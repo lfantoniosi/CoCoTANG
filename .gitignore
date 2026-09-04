@@ -1,0 +1,5 @@
+.DS_Store
+kicad/_restore_backup*
+*.dsn
+*.ses
+kicad/.history
