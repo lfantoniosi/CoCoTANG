@@ -3,12 +3,24 @@ module coco_hdmi (
     input logic serial_clk,
     input logic reset,
     input logic [5:0] framebuffer_data,
+    input logic [5:0] border_rgb,
     output logic [15:0] framebuffer_addr,
     output logic tmds_clk_p, output logic tmds_clk_n,
     output logic [2:0] tmds_data_p, output logic [2:0] tmds_data_n
 );
     logic [9:0] x, y;
     logic [23:0] rgb;
+    logic [5:0] border_meta, border_pixel;
+    always_ff @(posedge pixel_clk) begin
+        if (reset) begin
+            border_meta <= 6'd0;
+            border_pixel <= 6'd0;
+        end else begin
+            border_meta <= border_rgb;
+            border_pixel <= border_meta;
+        end
+    end
+
     always_comb begin
         framebuffer_addr = 16'd0;
         rgb = 24'd0;
@@ -18,6 +30,12 @@ module coco_hdmi (
             rgb = {{4{framebuffer_data[5:4]}},
                    {4{framebuffer_data[3:2]}},
                    {4{framebuffer_data[1:0]}}};
+        end else if (x >= 10'd40 && x < 10'd680 && y < 10'd480) begin
+            // 32/32 source-pixel side borders.  The 27-line native top and
+            // bottom borders are clipped to 24 lines each by 480p.
+            rgb = {{4{border_pixel[5:4]}},
+                   {4{border_pixel[3:2]}},
+                   {4{border_pixel[1:0]}}};
         end
     end
 

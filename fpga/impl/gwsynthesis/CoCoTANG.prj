@@ -10,7 +10,7 @@
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/bus/coco_bus_mux.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco_clocks.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco_startup.v" type="verilog"/>
-        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco_sam.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco_sam.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/spi_flash_reader.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/sdram.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/sdram_arbiter.v" type="verilog"/>
@@ -20,6 +20,7 @@
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847_char_rom.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/video_mode_debug.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_vdg.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco2.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_framebuffer.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/sigma_delta_dac.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_analog_video.v" type="verilog"/>

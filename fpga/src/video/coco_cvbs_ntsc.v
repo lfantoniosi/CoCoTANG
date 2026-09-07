@@ -9,6 +9,7 @@ module coco_cvbs_ntsc (
     input  wire        clk270,
     input  wire        reset_n,
     input  wire [5:0]  framebuffer_data,
+    input  wire [5:0]  border_rgb,
     output wire [15:0] framebuffer_addr,
     output reg         luma_out,
     output reg         chroma_out,
@@ -22,9 +23,13 @@ module coco_cvbs_ntsc (
     localparam [9:0] BURST_END      = 10'd102;
     localparam [9:0] PICTURE_LEFT   = 10'd222;
     localparam [9:0] PICTURE_RIGHT  = 10'd734;
+    localparam [9:0] BORDER_LEFT    = PICTURE_LEFT - 10'd64;
+    localparam [9:0] BORDER_RIGHT   = PICTURE_RIGHT + 10'd62;
     localparam [8:0] V_TOTAL        = 9'd262;
     localparam [8:0] PICTURE_TOP    = 9'd44;
     localparam [8:0] PICTURE_BOTTOM = 9'd236;
+    localparam [8:0] BORDER_TOP     = PICTURE_TOP - 9'd27;
+    localparam [8:0] BORDER_BOTTOM  = V_TOTAL;
 
     localparam [5:0] LEVEL_SYNC     = 6'd0;
     localparam [5:0] LEVEL_BLANK    = 6'd10;
@@ -39,6 +44,10 @@ module coco_cvbs_ntsc (
                       (h_sample < PICTURE_RIGHT) &&
                       (v_line >= PICTURE_TOP) &&
                       (v_line < PICTURE_BOTTOM);
+    wire in_vdg_window = (h_sample >= BORDER_LEFT) &&
+                         (h_sample < BORDER_RIGHT) &&
+                         (v_line >= BORDER_TOP) &&
+                         (v_line < BORDER_BOTTOM);
     wire [8:0] picture_x = (h_sample - PICTURE_LEFT) >> 1;
     wire [8:0] picture_y_full = v_line - PICTURE_TOP;
     wire [7:0] picture_y = picture_y_full[7:0];
@@ -128,6 +137,8 @@ module coco_cvbs_ntsc (
     // The framebuffer stores RGB222. Expand each channel to six bits before
     // applying the same RGB-axis and luma conversion proven by NTSCVideo.
     reg [5:0] pixel_rgb = 6'd0;
+    reg [5:0] border_meta = 6'd0;
+    reg [5:0] border_sample = 6'd0;
     wire [5:0] fb_red   = {3{pixel_rgb[5:4]}};
     wire [5:0] fb_green = {3{pixel_rgb[3:2]}};
     wire [5:0] fb_blue  = {3{pixel_rgb[1:0]}};
@@ -216,6 +227,8 @@ module coco_cvbs_ntsc (
             pixel_picture <= 1'b0;
             pixel_carrier <= 3'd0;
             pixel_rgb <= 6'd0;
+            border_meta <= 6'd0;
+            border_sample <= 6'd0;
             encoder_sync <= 1'b1;
             encoder_burst <= 1'b0;
             encoder_picture <= 1'b0;
@@ -248,7 +261,7 @@ module coco_cvbs_ntsc (
 
             source_sync <= sync_tip;
             source_burst <= in_burst;
-            source_picture <= in_picture;
+            source_picture <= in_vdg_window;
             source_carrier <= carrier_octant;
 
             // Register the synchronous BSRAM output before RGB arithmetic.
@@ -257,7 +270,9 @@ module coco_cvbs_ntsc (
             pixel_burst <= source_burst;
             pixel_picture <= source_picture;
             pixel_carrier <= source_carrier;
-            pixel_rgb <= framebuffer_data;
+            border_meta <= border_rgb;
+            border_sample <= border_meta;
+            pixel_rgb <= in_picture ? framebuffer_data : border_sample;
 
             encoder_sync <= pixel_sync;
             encoder_burst <= pixel_burst;

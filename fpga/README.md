@@ -3,6 +3,18 @@
 Tang Nano 20K replacement for the CoCo 2 SAM, 64 KiB RAM, BASIC/Extended
 BASIC ROMs, and MC6847 VDG. The external 6809 and PIAs remain in the CoCo.
 
+## Machine configuration
+
+Top parameter `COCO_MODEL` selects the machine-specific core. Model `2` is
+implemented under `src/coco2/` and contains the SAM, MC6847 wrapper, PIA
+video shadow registers, and S2 video-mode diagnostic. Model `3` currently
+selects safe inactive outputs; its branch is reserved for a future GIME-based
+`coco3` module.
+
+Clock generation, physical CPU-bus multiplexing, startup, SDRAM/ROM access,
+framebuffers, HDMI, and analog video encoding are common top-level services.
+Both machine cores use the same bus, video-memory, and framebuffer interface.
+
 ## Startup and memory
 
 The CPU HALT transistor is driven until both PLLs lock, the embedded SDRAM has

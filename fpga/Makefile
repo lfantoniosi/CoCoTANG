@@ -25,7 +25,7 @@ rebuild: check-tools
 	$(call run-gowin)
 
 test:
-	iverilog -g2012 -o /private/tmp/cocotang_tb_sam tests/tb_coco_sam.v src/coco_sam.v
+	iverilog -g2012 -o /private/tmp/cocotang_tb_sam tests/tb_coco_sam.v src/coco2/coco_sam.v
 	vvp /private/tmp/cocotang_tb_sam
 	iverilog -g2012 -o /private/tmp/cocotang_tb_mux tests/tb_coco_bus_mux.v src/bus/coco_bus_mux.v
 	vvp /private/tmp/cocotang_tb_mux

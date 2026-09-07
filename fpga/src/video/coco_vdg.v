@@ -18,6 +18,7 @@ module coco_vdg #(
     output [7:0] red,
     output [7:0] green,
     output [7:0] blue,
+    output [5:0] border_rgb,
     output hblank,
     output vblank,
     output [7:0] cvbs,
@@ -55,6 +56,10 @@ module coco_vdg #(
     wire [7:0] pia1_effective = pia1_pb & pia1_ddrb;
     wire effective_an_g = DEBUG_VIDEO_MODE ? debug_an_g : pia1_effective[7];
     wire effective_css = DEBUG_VIDEO_MODE ? debug_css : pia1_effective[3];
+    // The MC6847 graphics border is green in color set 0 and buff/white in
+    // color set 1.  Alpha modes use a black border.
+    assign border_rgb = effective_an_g ?
+                        (effective_css ? 6'b111111 : 6'b001100) : 6'b000000;
 
     wire da0;
     wire [12:0] video_address;

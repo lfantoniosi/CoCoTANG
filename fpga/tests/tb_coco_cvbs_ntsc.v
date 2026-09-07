@@ -4,6 +4,7 @@ module tb_coco_cvbs_ntsc;
     reg clk135 = 1'b0;
     reg reset_n = 1'b0;
     reg [5:0] framebuffer_data = 6'b111111;
+    reg [5:0] border_rgb = 6'b001100;
     wire [15:0] framebuffer_addr;
     wire luma_out, chroma_out, cvbs_out;
     integer errors = 0;
@@ -14,7 +15,8 @@ module tb_coco_cvbs_ntsc;
 
     coco_cvbs_ntsc dut(
         .clk135(clk135),.clk270(clk270),.reset_n(reset_n),
-        .framebuffer_data(framebuffer_data),.framebuffer_addr(framebuffer_addr),
+        .framebuffer_data(framebuffer_data),.border_rgb(border_rgb),
+        .framebuffer_addr(framebuffer_addr),
         .luma_out(luma_out),.chroma_out(chroma_out),.cvbs_out(cvbs_out));
 
     always #1.85185 clk270 = ~clk270;
@@ -54,6 +56,11 @@ module tb_coco_cvbs_ntsc;
             (dut.carrier_octant != saved_octant + 3'd4))
             begin $display("carrier line phase"); errors = errors + 1; end
 
+        seek(10'd157,9'd17);
+        if (dut.in_vdg_window) begin $display("border starts too early"); errors = errors + 1; end
+        seek(10'd158,9'd17);
+        if (!dut.in_vdg_window || dut.in_picture) begin $display("top-left border window"); errors = errors + 1; end
+
         seek(10'd222,9'd44);
         if (framebuffer_addr != 16'd0) begin $display("framebuffer first pixel"); errors = errors + 1; end
         seek(10'd224,9'd44);
@@ -76,6 +83,9 @@ module tb_coco_cvbs_ntsc;
                 dut.level_sync,dut.h_sample,dut.v_line);
             errors = errors + 1;
         end
+
+        seek(10'd795,9'd261);
+        if (!dut.in_vdg_window || dut.in_picture) begin $display("bottom-right border window"); errors = errors + 1; end
 
         if (errors == 0) $display("tb_coco_cvbs_ntsc PASS");
         else $display("tb_coco_cvbs_ntsc FAIL: %0d",errors);

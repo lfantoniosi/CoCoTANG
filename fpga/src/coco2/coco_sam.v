@@ -1,3 +1,4 @@
+// CoCo 2 Synchronous Address Multiplexer.
 module coco_sam (
     input         clk,
     input         reset_n,
