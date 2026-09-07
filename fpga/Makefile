@@ -31,6 +31,10 @@ test:
 	vvp /private/tmp/cocotang_tb_mux
 	iverilog -g2012 -o /private/tmp/cocotang_tb_cvbs tests/tb_coco_cvbs_ntsc.v src/video/coco_cvbs_ntsc.v
 	vvp /private/tmp/cocotang_tb_cvbs
+	iverilog -g2012 -o /private/tmp/cocotang_tb_fill tests/tb_sdram_test_fill.v src/memory/sdram_test_fill.v
+	vvp /private/tmp/cocotang_tb_fill
+	iverilog -g2012 -o /private/tmp/cocotang_tb_video_mode tests/tb_video_mode_debug.v src/video/video_mode_debug.v
+	vvp /private/tmp/cocotang_tb_video_mode
 
 program: $(OUTPUT)
 	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(OUTPUT)"

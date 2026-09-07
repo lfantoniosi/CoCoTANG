@@ -1,4 +1,6 @@
-module coco_memory (
+module coco_memory #(
+    parameter integer TEST_FILL = 1
+) (
     input clk, input reset_n, input loader_start,
     input e, input e_rise, input e_fall,
     input [15:0] cpu_addr, input [7:0] cpu_wdata,
@@ -93,12 +95,31 @@ module coco_memory (
     wire loader_req, loader_ack;
     wire [22:0] loader_addr;
     wire [7:0] loader_wdata;
+    wire fill_req, fill_ack, fill_done;
+    wire [22:0] fill_addr;
+    wire [7:0] fill_wdata;
+    sdram_test_fill fill (
+        .clk(clk), .reset_n(reset_n), .start(loader_start), .done(fill_done),
+        .mem_req(fill_req), .mem_addr(fill_addr), .mem_wdata(fill_wdata),
+        .mem_ack(fill_ack)
+    );
+
+    wire rom_req, rom_ack, rom_done;
+    wire [22:0] rom_addr;
+    wire [7:0] rom_wdata;
+    wire rom_start = loader_start && ((TEST_FILL == 0) || fill_done);
     coco_flash_loader loader (
-        .clk(clk), .reset_n(reset_n), .start(loader_start), .done(loader_done),
-        .mem_req(loader_req), .mem_addr(loader_addr), .mem_wdata(loader_wdata),
-        .mem_ack(loader_ack), .mspi_cs(mspi_cs), .mspi_sclk(mspi_sclk),
+        .clk(clk), .reset_n(reset_n), .start(rom_start), .done(rom_done),
+        .mem_req(rom_req), .mem_addr(rom_addr), .mem_wdata(rom_wdata),
+        .mem_ack(rom_ack), .mspi_cs(mspi_cs), .mspi_sclk(mspi_sclk),
         .mspi_miso(mspi_miso), .mspi_mosi(mspi_mosi)
     );
+    assign loader_req = ((TEST_FILL != 0) && !fill_done) ? fill_req : rom_req;
+    assign loader_addr = ((TEST_FILL != 0) && !fill_done) ? fill_addr : rom_addr;
+    assign loader_wdata = ((TEST_FILL != 0) && !fill_done) ? fill_wdata : rom_wdata;
+    assign fill_ack = ((TEST_FILL != 0) && !fill_done) ? loader_ack : 1'b0;
+    assign rom_ack = ((TEST_FILL == 0) || fill_done) ? loader_ack : 1'b0;
+    assign loader_done = rom_done;
 
     sdram_arbiter arbiter (
         .clk(clk), .reset_n(reset_n),

@@ -18,6 +18,12 @@ from SPI flash. Program `roms/coco2.rom` at flash offset `0x100000` with
 RAM uses SDRAM byte addresses `0x000000-0x00ffff`; the ROM cache uses
 `0x010000-0x013fff`. SAM `$FFDE/$FFDF` selects ROM/RAM or all-RAM mode.
 
+Top parameter `SDRAM_TEST_FILL` is currently `1` for standalone board testing.
+Before loading the ROM, startup fills the first 64 KiB with
+`RAM[address] = address[7:0]`; HALT remains asserted until both operations
+finish. This gives the VDG a deterministic 0-to-255 character pattern. Set
+the parameter to `0` for normal CoCo startup without the diagnostic fill.
+
 ## Video
 
 The MC6847-compatible renderer is based on the MiSTer CoCo 2 implementation.

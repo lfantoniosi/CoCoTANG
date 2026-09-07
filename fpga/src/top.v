@@ -1,5 +1,7 @@
 module top #(
- parameter integer ANALOG_VIDEO_MODE = 1
+ parameter integer ANALOG_VIDEO_MODE = 1,
+ parameter integer SDRAM_TEST_FILL = 1,
+ parameter integer DEBUG_S2_VIDEO_MODE = 1
 ) (
  input clkin,input s1,input s2,input [7:0] mp,output [1:0] msel,
  inout [7:0] cpu_data,input irq_n_in,input firq_n_in,input audio_in,
@@ -32,6 +34,13 @@ module top #(
   .video_mode(video_mode),.video_offset(video_offset),.page(page),.rate(rate),
   .memory_size(memory_size),.all_ram(all_ram));
 
+ wire [2:0] debug_video_mode;
+ wire debug_an_g,debug_css;
+ wire [2:0] effective_video_mode = DEBUG_S2_VIDEO_MODE ? debug_video_mode : video_mode;
+ video_mode_debug s2_video_mode(
+  .clk(clk108),.reset_n(board_reset_n),.button(s2),
+  .an_g(debug_an_g),.css(debug_css),.gm(debug_video_mode));
+
  wire sdram_reset_n,loader_start,system_ready,sdram_enabled,loader_done;
  coco_startup startup(.clk(clk108),.board_reset_n(board_reset_n),.sdram_enabled(sdram_enabled),
   .loader_done(loader_done),.sdram_reset_n(sdram_reset_n),.loader_start(loader_start),
@@ -49,7 +58,8 @@ module top #(
   .enabled(sdram_enabled));
 
  wire [15:0] video_memory_addr; wire [7:0] video_memory_data,cpu_read_data; wire cpu_data_oe;
- coco_memory memory(.clk(clk108),.reset_n(sdram_reset_n),.loader_start(loader_start),
+ coco_memory #(.TEST_FILL(SDRAM_TEST_FILL)) memory(
+  .clk(clk108),.reset_n(sdram_reset_n),.loader_start(loader_start),
   .e(e_out),.e_rise(e_rise),.e_fall(e_fall),.cpu_addr(address),.cpu_wdata(cpu_data),
   .cpu_rw_n(rw_n),.cpu_select(sam_s),.cpu_rdata(cpu_read_data),.cpu_data_oe(cpu_data_oe),
   .video_addr(video_memory_addr),.video_data(video_memory_data),.loader_done(loader_done),
@@ -61,8 +71,10 @@ module top #(
 
  wire [7:0] vdg_red,vdg_green,vdg_blue,vdg_cvbs; wire vdg_hblank,vdg_vblank;
  wire framebuffer_write; wire [15:0] framebuffer_write_addr; wire [5:0] framebuffer_write_data;
- coco_vdg vdg(.clk(clk108),.reset_n(board_reset_n && cpu_reset_n),.e_fall(e_fall),
-  .cpu_rw_n(rw_n),.cpu_addr(address),.cpu_data(cpu_data),.sam_video_mode(video_mode),
+ coco_vdg #(.DEBUG_VIDEO_MODE(DEBUG_S2_VIDEO_MODE)) vdg(
+  .clk(clk108),.reset_n(board_reset_n && cpu_reset_n),.e_fall(e_fall),
+  .cpu_rw_n(rw_n),.cpu_addr(address),.cpu_data(cpu_data),.sam_video_mode(effective_video_mode),
+  .debug_an_g(debug_an_g),.debug_css(debug_css),
   .sam_video_offset(video_offset),.memory_data(video_memory_data),.memory_addr(video_memory_addr),
   .hs_n(hs_n),.fs_n(fs_n),.red(vdg_red),.green(vdg_green),.blue(vdg_blue),
   .hblank(vdg_hblank),.vblank(vdg_vblank),.cvbs(vdg_cvbs),.pixel_capture(framebuffer_write),

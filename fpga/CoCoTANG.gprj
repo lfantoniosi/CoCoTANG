@@ -16,9 +16,11 @@
         <File path="src/memory/sdram.v" type="file.verilog" enable="1"/>
         <File path="src/memory/sdram_arbiter.v" type="file.verilog" enable="1"/>
         <File path="src/memory/coco_flash_loader.v" type="file.verilog" enable="1"/>
+        <File path="src/memory/sdram_test_fill.v" type="file.verilog" enable="1"/>
         <File path="src/memory/coco_memory.v" type="file.verilog" enable="1"/>
         <File path="src/video/mc6847.vhd" type="file.vhdl" enable="1"/>
         <File path="src/video/mc6847_char_rom.v" type="file.verilog" enable="1"/>
+        <File path="src/video/video_mode_debug.v" type="file.verilog" enable="1"/>
         <File path="src/video/coco_vdg.v" type="file.verilog" enable="1"/>
         <File path="src/video/coco_framebuffer.v" type="file.verilog" enable="1"/>
         <File path="src/video/sigma_delta_dac.v" type="file.verilog" enable="1"/>

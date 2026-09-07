@@ -133,6 +133,8 @@ architecture SYN of mc6847 is
     signal cvbs_linebuf_addr_rr : std_logic_vector(8 downto 0);
 
     signal lookup               : std_logic_vector(5 downto 0);
+    signal lookup5_fetch        : std_logic_vector(4 downto 0);
+    signal lookup4_fetch        : std_logic_vector(3 downto 0);
     signal tripletaddr          : std_logic_vector(7 downto 0);
     signal tripletcnt           : std_logic_vector(3 downto 0);
     -----------------------------------------------------------------------
@@ -192,6 +194,15 @@ architecture SYN of mc6847 is
     end procedure;
     
 begin
+
+    -- The scan-doubled VGA line buffer needs a two-byte look-ahead. Native
+    -- CVBS/RGB consumes the stream directly, so cancel that lead modulo the
+    -- row width. Without this adjustment a text row is rotated as
+    -- 02..1F,00,01 (B through @A for the SDRAM address test pattern).
+    lookup5_fetch <= lookup(4 downto 0) - 2 when CVBS_NOT_VGA else
+                     lookup(4 downto 0);
+    lookup4_fetch <= lookup(3 downto 0) - 2 when CVBS_NOT_VGA else
+                     lookup(3 downto 0);
 
     -- assign control inputs for debug/release build
     an_g_s     <= DEBUG_AN_G     when BUILD_DEBUG else an_g;
@@ -397,33 +408,33 @@ begin
 
             if an_g_s = '0' then
                 lookup(4 downto 0) <= active_h_count(7 downto 3) + 1;
-                videoaddr          <= "000" & active_v_count(8 downto 4) & lookup(4 downto 0);
+                videoaddr          <= "000" & active_v_count(8 downto 4) & lookup5_fetch;
             else
                 case gm is              --lookupaddr
                     when "000" =>
                         lookup(3 downto 0) <= active_h_count(7 downto 4) + 1;
-                        videoaddr          <= "0" & tripletaddr(7 downto 0) & lookup(3 downto 0);
+                        videoaddr          <= "0" & tripletaddr(7 downto 0) & lookup4_fetch;
                     when "001" =>
                         lookup(3 downto 0) <= active_h_count(7 downto 4) + 1;
-                        videoaddr          <= "0" & tripletaddr(7 downto 0) & lookup(3 downto 0);
+                        videoaddr          <= "0" & tripletaddr(7 downto 0) & lookup4_fetch;
                     when "010" =>
                         lookup(4 downto 0) <= active_h_count(7 downto 3) + 1;
-                        videoaddr          <= tripletaddr(7 downto 0) & lookup(4 downto 0);
+                        videoaddr          <= tripletaddr(7 downto 0) & lookup5_fetch;
                     when "011" =>
                         lookup(3 downto 0) <= active_h_count(7 downto 4) + 1;
-                        videoaddr          <= "00" &active_v_count(7 downto 1) & lookup(3 downto 0);
+                        videoaddr          <= "00" &active_v_count(7 downto 1) & lookup4_fetch;
                     when "100" =>
                         lookup(4 downto 0) <= active_h_count(7 downto 3) + 1;
-                        videoaddr          <= "0" & active_v_count(7 downto 1) & lookup(4 downto 0);
+                        videoaddr          <= "0" & active_v_count(7 downto 1) & lookup5_fetch;
                     when "101" =>
                         lookup(3 downto 0) <= active_h_count(7 downto 4) + 1;
-                        videoaddr          <= "0" &active_v_count(7 downto 0) & lookup(3 downto 0);
+                        videoaddr          <= "0" &active_v_count(7 downto 0) & lookup4_fetch;
                     when "110" =>
                         lookup(4 downto 0) <= active_h_count(7 downto 3) + 1;
-                        videoaddr          <= active_v_count(7 downto 0) & lookup(4 downto 0);
+                        videoaddr          <= active_v_count(7 downto 0) & lookup5_fetch;
                     when "111" =>
                         lookup(4 downto 0) <= active_h_count(7 downto 3) + 1;
-                        videoaddr          <= active_v_count(7 downto 0) & lookup(4 downto 0);
+                        videoaddr          <= active_v_count(7 downto 0) & lookup5_fetch;
                     when others =>
                         null;
                 end case;

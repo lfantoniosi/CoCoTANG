@@ -43,20 +43,22 @@ module tb_coco_cvbs_ntsc;
         seek(10'd64,9'd10);
         if (dut.sync_tip) begin $display("horizontal sync end"); errors = errors + 1; end
 
-        seek(10'd80,9'd10);
+        seek(10'd67,9'd10);
+        if (dut.in_burst) begin $display("burst starts too early"); errors = errors + 1; end
+        seek(10'd68,9'd10);
         if (!dut.in_burst) begin $display("burst window"); errors = errors + 1; end
         saved_fraction = dut.carrier_fraction;
         saved_octant = dut.carrier_octant;
-        seek(10'd80,9'd11);
+        seek(10'd68,9'd11);
         if ((dut.carrier_fraction != saved_fraction) ||
             (dut.carrier_octant != saved_octant + 3'd4))
             begin $display("carrier line phase"); errors = errors + 1; end
 
-        seek(10'd226,9'd44);
+        seek(10'd222,9'd44);
         if (framebuffer_addr != 16'd0) begin $display("framebuffer first pixel"); errors = errors + 1; end
-        seek(10'd228,9'd44);
+        seek(10'd224,9'd44);
         if (framebuffer_addr != 16'd1) begin $display("framebuffer horizontal scale"); errors = errors + 1; end
-        seek(10'd736,9'd235);
+        seek(10'd732,9'd235);
         if (framebuffer_addr != {8'd191,8'd255}) begin $display("framebuffer last pixel: %h",framebuffer_addr); errors = errors + 1; end
 
         // Move to an ordinary blank interval and allow the encoder pipeline

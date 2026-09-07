@@ -11,8 +11,10 @@ Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/spi_flas
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/sdram.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/sdram_arbiter.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_flash_loader.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/sdram_test_fill.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_memory.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847_char_rom.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/video_mode_debug.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_vdg.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_framebuffer.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/sigma_delta_dac.v'
@@ -33,8 +35,8 @@ Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v'
 Analyzing VHDL file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd'
 Analyzing entity 'mc6847'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":6)
 Analyzing architecture 'syn'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":44)
-WARN  (EX4319) : Shared variables must be of a protected type("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":146)
-WARN  (EX4319) : Shared variables must be of a protected type("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":147)
+WARN  (EX4319) : Shared variables must be of a protected type("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":148)
+WARN  (EX4319) : Shared variables must be of a protected type("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":149)
 Compiling module 'top'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v":1)
 Compiling module 'coco_clocks'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco_clocks.v":1)
 Compiling module 'CLK108'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/gowin_rpll/clk108.v":10)
@@ -42,36 +44,38 @@ Compiling module 'CLK270'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/gowin_rpll/c
 Compiling module 'coco_bus_mux'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/bus/coco_bus_mux.v":1)
 Compiling module 'input_filter(WIDTH=3)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/bus/input_filter.v":1)
 Compiling module 'coco_sam'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco_sam.v":1)
+Compiling module 'video_mode_debug'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/video_mode_debug.v":1)
 Compiling module 'coco_startup'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco_startup.v":1)
 Compiling module 'sdram'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/sdram.v":27)
 WARN  (EX3791) : Expression size 16 truncated to fit in target size 15("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/sdram.v":285)
 Compiling module 'coco_memory'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_memory.v":1)
+Compiling module 'sdram_test_fill'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/sdram_test_fill.v":1)
 Compiling module 'coco_flash_loader'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_flash_loader.v":1)
 Compiling module 'spi_flash_reader'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/spi_flash_reader.v":1)
 Compiling module 'sdram_arbiter'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/sdram_arbiter.v":1)
-Compiling module 'coco_vdg'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_vdg.v":1)
+Compiling module 'coco_vdg(DEBUG_VIDEO_MODE=1)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_vdg.v":1)
 Compiling module 'mc6847_char_rom'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847_char_rom.v":1)
 Extracting RAM for identifier 'memory'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847_char_rom.v":6)
-Switching to VHDL mode to elaborate design unit 'mc6847'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_vdg.v":75)
+Switching to VHDL mode to elaborate design unit 'mc6847'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_vdg.v":81)
 Processing 'mc6847(cvbs_not_vga=true)(SYN)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":6)
-Extracting RAM for identifier 'VRAM'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":140)
-WARN  (EX4749) : 'clk_ena' should be on the sensitivity list of the process. Signal missing is added and assuming complete sensitivity list specified. RTL design and post-synthesis netlist simulations may differ as a result("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":233)
-WARN  (EX4387) : Incomplete sensitivity list specified, assuming completeness("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":275)
-WARN  (EX4749) : 'cvbs_clk_ena' should be on the sensitivity list of the process. Signal missing is added and assuming complete sensitivity list specified. RTL design and post-synthesis netlist simulations may differ as a result("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":302)
-'others' clause is never selected("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":428)
-WARN  (EX4387) : Incomplete sensitivity list specified, assuming completeness("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":432)
-WARN  (EX4749) : 'cvbs_clk_ena' should be on the sensitivity list of the process. Signal missing is added and assuming complete sensitivity list specified. RTL design and post-synthesis netlist simulations may differ as a result("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":440)
-WARN  (EX4387) : Incomplete sensitivity list specified, assuming completeness("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":530)
-WARN  (EX4749) : 'cvbs_clk_ena' should be on the sensitivity list of the process. Signal missing is added and assuming complete sensitivity list specified. RTL design and post-synthesis netlist simulations may differ as a result("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":538)
-WARN  (EX4387) : Incomplete sensitivity list specified, assuming completeness("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":580)
-WARN  (EX4749) : 'reset' should be on the sensitivity list of the process. Signal missing is added and assuming complete sensitivity list specified. RTL design and post-synthesis netlist simulations may differ as a result("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":609)
-WARN  (EX4749) : 'cvbs_hsync' should be on the sensitivity list of the process. Signal missing is added and assuming complete sensitivity list specified. RTL design and post-synthesis netlist simulations may differ as a result("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":671)
-WARN  (EX4749) : 'cvbs_vsync' should be on the sensitivity list of the process. Signal missing is added and assuming complete sensitivity list specified. RTL design and post-synthesis netlist simulations may differ as a result("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":672)
-WARN  (EX4749) : 'cvbs_hblank' should be on the sensitivity list of the process. Signal missing is added and assuming complete sensitivity list specified. RTL design and post-synthesis netlist simulations may differ as a result("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":673)
-WARN  (EX4749) : 'cvbs_vblank' should be on the sensitivity list of the process. Signal missing is added and assuming complete sensitivity list specified. RTL design and post-synthesis netlist simulations may differ as a result("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":674)
-WARN  (EX4387) : Incomplete sensitivity list specified, assuming completeness("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":682)
-WARN  (EX4160) : Latch inferred for net 'PROC_OUTPUT.count'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":682)
-Returning to Verilog mode to proceed with elaboration("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_vdg.v":75)
+Extracting RAM for identifier 'VRAM'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":142)
+WARN  (EX4749) : 'clk_ena' should be on the sensitivity list of the process. Signal missing is added and assuming complete sensitivity list specified. RTL design and post-synthesis netlist simulations may differ as a result("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":244)
+WARN  (EX4387) : Incomplete sensitivity list specified, assuming completeness("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":286)
+WARN  (EX4749) : 'cvbs_clk_ena' should be on the sensitivity list of the process. Signal missing is added and assuming complete sensitivity list specified. RTL design and post-synthesis netlist simulations may differ as a result("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":313)
+'others' clause is never selected("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":439)
+WARN  (EX4387) : Incomplete sensitivity list specified, assuming completeness("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":443)
+WARN  (EX4749) : 'cvbs_clk_ena' should be on the sensitivity list of the process. Signal missing is added and assuming complete sensitivity list specified. RTL design and post-synthesis netlist simulations may differ as a result("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":451)
+WARN  (EX4387) : Incomplete sensitivity list specified, assuming completeness("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":541)
+WARN  (EX4749) : 'cvbs_clk_ena' should be on the sensitivity list of the process. Signal missing is added and assuming complete sensitivity list specified. RTL design and post-synthesis netlist simulations may differ as a result("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":549)
+WARN  (EX4387) : Incomplete sensitivity list specified, assuming completeness("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":591)
+WARN  (EX4749) : 'reset' should be on the sensitivity list of the process. Signal missing is added and assuming complete sensitivity list specified. RTL design and post-synthesis netlist simulations may differ as a result("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":620)
+WARN  (EX4749) : 'cvbs_hsync' should be on the sensitivity list of the process. Signal missing is added and assuming complete sensitivity list specified. RTL design and post-synthesis netlist simulations may differ as a result("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":682)
+WARN  (EX4749) : 'cvbs_vsync' should be on the sensitivity list of the process. Signal missing is added and assuming complete sensitivity list specified. RTL design and post-synthesis netlist simulations may differ as a result("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":683)
+WARN  (EX4749) : 'cvbs_hblank' should be on the sensitivity list of the process. Signal missing is added and assuming complete sensitivity list specified. RTL design and post-synthesis netlist simulations may differ as a result("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":684)
+WARN  (EX4749) : 'cvbs_vblank' should be on the sensitivity list of the process. Signal missing is added and assuming complete sensitivity list specified. RTL design and post-synthesis netlist simulations may differ as a result("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":685)
+WARN  (EX4387) : Incomplete sensitivity list specified, assuming completeness("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":693)
+WARN  (EX4160) : Latch inferred for net 'PROC_OUTPUT.count'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd":693)
+Returning to Verilog mode to proceed with elaboration("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_vdg.v":81)
 Compiling module 'coco_framebuffer'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_framebuffer.v":1)
 Extracting RAM for identifier 'memory'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_framebuffer.v":5)
 Compiling module 'coco_hdmi'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_hdmi.sv":1)
@@ -84,10 +88,9 @@ Compiling module 'serializer(VIDEO_RATE=0)'("/Users/felipe/src/fpga/CoCoTANG/fpg
 Compiling module 'coco_cvbs_ntsc'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_cvbs_ntsc.v":7)
 NOTE  (EX0101) : Current top module is "top"
 [5%] Running netlist conversion ...
-WARN  (CV0016) : Input s2 is unused("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v":4)
-WARN  (CV0016) : Input irq_n_in is unused("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v":5)
-WARN  (CV0016) : Input firq_n_in is unused("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v":5)
-WARN  (CV0016) : Input audio_in is unused("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v":5)
+WARN  (CV0016) : Input irq_n_in is unused("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v":7)
+WARN  (CV0016) : Input firq_n_in is unused("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v":7)
+WARN  (CV0016) : Input audio_in is unused("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v":7)
 Running device independent optimization ...
 [10%] Optimizing Phase 0 completed
 [15%] Optimizing Phase 1 completed
@@ -103,7 +106,7 @@ Running technical mapping ...
 [75%] Tech-Mapping Phase 2 completed
 [80%] Tech-Mapping Phase 3 completed
 [90%] Tech-Mapping Phase 4 completed
-WARN  (NL0002) : The module "input_filter" instantiated to "interrupt_filter" is swept in optimizing("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v":26)
+WARN  (NL0002) : The module "input_filter" instantiated to "interrupt_filter" is swept in optimizing("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v":28)
 [95%] Generate netlist file "/Users/felipe/src/fpga/CoCoTANG/fpga/impl/gwsynthesis/CoCoTANG.vg" completed
 [100%] Generate report file "/Users/felipe/src/fpga/CoCoTANG/fpga/impl/gwsynthesis/CoCoTANG_syn.rpt.html" completed
 GowinSynthesis finish

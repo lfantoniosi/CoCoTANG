@@ -66,8 +66,10 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 /Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/sdram.v<br>
 /Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/sdram_arbiter.v<br>
 /Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_flash_loader.v<br>
+/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/sdram_test_fill.v<br>
 /Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_memory.v<br>
 /Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847_char_rom.v<br>
+/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/video_mode_debug.v<br>
 /Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_vdg.v<br>
 /Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_framebuffer.v<br>
 /Users/felipe/src/fpga/CoCoTANG/fpga/src/video/sigma_delta_dac.v<br>
@@ -110,7 +112,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label">Created Time</td>
-<td>Sun Sep  6 17:29:01 2026
+<td>Sun Sep  6 23:58:38 2026
 </td>
 </tr>
 <tr>
@@ -126,11 +128,11 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label">Synthesis Process</td>
-<td>Running parser:<br/>&nbsp;&nbsp;&nbsp;&nbsp;CPU time = 0h 0m 0.1s, Elapsed time = 0h 0m 0.101s, Peak memory usage = 51.078MB<br/>Running netlist conversion:<br/>&nbsp;&nbsp;&nbsp;&nbsp;CPU time = 0h 0m 0s, Elapsed time = 0h 0m 0s, Peak memory usage = 0MB<br/>Running device independent optimization:<br/>&nbsp;&nbsp;&nbsp;&nbsp;Optimizing Phase 0: CPU time = 0h 0m 0.029s, Elapsed time = 0h 0m 0.029s, Peak memory usage = 51.672MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Optimizing Phase 1: CPU time = 0h 0m 0.01s, Elapsed time = 0h 0m 0.01s, Peak memory usage = 51.781MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Optimizing Phase 2: CPU time = 0h 0m 0.056s, Elapsed time = 0h 0m 0.06s, Peak memory usage = 51.969MB<br/>Running inference:<br/>&nbsp;&nbsp;&nbsp;&nbsp;Inferring Phase 0: CPU time = 0h 0m 0.052s, Elapsed time = 0h 0m 0.053s, Peak memory usage = 52.516MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Inferring Phase 1: CPU time = 0h 0m 0.002s, Elapsed time = 0h 0m 0.002s, Peak memory usage = 52.688MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Inferring Phase 2: CPU time = 0h 0m 0.001s, Elapsed time = 0h 0m 0.001s, Peak memory usage = 52.828MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Inferring Phase 3: CPU time = 0h 0m 0.004s, Elapsed time = 0h 0m 0.004s, Peak memory usage = 52.969MB<br/>Running technical mapping:<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 0: CPU time = 0h 0m 0.062s, Elapsed time = 0h 0m 0.062s, Peak memory usage = 53.047MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 1: CPU time = 0h 0m 0.011s, Elapsed time = 0h 0m 0.011s, Peak memory usage = 53.047MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 2: CPU time = 0h 0m 0.009s, Elapsed time = 0h 0m 0.009s, Peak memory usage = 53.047MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 3: CPU time = 0h 0m 2s, Elapsed time = 0h 0m 2s, Peak memory usage = 100.078MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 4: CPU time = 0h 0m 0.101s, Elapsed time = 0h 0m 0.101s, Peak memory usage = 100.266MB<br/>Generate output files:<br/>&nbsp;&nbsp;&nbsp;&nbsp;CPU time = 0h 0m 0.038s, Elapsed time = 0h 0m 0.038s, Peak memory usage = 117.438MB<br/></td>
+<td>Running parser:<br/>&nbsp;&nbsp;&nbsp;&nbsp;CPU time = 0h 0m 0.092s, Elapsed time = 0h 0m 0.092s, Peak memory usage = 51.484MB<br/>Running netlist conversion:<br/>&nbsp;&nbsp;&nbsp;&nbsp;CPU time = 0h 0m 0s, Elapsed time = 0h 0m 0s, Peak memory usage = 0MB<br/>Running device independent optimization:<br/>&nbsp;&nbsp;&nbsp;&nbsp;Optimizing Phase 0: CPU time = 0h 0m 0.027s, Elapsed time = 0h 0m 0.027s, Peak memory usage = 52.172MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Optimizing Phase 1: CPU time = 0h 0m 0.011s, Elapsed time = 0h 0m 0.011s, Peak memory usage = 52.281MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Optimizing Phase 2: CPU time = 0h 0m 0.051s, Elapsed time = 0h 0m 0.051s, Peak memory usage = 52.516MB<br/>Running inference:<br/>&nbsp;&nbsp;&nbsp;&nbsp;Inferring Phase 0: CPU time = 0h 0m 0.049s, Elapsed time = 0h 0m 0.051s, Peak memory usage = 53.078MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Inferring Phase 1: CPU time = 0h 0m 0.002s, Elapsed time = 0h 0m 0.002s, Peak memory usage = 53.250MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Inferring Phase 2: CPU time = 0h 0m 0.002s, Elapsed time = 0h 0m 0.002s, Peak memory usage = 53.375MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Inferring Phase 3: CPU time = 0h 0m 0.005s, Elapsed time = 0h 0m 0.005s, Peak memory usage = 53.438MB<br/>Running technical mapping:<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 0: CPU time = 0h 0m 0.06s, Elapsed time = 0h 0m 0.06s, Peak memory usage = 53.578MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 1: CPU time = 0h 0m 0.01s, Elapsed time = 0h 0m 0.01s, Peak memory usage = 53.578MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 2: CPU time = 0h 0m 0.01s, Elapsed time = 0h 0m 0.01s, Peak memory usage = 53.578MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 3: CPU time = 0h 0m 2s, Elapsed time = 0h 0m 2s, Peak memory usage = 101.422MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 4: CPU time = 0h 0m 0.106s, Elapsed time = 0h 0m 0.106s, Peak memory usage = 101.656MB<br/>Generate output files:<br/>&nbsp;&nbsp;&nbsp;&nbsp;CPU time = 0h 0m 0.038s, Elapsed time = 0h 0m 0.038s, Peak memory usage = 119.875MB<br/></td>
 </tr>
 <tr>
 <td class="label">Total Time and Memory Usage</td>
-<td>CPU time = 0h 0m 2s, Elapsed time = 0h 0m 2s, Peak memory usage = 117.438MB</td>
+<td>CPU time = 0h 0m 2s, Elapsed time = 0h 0m 2s, Peak memory usage = 119.875MB</td>
 </tr>
 </table>
 <h1><a name="resource">Resource</a></h1>
@@ -150,11 +152,11 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label"><b>I/O Buf </b></td>
-<td>94</td>
+<td>95</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspIBUF</td>
-<td>11</td>
+<td>12</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspOBUF</td>
@@ -170,7 +172,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label"><b>Register </b></td>
-<td>852</td>
+<td>885</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspDFF</td>
@@ -206,27 +208,27 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspDFFC</td>
-<td>84</td>
+<td>99</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspDFFCE</td>
-<td>310</td>
+<td>328</td>
 </tr>
 <tr>
 <td class="label"><b>LUT </b></td>
-<td>1153</td>
+<td>1270</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspLUT2</td>
-<td>127</td>
+<td>175</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspLUT3</td>
-<td>435</td>
+<td>451</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspLUT4</td>
-<td>591</td>
+<td>644</td>
 </tr>
 <tr>
 <td class="label"><b>ALU </b></td>
@@ -238,11 +240,11 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label"><b>INV </b></td>
-<td>30</td>
+<td>34</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspINV</td>
-<td>30</td>
+<td>34</td>
 </tr>
 <tr>
 <td class="label"><b>IOLOGIC </b></td>
@@ -282,12 +284,12 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label">Logic</td>
-<td>1352(1183 LUT, 169 ALU) / 20736</td>
-<td>7%</td>
+<td>1473(1304 LUT, 169 ALU) / 20736</td>
+<td>8%</td>
 </tr>
 <tr>
 <td class="label">Register</td>
-<td>852 / 15915</td>
+<td>885 / 15915</td>
 <td>6%</td>
 </tr>
 <tr>
@@ -297,7 +299,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp--Register as FF</td>
-<td>852 / 15915</td>
+<td>885 / 15915</td>
 <td>6%</td>
 </tr>
 <tr>
@@ -444,7 +446,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>1</td>
 <td>clkin</td>
 <td>27.000(MHz)</td>
-<td>127.714(MHz)</td>
+<td>127.097(MHz)</td>
 <td>8</td>
 <td>TOP</td>
 </tr>
@@ -452,8 +454,8 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>2</td>
 <td>clocks/sdram_pll/rpll_inst/CLKOUT.default_gen_clk</td>
 <td>108.000(MHz)</td>
-<td>129.500(MHz)</td>
-<td>8</td>
+<td>144.613(MHz)</td>
+<td>7</td>
 <td>TOP</td>
 </tr>
 <tr>
@@ -468,7 +470,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>4</td>
 <td>clocks/video_pll/rpll_inst/CLKOUTD.default_gen_clk</td>
 <td>135.000(MHz)</td>
-<td>147.493(MHz)</td>
+<td>150.331(MHz)</td>
 <td>6</td>
 <td>TOP</td>
 </tr>
@@ -529,7 +531,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.500</td>
 <td>tCL</td>
 <td>RR</td>
-<td>623</td>
+<td>656</td>
 <td>clocks/sdram_pll/rpll_inst/CLKOUT</td>
 </tr>
 <tr>
@@ -545,7 +547,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.232</td>
 <td>tC2Q</td>
 <td>RF</td>
-<td>273</td>
+<td>302</td>
 <td>clocks/board_reset_n_s0/Q</td>
 </tr>
 <tr>
@@ -701,7 +703,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.500</td>
 <td>tCL</td>
 <td>RR</td>
-<td>623</td>
+<td>656</td>
 <td>clocks/sdram_pll/rpll_inst/CLKOUT</td>
 </tr>
 <tr>
@@ -717,7 +719,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.232</td>
 <td>tC2Q</td>
 <td>RF</td>
-<td>273</td>
+<td>302</td>
 <td>clocks/board_reset_n_s0/Q</td>
 </tr>
 <tr>
@@ -873,7 +875,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.500</td>
 <td>tCL</td>
 <td>RR</td>
-<td>623</td>
+<td>656</td>
 <td>clocks/sdram_pll/rpll_inst/CLKOUT</td>
 </tr>
 <tr>
@@ -889,7 +891,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.232</td>
 <td>tC2Q</td>
 <td>RF</td>
-<td>273</td>
+<td>302</td>
 <td>clocks/board_reset_n_s0/Q</td>
 </tr>
 <tr>
@@ -1045,7 +1047,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.500</td>
 <td>tCL</td>
 <td>RR</td>
-<td>623</td>
+<td>656</td>
 <td>clocks/sdram_pll/rpll_inst/CLKOUT</td>
 </tr>
 <tr>
@@ -1061,7 +1063,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.232</td>
 <td>tC2Q</td>
 <td>RF</td>
-<td>273</td>
+<td>302</td>
 <td>clocks/board_reset_n_s0/Q</td>
 </tr>
 <tr>
@@ -1217,7 +1219,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.500</td>
 <td>tCL</td>
 <td>RR</td>
-<td>623</td>
+<td>656</td>
 <td>clocks/sdram_pll/rpll_inst/CLKOUT</td>
 </tr>
 <tr>
@@ -1233,7 +1235,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.232</td>
 <td>tC2Q</td>
 <td>RF</td>
-<td>273</td>
+<td>302</td>
 <td>clocks/board_reset_n_s0/Q</td>
 </tr>
 <tr>

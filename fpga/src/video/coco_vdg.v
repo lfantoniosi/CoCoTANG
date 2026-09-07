@@ -1,4 +1,6 @@
-module coco_vdg (
+module coco_vdg #(
+    parameter integer DEBUG_VIDEO_MODE = 0
+) (
     input clk,
     input reset_n,
     input e_fall,
@@ -6,6 +8,8 @@ module coco_vdg (
     input [15:0] cpu_addr,
     input [7:0] cpu_data,
     input [2:0] sam_video_mode,
+    input debug_an_g,
+    input debug_css,
     input [6:0] sam_video_offset,
     input [7:0] memory_data,
     output [15:0] memory_addr,
@@ -49,6 +53,8 @@ module coco_vdg (
         end
     end
     wire [7:0] pia1_effective = pia1_pb & pia1_ddrb;
+    wire effective_an_g = DEBUG_VIDEO_MODE ? debug_an_g : pia1_effective[7];
+    wire effective_css = DEBUG_VIDEO_MODE ? debug_css : pia1_effective[3];
 
     wire da0;
     wire [12:0] video_address;
@@ -63,9 +69,9 @@ module coco_vdg (
         .clk(clk), .clk_ena(vdg_enable), .reset(!reset_n),
         .da0(da0), .videoaddr(video_address), .dd(memory_data),
         .hs_n(hs_n), .fs_n(fs_n),
-        .an_g(pia1_effective[7]), .an_s(memory_data[7]),
+        .an_g(effective_an_g), .an_s(memory_data[7]),
         .intn_ext(pia1_effective[4]), .gm(sam_video_mode),
-        .css(pia1_effective[3]), .inv(memory_data[6]),
+        .css(effective_css), .inv(memory_data[6]),
         .red(red), .green(green), .blue(blue),
         .hsync(unused_hsync), .vsync(unused_vsync),
         .hblank(hblank), .vblank(vblank),

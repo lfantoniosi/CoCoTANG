@@ -16,9 +16,12 @@ module coco_cvbs_ntsc (
 );
     localparam [9:0] H_TOTAL        = 10'd858;
     localparam [9:0] H_SYNC         = 10'd64;
-    localparam [9:0] H_ACTIVE_START = 10'd122;
-    localparam [9:0] PICTURE_LEFT   = 10'd226;
-    localparam [9:0] PICTURE_RIGHT  = 10'd738;
+    // Advance the calibrated back-porch content by four 13.5 MHz samples.
+    // Horizontal sync remains fixed; burst and active picture move together.
+    localparam [9:0] BURST_START    = 10'd68;
+    localparam [9:0] BURST_END      = 10'd102;
+    localparam [9:0] PICTURE_LEFT   = 10'd222;
+    localparam [9:0] PICTURE_RIGHT  = 10'd734;
     localparam [8:0] V_TOTAL        = 9'd262;
     localparam [8:0] PICTURE_TOP    = 9'd44;
     localparam [8:0] PICTURE_BOTTOM = 9'd236;
@@ -55,7 +58,7 @@ module coco_cvbs_ntsc (
         (h_sample < H_SYNC);
 
     wire in_burst = (v_line >= 9'd9) &&
-                    (h_sample >= 10'd72) && (h_sample < 10'd106);
+                    (h_sample >= BURST_START) && (h_sample < BURST_END);
 
     // NTSC fSC is 455/2 times the line rate. At 135 MHz this accumulator
     // advances 91/3432 of an octant per clock and exactly half a carrier
