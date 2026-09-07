@@ -56,7 +56,7 @@
       "grid_items",
       "via_stitching"
     ],
-    "visible_layers": "ffffffff_ffffffff_fffffff5_ffffffff",
+    "visible_layers": "ffffffff_ffffffff_ffffffff_ffffffdf",
     "zone_display_mode": 0
   },
   "git": {

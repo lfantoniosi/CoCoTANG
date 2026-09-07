@@ -1,0 +1,28 @@
+[
+ {
+  "InstFile" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v",
+  "InstLine" : 1,
+  "InstName" : "top",
+  "ModuleFile" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v",
+  "ModuleLine" : 1,
+  "ModuleName" : "top",
+  "SubInsts" : [
+   {
+    "InstFile" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v",
+    "InstLine" : 18,
+    "InstName" : "video_pll",
+    "ModuleFile" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/gowin_rpll/clk270.v",
+    "ModuleLine" : 10,
+    "ModuleName" : "CLK270"
+   },
+   {
+    "InstFile" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v",
+    "InstLine" : 26,
+    "InstName" : "sdram_pll",
+    "ModuleFile" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/gowin_rpll/clk108.v",
+    "ModuleLine" : 10,
+    "ModuleName" : "CLK108"
+   }
+  ]
+ }
+]

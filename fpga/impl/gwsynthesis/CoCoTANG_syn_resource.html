@@ -1,0 +1,276 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+<head>
+<title>Hierarchy Module Resource</title>
+<style type="text/css">
+body { font-family: Verdana, Arial, sans-serif; font-size: 14px; }
+div#main_wrapper{ width: 100%; }
+h1 {text-align: center; }
+h1 {margin-top: 36px; }
+table, th, td { border: 1px solid #aaa; }
+table { border-collapse:collapse; margin-top: 10px; margin-bottom: 20px; width: 100%; }
+th, td { align = "center"; padding: 5px 2px 5px 5px; }
+th { color: #fff; font-weight: bold; background-color: #0084ff; }
+table td.label { width: 20%; white-space: nowrap; min-width: 20px; background-color: #dee8f4; }
+</style>
+</head>
+<body>
+<div id="main_wrapper">
+<div id="content">
+<h1>Hierarchy Module Resource</h1>
+<table>
+<tr>
+<th class="label">MODULE NAME</th>
+<th class="label">REG NUMBER</th>
+<th class="label">ALU NUMBER</th>
+<th class="label">LUT NUMBER</th>
+<th class="label">DSP NUMBER</th>
+<th class="label">BSRAM NUMBER</th>
+<th class="label">SSRAM NUMBER</th>
+<th class="label">ROM16 NUMBER</th>
+</tr>
+<tr>
+<td class="label">top (/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v)</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">4</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+</tr>
+<td class="label">&nbsp&nbsp&nbsp&nbsp|--clocks
+ (/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v)</td>
+<td align = "center">20</td>
+<td align = "center">7</td>
+<td align = "center">23</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+</tr>
+<td class="label">&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp|--sdram_pll
+ (/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco_clocks.v)</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+</tr>
+<td class="label">&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp|--video_pll
+ (/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco_clocks.v)</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+</tr>
+<td class="label">&nbsp&nbsp&nbsp&nbsp|--bus_mux
+ (/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v)</td>
+<td align = "center">59</td>
+<td align = "center">-</td>
+<td align = "center">26</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+</tr>
+<td class="label">&nbsp&nbsp&nbsp&nbsp|--sam
+ (/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v)</td>
+<td align = "center">51</td>
+<td align = "center">-</td>
+<td align = "center">55</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+</tr>
+<td class="label">&nbsp&nbsp&nbsp&nbsp|--startup
+ (/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v)</td>
+<td align = "center">13</td>
+<td align = "center">-</td>
+<td align = "center">25</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+</tr>
+<td class="label">&nbsp&nbsp&nbsp&nbsp|--sdram_controller
+ (/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v)</td>
+<td align = "center">54</td>
+<td align = "center">14</td>
+<td align = "center">65</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+</tr>
+<td class="label">&nbsp&nbsp&nbsp&nbsp|--memory
+ (/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v)</td>
+<td align = "center">77</td>
+<td align = "center">16</td>
+<td align = "center">15</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+</tr>
+<td class="label">&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp|--loader
+ (/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_memory.v)</td>
+<td align = "center">23</td>
+<td align = "center">14</td>
+<td align = "center">23</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+</tr>
+<td class="label">&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp|--reader
+ (/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_flash_loader.v)</td>
+<td align = "center">57</td>
+<td align = "center">-</td>
+<td align = "center">84</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+</tr>
+<td class="label">&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp|--arbiter
+ (/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_memory.v)</td>
+<td align = "center">71</td>
+<td align = "center">-</td>
+<td align = "center">114</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+</tr>
+<td class="label">&nbsp&nbsp&nbsp&nbsp|--vdg
+ (/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v)</td>
+<td align = "center">55</td>
+<td align = "center">7</td>
+<td align = "center">87</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+</tr>
+<td class="label">&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp|--character_rom
+ (/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_vdg.v)</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">1</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+</tr>
+<td class="label">&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp|--vdg
+ (/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_vdg.v)</td>
+<td align = "center">115</td>
+<td align = "center">7</td>
+<td align = "center">275</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+</tr>
+<td class="label">&nbsp&nbsp&nbsp&nbsp|--framebuffer
+ (/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v)</td>
+<td align = "center">2</td>
+<td align = "center">-</td>
+<td align = "center">17</td>
+<td align = "center">-</td>
+<td align = "center">18</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+</tr>
+<td class="label">&nbsp&nbsp&nbsp&nbsp|--hdmi_output
+ (/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v)</td>
+<td align = "center">-</td>
+<td align = "center">8</td>
+<td align = "center">32</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+</tr>
+<td class="label">&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp|--hdmi_encoder
+ (/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_hdmi.sv)</td>
+<td align = "center">30</td>
+<td align = "center">9</td>
+<td align = "center">34</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+</tr>
+<td class="label">&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp|--tmds_gen[0].tmds_channel
+ (/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/hdmi.sv)</td>
+<td align = "center">11</td>
+<td align = "center">6</td>
+<td align = "center">37</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+</tr>
+<td class="label">&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp|--tmds_gen[1].tmds_channel
+ (/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/hdmi.sv)</td>
+<td align = "center">11</td>
+<td align = "center">6</td>
+<td align = "center">30</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+</tr>
+<td class="label">&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp|--tmds_gen[2].tmds_channel
+ (/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/hdmi.sv)</td>
+<td align = "center">11</td>
+<td align = "center">6</td>
+<td align = "center">31</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+</tr>
+<td class="label">&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp|--serializer_inst
+ (/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_hdmi.sv)</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+</tr>
+<td class="label">&nbsp&nbsp&nbsp&nbsp|--ntsc_video.cvbs_framebuffer
+ (/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v)</td>
+<td align = "center">2</td>
+<td align = "center">-</td>
+<td align = "center">12</td>
+<td align = "center">-</td>
+<td align = "center">18</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+</tr>
+<td class="label">&nbsp&nbsp&nbsp&nbsp|--ntsc_video.encoder
+ (/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v)</td>
+<td align = "center">190</td>
+<td align = "center">69</td>
+<td align = "center">194</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+<td align = "center">-</td>
+</tr>
+</table>
+</div><!-- content -->
+</div><!-- main_wrapper -->
+</body>
+</html>
