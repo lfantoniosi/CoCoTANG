@@ -25,6 +25,8 @@
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_registers.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_mode_debug.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_video.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_native_video.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/coco3.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_framebuffer.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/sigma_delta_dac.v" type="verilog"/>

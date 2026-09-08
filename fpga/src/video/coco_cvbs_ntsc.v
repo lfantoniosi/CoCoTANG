@@ -8,10 +8,16 @@ module coco_cvbs_ntsc (
     input  wire        clk135,
     input  wire        clk270,
     input  wire        reset_n,
+    input  wire        high_resolution,
     input  wire [5:0]  framebuffer_data,
     input  wire [5:0]  border_rgb,
     input  wire [7:0]  active_height,
     output wire [15:0] framebuffer_addr,
+    output wire [9:0]  source_x,
+    output wire [7:0]  source_y,
+    output wire        source_valid,
+    output wire [7:0]  prefetch_y,
+    output wire        prefetch_valid,
     output reg         luma_out,
     output reg         chroma_out,
     output reg         cvbs_out
@@ -22,15 +28,15 @@ module coco_cvbs_ntsc (
     // Horizontal sync remains fixed; burst and active picture move together.
     localparam [9:0] BURST_START    = 10'd68;
     localparam [9:0] BURST_END      = 10'd102;
-    localparam [9:0] PICTURE_LEFT   = 10'd222;
-    localparam [9:0] PICTURE_RIGHT  = 10'd734;
-    localparam [9:0] BORDER_LEFT    = PICTURE_LEFT - 10'd64;
-    localparam [9:0] BORDER_RIGHT   = PICTURE_RIGHT + 10'd62;
+    wire [9:0] picture_left  = high_resolution ? 10'd158 : 10'd222;
+    wire [9:0] picture_right = high_resolution ? 10'd798 : 10'd734;
+    wire [9:0] border_left   = 10'd158;
+    wire [9:0] border_right  = high_resolution ? 10'd798 : 10'd796;
     localparam [8:0] V_TOTAL        = 9'd262;
     reg [7:0] height_meta = 8'd192;
-    reg [7:0] height_sample = 8'd192;
-    wire [8:0] picture_top = (9'd280 - {1'b0,height_sample}) >> 1;
-    wire [8:0] picture_bottom = picture_top + {1'b0,height_sample};
+    reg [8:0] picture_top = 9'd44;
+    reg [8:0] picture_bottom = 9'd236;
+    wire [8:0] next_picture_top = (9'd280 - {1'b0,height_meta}) >> 1;
     wire [8:0] border_top = picture_top >= 9'd27 ? picture_top - 9'd27 : 9'd0;
 
     localparam [5:0] LEVEL_SYNC     = 6'd0;
@@ -42,18 +48,26 @@ module coco_cvbs_ntsc (
     reg [9:0] h_sample = 10'd0;
     reg [8:0] v_line = 9'd0;
 
-    wire in_picture = (h_sample >= PICTURE_LEFT) &&
-                      (h_sample < PICTURE_RIGHT) &&
+    wire in_picture = (h_sample >= picture_left) &&
+                      (h_sample < picture_right) &&
                       (v_line >= picture_top) &&
                       (v_line < picture_bottom);
-    wire in_vdg_window = (h_sample >= BORDER_LEFT) &&
-                         (h_sample < BORDER_RIGHT) &&
+    wire in_vdg_window = (h_sample >= border_left) &&
+                         (h_sample < border_right) &&
                          (v_line >= border_top) &&
                          (v_line < V_TOTAL);
-    wire [8:0] picture_x = (h_sample - PICTURE_LEFT) >> 1;
+    wire [9:0] picture_x = high_resolution ? (h_sample-picture_left) :
+                                              ((h_sample-picture_left) >> 1);
     wire [8:0] picture_y_full = v_line - picture_top;
     wire [7:0] picture_y = picture_y_full[7:0];
     assign framebuffer_addr = in_picture ? {picture_y, picture_x[7:0]} : 16'd0;
+    assign source_x = picture_x;
+    assign source_y = picture_y;
+    assign source_valid = in_picture;
+    assign prefetch_y = (v_line + 1'b1 >= picture_top) ?
+                        (v_line + 1'b1 - picture_top) : 8'd0;
+    assign prefetch_valid = (v_line + 1'b1 >= picture_top) &&
+                            (v_line + 1'b1 < picture_bottom);
 
     // Six pre-equalizing half-lines, six broad-sync half-lines and six
     // post-equalizing half-lines, followed by conventional horizontal sync.
@@ -157,6 +171,7 @@ module coco_cvbs_ntsc (
     reg source_sync = 1'b1;
     reg source_burst = 1'b0;
     reg source_picture = 1'b0;
+    reg source_active = 1'b0;
     reg [2:0] source_carrier = 3'd0;
 
     reg pixel_sync = 1'b1;
@@ -217,7 +232,8 @@ module coco_cvbs_ntsc (
         if (!reset_n) begin
             sample_phase <= 4'd0;
             height_meta <= 8'd192;
-            height_sample <= 8'd192;
+            picture_top <= 9'd44;
+            picture_bottom <= 9'd236;
             h_sample <= 10'd0;
             v_line <= 9'd0;
             carrier_fraction <= 9'd0;
@@ -225,6 +241,7 @@ module coco_cvbs_ntsc (
             source_sync <= 1'b1;
             source_burst <= 1'b0;
             source_picture <= 1'b0;
+            source_active <= 1'b0;
             source_carrier <= 3'd0;
             pixel_sync <= 1'b1;
             pixel_burst <= 1'b0;
@@ -260,7 +277,8 @@ module coco_cvbs_ntsc (
             cvbs_level_135 <= LEVEL_SYNC;
         end else begin
             height_meta <= active_height;
-            height_sample <= height_meta;
+            picture_top <= next_picture_top;
+            picture_bottom <= next_picture_top + {1'b0,height_meta};
             luma_level_135 <= luma_level;
             chroma_level_135 <= chroma_level;
             cvbs_level_135 <= composite_level;
@@ -268,6 +286,7 @@ module coco_cvbs_ntsc (
             source_sync <= sync_tip;
             source_burst <= in_burst;
             source_picture <= in_vdg_window;
+            source_active <= in_picture;
             source_carrier <= carrier_octant;
 
             // Register the synchronous BSRAM output before RGB arithmetic.
@@ -278,7 +297,7 @@ module coco_cvbs_ntsc (
             pixel_carrier <= source_carrier;
             border_meta <= border_rgb;
             border_sample <= border_meta;
-            pixel_rgb <= in_picture ? framebuffer_data : border_sample;
+            pixel_rgb <= source_active ? framebuffer_data : border_sample;
 
             encoder_sync <= pixel_sync;
             encoder_burst <= pixel_burst;

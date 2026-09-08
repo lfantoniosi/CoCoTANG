@@ -27,6 +27,8 @@
         <File path="src/coco3/gime_registers.v" type="file.verilog" enable="1"/>
         <File path="src/coco3/gime_mode_debug.v" type="file.verilog" enable="1"/>
         <File path="src/coco3/gime_video.v" type="file.verilog" enable="1"/>
+        <File path="src/coco3/gime_scanline_buffer.v" type="file.verilog" enable="1"/>
+        <File path="src/coco3/gime_native_video.v" type="file.verilog" enable="1"/>
         <File path="src/coco3/coco3.v" type="file.verilog" enable="1"/>
         <File path="src/video/coco_framebuffer.v" type="file.verilog" enable="1"/>
         <File path="src/video/sigma_delta_dac.v" type="file.verilog" enable="1"/>

@@ -7,13 +7,14 @@ module sdram_arbiter #(
     input cpu_req, input cpu_wr, input [22:0] cpu_addr, input [7:0] cpu_wdata,
     output reg cpu_ack, output reg [7:0] cpu_rdata,
     input video_req, input [22:0] video_addr,
-    output reg video_ack, output reg [7:0] video_rdata,
+    output reg video_ack, output reg [31:0] video_rdata,
     input loader_req, input [22:0] loader_addr, input [7:0] loader_wdata,
     output reg loader_ack,
 
     output reg rd, output reg wr, output reg refresh,
     output reg [22:0] addr, output reg [15:0] din, output reg [1:0] wdm,
-    input [15:0] dout, input data_ready, input busy, input enabled
+    input [15:0] dout, input [31:0] dout32,
+    input data_ready, input busy, input enabled
 );
     localparam IDLE=3'd0, ACTIVE_READ=3'd1, ACTIVE_WRITE=3'd2,
                WAIT_DROP=3'd3, ACTIVE_REFRESH=3'd4;
@@ -55,7 +56,7 @@ module sdram_arbiter #(
             rd <= 1'b0; wr <= 1'b0; refresh <= 1'b0;
             addr <= 23'd0; din <= 16'd0; wdm <= 2'b11;
             cpu_ack <= 1'b0; video_ack <= 1'b0; loader_ack <= 1'b0;
-            cpu_rdata <= 8'hff; video_rdata <= 8'h00;
+            cpu_rdata <= 8'hff; video_rdata <= 32'h00000000;
         end else begin
             rd <= 1'b0; wr <= 1'b0; refresh <= 1'b0;
             cpu_ack <= 1'b0; video_ack <= 1'b0; loader_ack <= 1'b0;
@@ -83,7 +84,10 @@ module sdram_arbiter #(
                             cpu_rdata <= byte_lane ? dout[15:8] : dout[7:0];
                             cpu_ack <= 1'b1;
                         end else begin
-                            video_rdata <= byte_lane ? dout[15:8] : dout[7:0];
+                            // A single SDRAM activation returns the complete
+                            // aligned 32-bit word.  Scanline renderers consume
+                            // all four bytes before requesting another word.
+                            video_rdata <= dout32;
                             video_ack <= 1'b1;
                         end
                         state <= WAIT_DROP;

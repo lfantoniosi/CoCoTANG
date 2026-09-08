@@ -24,6 +24,7 @@ module coco3 #(
     output            core_data_oe,
 
     input       [7:0] video_memory_data,
+    input      [31:0] video_memory_data32,
     input             video_memory_valid,
     output            video_memory_request,
     output     [22:0] video_memory_addr,
@@ -38,7 +39,22 @@ module coco3 #(
     output            vblank,
     output            framebuffer_write,
     output     [15:0] framebuffer_write_addr,
-    output      [5:0] framebuffer_write_data
+    output      [5:0] framebuffer_write_data,
+
+    input             hdmi_read_clk,
+    input       [9:0] hdmi_source_x,
+    input       [7:0] hdmi_source_y,
+    input             hdmi_source_valid,
+    input       [7:0] hdmi_prefetch_y,
+    input             hdmi_prefetch_valid,
+    output      [5:0] hdmi_pixel_data,
+    input             cvbs_read_clk,
+    input       [9:0] cvbs_source_x,
+    input       [7:0] cvbs_source_y,
+    input             cvbs_source_valid,
+    input       [7:0] cvbs_prefetch_y,
+    input             cvbs_prefetch_valid,
+    output      [5:0] cvbs_pixel_data
 );
     wire core_reset_n = reset_n && cpu_reset_n;
 
@@ -105,22 +121,85 @@ module coco3 #(
         end
     end
 
-    gime_video video (
-        .clk(clk), .reset_n(core_reset_n),
+    function [5:0] palette_rgb;
+        input [5:0] color;
+        begin palette_rgb={color[5],color[2],color[4],color[1],color[3],color[0]}; end
+    endfunction
+    assign border_rgb=palette_rgb(border_color);
+    assign framebuffer_write=1'b0;
+    assign framebuffer_write_addr=16'd0;
+    assign framebuffer_write_data=6'd0;
+
+    wire hdmi_req,cvbs_req;
+    wire [22:0] hdmi_addr,cvbs_addr;
+    reg hdmi_valid=0,cvbs_valid=0;
+    gime_scanline_buffer hdmi_lines (
+        .clk(clk),.reset_n(core_reset_n),
         .bit_plane(effective_bit_plane), .hres(effective_hres),
         .cres(effective_cres), .lines_per_row_code(effective_lines_per_row_code),
-        .lpf(effective_lpf), .screen_base(effective_screen_base),
+        .screen_base(effective_screen_base),
         .horizontal_offset(horizontal_offset), .palettes(palettes),
-        .border_color(border_color), .memory_data(video_memory_data),
-        .memory_data_valid(video_memory_valid),
-        .video_read_request(video_memory_request), .memory_addr(video_memory_addr),
-        .framebuffer_write(framebuffer_write),
-        .framebuffer_write_addr(framebuffer_write_addr),
-        .framebuffer_write_data(framebuffer_write_data),
-        .active_height(active_height), .hs_n(hs_n), .fs_n(fs_n),
-        .hblank(hblank), .vblank(vblank), .red(red), .green(green),
-        .blue(blue), .border_rgb(border_rgb)
+        .read_clk(hdmi_read_clk),.read_x(hdmi_source_x),
+        .display_y(hdmi_source_y),.display_valid(hdmi_source_valid),
+        .prefetch_y(hdmi_prefetch_y),.prefetch_valid(hdmi_prefetch_valid),
+        .pixel_data(hdmi_pixel_data),.memory_request(hdmi_req),.memory_addr(hdmi_addr),
+        .memory_data(video_memory_data32),.memory_valid(hdmi_valid)
+    );
+    gime_scanline_buffer cvbs_lines (
+        .clk(clk),.reset_n(core_reset_n),
+        .bit_plane(effective_bit_plane),.hres(effective_hres),.cres(effective_cres),
+        .lines_per_row_code(effective_lines_per_row_code),.screen_base(effective_screen_base),
+        .horizontal_offset(horizontal_offset),.palettes(palettes),
+        .read_clk(cvbs_read_clk),.read_x(cvbs_source_x),
+        .display_y(cvbs_source_y),.display_valid(cvbs_source_valid),
+        .prefetch_y(cvbs_prefetch_y),.prefetch_valid(cvbs_prefetch_valid),
+        .pixel_data(cvbs_pixel_data),.memory_request(cvbs_req),.memory_addr(cvbs_addr),
+        .memory_data(video_memory_data32),.memory_valid(cvbs_valid)
     );
 
+    // Lock ownership from request through response; wait for the selected
+    // renderer to drop its request before accepting another transaction.
+    localparam M_IDLE=2'd0,M_LAUNCH=2'd1,M_WAIT=2'd2,M_DROP=2'd3;
+    reg [1:0] mux_state=0;
+    reg mux_owner=0;
+    reg round_robin=0;
+    reg video_request_reg=0;
+    reg [22:0] video_addr_reg=0;
+    assign video_memory_request=video_request_reg;
+    assign video_memory_addr=video_addr_reg;
+    always @(posedge clk or negedge core_reset_n) begin
+        if (!core_reset_n) begin
+            mux_state<=M_IDLE; mux_owner<=0; round_robin<=0;
+            video_request_reg<=0; video_addr_reg<=0; hdmi_valid<=0; cvbs_valid<=0;
+        end else begin
+            video_request_reg<=0; hdmi_valid<=0; cvbs_valid<=0;
+            case (mux_state)
+                M_IDLE: if (hdmi_req || cvbs_req) begin
+                    mux_owner <= hdmi_req && cvbs_req ? round_robin : cvbs_req;
+                    video_addr_reg <= (hdmi_req && (!cvbs_req || !round_robin)) ? hdmi_addr : cvbs_addr;
+                    mux_state<=M_LAUNCH;
+                end
+                M_LAUNCH: begin video_request_reg<=1; mux_state<=M_WAIT; end
+                M_WAIT: if (video_memory_valid) begin
+                    if (mux_owner) cvbs_valid<=1; else hdmi_valid<=1;
+                    round_robin<=!mux_owner; mux_state<=M_DROP;
+                end
+                M_DROP: if (mux_owner ? !cvbs_req : !hdmi_req) mux_state<=M_IDLE;
+            endcase
+        end
+    end
+
+    function [7:0] line_count;
+        input [1:0] value;
+        begin case(value) 2'b00:line_count=192; 2'b01:line_count=199;
+              2'b11:line_count=225; default:line_count=0; endcase end
+    endfunction
+    assign active_height=line_count(effective_lpf);
+    gime_native_video native_video(
+        .clk(clk),.reset_n(core_reset_n),.active_height(active_height),
+        .pixel_rgb(hdmi_pixel_data),.hs_n(hs_n),.fs_n(fs_n),
+        .hblank(hblank),.vblank(vblank),.red(red),.green(green),.blue(blue));
+
     wire unused_vertical_scroll = ^vertical_scroll;
+    wire unused_video_byte = ^video_memory_data;
 endmodule

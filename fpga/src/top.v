@@ -1,5 +1,5 @@
 module top #(
- parameter integer COCO_MODEL = 2,
+ parameter integer COCO_MODEL = 3,
  parameter integer ANALOG_VIDEO_MODE = 1,
  parameter integer SDRAM_TEST_FILL = 1,
  parameter integer DEBUG_S2_VIDEO_MODE = 1
@@ -37,18 +37,19 @@ module top #(
  assign halt_drive=!system_ready;
 
  wire sd_rd,sd_wr,sd_refresh,sd_data_ready,sd_busy; wire [22:0] sd_addr;
- wire [15:0] sd_din,sd_dout; wire [1:0] sd_wdm; wire [31:0] unused_sd_dout32;
+ wire [15:0] sd_din,sd_dout; wire [1:0] sd_wdm; wire [31:0] sd_dout32;
  sdram sdram_controller(.SDRAM_DQ(IO_sdram_dq),.SDRAM_A(O_sdram_addr),.SDRAM_BA(O_sdram_ba),
   .SDRAM_nCS(O_sdram_cs_n),.SDRAM_nWE(O_sdram_wen_n),.SDRAM_nRAS(O_sdram_ras_n),
   .SDRAM_nCAS(O_sdram_cas_n),.SDRAM_CLK(O_sdram_clk),.SDRAM_CKE(O_sdram_cke),
   .SDRAM_DQM(O_sdram_dqm),.clk(clk108),.clk_sdram(clk108p),.resetn(sdram_reset_n),
   .rd(sd_rd),.wr(sd_wr),.refresh(sd_refresh),.addr(sd_addr),.din(sd_din),.wdm(sd_wdm),
-  .dout(sd_dout),.dout32(unused_sd_dout32),.data_ready(sd_data_ready),.busy(sd_busy),
+  .dout(sd_dout),.dout32(sd_dout32),.data_ready(sd_data_ready),.busy(sd_busy),
   .enabled(sdram_enabled));
 
  wire cpu_mem_read,cpu_mem_write,cpu_mem_is_rom;
  wire [22:0] cpu_mem_addr,video_memory_addr;
  wire [7:0] video_memory_data,cpu_read_data,core_read_data;
+ wire [31:0] video_memory_data32;
  wire cpu_data_oe,core_data_oe,video_memory_valid,video_memory_request;
  coco_memory #(.TEST_FILL(SDRAM_TEST_FILL),
   .ROM_BYTES(COCO_MODEL == 3 ? 32768 : 16384)) memory(
@@ -59,10 +60,12 @@ module top #(
   .cpu_rdata(cpu_read_data),.cpu_data_oe(cpu_data_oe),
   .video_read_request(video_memory_request),
   .video_addr(video_memory_addr),.video_data(video_memory_data),
+  .video_data32(video_memory_data32),
   .video_data_valid(video_memory_valid),.loader_done(loader_done),
   .mspi_cs(mspi_cs),.mspi_sclk(mspi_sclk),.mspi_miso(mspi_miso),.mspi_mosi(mspi_mosi),
   .sdram_enabled(sdram_enabled),.sd_rd(sd_rd),.sd_wr(sd_wr),.sd_refresh(sd_refresh),
   .sd_addr(sd_addr),.sd_din(sd_din),.sd_wdm(sd_wdm),.sd_dout(sd_dout),
+  .sd_dout32(sd_dout32),
   .sd_data_ready(sd_data_ready),.sd_busy(sd_busy));
  assign cpu_data=core_data_oe?core_read_data:cpu_data_oe?cpu_read_data:8'bz;
 
@@ -70,6 +73,12 @@ module top #(
  wire [5:0] vdg_border_rgb;
  wire [7:0] video_active_height;
  wire framebuffer_write; wire [15:0] framebuffer_write_addr; wire [5:0] framebuffer_write_data;
+ wire [15:0] framebuffer_read_addr,cvbs_framebuffer_addr;
+ wire [5:0] framebuffer_read_data,cvbs_framebuffer_data;
+ wire [9:0] hdmi_source_x,cvbs_source_x;
+ wire [7:0] hdmi_source_y,cvbs_source_y,hdmi_prefetch_y,cvbs_prefetch_y;
+ wire hdmi_source_valid,cvbs_source_valid,hdmi_prefetch_valid,cvbs_prefetch_valid;
+ wire [5:0] machine_hdmi_pixel,machine_cvbs_pixel;
  generate
   if (COCO_MODEL == 2) begin : coco2_machine
    coco2 #(.DEBUG_S2_VIDEO_MODE(DEBUG_S2_VIDEO_MODE)) machine(
@@ -87,6 +96,8 @@ module top #(
     .framebuffer_write(framebuffer_write),
     .framebuffer_write_addr(framebuffer_write_addr),
     .framebuffer_write_data(framebuffer_write_data));
+   assign machine_hdmi_pixel=framebuffer_read_data;
+   assign machine_cvbs_pixel=cvbs_framebuffer_data;
   end else if (COCO_MODEL == 3) begin : coco3_machine
    coco3 #(.DEBUG_S2_VIDEO_MODE(DEBUG_S2_VIDEO_MODE)) machine(
     .clk(clk108),.reset_n(board_reset_n),.cpu_reset_n(cpu_reset_n),.s2(s2),
@@ -95,14 +106,21 @@ module top #(
     .cpu_mem_read(cpu_mem_read),.cpu_mem_write(cpu_mem_write),
     .cpu_mem_is_rom(cpu_mem_is_rom),.cpu_mem_addr(cpu_mem_addr),
     .core_rdata(core_read_data),.core_data_oe(core_data_oe),
-    .video_memory_data(video_memory_data),.video_memory_valid(video_memory_valid),
+    .video_memory_data(video_memory_data),.video_memory_data32(video_memory_data32),
+    .video_memory_valid(video_memory_valid),
     .video_memory_request(video_memory_request),
     .video_memory_addr(video_memory_addr),.active_height(video_active_height),
     .hs_n(hs_n),.fs_n(fs_n),.red(vdg_red),.green(vdg_green),.blue(vdg_blue),
     .border_rgb(vdg_border_rgb),.hblank(vdg_hblank),.vblank(vdg_vblank),
     .framebuffer_write(framebuffer_write),
     .framebuffer_write_addr(framebuffer_write_addr),
-    .framebuffer_write_data(framebuffer_write_data));
+    .framebuffer_write_data(framebuffer_write_data),
+    .hdmi_read_clk(clkin),.hdmi_source_x(hdmi_source_x),.hdmi_source_y(hdmi_source_y),
+    .hdmi_source_valid(hdmi_source_valid),.hdmi_prefetch_y(hdmi_prefetch_y),
+    .hdmi_prefetch_valid(hdmi_prefetch_valid),.hdmi_pixel_data(machine_hdmi_pixel),
+    .cvbs_read_clk(clk135),.cvbs_source_x(cvbs_source_x),.cvbs_source_y(cvbs_source_y),
+    .cvbs_source_valid(cvbs_source_valid),.cvbs_prefetch_y(cvbs_prefetch_y),
+    .cvbs_prefetch_valid(cvbs_prefetch_valid),.cvbs_pixel_data(machine_cvbs_pixel));
   end else begin : unsupported_machine
    assign sam_s = 3'd7;
    assign e_out = 1'b0;
@@ -129,32 +147,48 @@ module top #(
    assign framebuffer_write = 1'b0;
    assign framebuffer_write_addr = 16'd0;
    assign framebuffer_write_data = 6'd0;
+   assign machine_hdmi_pixel=6'd0;
+   assign machine_cvbs_pixel=6'd0;
   end
  endgenerate
- wire [15:0] framebuffer_read_addr; wire [5:0] framebuffer_read_data;
- wire [15:0] cvbs_framebuffer_addr; wire [5:0] cvbs_framebuffer_data;
- coco_framebuffer framebuffer(.write_clk(clk108),.write_en(framebuffer_write),
-  .write_addr(framebuffer_write_addr),.write_data(framebuffer_write_data),.read_clk(clk135),
-  .hdmi_addr(framebuffer_read_addr),.hdmi_data(framebuffer_read_data),
-  .cvbs_addr(cvbs_framebuffer_addr),.cvbs_data(cvbs_framebuffer_data));
+ generate
+  if (COCO_MODEL == 2) begin : coco2_frame_store
+   coco_framebuffer framebuffer(.write_clk(clk108),.write_en(framebuffer_write),
+    .write_addr(framebuffer_write_addr),.write_data(framebuffer_write_data),.read_clk(clk135),
+    .hdmi_addr(framebuffer_read_addr),.hdmi_data(framebuffer_read_data),
+    .cvbs_addr(cvbs_framebuffer_addr),.cvbs_data(cvbs_framebuffer_data));
+  end else begin : no_frame_store
+   assign framebuffer_read_data=6'd0;
+   assign cvbs_framebuffer_data=6'd0;
+  end
+ endgenerate
  coco_hdmi hdmi_output(.pixel_clk(clkin),.serial_clk(clk135),.reset(!board_reset_n),
-  .framebuffer_data(framebuffer_read_data),.border_rgb(vdg_border_rgb),
+  .high_resolution(COCO_MODEL == 3),.framebuffer_data(machine_hdmi_pixel),.border_rgb(vdg_border_rgb),
   .active_height(video_active_height),
   .framebuffer_addr(framebuffer_read_addr),
+  .source_x(hdmi_source_x),.source_y(hdmi_source_y),.source_valid(hdmi_source_valid),
+  .prefetch_y(hdmi_prefetch_y),.prefetch_valid(hdmi_prefetch_valid),
   .tmds_clk_p(tmds_clk_p),.tmds_clk_n(tmds_clk_n),.tmds_data_p(tmds_data_p),
   .tmds_data_n(tmds_data_n));
  generate
   if (ANALOG_VIDEO_MODE == 0) begin : component_video
    assign cvbs_framebuffer_addr = 16'd0;
+   assign cvbs_source_x = 10'd0;
+   assign cvbs_source_y = 8'd0;
+   assign cvbs_source_valid = 1'b0;
+   assign cvbs_prefetch_y = 8'd0;
+   assign cvbs_prefetch_valid = 1'b0;
    coco_analog_video #(.OUTPUT_MODE(0)) analog_output(
     .clk270(clk270),.reset_n(board_reset_n),
     .red(vdg_red),.green(vdg_green),.blue(vdg_blue),.hblank(vdg_hblank),
     .vblank(vdg_vblank),.hs_n(hs_n),.y_out(y_out),.pb_out(pb_out),.pr_out(pr_out));
   end else begin : ntsc_video
    coco_cvbs_ntsc encoder(.clk135(clk135),.clk270(clk270),.reset_n(board_reset_n),
-    .framebuffer_data(cvbs_framebuffer_data),.border_rgb(vdg_border_rgb),
+    .high_resolution(COCO_MODEL == 3),.framebuffer_data(machine_cvbs_pixel),.border_rgb(vdg_border_rgb),
     .active_height(video_active_height),
     .framebuffer_addr(cvbs_framebuffer_addr),
+    .source_x(cvbs_source_x),.source_y(cvbs_source_y),.source_valid(cvbs_source_valid),
+    .prefetch_y(cvbs_prefetch_y),.prefetch_valid(cvbs_prefetch_valid),
     .luma_out(y_out),.chroma_out(pb_out),.cvbs_out(pr_out));
   end
  endgenerate

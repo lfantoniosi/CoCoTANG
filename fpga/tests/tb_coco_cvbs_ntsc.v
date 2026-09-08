@@ -3,9 +3,13 @@ module tb_coco_cvbs_ntsc;
     reg clk270 = 1'b0;
     reg clk135 = 1'b0;
     reg reset_n = 1'b0;
+    reg high_resolution = 1'b0;
     reg [5:0] framebuffer_data = 6'b111111;
     reg [5:0] border_rgb = 6'b001100;
     wire [15:0] framebuffer_addr;
+    wire [9:0] source_x;
+    wire [7:0] source_y,prefetch_y;
+    wire source_valid,prefetch_valid;
     wire luma_out, chroma_out, cvbs_out;
     integer errors = 0;
     integer ones;
@@ -14,9 +18,11 @@ module tb_coco_cvbs_ntsc;
     reg [2:0] saved_octant;
 
     coco_cvbs_ntsc dut(
-        .clk135(clk135),.clk270(clk270),.reset_n(reset_n),
+        .clk135(clk135),.clk270(clk270),.reset_n(reset_n),.high_resolution(high_resolution),
         .framebuffer_data(framebuffer_data),.border_rgb(border_rgb),.active_height(8'd192),
         .framebuffer_addr(framebuffer_addr),
+        .source_x(source_x),.source_y(source_y),.source_valid(source_valid),
+        .prefetch_y(prefetch_y),.prefetch_valid(prefetch_valid),
         .luma_out(luma_out),.chroma_out(chroma_out),.cvbs_out(cvbs_out));
 
     always #1.85185 clk270 = ~clk270;
@@ -67,6 +73,17 @@ module tb_coco_cvbs_ntsc;
         if (framebuffer_addr != 16'd1) begin $display("framebuffer horizontal scale"); errors = errors + 1; end
         seek(10'd732,9'd235);
         if (framebuffer_addr != {8'd191,8'd255}) begin $display("framebuffer last pixel: %h",framebuffer_addr); errors = errors + 1; end
+
+        high_resolution = 1'b1;
+        seek(10'd158,9'd44);
+        if (!source_valid || source_x != 10'd0 || source_y != 8'd0) begin
+            $display("640-wide first pixel: %0d,%0d",source_x,source_y); errors=errors+1;
+        end
+        seek(10'd797,9'd44);
+        if (!source_valid || !dut.in_vdg_window || source_x != 10'd639) begin
+            $display("640-wide last pixel: %0d",source_x); errors=errors+1;
+        end
+        high_resolution = 1'b0;
 
         // Move to an ordinary blank interval and allow the encoder pipeline
         // to settle. Level 10 in a modulo-32 DAC is exactly 40 ones/128.
