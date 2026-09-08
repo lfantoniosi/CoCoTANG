@@ -413,4 +413,3 @@ module mc6847_char_rom (
     always @(posedge clk)
         data <= memory[addr[9:0]];
 endmodule
-

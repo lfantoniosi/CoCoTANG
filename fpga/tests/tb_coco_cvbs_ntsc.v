@@ -15,7 +15,7 @@ module tb_coco_cvbs_ntsc;
 
     coco_cvbs_ntsc dut(
         .clk135(clk135),.clk270(clk270),.reset_n(reset_n),
-        .framebuffer_data(framebuffer_data),.border_rgb(border_rgb),
+        .framebuffer_data(framebuffer_data),.border_rgb(border_rgb),.active_height(8'd192),
         .framebuffer_addr(framebuffer_addr),
         .luma_out(luma_out),.chroma_out(chroma_out),.cvbs_out(cvbs_out));
 

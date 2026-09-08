@@ -16,9 +16,18 @@ module coco2 #(
     output            q,
     output            e_rise,
     output            e_fall,
+    output            cpu_mem_read,
+    output            cpu_mem_write,
+    output            cpu_mem_is_rom,
+    output     [22:0] cpu_mem_addr,
+    output      [7:0] core_rdata,
+    output            core_data_oe,
 
     input       [7:0] video_memory_data,
-    output     [15:0] video_memory_addr,
+    input             video_memory_valid,
+    output            video_memory_request,
+    output     [22:0] video_memory_addr,
+    output      [7:0] active_height,
     output            hs_n,
     output            fs_n,
     output      [7:0] red,
@@ -48,6 +57,18 @@ module coco2 #(
         .all_ram(sam_all_ram)
     );
 
+    assign cpu_mem_read = cpu_rw_n && (sam_s <= 3'd2);
+    assign cpu_mem_write = !cpu_rw_n && (sam_s == 3'd0);
+    assign cpu_mem_is_rom = sam_s == 3'd1 || sam_s == 3'd2;
+    assign cpu_mem_addr = (sam_s == 3'd1) ?
+                          23'h002000 + {10'd0,cpu_addr[12:0]} :
+                          (sam_s == 3'd2) ? {10'd0,cpu_addr[12:0]} :
+                                           {7'd0,cpu_addr};
+    assign core_rdata = 8'hff;
+    assign core_data_oe = 1'b0;
+    assign active_height = 8'd192;
+    assign video_memory_request = 1'b0;
+
     wire [2:0] debug_video_mode;
     wire debug_an_g;
     wire debug_css;
@@ -59,13 +80,15 @@ module coco2 #(
     );
 
     wire [7:0] unused_vdg_cvbs;
+    wire [15:0] vdg_memory_addr;
+    assign video_memory_addr = {7'd0,vdg_memory_addr};
     coco_vdg #(.DEBUG_VIDEO_MODE(DEBUG_S2_VIDEO_MODE)) vdg (
         .clk(clk), .reset_n(core_reset_n), .e_fall(e_fall),
         .cpu_rw_n(cpu_rw_n), .cpu_addr(cpu_addr), .cpu_data(cpu_data),
         .sam_video_mode(effective_video_mode),
         .debug_an_g(debug_an_g), .debug_css(debug_css),
         .sam_video_offset(sam_video_offset),
-        .memory_data(video_memory_data), .memory_addr(video_memory_addr),
+        .memory_data(video_memory_data), .memory_addr(vdg_memory_addr),
         .hs_n(hs_n), .fs_n(fs_n), .red(red), .green(green), .blue(blue),
         .border_rgb(border_rgb), .hblank(hblank), .vblank(vblank),
         .cvbs(unused_vdg_cvbs), .pixel_capture(framebuffer_write),

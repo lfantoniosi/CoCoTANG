@@ -68,10 +68,15 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 /Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_flash_loader.v<br>
 /Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/sdram_test_fill.v<br>
 /Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_memory.v<br>
-/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847_char_rom.v<br>
+/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847_char_rom.v<br>
 /Users/felipe/src/fpga/CoCoTANG/fpga/src/video/video_mode_debug.v<br>
-/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_vdg.v<br>
+/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco_vdg.v<br>
 /Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco2.v<br>
+/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_timing.v<br>
+/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_registers.v<br>
+/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_mode_debug.v<br>
+/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_video.v<br>
+/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/coco3.v<br>
 /Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_framebuffer.v<br>
 /Users/felipe/src/fpga/CoCoTANG/fpga/src/video/sigma_delta_dac.v<br>
 /Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_analog_video.v<br>
@@ -88,7 +93,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 /Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/serializer.sv<br>
 /Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_hdmi.sv<br>
 /Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v<br>
-/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd<br>
+/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847.vhd<br>
 </td>
 </tr>
 <tr>
@@ -113,7 +118,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label">Created Time</td>
-<td>Mon Sep  7 13:35:46 2026
+<td>Mon Sep  7 14:37:42 2026
 </td>
 </tr>
 <tr>
@@ -129,11 +134,11 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label">Synthesis Process</td>
-<td>Running parser:<br/>&nbsp;&nbsp;&nbsp;&nbsp;CPU time = 0h 0m 0.093s, Elapsed time = 0h 0m 0.093s, Peak memory usage = 51.922MB<br/>Running netlist conversion:<br/>&nbsp;&nbsp;&nbsp;&nbsp;CPU time = 0h 0m 0s, Elapsed time = 0h 0m 0s, Peak memory usage = 0MB<br/>Running device independent optimization:<br/>&nbsp;&nbsp;&nbsp;&nbsp;Optimizing Phase 0: CPU time = 0h 0m 0.028s, Elapsed time = 0h 0m 0.028s, Peak memory usage = 52.641MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Optimizing Phase 1: CPU time = 0h 0m 0.011s, Elapsed time = 0h 0m 0.011s, Peak memory usage = 52.781MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Optimizing Phase 2: CPU time = 0h 0m 0.054s, Elapsed time = 0h 0m 0.063s, Peak memory usage = 52.984MB<br/>Running inference:<br/>&nbsp;&nbsp;&nbsp;&nbsp;Inferring Phase 0: CPU time = 0h 0m 0.052s, Elapsed time = 0h 0m 0.053s, Peak memory usage = 53.516MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Inferring Phase 1: CPU time = 0h 0m 0.002s, Elapsed time = 0h 0m 0.002s, Peak memory usage = 53.688MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Inferring Phase 2: CPU time = 0h 0m 0.001s, Elapsed time = 0h 0m 0.001s, Peak memory usage = 53.891MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Inferring Phase 3: CPU time = 0h 0m 0.004s, Elapsed time = 0h 0m 0.004s, Peak memory usage = 54.000MB<br/>Running technical mapping:<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 0: CPU time = 0h 0m 0.059s, Elapsed time = 0h 0m 0.059s, Peak memory usage = 54.141MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 1: CPU time = 0h 0m 0.011s, Elapsed time = 0h 0m 0.011s, Peak memory usage = 54.141MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 2: CPU time = 0h 0m 0.01s, Elapsed time = 0h 0m 0.01s, Peak memory usage = 54.141MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 3: CPU time = 0h 0m 2s, Elapsed time = 0h 0m 2s, Peak memory usage = 101.828MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 4: CPU time = 0h 0m 0.104s, Elapsed time = 0h 0m 0.104s, Peak memory usage = 102.078MB<br/>Generate output files:<br/>&nbsp;&nbsp;&nbsp;&nbsp;CPU time = 0h 0m 0.039s, Elapsed time = 0h 0m 0.039s, Peak memory usage = 119.875MB<br/></td>
+<td>Running parser:<br/>&nbsp;&nbsp;&nbsp;&nbsp;CPU time = 0h 0m 0.096s, Elapsed time = 0h 0m 0.096s, Peak memory usage = 53.078MB<br/>Running netlist conversion:<br/>&nbsp;&nbsp;&nbsp;&nbsp;CPU time = 0h 0m 0s, Elapsed time = 0h 0m 0s, Peak memory usage = 0MB<br/>Running device independent optimization:<br/>&nbsp;&nbsp;&nbsp;&nbsp;Optimizing Phase 0: CPU time = 0h 0m 0.03s, Elapsed time = 0h 0m 0.03s, Peak memory usage = 53.766MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Optimizing Phase 1: CPU time = 0h 0m 0.011s, Elapsed time = 0h 0m 0.011s, Peak memory usage = 53.906MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Optimizing Phase 2: CPU time = 0h 0m 0.057s, Elapsed time = 0h 0m 0.057s, Peak memory usage = 54.922MB<br/>Running inference:<br/>&nbsp;&nbsp;&nbsp;&nbsp;Inferring Phase 0: CPU time = 0h 0m 0.01s, Elapsed time = 0h 0m 0.01s, Peak memory usage = 55.406MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Inferring Phase 1: CPU time = 0h 0m 0.001s, Elapsed time = 0h 0m 0.001s, Peak memory usage = 55.578MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Inferring Phase 2: CPU time = 0h 0m 0.001s, Elapsed time = 0h 0m 0.001s, Peak memory usage = 55.922MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Inferring Phase 3: CPU time = 0h 0m 0.005s, Elapsed time = 0h 0m 0.01s, Peak memory usage = 56.000MB<br/>Running technical mapping:<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 0: CPU time = 0h 0m 0.064s, Elapsed time = 0h 0m 0.064s, Peak memory usage = 56.094MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 1: CPU time = 0h 0m 0.01s, Elapsed time = 0h 0m 0.01s, Peak memory usage = 56.094MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 2: CPU time = 0h 0m 0.009s, Elapsed time = 0h 0m 0.009s, Peak memory usage = 56.094MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 3: CPU time = 0h 0m 3s, Elapsed time = 0h 0m 3s, Peak memory usage = 102.219MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 4: CPU time = 0h 0m 0.106s, Elapsed time = 0h 0m 0.106s, Peak memory usage = 102.375MB<br/>Generate output files:<br/>&nbsp;&nbsp;&nbsp;&nbsp;CPU time = 0h 0m 0.036s, Elapsed time = 0h 0m 0.036s, Peak memory usage = 118.375MB<br/></td>
 </tr>
 <tr>
 <td class="label">Total Time and Memory Usage</td>
-<td>CPU time = 0h 0m 2s, Elapsed time = 0h 0m 2s, Peak memory usage = 119.875MB</td>
+<td>CPU time = 0h 0m 3s, Elapsed time = 0h 0m 3s, Peak memory usage = 118.375MB</td>
 </tr>
 </table>
 <h1><a name="resource">Resource</a></h1>
@@ -173,19 +178,19 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label"><b>Register </b></td>
-<td>897</td>
+<td>965</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspDFF</td>
-<td>11</td>
+<td>30</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspDFFE</td>
-<td>47</td>
+<td>59</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspDFFS</td>
-<td>20</td>
+<td>52</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspDFFSE</td>
@@ -193,11 +198,11 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspDFFR</td>
-<td>215</td>
+<td>212</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspDFFRE</td>
-<td>57</td>
+<td>60</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspDFFP</td>
@@ -205,15 +210,15 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspDFFPE</td>
-<td>108</td>
+<td>109</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspDFFC</td>
-<td>95</td>
+<td>93</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspDFFCE</td>
-<td>336</td>
+<td>342</td>
 </tr>
 <tr>
 <td class="label"><b>LUT </b></td>
@@ -221,31 +226,31 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspLUT2</td>
-<td>177</td>
+<td>143</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspLUT3</td>
-<td>496</td>
+<td>483</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspLUT4</td>
-<td>634</td>
+<td>681</td>
 </tr>
 <tr>
 <td class="label"><b>ALU </b></td>
-<td>169</td>
+<td>153</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspALU</td>
-<td>169</td>
+<td>153</td>
 </tr>
 <tr>
 <td class="label"><b>INV </b></td>
-<td>32</td>
+<td>34</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspINV</td>
-<td>32</td>
+<td>34</td>
 </tr>
 <tr>
 <td class="label"><b>IOLOGIC </b></td>
@@ -257,11 +262,11 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label"><b>BSRAM </b></td>
-<td>37</td>
+<td>25</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspSDPB</td>
-<td>36</td>
+<td>24</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbsppROM</td>
@@ -285,13 +290,13 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label">Logic</td>
-<td>1508(1339 LUT, 169 ALU) / 20736</td>
+<td>1494(1341 LUT, 153 ALU) / 20736</td>
 <td>8%</td>
 </tr>
 <tr>
 <td class="label">Register</td>
-<td>897 / 15915</td>
-<td>6%</td>
+<td>965 / 15915</td>
+<td>7%</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp--Register as Latch</td>
@@ -300,13 +305,13 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp--Register as FF</td>
-<td>897 / 15915</td>
-<td>6%</td>
+<td>965 / 15915</td>
+<td>7%</td>
 </tr>
 <tr>
 <td class="label">BSRAM</td>
-<td>37 / 46</td>
-<td>81%</td>
+<td>25 / 46</td>
+<td>55%</td>
 </tr>
 </table>
 <h1><a name="timing">Timing</a></h1>
@@ -447,7 +452,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>1</td>
 <td>clkin</td>
 <td>27.000(MHz)</td>
-<td>127.097(MHz)</td>
+<td>139.758(MHz)</td>
 <td>8</td>
 <td>TOP</td>
 </tr>
@@ -455,8 +460,8 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>2</td>
 <td>clocks/sdram_pll/rpll_inst/CLKOUT.default_gen_clk</td>
 <td>108.000(MHz)</td>
-<td>146.220(MHz)</td>
-<td>7</td>
+<td>127.518(MHz)</td>
+<td>8</td>
 <td>TOP</td>
 </tr>
 <tr>
@@ -532,7 +537,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.500</td>
 <td>tCL</td>
 <td>RR</td>
-<td>660</td>
+<td>653</td>
 <td>clocks/sdram_pll/rpll_inst/CLKOUT</td>
 </tr>
 <tr>
@@ -548,7 +553,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.232</td>
 <td>tC2Q</td>
 <td>RF</td>
-<td>36</td>
+<td>37</td>
 <td>coco2_machine.machine/s2_video_mode/selection_2_s0/Q</td>
 </tr>
 <tr>
@@ -564,7 +569,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.555</td>
 <td>tINS</td>
 <td>FF</td>
-<td>39</td>
+<td>35</td>
 <td>coco2_machine.machine/s2_video_mode/debug_an_g_s/F</td>
 </tr>
 <tr>
@@ -599,7 +604,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.484</td>
 <td>tCL</td>
 <td>RR</td>
-<td>182</td>
+<td>253</td>
 <td>clocks/video_pll/rpll_inst/CLKOUTD</td>
 </tr>
 <tr>
@@ -704,7 +709,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.500</td>
 <td>tCL</td>
 <td>RR</td>
-<td>660</td>
+<td>653</td>
 <td>clocks/sdram_pll/rpll_inst/CLKOUT</td>
 </tr>
 <tr>
@@ -720,7 +725,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.232</td>
 <td>tC2Q</td>
 <td>RF</td>
-<td>36</td>
+<td>37</td>
 <td>coco2_machine.machine/s2_video_mode/selection_2_s0/Q</td>
 </tr>
 <tr>
@@ -771,7 +776,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.484</td>
 <td>tCL</td>
 <td>RR</td>
-<td>182</td>
+<td>253</td>
 <td>clocks/video_pll/rpll_inst/CLKOUTD</td>
 </tr>
 <tr>
@@ -876,7 +881,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.500</td>
 <td>tCL</td>
 <td>RR</td>
-<td>660</td>
+<td>653</td>
 <td>clocks/sdram_pll/rpll_inst/CLKOUT</td>
 </tr>
 <tr>
@@ -901,7 +906,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>tNET</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/n1365_s1/I1</td>
+<td>ntsc_video.encoder/n1470_s1/I1</td>
 </tr>
 <tr>
 <td>29.914</td>
@@ -909,7 +914,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>tINS</td>
 <td>FR</td>
 <td>4</td>
-<td>ntsc_video.encoder/n1365_s1/F</td>
+<td>ntsc_video.encoder/n1470_s1/F</td>
 </tr>
 <tr>
 <td>30.274</td>
@@ -943,7 +948,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.484</td>
 <td>tCL</td>
 <td>RR</td>
-<td>182</td>
+<td>253</td>
 <td>clocks/video_pll/rpll_inst/CLKOUTD</td>
 </tr>
 <tr>
@@ -1048,7 +1053,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.500</td>
 <td>tCL</td>
 <td>RR</td>
-<td>660</td>
+<td>653</td>
 <td>clocks/sdram_pll/rpll_inst/CLKOUT</td>
 </tr>
 <tr>
@@ -1073,7 +1078,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>tNET</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/n1372_s1/I1</td>
+<td>ntsc_video.encoder/n1477_s1/I1</td>
 </tr>
 <tr>
 <td>29.914</td>
@@ -1081,7 +1086,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>tINS</td>
 <td>FR</td>
 <td>8</td>
-<td>ntsc_video.encoder/n1372_s1/F</td>
+<td>ntsc_video.encoder/n1477_s1/F</td>
 </tr>
 <tr>
 <td>30.274</td>
@@ -1115,7 +1120,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.484</td>
 <td>tCL</td>
 <td>RR</td>
-<td>182</td>
+<td>253</td>
 <td>clocks/video_pll/rpll_inst/CLKOUTD</td>
 </tr>
 <tr>
@@ -1220,7 +1225,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.500</td>
 <td>tCL</td>
 <td>RR</td>
-<td>660</td>
+<td>653</td>
 <td>clocks/sdram_pll/rpll_inst/CLKOUT</td>
 </tr>
 <tr>
@@ -1245,7 +1250,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>tNET</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/n1372_s1/I1</td>
+<td>ntsc_video.encoder/n1477_s1/I1</td>
 </tr>
 <tr>
 <td>29.914</td>
@@ -1253,7 +1258,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>tINS</td>
 <td>FR</td>
 <td>8</td>
-<td>ntsc_video.encoder/n1372_s1/F</td>
+<td>ntsc_video.encoder/n1477_s1/F</td>
 </tr>
 <tr>
 <td>30.274</td>
@@ -1287,7 +1292,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.484</td>
 <td>tCL</td>
 <td>RR</td>
-<td>182</td>
+<td>253</td>
 <td>clocks/video_pll/rpll_inst/CLKOUTD</td>
 </tr>
 <tr>

@@ -4,6 +4,7 @@ module coco_hdmi (
     input logic reset,
     input logic [5:0] framebuffer_data,
     input logic [5:0] border_rgb,
+    input logic [7:0] active_height,
     output logic [15:0] framebuffer_addr,
     output logic tmds_clk_p, output logic tmds_clk_n,
     output logic [2:0] tmds_data_p, output logic [2:0] tmds_data_n
@@ -11,21 +12,33 @@ module coco_hdmi (
     logic [9:0] x, y;
     logic [23:0] rgb;
     logic [5:0] border_meta, border_pixel;
+    logic [7:0] height_meta, height_pixel;
     always_ff @(posedge pixel_clk) begin
         if (reset) begin
             border_meta <= 6'd0;
             border_pixel <= 6'd0;
+            height_meta <= 8'd192;
+            height_pixel <= 8'd192;
         end else begin
             border_meta <= border_rgb;
             border_pixel <= border_meta;
+            height_meta <= active_height;
+            height_pixel <= height_meta;
         end
+    end
+
+    logic [9:0] picture_top;
+    logic [9:0] picture_bottom;
+    always_comb begin
+        picture_top = (10'd480 - {height_pixel,1'b0}) >> 1;
+        picture_bottom = picture_top + {height_pixel,1'b0};
     end
 
     always_comb begin
         framebuffer_addr = 16'd0;
         rgb = 24'd0;
-        if (x >= 10'd104 && x < 10'd616 && y >= 10'd48 && y < 10'd432) begin
-            framebuffer_addr = (((y - 10'd48) >> 1) << 8) +
+        if (x >= 10'd104 && x < 10'd616 && y >= picture_top && y < picture_bottom) begin
+            framebuffer_addr = (((y - picture_top) >> 1) << 8) +
                                ((x - 10'd104) >> 1);
             rgb = {{4{framebuffer_data[5:4]}},
                    {4{framebuffer_data[3:2]}},

@@ -10,6 +10,7 @@ module coco_cvbs_ntsc (
     input  wire        reset_n,
     input  wire [5:0]  framebuffer_data,
     input  wire [5:0]  border_rgb,
+    input  wire [7:0]  active_height,
     output wire [15:0] framebuffer_addr,
     output reg         luma_out,
     output reg         chroma_out,
@@ -26,10 +27,11 @@ module coco_cvbs_ntsc (
     localparam [9:0] BORDER_LEFT    = PICTURE_LEFT - 10'd64;
     localparam [9:0] BORDER_RIGHT   = PICTURE_RIGHT + 10'd62;
     localparam [8:0] V_TOTAL        = 9'd262;
-    localparam [8:0] PICTURE_TOP    = 9'd44;
-    localparam [8:0] PICTURE_BOTTOM = 9'd236;
-    localparam [8:0] BORDER_TOP     = PICTURE_TOP - 9'd27;
-    localparam [8:0] BORDER_BOTTOM  = V_TOTAL;
+    reg [7:0] height_meta = 8'd192;
+    reg [7:0] height_sample = 8'd192;
+    wire [8:0] picture_top = (9'd280 - {1'b0,height_sample}) >> 1;
+    wire [8:0] picture_bottom = picture_top + {1'b0,height_sample};
+    wire [8:0] border_top = picture_top >= 9'd27 ? picture_top - 9'd27 : 9'd0;
 
     localparam [5:0] LEVEL_SYNC     = 6'd0;
     localparam [5:0] LEVEL_BLANK    = 6'd10;
@@ -42,14 +44,14 @@ module coco_cvbs_ntsc (
 
     wire in_picture = (h_sample >= PICTURE_LEFT) &&
                       (h_sample < PICTURE_RIGHT) &&
-                      (v_line >= PICTURE_TOP) &&
-                      (v_line < PICTURE_BOTTOM);
+                      (v_line >= picture_top) &&
+                      (v_line < picture_bottom);
     wire in_vdg_window = (h_sample >= BORDER_LEFT) &&
                          (h_sample < BORDER_RIGHT) &&
-                         (v_line >= BORDER_TOP) &&
-                         (v_line < BORDER_BOTTOM);
+                         (v_line >= border_top) &&
+                         (v_line < V_TOTAL);
     wire [8:0] picture_x = (h_sample - PICTURE_LEFT) >> 1;
-    wire [8:0] picture_y_full = v_line - PICTURE_TOP;
+    wire [8:0] picture_y_full = v_line - picture_top;
     wire [7:0] picture_y = picture_y_full[7:0];
     assign framebuffer_addr = in_picture ? {picture_y, picture_x[7:0]} : 16'd0;
 
@@ -214,6 +216,8 @@ module coco_cvbs_ntsc (
     always @(posedge clk135) begin
         if (!reset_n) begin
             sample_phase <= 4'd0;
+            height_meta <= 8'd192;
+            height_sample <= 8'd192;
             h_sample <= 10'd0;
             v_line <= 9'd0;
             carrier_fraction <= 9'd0;
@@ -255,6 +259,8 @@ module coco_cvbs_ntsc (
             chroma_level_135 <= CHROMA_CENTER;
             cvbs_level_135 <= LEVEL_SYNC;
         end else begin
+            height_meta <= active_height;
+            height_sample <= height_meta;
             luma_level_135 <= luma_level;
             chroma_level_135 <= chroma_level;
             cvbs_level_135 <= composite_level;

@@ -29,7 +29,7 @@ module tb_sdram_test_fill;
         start = 1'b1;
         wait(done);
         @(negedge clk);
-        if (writes != 65536) errors = errors + 1;
+        if (writes != 524288) errors = errors + 1;
         if (errors == 0) $display("tb_sdram_test_fill PASS");
         else $display("tb_sdram_test_fill FAIL: writes=%0d errors=%0d",writes,errors);
         $finish;

@@ -17,10 +17,15 @@
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_flash_loader.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/sdram_test_fill.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_memory.v" type="verilog"/>
-        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847_char_rom.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847_char_rom.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/video_mode_debug.v" type="verilog"/>
-        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_vdg.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco_vdg.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco2.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_timing.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_registers.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_mode_debug.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_video.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/coco3.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_framebuffer.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/sigma_delta_dac.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_analog_video.v" type="verilog"/>
@@ -37,7 +42,7 @@
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/serializer.sv" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_hdmi.sv" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v" type="verilog"/>
-        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd" type="vhdl"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847.vhd" type="vhdl"/>
     </FileList>
     <OptionList>
         <Option type="disable_insert_pad" value="0"/>

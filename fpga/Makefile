@@ -17,7 +17,7 @@ PROGRAMMER_BOARD ?= tangnano20k
 ROM_OFFSET ?= 1048576
 
 .DEFAULT_GOAL := build
-.PHONY: build rebuild test program reprogram roms check-tools
+.PHONY: build rebuild test program reprogram coco2_rom coco3_rom check-tools
 
 build: $(OUTPUT)
 
@@ -35,6 +35,14 @@ test:
 	vvp /private/tmp/cocotang_tb_fill
 	iverilog -g2012 -o /private/tmp/cocotang_tb_video_mode tests/tb_video_mode_debug.v src/video/video_mode_debug.v
 	vvp /private/tmp/cocotang_tb_video_mode
+	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_mode tests/tb_gime_mode_debug.v src/coco3/gime_mode_debug.v
+	vvp /private/tmp/cocotang_tb_gime_mode
+	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_registers tests/tb_gime_registers.v src/coco3/gime_registers.v
+	vvp /private/tmp/cocotang_tb_gime_registers
+	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_video tests/tb_gime_video.v src/coco3/gime_video.v src/coco2/mc6847_char_rom.v
+	vvp /private/tmp/cocotang_tb_gime_video
+	iverilog -g2012 -o /private/tmp/cocotang_tb_framebuffer tests/tb_coco_framebuffer.v src/video/coco_framebuffer.v
+	vvp /private/tmp/cocotang_tb_framebuffer
 
 program: $(OUTPUT)
 	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(OUTPUT)"
@@ -42,7 +50,11 @@ program: $(OUTPUT)
 reprogram:
 	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(OUTPUT)"
 
-roms: roms/coco2.rom
+coco2_rom: roms/coco2.rom
+	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f --external-flash \
+	 -o "$(ROM_OFFSET)" "$<"
+
+coco3_rom: roms/coco3.rom
 	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f --external-flash \
 	 -o "$(ROM_OFFSET)" "$<"
 
