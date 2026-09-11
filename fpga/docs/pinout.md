@@ -9,22 +9,23 @@ Package pins are for the GW2AR-LV18QN88C8/I7 on the Tang Nano 20K.
 | `msel[1:0]` | out | 20, 17 | 74HC139 mux selection |
 | `cpu_data[7:0]` | inout | 48, 49, 86, 79, 72, 71, 53, 52 | Buffered 6809 data bus |
 | `sam_s[2:0]` | out | 16, 81, 41 | SAM device selects to motherboard decoder |
-| `e_out`, `q_out` | out | 75, 76 | 6809 clocks |
+| `e_out`, `q_out` | out | 51, 76 | 6809 clocks; E uses the former PR_33 connection |
 | `halt_drive` | out | 42 | High turns Q2 on and pulls `/HALT` low |
 | `irq_n_in`, `firq_n_in` | in | 19, 18 | Interrupt observations |
 | `hs_n`, `fs_n` | out | 73, 74 | VDG horizontal/field sync |
-| `y_out`, `pb_out`, `pr_out` | out | 56, 54, 51 | Analog Y/Pb/Pr, or luma/chroma/CVBS |
+| `y_out`, `pb_out` | out | 56, 54 | Luma plus selectable S-Video chroma or CVBS |
 | `audio_in` | in | 55 | Audio observation/reserved for HDMI audio |
 | `mspi_sclk`, `mspi_cs`, `mspi_mosi`, `mspi_miso` | out/out/out/in | 59, 60, 61, 62 | On-module SPI flash |
 | `tmds_clk_p` | differential out | 33/34 | HDMI clock pair |
 | `tmds_data_p[0]` | differential out | 35/36 | HDMI data 0 pair |
 | `tmds_data_p[1]` | differential out | 37/38 | HDMI data 1 pair |
 | `tmds_data_p[2]` | differential out | 39/40 | HDMI data 2 pair |
-| `s1`, `s2` | in | 88, 87 | Module buttons; S1 resets, S2 is reserved |
+| `s1`, `s2` | in | 88, 87 | Module buttons; S1 resets, S2 toggles HDMI debug |
 
-With the default `ANALOG_VIDEO_MODE=1`, `y_out` is S-Video luma, `pb_out` is
-S-Video chroma, and `pr_out` is composite video for the pin-32 transistor/RCA
-circuit. Set the top parameter to `0` for component Y/Pb/Pr instead.
+`y_out` is always S-Video luma. With the default `ANALOG_VIDEO_MODE=1`,
+`pb_out` is composite video; set the parameter to `0` for S-Video chroma.
+Package pin 51/PR_33 now carries the 6809 E clock. Package pin 75 is left
+unused because it is connected to the Tang Nano 20K onboard `HSPI_DIR` signal.
 
 ## 74HC139 scan map
 

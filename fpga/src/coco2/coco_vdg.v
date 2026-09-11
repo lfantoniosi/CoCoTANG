@@ -26,13 +26,15 @@ module coco_vdg #(
     output reg [15:0] capture_addr,
     output reg [5:0] capture_rgb
 );
-    localparam [31:0] VDG_STEP = 32'd569408471;
-    reg [31:0] accumulator = 32'd0;
-    wire [32:0] accumulator_sum = {1'b0,accumulator} + {1'b0,VDG_STEP};
-    wire vdg_enable = accumulator_sum[32];
+    // Match the SAM's 24-bit phase accumulator. The 0.072 ppm frequency
+    // error is negligible and avoids a failing 32-bit carry path at 108 MHz.
+    localparam [23:0] VDG_STEP = 24'd2224252;
+    reg [23:0] accumulator = 24'd0;
+    wire [24:0] accumulator_sum = {1'b0,accumulator} + {1'b0,VDG_STEP};
+    wire vdg_enable = accumulator_sum[24];
     always @(posedge clk or negedge reset_n)
-        if (!reset_n) accumulator <= 32'd0;
-        else accumulator <= accumulator_sum[31:0];
+        if (!reset_n) accumulator <= 24'd0;
+        else accumulator <= accumulator_sum[23:0];
 
     // Shadow PIA1 port B so A/G, INT/EXT and CSS remain available even
     // though those physical MC6847 pins are not routed to the FPGA.

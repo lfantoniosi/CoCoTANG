@@ -1,7 +1,10 @@
 // CoCo 2 Synchronous Address Multiplexer.
-module coco_sam (
+module coco_sam #(
+    parameter integer SLOW_DIAGNOSTIC = 0
+) (
     input         clk,
     input         reset_n,
+    input         register_reset_n,
     input  [15:0] addr,
     input         rw_n,
     output reg [2:0] s,
@@ -18,24 +21,29 @@ module coco_sam (
 );
     // 108 MHz to the CoCo 14.31818 MHz SAM master tick. The accumulator
     // gives the correct average frequency with one 108 MHz cycle of jitter.
-    localparam [31:0] SAM_STEP = 32'd569408471;
-    reg [31:0] accumulator = 32'd0;
+    // A 24-bit NCO is accurate to 0.072 ppm and keeps the shared SAM/VDG
+    // carry chain comfortably inside the 108 MHz timing budget.
+    // Quarter speed is used only by the physical-CPU delivery diagnostic.
+    // It preserves the E/Q phase relationship while expanding every setup
+    // and hold interval by four, making marginal external-bus timing obvious.
+    localparam [23:0] SAM_STEP = SLOW_DIAGNOSTIC ? 24'd556063 : 24'd2224252;
+    reg [23:0] accumulator = 24'd0;
     reg [3:0] phase = 4'd0;
-    wire [32:0] sum = {1'b0, accumulator} + {1'b0, SAM_STEP};
+    wire [24:0] sum = {1'b0, accumulator} + {1'b0, SAM_STEP};
 
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
-            accumulator <= 32'd0;
+            accumulator <= 24'd0;
             phase <= 4'd0;
             e <= 1'b0;
             q <= 1'b0;
             e_rise <= 1'b0;
             e_fall <= 1'b0;
         end else begin
-            accumulator <= sum[31:0];
+            accumulator <= sum[23:0];
             e_rise <= 1'b0;
             e_fall <= 1'b0;
-            if (sum[32]) begin
+            if (sum[24]) begin
                 phase <= phase + 1'b1;
                 case (phase)
                     4'd2: q <= 1'b1;
@@ -48,8 +56,10 @@ module coco_sam (
         end
     end
 
-    always @(posedge clk or negedge reset_n) begin
-        if (!reset_n) begin
+    // The SAM continues producing E/Q while the 6809 is in reset.  Its
+    // programmable mapping registers, however, return to their reset state.
+    always @(posedge clk or negedge register_reset_n) begin
+        if (!register_reset_n) begin
             video_mode <= 3'b000;
             video_offset <= 7'b0000000;
             page <= 1'b0;
@@ -79,25 +89,24 @@ module coco_sam (
     end
 
     always @(*) begin
-        if (all_ram && addr < 16'hff00)
+        if (all_ram && addr[15:8] != 8'hff)
             s = 3'd0;
-        else if (addr < 16'h8000)
+        else if (!addr[15])
             s = 3'd0;
-        else if (addr < 16'ha000)
+        else if (addr[15:13] == 3'b100)
             s = 3'd1;
-        else if (addr < 16'hc000)
+        else if (addr[15:13] == 3'b101)
             s = 3'd2;
-        else if (addr < 16'hff00)
+        else if (addr[15:8] != 8'hff)
             s = 3'd3;
-        else if (addr < 16'hff20)
-            s = 3'd4;
-        else if (addr < 16'hff40)
-            s = 3'd5;
-        else if (addr < 16'hff60)
-            s = 3'd6;
-        else if (addr >= 16'hffe0)
-            s = 3'd2;
-        else
-            s = 3'd7;
+        else begin
+            case (addr[7:5])
+                3'b000: s = 3'd4;
+                3'b001: s = 3'd5;
+                3'b010: s = 3'd6;
+                3'b111: s = 3'd2;
+                default: s = 3'd7;
+            endcase
+        end
     end
 endmodule

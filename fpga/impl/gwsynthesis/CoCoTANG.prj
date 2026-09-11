@@ -42,6 +42,7 @@
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/tmds_channel.sv" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/hdmi.sv" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/serializer.sv" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi_debug_overlay.sv" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_hdmi.sv" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847.vhd" type="vhdl"/>

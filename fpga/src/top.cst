@@ -12,14 +12,14 @@ IO_LOC "mp[3]" 25;
 IO_LOC "mp[2]" 28;
 IO_LOC "mp[1]" 27;
 IO_LOC "mp[0]" 77;
-IO_PORT "mp[7]" IO_TYPE=LVCMOS33 PULL_MODE=UP BANK_VCCIO=3.3;
-IO_PORT "mp[6]" IO_TYPE=LVCMOS33 PULL_MODE=UP BANK_VCCIO=3.3;
-IO_PORT "mp[5]" IO_TYPE=LVCMOS33 PULL_MODE=UP BANK_VCCIO=3.3;
-IO_PORT "mp[4]" IO_TYPE=LVCMOS33 PULL_MODE=UP BANK_VCCIO=3.3;
-IO_PORT "mp[3]" IO_TYPE=LVCMOS33 PULL_MODE=UP BANK_VCCIO=3.3;
-IO_PORT "mp[2]" IO_TYPE=LVCMOS33 PULL_MODE=UP BANK_VCCIO=3.3;
-IO_PORT "mp[1]" IO_TYPE=LVCMOS33 PULL_MODE=UP BANK_VCCIO=3.3;
-IO_PORT "mp[0]" IO_TYPE=LVCMOS33 PULL_MODE=UP BANK_VCCIO=3.3;
+IO_PORT "mp[7]" IO_TYPE=LVCMOS33 PULL_MODE=NONE BANK_VCCIO=3.3;
+IO_PORT "mp[6]" IO_TYPE=LVCMOS33 PULL_MODE=NONE BANK_VCCIO=3.3;
+IO_PORT "mp[5]" IO_TYPE=LVCMOS33 PULL_MODE=NONE BANK_VCCIO=3.3;
+IO_PORT "mp[4]" IO_TYPE=LVCMOS33 PULL_MODE=NONE BANK_VCCIO=3.3;
+IO_PORT "mp[3]" IO_TYPE=LVCMOS33 PULL_MODE=NONE BANK_VCCIO=3.3;
+IO_PORT "mp[2]" IO_TYPE=LVCMOS33 PULL_MODE=NONE BANK_VCCIO=3.3;
+IO_PORT "mp[1]" IO_TYPE=LVCMOS33 PULL_MODE=NONE BANK_VCCIO=3.3;
+IO_PORT "mp[0]" IO_TYPE=LVCMOS33 PULL_MODE=NONE BANK_VCCIO=3.3;
 IO_LOC "msel[0]" 17;
 IO_LOC "msel[1]" 20;
 IO_PORT "msel[0]" IO_TYPE=LVCMOS33 PULL_MODE=UP DRIVE=8 BANK_VCCIO=3.3;
@@ -30,14 +30,17 @@ IO_LOC "audio_in" 55;
 IO_PORT "irq_n_in" IO_TYPE=LVCMOS33 PULL_MODE=UP BANK_VCCIO=3.3;
 IO_PORT "firq_n_in" IO_TYPE=LVCMOS33 PULL_MODE=UP BANK_VCCIO=3.3;
 IO_PORT "audio_in" IO_TYPE=LVCMOS33 PULL_MODE=DOWN BANK_VCCIO=3.3;
-IO_LOC "cpu_data[7]" 48;
-IO_LOC "cpu_data[6]" 49;
-IO_LOC "cpu_data[5]" 86;
-IO_LOC "cpu_data[4]" 79;
-IO_LOC "cpu_data[3]" 72;
-IO_LOC "cpu_data[2]" 71;
-IO_LOC "cpu_data[1]" 53;
-IO_LOC "cpu_data[0]" 52;
+// The assembled U12/CPU path presents the byte in reverse bit order.  The
+// reset vector demonstrated this unambiguously: driving A0,27 made the 6809
+// branch to 05E4.  Correct the permutation here for both input and output.
+IO_LOC "cpu_data[7]" 52;
+IO_LOC "cpu_data[6]" 53;
+IO_LOC "cpu_data[5]" 71;
+IO_LOC "cpu_data[4]" 72;
+IO_LOC "cpu_data[3]" 79;
+IO_LOC "cpu_data[2]" 86;
+IO_LOC "cpu_data[1]" 49;
+IO_LOC "cpu_data[0]" 48;
 IO_PORT "cpu_data[7]" IO_TYPE=LVCMOS33 PULL_MODE=UP DRIVE=8 BANK_VCCIO=3.3;
 IO_PORT "cpu_data[6]" IO_TYPE=LVCMOS33 PULL_MODE=UP DRIVE=8 BANK_VCCIO=3.3;
 IO_PORT "cpu_data[5]" IO_TYPE=LVCMOS33 PULL_MODE=UP DRIVE=8 BANK_VCCIO=3.3;
@@ -48,7 +51,9 @@ IO_PORT "cpu_data[1]" IO_TYPE=LVCMOS33 PULL_MODE=UP DRIVE=8 BANK_VCCIO=3.3;
 IO_PORT "cpu_data[0]" IO_TYPE=LVCMOS33 PULL_MODE=UP DRIVE=8 BANK_VCCIO=3.3;
 IO_LOC "hs_n" 73;
 IO_LOC "fs_n" 74;
-IO_LOC "e_out" 75;
+// PR_33 is repurposed as the 6809 E clock because package pin 75 is
+// connected to the Tang Nano 20K onboard HSPI_DIR signal.
+IO_LOC "e_out" 51;
 // The project schematic symbol says package 78. Official Tang Nano 20K
 // documentation and the QN88 database identify this header contact as 76.
 IO_LOC "q_out" 76;
@@ -66,10 +71,8 @@ IO_PORT "sam_s[1]" IO_TYPE=LVCMOS33 PULL_MODE=DOWN DRIVE=8 BANK_VCCIO=3.3;
 IO_PORT "sam_s[2]" IO_TYPE=LVCMOS33 PULL_MODE=DOWN DRIVE=8 BANK_VCCIO=3.3;
 IO_LOC "y_out" 56;
 IO_LOC "pb_out" 54;
-IO_LOC "pr_out" 51;
 IO_PORT "y_out" IO_TYPE=LVCMOS33 PULL_MODE=DOWN DRIVE=8 BANK_VCCIO=3.3;
 IO_PORT "pb_out" IO_TYPE=LVCMOS33 PULL_MODE=DOWN DRIVE=8 BANK_VCCIO=3.3;
-IO_PORT "pr_out" IO_TYPE=LVCMOS33 PULL_MODE=DOWN DRIVE=8 BANK_VCCIO=3.3;
 IO_LOC "mspi_sclk" 59;
 IO_LOC "mspi_cs" 60;
 IO_LOC "mspi_mosi" 61;

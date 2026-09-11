@@ -26,7 +26,7 @@
    "Type" : "verilog"
   },
   {
-   "Path" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco_sam.v",
+   "Path" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco_sam.v",
    "Type" : "verilog"
   },
   {
@@ -46,15 +46,55 @@
    "Type" : "verilog"
   },
   {
+   "Path" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/sdram_test_fill.v",
+   "Type" : "verilog"
+  },
+  {
    "Path" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_memory.v",
    "Type" : "verilog"
   },
   {
-   "Path" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847_char_rom.v",
+   "Path" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847_char_rom.v",
    "Type" : "verilog"
   },
   {
-   "Path" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_vdg.v",
+   "Path" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/video_mode_debug.v",
+   "Type" : "verilog"
+  },
+  {
+   "Path" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco_vdg.v",
+   "Type" : "verilog"
+  },
+  {
+   "Path" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco2.v",
+   "Type" : "verilog"
+  },
+  {
+   "Path" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_timing.v",
+   "Type" : "verilog"
+  },
+  {
+   "Path" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_registers.v",
+   "Type" : "verilog"
+  },
+  {
+   "Path" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_mode_debug.v",
+   "Type" : "verilog"
+  },
+  {
+   "Path" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_video.v",
+   "Type" : "verilog"
+  },
+  {
+   "Path" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v",
+   "Type" : "verilog"
+  },
+  {
+   "Path" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_native_video.v",
+   "Type" : "verilog"
+  },
+  {
+   "Path" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/coco3.v",
    "Type" : "verilog"
   },
   {
@@ -67,6 +107,10 @@
   },
   {
    "Path" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_analog_video.v",
+   "Type" : "verilog"
+  },
+  {
+   "Path" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_cvbs_ntsc.v",
    "Type" : "verilog"
   },
   {
@@ -110,6 +154,10 @@
    "Type" : "verilog"
   },
   {
+   "Path" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi_debug_overlay.sv",
+   "Type" : "verilog"
+  },
+  {
    "Path" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_hdmi.sv",
    "Type" : "verilog"
   },
@@ -119,7 +167,7 @@
   },
   {
    "Library" : "work",
-   "Path" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/mc6847.vhd",
+   "Path" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847.vhd",
    "Type" : "vhdl"
   }
  ],
@@ -128,7 +176,7 @@
  ],
  "LoopLimit" : 2000,
  "ResultFile" : "/Users/felipe/src/fpga/CoCoTANG/fpga/impl/temp/rtl_parser.result",
- "Top" : "",
- "VerilogStd" : "verilog_2001",
+ "Top" : "top",
+ "VerilogStd" : "sysv",
  "VhdlStd" : "vhdl_93"
 }

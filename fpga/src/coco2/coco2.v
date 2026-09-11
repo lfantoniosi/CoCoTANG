@@ -2,7 +2,8 @@
 // output scan converters remain common at the board top level so a future
 // CoCo 3/GIME core can implement this same outward-facing interface.
 module coco2 #(
-    parameter integer DEBUG_S2_VIDEO_MODE = 0
+    parameter integer DEBUG_S2_VIDEO_MODE = 0,
+    parameter integer DEBUG_CPU_SLOW = 0
 ) (
     input             clk,
     input             reset_n,
@@ -49,8 +50,9 @@ module coco2 #(
     wire [1:0] sam_rate;
     wire [1:0] sam_memory_size;
 
-    coco_sam sam (
-        .clk(clk), .reset_n(core_reset_n), .addr(cpu_addr), .rw_n(cpu_rw_n),
+    coco_sam #(.SLOW_DIAGNOSTIC(DEBUG_CPU_SLOW)) sam (
+        .clk(clk), .reset_n(reset_n), .register_reset_n(core_reset_n),
+        .addr(cpu_addr), .rw_n(cpu_rw_n),
         .s(sam_s), .e(e), .q(q), .e_rise(e_rise), .e_fall(e_fall),
         .video_mode(sam_video_mode), .video_offset(sam_video_offset),
         .page(sam_page), .rate(sam_rate), .memory_size(sam_memory_size),

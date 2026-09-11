@@ -1,13 +1,14 @@
 `timescale 1ns/1ps
 module tb_coco_sam;
-    reg clk=0, reset_n=0, rw_n=1;
+    reg clk=0, reset_n=0, register_reset_n=0, rw_n=1;
     reg [15:0] addr=0;
     wire [2:0] s, video_mode;
     wire e,q,e_rise,e_fall;
     wire [6:0] video_offset;
     wire page,all_ram;
     wire [1:0] rate,memory_size;
-    coco_sam dut(.clk(clk),.reset_n(reset_n),.addr(addr),.rw_n(rw_n),.s(s),
+    coco_sam dut(.clk(clk),.reset_n(reset_n),.register_reset_n(register_reset_n),
+      .addr(addr),.rw_n(rw_n),.s(s),
       .e(e),.q(q),.e_rise(e_rise),.e_fall(e_fall),.video_mode(video_mode),
       .video_offset(video_offset),.page(page),.rate(rate),.memory_size(memory_size),
       .all_ram(all_ram));
@@ -20,15 +21,28 @@ module tb_coco_sam;
       end
     endtask
     initial begin
-      repeat(4) @(posedge clk); reset_n=1;
+      repeat(4) @(posedge clk); reset_n=1; register_reset_n=1;
       addr=16'h1234; #1; if(s!==0) $fatal(1,"RAM decode");
       addr=16'h8123; #1; if(s!==1) $fatal(1,"EXTROM decode");
       addr=16'ha123; #1; if(s!==2) $fatal(1,"ROM decode");
       addr=16'hff22; #1; if(s!==5) $fatal(1,"PIA1 decode");
+      addr=16'hff40; #1; if(s!==6) $fatal(1,"cartridge decode");
+      addr=16'hffdf; #1; if(s!==7) $fatal(1,"SAM register decode");
+      addr=16'hffe0; #1; if(s!==2) $fatal(1,"vector decode");
       sam_write(16'hffc1); if(video_mode[0]!==1) $fatal(1,"V0 latch");
       sam_write(16'hffdf); addr=16'h8123; #1;
       if(!all_ram || s!==0) $fatal(1,"all-RAM mapping");
-      $display("tb_coco_sam PASS"); $finish;
+      register_reset_n=0; repeat(2) @(posedge clk);
+      if(all_ram) $fatal(1,"CPU reset did not clear SAM registers");
+      if(e_rise || e_fall) @(posedge clk);
+      repeat(200) begin
+        @(posedge clk);
+        if(e_rise || e_fall) begin
+          register_reset_n=1;
+          $display("tb_coco_sam PASS"); $finish;
+        end
+      end
+      $fatal(1,"E/Q stopped during CPU reset");
     end
     initial begin #200000; $fatal(1,"timeout e=%b q=%b phase=%h acc=%h",e,q,dut.phase,dut.accumulator); end
 endmodule

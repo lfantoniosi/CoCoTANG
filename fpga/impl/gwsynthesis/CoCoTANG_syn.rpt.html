@@ -93,6 +93,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 /Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/tmds_channel.sv<br>
 /Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/hdmi.sv<br>
 /Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/serializer.sv<br>
+/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi_debug_overlay.sv<br>
 /Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_hdmi.sv<br>
 /Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v<br>
 /Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847.vhd<br>
@@ -120,7 +121,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label">Created Time</td>
-<td>Mon Sep  7 17:39:13 2026
+<td>Thu Sep 10 22:00:28 2026
 </td>
 </tr>
 <tr>
@@ -136,11 +137,11 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label">Synthesis Process</td>
-<td>Running parser:<br/>&nbsp;&nbsp;&nbsp;&nbsp;CPU time = 0h 0m 0.127s, Elapsed time = 0h 0m 0.127s, Peak memory usage = 64.906MB<br/>Running netlist conversion:<br/>&nbsp;&nbsp;&nbsp;&nbsp;CPU time = 0h 0m 0s, Elapsed time = 0h 0m 0s, Peak memory usage = 0MB<br/>Running device independent optimization:<br/>&nbsp;&nbsp;&nbsp;&nbsp;Optimizing Phase 0: CPU time = 0h 0m 0.073s, Elapsed time = 0h 0m 0.073s, Peak memory usage = 67.609MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Optimizing Phase 1: CPU time = 0h 0m 0.029s, Elapsed time = 0h 0m 0.034s, Peak memory usage = 67.734MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Optimizing Phase 2: CPU time = 0h 0m 0.112s, Elapsed time = 0h 0m 0.112s, Peak memory usage = 67.953MB<br/>Running inference:<br/>&nbsp;&nbsp;&nbsp;&nbsp;Inferring Phase 0: CPU time = 0h 0m 0.047s, Elapsed time = 0h 0m 0.047s, Peak memory usage = 68.484MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Inferring Phase 1: CPU time = 0h 0m 0.006s, Elapsed time = 0h 0m 0.006s, Peak memory usage = 68.766MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Inferring Phase 2: CPU time = 0h 0m 0.003s, Elapsed time = 0h 0m 0.003s, Peak memory usage = 69.625MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Inferring Phase 3: CPU time = 0h 0m 0.005s, Elapsed time = 0h 0m 0.005s, Peak memory usage = 69.672MB<br/>Running technical mapping:<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 0: CPU time = 0h 0m 0.086s, Elapsed time = 0h 0m 0.086s, Peak memory usage = 69.719MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 1: CPU time = 0h 0m 0.02s, Elapsed time = 0h 0m 0.02s, Peak memory usage = 69.719MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 2: CPU time = 0h 0m 0.011s, Elapsed time = 0h 0m 0.011s, Peak memory usage = 69.719MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 3: CPU time = 0h 0m 4s, Elapsed time = 0h 0m 4s, Peak memory usage = 117.891MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 4: CPU time = 0h 0m 0.136s, Elapsed time = 0h 0m 0.136s, Peak memory usage = 118.141MB<br/>Generate output files:<br/>&nbsp;&nbsp;&nbsp;&nbsp;CPU time = 0h 0m 0.065s, Elapsed time = 0h 0m 0.065s, Peak memory usage = 146.125MB<br/></td>
+<td>Running parser:<br/>&nbsp;&nbsp;&nbsp;&nbsp;CPU time = 0h 0m 0.118s, Elapsed time = 0h 0m 0.118s, Peak memory usage = 61.094MB<br/>Running netlist conversion:<br/>&nbsp;&nbsp;&nbsp;&nbsp;CPU time = 0h 0m 0s, Elapsed time = 0h 0m 0s, Peak memory usage = 0MB<br/>Running device independent optimization:<br/>&nbsp;&nbsp;&nbsp;&nbsp;Optimizing Phase 0: CPU time = 0h 0m 0.036s, Elapsed time = 0h 0m 0.036s, Peak memory usage = 61.641MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Optimizing Phase 1: CPU time = 0h 0m 0.013s, Elapsed time = 0h 0m 0.013s, Peak memory usage = 61.750MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Optimizing Phase 2: CPU time = 0h 0m 0.085s, Elapsed time = 0h 0m 0.093s, Peak memory usage = 62.828MB<br/>Running inference:<br/>&nbsp;&nbsp;&nbsp;&nbsp;Inferring Phase 0: CPU time = 0h 0m 0.015s, Elapsed time = 0h 0m 0.015s, Peak memory usage = 63.391MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Inferring Phase 1: CPU time = 0h 0m 0.005s, Elapsed time = 0h 0m 0.005s, Peak memory usage = 63.672MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Inferring Phase 2: CPU time = 0h 0m 0.002s, Elapsed time = 0h 0m 0.002s, Peak memory usage = 64.594MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Inferring Phase 3: CPU time = 0h 0m 0.005s, Elapsed time = 0h 0m 0.005s, Peak memory usage = 64.641MB<br/>Running technical mapping:<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 0: CPU time = 0h 0m 0.077s, Elapsed time = 0h 0m 0.077s, Peak memory usage = 64.672MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 1: CPU time = 0h 0m 0.013s, Elapsed time = 0h 0m 0.013s, Peak memory usage = 64.672MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 2: CPU time = 0h 0m 0.013s, Elapsed time = 0h 0m 0.013s, Peak memory usage = 64.672MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 3: CPU time = 0h 0m 6s, Elapsed time = 0h 0m 6s, Peak memory usage = 115.719MB<br/>&nbsp;&nbsp;&nbsp;&nbsp;Tech-Mapping Phase 4: CPU time = 0h 0m 0.084s, Elapsed time = 0h 0m 0.084s, Peak memory usage = 116.016MB<br/>Generate output files:<br/>&nbsp;&nbsp;&nbsp;&nbsp;CPU time = 0h 0m 0.048s, Elapsed time = 0h 0m 0.048s, Peak memory usage = 117.172MB<br/></td>
 </tr>
 <tr>
 <td class="label">Total Time and Memory Usage</td>
-<td>CPU time = 0h 0m 4s, Elapsed time = 0h 0m 4s, Peak memory usage = 146.125MB</td>
+<td>CPU time = 0h 0m 6s, Elapsed time = 0h 0m 6s, Peak memory usage = 117.172MB</td>
 </tr>
 </table>
 <h1><a name="resource">Resource</a></h1>
@@ -152,7 +153,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label"><b>I/O Port </b></td>
-<td>47</td>
+<td>46</td>
 </tr>
 <tr>
 <td class="label"><b>Embedded Port </b></td>
@@ -160,7 +161,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label"><b>I/O Buf </b></td>
-<td>95</td>
+<td>94</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspIBUF</td>
@@ -168,7 +169,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspOBUF</td>
-<td>39</td>
+<td>38</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspIOBUF</td>
@@ -180,87 +181,79 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label"><b>Register </b></td>
-<td>1896</td>
+<td>1317</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspDFF</td>
-<td>48</td>
+<td>156</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspDFFE</td>
-<td>558</td>
+<td>107</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspDFFS</td>
-<td>30</td>
+<td>53</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspDFFSE</td>
-<td>7</td>
+<td>1</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspDFFR</td>
-<td>273</td>
+<td>211</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspDFFRE</td>
-<td>56</td>
+<td>65</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspDFFP</td>
-<td>9</td>
+<td>5</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspDFFPE</td>
-<td>221</td>
+<td>92</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspDFFC</td>
-<td>112</td>
+<td>113</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspDFFCE</td>
-<td>582</td>
+<td>514</td>
 </tr>
 <tr>
 <td class="label"><b>LUT </b></td>
-<td>2198</td>
+<td>1823</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspLUT2</td>
-<td>289</td>
+<td>204</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspLUT3</td>
-<td>812</td>
+<td>591</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspLUT4</td>
-<td>1097</td>
+<td>1028</td>
 </tr>
 <tr>
 <td class="label"><b>ALU </b></td>
-<td>519</td>
+<td>221</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspALU</td>
-<td>519</td>
-</tr>
-<tr>
-<td class="label"><b>SSRAM </b></td>
-<td>10</td>
-</tr>
-<tr>
-<td class="label">&nbsp&nbsp&nbsp&nbspRAM16S4</td>
-<td>10</td>
+<td>221</td>
 </tr>
 <tr>
 <td class="label"><b>INV </b></td>
-<td>44</td>
+<td>40</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspINV</td>
-<td>44</td>
+<td>40</td>
 </tr>
 <tr>
 <td class="label"><b>IOLOGIC </b></td>
@@ -275,20 +268,20 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td></td>
 </tr>
 <tr>
-<td class="label">&nbsp&nbsp&nbsp&nbspMULT9X9</td>
-<td>2</td>
+<td class="label">&nbsp&nbsp&nbsp&nbspMULTADDALU18X18</td>
+<td>1</td>
 </tr>
 <tr>
 <td class="label"><b>BSRAM </b></td>
-<td>6</td>
+<td>27</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbspSDPB</td>
-<td>4</td>
+<td>26</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp&nbsp&nbsppROM</td>
-<td>2</td>
+<td>1</td>
 </tr>
 <tr>
 <td class="label"><b>CLOCK </b></td>
@@ -308,13 +301,13 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label">Logic</td>
-<td>2821(2242 LUT, 519 ALU, 10 RAM16) / 20736</td>
-<td>14%</td>
+<td>2084(1863 LUT, 221 ALU) / 20736</td>
+<td>11%</td>
 </tr>
 <tr>
 <td class="label">Register</td>
-<td>1896 / 15915</td>
-<td>12%</td>
+<td>1317 / 15915</td>
+<td>9%</td>
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp--Register as Latch</td>
@@ -323,13 +316,13 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label">&nbsp&nbsp--Register as FF</td>
-<td>1896 / 15915</td>
-<td>12%</td>
+<td>1317 / 15915</td>
+<td>9%</td>
 </tr>
 <tr>
 <td class="label">BSRAM</td>
-<td>6 / 46</td>
-<td>14%</td>
+<td>27 / 46</td>
+<td>59%</td>
 </tr>
 </table>
 <h1><a name="timing">Timing</a></h1>
@@ -470,32 +463,32 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>1</td>
 <td>clkin</td>
 <td>27.000(MHz)</td>
-<td>93.596(MHz)</td>
-<td>14</td>
+<td>60.085(MHz)</td>
+<td>19</td>
 <td>TOP</td>
 </tr>
 <tr>
 <td>2</td>
 <td>clocks/sdram_pll/rpll_inst/CLKOUT.default_gen_clk</td>
 <td>108.000(MHz)</td>
-<td>120.250(MHz)</td>
-<td>10</td>
+<td>86.237(MHz)</td>
+<td>12</td>
 <td>TOP</td>
 </tr>
 <tr>
 <td>3</td>
 <td>clocks/video_pll/rpll_inst/CLKOUT.default_gen_clk</td>
 <td>270.000(MHz)</td>
-<td>417.397(MHz)</td>
-<td>3</td>
+<td>275.710(MHz)</td>
+<td>4</td>
 <td>TOP</td>
 </tr>
 <tr>
 <td>4</td>
 <td>clocks/video_pll/rpll_inst/CLKOUTD.default_gen_clk</td>
 <td>135.000(MHz)</td>
-<td>147.493(MHz)</td>
-<td>6</td>
+<td>135.870(MHz)</td>
+<td>8</td>
 <td>TOP</td>
 </tr>
 </table>
@@ -505,11 +498,11 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <table class="summary_table">
 <tr>
 <td class="label">Slack</td>
-<td>-3.951</td>
+<td>-8.914</td>
 </tr>
 <tr>
 <td class="label">Data Arrival Time</td>
-<td>14.000</td>
+<td>18.963</td>
 </tr>
 <tr>
 <td class="label">Data Required Time</td>
@@ -517,15 +510,15 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label">From</td>
-<td>ntsc_video.encoder/v_line_1_s0</td>
+<td>bus_mux/snapshot_13_s0</td>
 </tr>
 <tr>
 <td class="label">To</td>
-<td>coco3_machine.machine/cvbs_lines/prefetch_valid_m_s0</td>
+<td>debug_cycle_dout_0_s1</td>
 </tr>
 <tr>
 <td class="label">Launch Clk</td>
-<td>clocks/video_pll/rpll_inst/CLKOUTD.default_gen_clk[R]</td>
+<td>clocks/video_pll/rpll_inst/CLKOUT.default_gen_clk[R]</td>
 </tr>
 <tr>
 <td class="label">Latch Clk</td>
@@ -548,119 +541,247 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td> </td>
 <td> </td>
 <td> </td>
-<td>clocks/video_pll/rpll_inst/CLKOUTD.default_gen_clk</td>
+<td>clocks/video_pll/rpll_inst/CLKOUT.default_gen_clk</td>
 </tr>
 <tr>
-<td>7.891</td>
-<td>0.484</td>
+<td>7.907</td>
+<td>0.500</td>
 <td>tCL</td>
 <td>RR</td>
-<td>204</td>
-<td>clocks/video_pll/rpll_inst/CLKOUTD</td>
+<td>70</td>
+<td>clocks/video_pll/rpll_inst/CLKOUT</td>
 </tr>
 <tr>
-<td>8.251</td>
+<td>8.267</td>
 <td>0.360</td>
 <td>tNET</td>
 <td>RR</td>
 <td>1</td>
-<td>ntsc_video.encoder/v_line_1_s0/CLK</td>
+<td>bus_mux/snapshot_13_s0/CLK</td>
 </tr>
 <tr>
-<td>8.483</td>
+<td>8.499</td>
 <td>0.232</td>
 <td>tC2Q</td>
 <td>RF</td>
-<td>16</td>
-<td>ntsc_video.encoder/v_line_1_s0/Q</td>
+<td>5</td>
+<td>bus_mux/snapshot_13_s0/Q</td>
 </tr>
 <tr>
-<td>8.957</td>
+<td>8.973</td>
 <td>0.474</td>
 <td>tNET</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/n215_s4/I1</td>
+<td>coco2_machine.machine/sam/sam_s_d_2_s1/I1</td>
 </tr>
 <tr>
-<td>9.512</td>
-<td>0.555</td>
-<td>tINS</td>
-<td>FF</td>
-<td>6</td>
-<td>ntsc_video.encoder/n215_s4/F</td>
-</tr>
-<tr>
-<td>9.986</td>
-<td>0.474</td>
-<td>tNET</td>
-<td>FF</td>
-<td>1</td>
-<td>ntsc_video.encoder/n214_s3/I1</td>
-</tr>
-<tr>
-<td>10.541</td>
-<td>0.555</td>
-<td>tINS</td>
-<td>FF</td>
-<td>6</td>
-<td>ntsc_video.encoder/n214_s3/F</td>
-</tr>
-<tr>
-<td>11.015</td>
-<td>0.474</td>
-<td>tNET</td>
-<td>FF</td>
-<td>1</td>
-<td>ntsc_video.encoder/n280_s24/I1</td>
-</tr>
-<tr>
-<td>11.570</td>
+<td>9.528</td>
 <td>0.555</td>
 <td>tINS</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/n280_s24/F</td>
+<td>coco2_machine.machine/sam/sam_s_d_2_s1/F</td>
 </tr>
 <tr>
-<td>12.044</td>
+<td>10.002</td>
 <td>0.474</td>
 <td>tNET</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/n280_s21/I1</td>
+<td>coco2_machine.machine/sam/sam_s_d_2_s0/I0</td>
 </tr>
 <tr>
-<td>12.599</td>
-<td>0.555</td>
+<td>10.519</td>
+<td>0.517</td>
+<td>tINS</td>
+<td>FF</td>
+<td>5</td>
+<td>coco2_machine.machine/sam/sam_s_d_2_s0/F</td>
+</tr>
+<tr>
+<td>10.993</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>coco2_machine.machine/sam/sam_s_d_1_s0/I3</td>
+</tr>
+<tr>
+<td>11.364</td>
+<td>0.371</td>
 <td>tINS</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/n280_s21/F</td>
+<td>coco2_machine.machine/sam/sam_s_d_1_s0/F</td>
 </tr>
 <tr>
-<td>13.073</td>
+<td>11.838</td>
 <td>0.474</td>
 <td>tNET</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/n280_s20/I2</td>
+<td>coco2_machine.machine/sam/sam_s_d_1_s/I2</td>
 </tr>
 <tr>
-<td>13.526</td>
+<td>12.291</td>
 <td>0.453</td>
 <td>tINS</td>
 <td>FF</td>
-<td>1</td>
-<td>ntsc_video.encoder/n280_s20/F</td>
+<td>9</td>
+<td>coco2_machine.machine/sam/sam_s_d_1_s/F</td>
 </tr>
 <tr>
-<td>14.000</td>
+<td>12.765</td>
 <td>0.474</td>
 <td>tNET</td>
 <td>FF</td>
 <td>1</td>
-<td>coco3_machine.machine/cvbs_lines/prefetch_valid_m_s0/D</td>
+<td>coco2_machine.machine/cpu_mem_addr_Z_13_s0/I1</td>
+</tr>
+<tr>
+<td>13.320</td>
+<td>0.555</td>
+<td>tINS</td>
+<td>FF</td>
+<td>1</td>
+<td>coco2_machine.machine/cpu_mem_addr_Z_13_s0/F</td>
+</tr>
+<tr>
+<td>13.794</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>coco2_machine.machine/cpu_mem_addr_Z_13_s/I1</td>
+</tr>
+<tr>
+<td>14.349</td>
+<td>0.555</td>
+<td>tINS</td>
+<td>FF</td>
+<td>2</td>
+<td>coco2_machine.machine/cpu_mem_addr_Z_13_s/F</td>
+</tr>
+<tr>
+<td>14.823</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>2</td>
+<td>memory/n124_s0/I0</td>
+</tr>
+<tr>
+<td>15.372</td>
+<td>0.549</td>
+<td>tINS</td>
+<td>FR</td>
+<td>1</td>
+<td>memory/n124_s0/COUT</td>
+</tr>
+<tr>
+<td>15.372</td>
+<td>0.000</td>
+<td>tNET</td>
+<td>RR</td>
+<td>2</td>
+<td>memory/n125_s0/CIN</td>
+</tr>
+<tr>
+<td>15.407</td>
+<td>0.035</td>
+<td>tINS</td>
+<td>RF</td>
+<td>1</td>
+<td>memory/n125_s0/COUT</td>
+</tr>
+<tr>
+<td>15.407</td>
+<td>0.000</td>
+<td>tNET</td>
+<td>FF</td>
+<td>2</td>
+<td>memory/n126_s0/CIN</td>
+</tr>
+<tr>
+<td>15.443</td>
+<td>0.035</td>
+<td>tINS</td>
+<td>FF</td>
+<td>1</td>
+<td>memory/n126_s0/COUT</td>
+</tr>
+<tr>
+<td>15.443</td>
+<td>0.000</td>
+<td>tNET</td>
+<td>FF</td>
+<td>2</td>
+<td>memory/n130_s0/CIN</td>
+</tr>
+<tr>
+<td>15.478</td>
+<td>0.035</td>
+<td>tINS</td>
+<td>FF</td>
+<td>2</td>
+<td>memory/n130_s0/COUT</td>
+</tr>
+<tr>
+<td>15.952</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>cpu_data_0_s4/I0</td>
+</tr>
+<tr>
+<td>16.469</td>
+<td>0.517</td>
+<td>tINS</td>
+<td>FF</td>
+<td>1</td>
+<td>cpu_data_0_s4/F</td>
+</tr>
+<tr>
+<td>16.943</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>cpu_data_0_s3/I0</td>
+</tr>
+<tr>
+<td>17.460</td>
+<td>0.517</td>
+<td>tINS</td>
+<td>FF</td>
+<td>18</td>
+<td>cpu_data_0_s3/F</td>
+</tr>
+<tr>
+<td>17.934</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>n1004_s2/I1</td>
+</tr>
+<tr>
+<td>18.489</td>
+<td>0.555</td>
+<td>tINS</td>
+<td>FF</td>
+<td>1</td>
+<td>n1004_s2/F</td>
+</tr>
+<tr>
+<td>18.963</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>debug_cycle_dout_0_s1/D</td>
 </tr>
 </table>
 <b>Data Required Path:</b>
@@ -686,7 +807,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.500</td>
 <td>tCL</td>
 <td>RR</td>
-<td>1577</td>
+<td>830</td>
 <td>clocks/sdram_pll/rpll_inst/CLKOUT</td>
 </tr>
 <tr>
@@ -695,7 +816,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>tNET</td>
 <td>RR</td>
 <td>1</td>
-<td>coco3_machine.machine/cvbs_lines/prefetch_valid_m_s0/CLK</td>
+<td>debug_cycle_dout_0_s1/CLK</td>
 </tr>
 <tr>
 <td>10.084</td>
@@ -703,7 +824,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>tUnc</td>
 <td> </td>
 <td> </td>
-<td>coco3_machine.machine/cvbs_lines/prefetch_valid_m_s0</td>
+<td>debug_cycle_dout_0_s1</td>
 </tr>
 <tr>
 <td>10.049</td>
@@ -711,14 +832,14 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>tSu</td>
 <td> </td>
 <td>1</td>
-<td>coco3_machine.machine/cvbs_lines/prefetch_valid_m_s0</td>
+<td>debug_cycle_dout_0_s1</td>
 </tr>
 </table>
 <b>Path Statistics:</b>
 <table class="summary_table">
 <tr>
 <td class="label">Clock Skew:</td>
-<td>0.016</td>
+<td>0.000</td>
 </tr>
 <tr>
 <td class="label">Setup Relationship:</td>
@@ -726,12 +847,12 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label">Logic Level:</td>
-<td>6</td>
+<td>12</td>
 </tr>
 <tr>
 <td class="label">Arrival Clock Path Delay:</td><td> cell: 0.000, 0.000%; route: 0.360, 100.000%</td></tr>
 <tr>
-<td class="label">Arrival Data Path Delay:</td><td> cell: 2.673, 46.495%; route: 2.844, 49.470%; tC2Q: 0.232, 4.035%</td></tr>
+<td class="label">Arrival Data Path Delay:</td><td> cell: 5.250, 49.082%; route: 5.214, 48.749%; tC2Q: 0.232, 2.169%</td></tr>
 <tr>
 <td class="label">Required Clock Path Delay:</td><td> cell: 0.000, 0.000%; route: 0.360, 100.000%</td></tr>
 </table>
@@ -741,11 +862,11 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <table class="summary_table">
 <tr>
 <td class="label">Slack</td>
-<td>-3.846</td>
+<td>-8.914</td>
 </tr>
 <tr>
 <td class="label">Data Arrival Time</td>
-<td>13.895</td>
+<td>18.963</td>
 </tr>
 <tr>
 <td class="label">Data Required Time</td>
@@ -753,15 +874,15 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label">From</td>
-<td>ntsc_video.encoder/v_line_1_s0</td>
+<td>bus_mux/snapshot_13_s0</td>
 </tr>
 <tr>
 <td class="label">To</td>
-<td>coco3_machine.machine/cvbs_lines/prefetch_valid_m_s0</td>
+<td>debug_cycle_dout_1_s1</td>
 </tr>
 <tr>
 <td class="label">Launch Clk</td>
-<td>clocks/video_pll/rpll_inst/CLKOUTD.default_gen_clk[R]</td>
+<td>clocks/video_pll/rpll_inst/CLKOUT.default_gen_clk[R]</td>
 </tr>
 <tr>
 <td class="label">Latch Clk</td>
@@ -784,119 +905,247 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td> </td>
 <td> </td>
 <td> </td>
-<td>clocks/video_pll/rpll_inst/CLKOUTD.default_gen_clk</td>
+<td>clocks/video_pll/rpll_inst/CLKOUT.default_gen_clk</td>
 </tr>
 <tr>
-<td>7.891</td>
-<td>0.484</td>
+<td>7.907</td>
+<td>0.500</td>
 <td>tCL</td>
 <td>RR</td>
-<td>204</td>
-<td>clocks/video_pll/rpll_inst/CLKOUTD</td>
+<td>70</td>
+<td>clocks/video_pll/rpll_inst/CLKOUT</td>
 </tr>
 <tr>
-<td>8.251</td>
+<td>8.267</td>
 <td>0.360</td>
 <td>tNET</td>
 <td>RR</td>
 <td>1</td>
-<td>ntsc_video.encoder/v_line_1_s0/CLK</td>
+<td>bus_mux/snapshot_13_s0/CLK</td>
 </tr>
 <tr>
-<td>8.483</td>
+<td>8.499</td>
 <td>0.232</td>
 <td>tC2Q</td>
 <td>RF</td>
-<td>16</td>
-<td>ntsc_video.encoder/v_line_1_s0/Q</td>
+<td>5</td>
+<td>bus_mux/snapshot_13_s0/Q</td>
 </tr>
 <tr>
-<td>8.957</td>
+<td>8.973</td>
 <td>0.474</td>
 <td>tNET</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/n215_s4/I1</td>
+<td>coco2_machine.machine/sam/sam_s_d_2_s1/I1</td>
 </tr>
 <tr>
-<td>9.512</td>
-<td>0.555</td>
-<td>tINS</td>
-<td>FF</td>
-<td>6</td>
-<td>ntsc_video.encoder/n215_s4/F</td>
-</tr>
-<tr>
-<td>9.986</td>
-<td>0.474</td>
-<td>tNET</td>
-<td>FF</td>
-<td>1</td>
-<td>ntsc_video.encoder/n214_s3/I1</td>
-</tr>
-<tr>
-<td>10.541</td>
-<td>0.555</td>
-<td>tINS</td>
-<td>FF</td>
-<td>6</td>
-<td>ntsc_video.encoder/n214_s3/F</td>
-</tr>
-<tr>
-<td>11.015</td>
-<td>0.474</td>
-<td>tNET</td>
-<td>FF</td>
-<td>1</td>
-<td>ntsc_video.encoder/prefetch_y_7_s5/I1</td>
-</tr>
-<tr>
-<td>11.570</td>
+<td>9.528</td>
 <td>0.555</td>
 <td>tINS</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/prefetch_y_7_s5/F</td>
+<td>coco2_machine.machine/sam/sam_s_d_2_s1/F</td>
 </tr>
 <tr>
-<td>12.044</td>
+<td>10.002</td>
 <td>0.474</td>
 <td>tNET</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/prefetch_y_7_s2/I1</td>
+<td>coco2_machine.machine/sam/sam_s_d_2_s0/I0</td>
 </tr>
 <tr>
-<td>12.599</td>
+<td>10.519</td>
+<td>0.517</td>
+<td>tINS</td>
+<td>FF</td>
+<td>5</td>
+<td>coco2_machine.machine/sam/sam_s_d_2_s0/F</td>
+</tr>
+<tr>
+<td>10.993</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>coco2_machine.machine/sam/sam_s_d_1_s0/I3</td>
+</tr>
+<tr>
+<td>11.364</td>
+<td>0.371</td>
+<td>tINS</td>
+<td>FF</td>
+<td>1</td>
+<td>coco2_machine.machine/sam/sam_s_d_1_s0/F</td>
+</tr>
+<tr>
+<td>11.838</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>coco2_machine.machine/sam/sam_s_d_1_s/I2</td>
+</tr>
+<tr>
+<td>12.291</td>
+<td>0.453</td>
+<td>tINS</td>
+<td>FF</td>
+<td>9</td>
+<td>coco2_machine.machine/sam/sam_s_d_1_s/F</td>
+</tr>
+<tr>
+<td>12.765</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>coco2_machine.machine/cpu_mem_addr_Z_13_s0/I1</td>
+</tr>
+<tr>
+<td>13.320</td>
 <td>0.555</td>
 <td>tINS</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/prefetch_y_7_s2/F</td>
+<td>coco2_machine.machine/cpu_mem_addr_Z_13_s0/F</td>
 </tr>
 <tr>
-<td>13.073</td>
+<td>13.794</td>
 <td>0.474</td>
 <td>tNET</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/prefetch_y_7_s1/I2</td>
+<td>coco2_machine.machine/cpu_mem_addr_Z_13_s/I1</td>
 </tr>
 <tr>
-<td>13.535</td>
-<td>0.462</td>
+<td>14.349</td>
+<td>0.555</td>
+<td>tINS</td>
+<td>FF</td>
+<td>2</td>
+<td>coco2_machine.machine/cpu_mem_addr_Z_13_s/F</td>
+</tr>
+<tr>
+<td>14.823</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>2</td>
+<td>memory/n124_s0/I0</td>
+</tr>
+<tr>
+<td>15.372</td>
+<td>0.549</td>
 <td>tINS</td>
 <td>FR</td>
-<td>9</td>
-<td>ntsc_video.encoder/prefetch_y_7_s1/F</td>
+<td>1</td>
+<td>memory/n124_s0/COUT</td>
 </tr>
 <tr>
-<td>13.895</td>
-<td>0.360</td>
+<td>15.372</td>
+<td>0.000</td>
 <td>tNET</td>
 <td>RR</td>
+<td>2</td>
+<td>memory/n125_s0/CIN</td>
+</tr>
+<tr>
+<td>15.407</td>
+<td>0.035</td>
+<td>tINS</td>
+<td>RF</td>
 <td>1</td>
-<td>coco3_machine.machine/cvbs_lines/prefetch_valid_m_s0/RESET</td>
+<td>memory/n125_s0/COUT</td>
+</tr>
+<tr>
+<td>15.407</td>
+<td>0.000</td>
+<td>tNET</td>
+<td>FF</td>
+<td>2</td>
+<td>memory/n126_s0/CIN</td>
+</tr>
+<tr>
+<td>15.443</td>
+<td>0.035</td>
+<td>tINS</td>
+<td>FF</td>
+<td>1</td>
+<td>memory/n126_s0/COUT</td>
+</tr>
+<tr>
+<td>15.443</td>
+<td>0.000</td>
+<td>tNET</td>
+<td>FF</td>
+<td>2</td>
+<td>memory/n130_s0/CIN</td>
+</tr>
+<tr>
+<td>15.478</td>
+<td>0.035</td>
+<td>tINS</td>
+<td>FF</td>
+<td>2</td>
+<td>memory/n130_s0/COUT</td>
+</tr>
+<tr>
+<td>15.952</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>cpu_data_0_s4/I0</td>
+</tr>
+<tr>
+<td>16.469</td>
+<td>0.517</td>
+<td>tINS</td>
+<td>FF</td>
+<td>1</td>
+<td>cpu_data_0_s4/F</td>
+</tr>
+<tr>
+<td>16.943</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>cpu_data_0_s3/I0</td>
+</tr>
+<tr>
+<td>17.460</td>
+<td>0.517</td>
+<td>tINS</td>
+<td>FF</td>
+<td>18</td>
+<td>cpu_data_0_s3/F</td>
+</tr>
+<tr>
+<td>17.934</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>n1003_s2/I1</td>
+</tr>
+<tr>
+<td>18.489</td>
+<td>0.555</td>
+<td>tINS</td>
+<td>FF</td>
+<td>1</td>
+<td>n1003_s2/F</td>
+</tr>
+<tr>
+<td>18.963</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>debug_cycle_dout_1_s1/D</td>
 </tr>
 </table>
 <b>Data Required Path:</b>
@@ -922,7 +1171,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.500</td>
 <td>tCL</td>
 <td>RR</td>
-<td>1577</td>
+<td>830</td>
 <td>clocks/sdram_pll/rpll_inst/CLKOUT</td>
 </tr>
 <tr>
@@ -931,7 +1180,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>tNET</td>
 <td>RR</td>
 <td>1</td>
-<td>coco3_machine.machine/cvbs_lines/prefetch_valid_m_s0/CLK</td>
+<td>debug_cycle_dout_1_s1/CLK</td>
 </tr>
 <tr>
 <td>10.084</td>
@@ -939,7 +1188,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>tUnc</td>
 <td> </td>
 <td> </td>
-<td>coco3_machine.machine/cvbs_lines/prefetch_valid_m_s0</td>
+<td>debug_cycle_dout_1_s1</td>
 </tr>
 <tr>
 <td>10.049</td>
@@ -947,14 +1196,14 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>tSu</td>
 <td> </td>
 <td>1</td>
-<td>coco3_machine.machine/cvbs_lines/prefetch_valid_m_s0</td>
+<td>debug_cycle_dout_1_s1</td>
 </tr>
 </table>
 <b>Path Statistics:</b>
 <table class="summary_table">
 <tr>
 <td class="label">Clock Skew:</td>
-<td>0.016</td>
+<td>0.000</td>
 </tr>
 <tr>
 <td class="label">Setup Relationship:</td>
@@ -962,12 +1211,12 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label">Logic Level:</td>
-<td>6</td>
+<td>12</td>
 </tr>
 <tr>
 <td class="label">Arrival Clock Path Delay:</td><td> cell: 0.000, 0.000%; route: 0.360, 100.000%</td></tr>
 <tr>
-<td class="label">Arrival Data Path Delay:</td><td> cell: 2.682, 47.519%; route: 2.730, 48.370%; tC2Q: 0.232, 4.111%</td></tr>
+<td class="label">Arrival Data Path Delay:</td><td> cell: 5.250, 49.082%; route: 5.214, 48.749%; tC2Q: 0.232, 2.169%</td></tr>
 <tr>
 <td class="label">Required Clock Path Delay:</td><td> cell: 0.000, 0.000%; route: 0.360, 100.000%</td></tr>
 </table>
@@ -977,11 +1226,11 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <table class="summary_table">
 <tr>
 <td class="label">Slack</td>
-<td>-3.846</td>
+<td>-8.914</td>
 </tr>
 <tr>
 <td class="label">Data Arrival Time</td>
-<td>13.895</td>
+<td>18.963</td>
 </tr>
 <tr>
 <td class="label">Data Required Time</td>
@@ -989,15 +1238,15 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label">From</td>
-<td>ntsc_video.encoder/v_line_1_s0</td>
+<td>bus_mux/snapshot_13_s0</td>
 </tr>
 <tr>
 <td class="label">To</td>
-<td>coco3_machine.machine/cvbs_lines/prefetch_y_m_0_s0</td>
+<td>debug_cycle_dout_2_s1</td>
 </tr>
 <tr>
 <td class="label">Launch Clk</td>
-<td>clocks/video_pll/rpll_inst/CLKOUTD.default_gen_clk[R]</td>
+<td>clocks/video_pll/rpll_inst/CLKOUT.default_gen_clk[R]</td>
 </tr>
 <tr>
 <td class="label">Latch Clk</td>
@@ -1020,119 +1269,247 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td> </td>
 <td> </td>
 <td> </td>
-<td>clocks/video_pll/rpll_inst/CLKOUTD.default_gen_clk</td>
+<td>clocks/video_pll/rpll_inst/CLKOUT.default_gen_clk</td>
 </tr>
 <tr>
-<td>7.891</td>
-<td>0.484</td>
+<td>7.907</td>
+<td>0.500</td>
 <td>tCL</td>
 <td>RR</td>
-<td>204</td>
-<td>clocks/video_pll/rpll_inst/CLKOUTD</td>
+<td>70</td>
+<td>clocks/video_pll/rpll_inst/CLKOUT</td>
 </tr>
 <tr>
-<td>8.251</td>
+<td>8.267</td>
 <td>0.360</td>
 <td>tNET</td>
 <td>RR</td>
 <td>1</td>
-<td>ntsc_video.encoder/v_line_1_s0/CLK</td>
+<td>bus_mux/snapshot_13_s0/CLK</td>
 </tr>
 <tr>
-<td>8.483</td>
+<td>8.499</td>
 <td>0.232</td>
 <td>tC2Q</td>
 <td>RF</td>
-<td>16</td>
-<td>ntsc_video.encoder/v_line_1_s0/Q</td>
+<td>5</td>
+<td>bus_mux/snapshot_13_s0/Q</td>
 </tr>
 <tr>
-<td>8.957</td>
+<td>8.973</td>
 <td>0.474</td>
 <td>tNET</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/n215_s4/I1</td>
+<td>coco2_machine.machine/sam/sam_s_d_2_s1/I1</td>
 </tr>
 <tr>
-<td>9.512</td>
-<td>0.555</td>
-<td>tINS</td>
-<td>FF</td>
-<td>6</td>
-<td>ntsc_video.encoder/n215_s4/F</td>
-</tr>
-<tr>
-<td>9.986</td>
-<td>0.474</td>
-<td>tNET</td>
-<td>FF</td>
-<td>1</td>
-<td>ntsc_video.encoder/n214_s3/I1</td>
-</tr>
-<tr>
-<td>10.541</td>
-<td>0.555</td>
-<td>tINS</td>
-<td>FF</td>
-<td>6</td>
-<td>ntsc_video.encoder/n214_s3/F</td>
-</tr>
-<tr>
-<td>11.015</td>
-<td>0.474</td>
-<td>tNET</td>
-<td>FF</td>
-<td>1</td>
-<td>ntsc_video.encoder/prefetch_y_7_s5/I1</td>
-</tr>
-<tr>
-<td>11.570</td>
+<td>9.528</td>
 <td>0.555</td>
 <td>tINS</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/prefetch_y_7_s5/F</td>
+<td>coco2_machine.machine/sam/sam_s_d_2_s1/F</td>
 </tr>
 <tr>
-<td>12.044</td>
+<td>10.002</td>
 <td>0.474</td>
 <td>tNET</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/prefetch_y_7_s2/I1</td>
+<td>coco2_machine.machine/sam/sam_s_d_2_s0/I0</td>
 </tr>
 <tr>
-<td>12.599</td>
+<td>10.519</td>
+<td>0.517</td>
+<td>tINS</td>
+<td>FF</td>
+<td>5</td>
+<td>coco2_machine.machine/sam/sam_s_d_2_s0/F</td>
+</tr>
+<tr>
+<td>10.993</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>coco2_machine.machine/sam/sam_s_d_1_s0/I3</td>
+</tr>
+<tr>
+<td>11.364</td>
+<td>0.371</td>
+<td>tINS</td>
+<td>FF</td>
+<td>1</td>
+<td>coco2_machine.machine/sam/sam_s_d_1_s0/F</td>
+</tr>
+<tr>
+<td>11.838</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>coco2_machine.machine/sam/sam_s_d_1_s/I2</td>
+</tr>
+<tr>
+<td>12.291</td>
+<td>0.453</td>
+<td>tINS</td>
+<td>FF</td>
+<td>9</td>
+<td>coco2_machine.machine/sam/sam_s_d_1_s/F</td>
+</tr>
+<tr>
+<td>12.765</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>coco2_machine.machine/cpu_mem_addr_Z_13_s0/I1</td>
+</tr>
+<tr>
+<td>13.320</td>
 <td>0.555</td>
 <td>tINS</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/prefetch_y_7_s2/F</td>
+<td>coco2_machine.machine/cpu_mem_addr_Z_13_s0/F</td>
 </tr>
 <tr>
-<td>13.073</td>
+<td>13.794</td>
 <td>0.474</td>
 <td>tNET</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/prefetch_y_7_s1/I2</td>
+<td>coco2_machine.machine/cpu_mem_addr_Z_13_s/I1</td>
 </tr>
 <tr>
-<td>13.535</td>
-<td>0.462</td>
+<td>14.349</td>
+<td>0.555</td>
+<td>tINS</td>
+<td>FF</td>
+<td>2</td>
+<td>coco2_machine.machine/cpu_mem_addr_Z_13_s/F</td>
+</tr>
+<tr>
+<td>14.823</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>2</td>
+<td>memory/n124_s0/I0</td>
+</tr>
+<tr>
+<td>15.372</td>
+<td>0.549</td>
 <td>tINS</td>
 <td>FR</td>
-<td>9</td>
-<td>ntsc_video.encoder/prefetch_y_7_s1/F</td>
+<td>1</td>
+<td>memory/n124_s0/COUT</td>
 </tr>
 <tr>
-<td>13.895</td>
-<td>0.360</td>
+<td>15.372</td>
+<td>0.000</td>
 <td>tNET</td>
 <td>RR</td>
+<td>2</td>
+<td>memory/n125_s0/CIN</td>
+</tr>
+<tr>
+<td>15.407</td>
+<td>0.035</td>
+<td>tINS</td>
+<td>RF</td>
 <td>1</td>
-<td>coco3_machine.machine/cvbs_lines/prefetch_y_m_0_s0/RESET</td>
+<td>memory/n125_s0/COUT</td>
+</tr>
+<tr>
+<td>15.407</td>
+<td>0.000</td>
+<td>tNET</td>
+<td>FF</td>
+<td>2</td>
+<td>memory/n126_s0/CIN</td>
+</tr>
+<tr>
+<td>15.443</td>
+<td>0.035</td>
+<td>tINS</td>
+<td>FF</td>
+<td>1</td>
+<td>memory/n126_s0/COUT</td>
+</tr>
+<tr>
+<td>15.443</td>
+<td>0.000</td>
+<td>tNET</td>
+<td>FF</td>
+<td>2</td>
+<td>memory/n130_s0/CIN</td>
+</tr>
+<tr>
+<td>15.478</td>
+<td>0.035</td>
+<td>tINS</td>
+<td>FF</td>
+<td>2</td>
+<td>memory/n130_s0/COUT</td>
+</tr>
+<tr>
+<td>15.952</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>cpu_data_0_s4/I0</td>
+</tr>
+<tr>
+<td>16.469</td>
+<td>0.517</td>
+<td>tINS</td>
+<td>FF</td>
+<td>1</td>
+<td>cpu_data_0_s4/F</td>
+</tr>
+<tr>
+<td>16.943</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>cpu_data_0_s3/I0</td>
+</tr>
+<tr>
+<td>17.460</td>
+<td>0.517</td>
+<td>tINS</td>
+<td>FF</td>
+<td>18</td>
+<td>cpu_data_0_s3/F</td>
+</tr>
+<tr>
+<td>17.934</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>n1002_s2/I1</td>
+</tr>
+<tr>
+<td>18.489</td>
+<td>0.555</td>
+<td>tINS</td>
+<td>FF</td>
+<td>1</td>
+<td>n1002_s2/F</td>
+</tr>
+<tr>
+<td>18.963</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>debug_cycle_dout_2_s1/D</td>
 </tr>
 </table>
 <b>Data Required Path:</b>
@@ -1158,7 +1535,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.500</td>
 <td>tCL</td>
 <td>RR</td>
-<td>1577</td>
+<td>830</td>
 <td>clocks/sdram_pll/rpll_inst/CLKOUT</td>
 </tr>
 <tr>
@@ -1167,7 +1544,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>tNET</td>
 <td>RR</td>
 <td>1</td>
-<td>coco3_machine.machine/cvbs_lines/prefetch_y_m_0_s0/CLK</td>
+<td>debug_cycle_dout_2_s1/CLK</td>
 </tr>
 <tr>
 <td>10.084</td>
@@ -1175,7 +1552,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>tUnc</td>
 <td> </td>
 <td> </td>
-<td>coco3_machine.machine/cvbs_lines/prefetch_y_m_0_s0</td>
+<td>debug_cycle_dout_2_s1</td>
 </tr>
 <tr>
 <td>10.049</td>
@@ -1183,14 +1560,14 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>tSu</td>
 <td> </td>
 <td>1</td>
-<td>coco3_machine.machine/cvbs_lines/prefetch_y_m_0_s0</td>
+<td>debug_cycle_dout_2_s1</td>
 </tr>
 </table>
 <b>Path Statistics:</b>
 <table class="summary_table">
 <tr>
 <td class="label">Clock Skew:</td>
-<td>0.016</td>
+<td>0.000</td>
 </tr>
 <tr>
 <td class="label">Setup Relationship:</td>
@@ -1198,12 +1575,12 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label">Logic Level:</td>
-<td>6</td>
+<td>12</td>
 </tr>
 <tr>
 <td class="label">Arrival Clock Path Delay:</td><td> cell: 0.000, 0.000%; route: 0.360, 100.000%</td></tr>
 <tr>
-<td class="label">Arrival Data Path Delay:</td><td> cell: 2.682, 47.519%; route: 2.730, 48.370%; tC2Q: 0.232, 4.111%</td></tr>
+<td class="label">Arrival Data Path Delay:</td><td> cell: 5.250, 49.082%; route: 5.214, 48.749%; tC2Q: 0.232, 2.169%</td></tr>
 <tr>
 <td class="label">Required Clock Path Delay:</td><td> cell: 0.000, 0.000%; route: 0.360, 100.000%</td></tr>
 </table>
@@ -1213,11 +1590,11 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <table class="summary_table">
 <tr>
 <td class="label">Slack</td>
-<td>-3.846</td>
+<td>-8.914</td>
 </tr>
 <tr>
 <td class="label">Data Arrival Time</td>
-<td>13.895</td>
+<td>18.963</td>
 </tr>
 <tr>
 <td class="label">Data Required Time</td>
@@ -1225,15 +1602,15 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label">From</td>
-<td>ntsc_video.encoder/v_line_1_s0</td>
+<td>bus_mux/snapshot_13_s0</td>
 </tr>
 <tr>
 <td class="label">To</td>
-<td>coco3_machine.machine/cvbs_lines/prefetch_y_m_1_s0</td>
+<td>debug_cycle_dout_3_s1</td>
 </tr>
 <tr>
 <td class="label">Launch Clk</td>
-<td>clocks/video_pll/rpll_inst/CLKOUTD.default_gen_clk[R]</td>
+<td>clocks/video_pll/rpll_inst/CLKOUT.default_gen_clk[R]</td>
 </tr>
 <tr>
 <td class="label">Latch Clk</td>
@@ -1256,119 +1633,247 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td> </td>
 <td> </td>
 <td> </td>
-<td>clocks/video_pll/rpll_inst/CLKOUTD.default_gen_clk</td>
+<td>clocks/video_pll/rpll_inst/CLKOUT.default_gen_clk</td>
 </tr>
 <tr>
-<td>7.891</td>
-<td>0.484</td>
+<td>7.907</td>
+<td>0.500</td>
 <td>tCL</td>
 <td>RR</td>
-<td>204</td>
-<td>clocks/video_pll/rpll_inst/CLKOUTD</td>
+<td>70</td>
+<td>clocks/video_pll/rpll_inst/CLKOUT</td>
 </tr>
 <tr>
-<td>8.251</td>
+<td>8.267</td>
 <td>0.360</td>
 <td>tNET</td>
 <td>RR</td>
 <td>1</td>
-<td>ntsc_video.encoder/v_line_1_s0/CLK</td>
+<td>bus_mux/snapshot_13_s0/CLK</td>
 </tr>
 <tr>
-<td>8.483</td>
+<td>8.499</td>
 <td>0.232</td>
 <td>tC2Q</td>
 <td>RF</td>
-<td>16</td>
-<td>ntsc_video.encoder/v_line_1_s0/Q</td>
+<td>5</td>
+<td>bus_mux/snapshot_13_s0/Q</td>
 </tr>
 <tr>
-<td>8.957</td>
+<td>8.973</td>
 <td>0.474</td>
 <td>tNET</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/n215_s4/I1</td>
+<td>coco2_machine.machine/sam/sam_s_d_2_s1/I1</td>
 </tr>
 <tr>
-<td>9.512</td>
-<td>0.555</td>
-<td>tINS</td>
-<td>FF</td>
-<td>6</td>
-<td>ntsc_video.encoder/n215_s4/F</td>
-</tr>
-<tr>
-<td>9.986</td>
-<td>0.474</td>
-<td>tNET</td>
-<td>FF</td>
-<td>1</td>
-<td>ntsc_video.encoder/n214_s3/I1</td>
-</tr>
-<tr>
-<td>10.541</td>
-<td>0.555</td>
-<td>tINS</td>
-<td>FF</td>
-<td>6</td>
-<td>ntsc_video.encoder/n214_s3/F</td>
-</tr>
-<tr>
-<td>11.015</td>
-<td>0.474</td>
-<td>tNET</td>
-<td>FF</td>
-<td>1</td>
-<td>ntsc_video.encoder/prefetch_y_7_s5/I1</td>
-</tr>
-<tr>
-<td>11.570</td>
+<td>9.528</td>
 <td>0.555</td>
 <td>tINS</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/prefetch_y_7_s5/F</td>
+<td>coco2_machine.machine/sam/sam_s_d_2_s1/F</td>
 </tr>
 <tr>
-<td>12.044</td>
+<td>10.002</td>
 <td>0.474</td>
 <td>tNET</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/prefetch_y_7_s2/I1</td>
+<td>coco2_machine.machine/sam/sam_s_d_2_s0/I0</td>
 </tr>
 <tr>
-<td>12.599</td>
+<td>10.519</td>
+<td>0.517</td>
+<td>tINS</td>
+<td>FF</td>
+<td>5</td>
+<td>coco2_machine.machine/sam/sam_s_d_2_s0/F</td>
+</tr>
+<tr>
+<td>10.993</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>coco2_machine.machine/sam/sam_s_d_1_s0/I3</td>
+</tr>
+<tr>
+<td>11.364</td>
+<td>0.371</td>
+<td>tINS</td>
+<td>FF</td>
+<td>1</td>
+<td>coco2_machine.machine/sam/sam_s_d_1_s0/F</td>
+</tr>
+<tr>
+<td>11.838</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>coco2_machine.machine/sam/sam_s_d_1_s/I2</td>
+</tr>
+<tr>
+<td>12.291</td>
+<td>0.453</td>
+<td>tINS</td>
+<td>FF</td>
+<td>9</td>
+<td>coco2_machine.machine/sam/sam_s_d_1_s/F</td>
+</tr>
+<tr>
+<td>12.765</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>coco2_machine.machine/cpu_mem_addr_Z_13_s0/I1</td>
+</tr>
+<tr>
+<td>13.320</td>
 <td>0.555</td>
 <td>tINS</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/prefetch_y_7_s2/F</td>
+<td>coco2_machine.machine/cpu_mem_addr_Z_13_s0/F</td>
 </tr>
 <tr>
-<td>13.073</td>
+<td>13.794</td>
 <td>0.474</td>
 <td>tNET</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/prefetch_y_7_s1/I2</td>
+<td>coco2_machine.machine/cpu_mem_addr_Z_13_s/I1</td>
 </tr>
 <tr>
-<td>13.535</td>
-<td>0.462</td>
+<td>14.349</td>
+<td>0.555</td>
+<td>tINS</td>
+<td>FF</td>
+<td>2</td>
+<td>coco2_machine.machine/cpu_mem_addr_Z_13_s/F</td>
+</tr>
+<tr>
+<td>14.823</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>2</td>
+<td>memory/n124_s0/I0</td>
+</tr>
+<tr>
+<td>15.372</td>
+<td>0.549</td>
 <td>tINS</td>
 <td>FR</td>
-<td>9</td>
-<td>ntsc_video.encoder/prefetch_y_7_s1/F</td>
+<td>1</td>
+<td>memory/n124_s0/COUT</td>
 </tr>
 <tr>
-<td>13.895</td>
-<td>0.360</td>
+<td>15.372</td>
+<td>0.000</td>
 <td>tNET</td>
 <td>RR</td>
+<td>2</td>
+<td>memory/n125_s0/CIN</td>
+</tr>
+<tr>
+<td>15.407</td>
+<td>0.035</td>
+<td>tINS</td>
+<td>RF</td>
 <td>1</td>
-<td>coco3_machine.machine/cvbs_lines/prefetch_y_m_1_s0/RESET</td>
+<td>memory/n125_s0/COUT</td>
+</tr>
+<tr>
+<td>15.407</td>
+<td>0.000</td>
+<td>tNET</td>
+<td>FF</td>
+<td>2</td>
+<td>memory/n126_s0/CIN</td>
+</tr>
+<tr>
+<td>15.443</td>
+<td>0.035</td>
+<td>tINS</td>
+<td>FF</td>
+<td>1</td>
+<td>memory/n126_s0/COUT</td>
+</tr>
+<tr>
+<td>15.443</td>
+<td>0.000</td>
+<td>tNET</td>
+<td>FF</td>
+<td>2</td>
+<td>memory/n130_s0/CIN</td>
+</tr>
+<tr>
+<td>15.478</td>
+<td>0.035</td>
+<td>tINS</td>
+<td>FF</td>
+<td>2</td>
+<td>memory/n130_s0/COUT</td>
+</tr>
+<tr>
+<td>15.952</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>cpu_data_0_s4/I0</td>
+</tr>
+<tr>
+<td>16.469</td>
+<td>0.517</td>
+<td>tINS</td>
+<td>FF</td>
+<td>1</td>
+<td>cpu_data_0_s4/F</td>
+</tr>
+<tr>
+<td>16.943</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>cpu_data_0_s3/I0</td>
+</tr>
+<tr>
+<td>17.460</td>
+<td>0.517</td>
+<td>tINS</td>
+<td>FF</td>
+<td>18</td>
+<td>cpu_data_0_s3/F</td>
+</tr>
+<tr>
+<td>17.934</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>n1001_s2/I1</td>
+</tr>
+<tr>
+<td>18.489</td>
+<td>0.555</td>
+<td>tINS</td>
+<td>FF</td>
+<td>1</td>
+<td>n1001_s2/F</td>
+</tr>
+<tr>
+<td>18.963</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>debug_cycle_dout_3_s1/D</td>
 </tr>
 </table>
 <b>Data Required Path:</b>
@@ -1394,7 +1899,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.500</td>
 <td>tCL</td>
 <td>RR</td>
-<td>1577</td>
+<td>830</td>
 <td>clocks/sdram_pll/rpll_inst/CLKOUT</td>
 </tr>
 <tr>
@@ -1403,7 +1908,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>tNET</td>
 <td>RR</td>
 <td>1</td>
-<td>coco3_machine.machine/cvbs_lines/prefetch_y_m_1_s0/CLK</td>
+<td>debug_cycle_dout_3_s1/CLK</td>
 </tr>
 <tr>
 <td>10.084</td>
@@ -1411,7 +1916,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>tUnc</td>
 <td> </td>
 <td> </td>
-<td>coco3_machine.machine/cvbs_lines/prefetch_y_m_1_s0</td>
+<td>debug_cycle_dout_3_s1</td>
 </tr>
 <tr>
 <td>10.049</td>
@@ -1419,14 +1924,14 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>tSu</td>
 <td> </td>
 <td>1</td>
-<td>coco3_machine.machine/cvbs_lines/prefetch_y_m_1_s0</td>
+<td>debug_cycle_dout_3_s1</td>
 </tr>
 </table>
 <b>Path Statistics:</b>
 <table class="summary_table">
 <tr>
 <td class="label">Clock Skew:</td>
-<td>0.016</td>
+<td>0.000</td>
 </tr>
 <tr>
 <td class="label">Setup Relationship:</td>
@@ -1434,12 +1939,12 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label">Logic Level:</td>
-<td>6</td>
+<td>12</td>
 </tr>
 <tr>
 <td class="label">Arrival Clock Path Delay:</td><td> cell: 0.000, 0.000%; route: 0.360, 100.000%</td></tr>
 <tr>
-<td class="label">Arrival Data Path Delay:</td><td> cell: 2.682, 47.519%; route: 2.730, 48.370%; tC2Q: 0.232, 4.111%</td></tr>
+<td class="label">Arrival Data Path Delay:</td><td> cell: 5.250, 49.082%; route: 5.214, 48.749%; tC2Q: 0.232, 2.169%</td></tr>
 <tr>
 <td class="label">Required Clock Path Delay:</td><td> cell: 0.000, 0.000%; route: 0.360, 100.000%</td></tr>
 </table>
@@ -1449,11 +1954,11 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <table class="summary_table">
 <tr>
 <td class="label">Slack</td>
-<td>-3.846</td>
+<td>-8.914</td>
 </tr>
 <tr>
 <td class="label">Data Arrival Time</td>
-<td>13.895</td>
+<td>18.963</td>
 </tr>
 <tr>
 <td class="label">Data Required Time</td>
@@ -1461,15 +1966,15 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label">From</td>
-<td>ntsc_video.encoder/v_line_1_s0</td>
+<td>bus_mux/snapshot_13_s0</td>
 </tr>
 <tr>
 <td class="label">To</td>
-<td>coco3_machine.machine/cvbs_lines/prefetch_y_m_2_s0</td>
+<td>debug_cycle_dout_4_s1</td>
 </tr>
 <tr>
 <td class="label">Launch Clk</td>
-<td>clocks/video_pll/rpll_inst/CLKOUTD.default_gen_clk[R]</td>
+<td>clocks/video_pll/rpll_inst/CLKOUT.default_gen_clk[R]</td>
 </tr>
 <tr>
 <td class="label">Latch Clk</td>
@@ -1492,119 +1997,247 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td> </td>
 <td> </td>
 <td> </td>
-<td>clocks/video_pll/rpll_inst/CLKOUTD.default_gen_clk</td>
+<td>clocks/video_pll/rpll_inst/CLKOUT.default_gen_clk</td>
 </tr>
 <tr>
-<td>7.891</td>
-<td>0.484</td>
+<td>7.907</td>
+<td>0.500</td>
 <td>tCL</td>
 <td>RR</td>
-<td>204</td>
-<td>clocks/video_pll/rpll_inst/CLKOUTD</td>
+<td>70</td>
+<td>clocks/video_pll/rpll_inst/CLKOUT</td>
 </tr>
 <tr>
-<td>8.251</td>
+<td>8.267</td>
 <td>0.360</td>
 <td>tNET</td>
 <td>RR</td>
 <td>1</td>
-<td>ntsc_video.encoder/v_line_1_s0/CLK</td>
+<td>bus_mux/snapshot_13_s0/CLK</td>
 </tr>
 <tr>
-<td>8.483</td>
+<td>8.499</td>
 <td>0.232</td>
 <td>tC2Q</td>
 <td>RF</td>
-<td>16</td>
-<td>ntsc_video.encoder/v_line_1_s0/Q</td>
+<td>5</td>
+<td>bus_mux/snapshot_13_s0/Q</td>
 </tr>
 <tr>
-<td>8.957</td>
+<td>8.973</td>
 <td>0.474</td>
 <td>tNET</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/n215_s4/I1</td>
+<td>coco2_machine.machine/sam/sam_s_d_2_s1/I1</td>
 </tr>
 <tr>
-<td>9.512</td>
-<td>0.555</td>
-<td>tINS</td>
-<td>FF</td>
-<td>6</td>
-<td>ntsc_video.encoder/n215_s4/F</td>
-</tr>
-<tr>
-<td>9.986</td>
-<td>0.474</td>
-<td>tNET</td>
-<td>FF</td>
-<td>1</td>
-<td>ntsc_video.encoder/n214_s3/I1</td>
-</tr>
-<tr>
-<td>10.541</td>
-<td>0.555</td>
-<td>tINS</td>
-<td>FF</td>
-<td>6</td>
-<td>ntsc_video.encoder/n214_s3/F</td>
-</tr>
-<tr>
-<td>11.015</td>
-<td>0.474</td>
-<td>tNET</td>
-<td>FF</td>
-<td>1</td>
-<td>ntsc_video.encoder/prefetch_y_7_s5/I1</td>
-</tr>
-<tr>
-<td>11.570</td>
+<td>9.528</td>
 <td>0.555</td>
 <td>tINS</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/prefetch_y_7_s5/F</td>
+<td>coco2_machine.machine/sam/sam_s_d_2_s1/F</td>
 </tr>
 <tr>
-<td>12.044</td>
+<td>10.002</td>
 <td>0.474</td>
 <td>tNET</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/prefetch_y_7_s2/I1</td>
+<td>coco2_machine.machine/sam/sam_s_d_2_s0/I0</td>
 </tr>
 <tr>
-<td>12.599</td>
+<td>10.519</td>
+<td>0.517</td>
+<td>tINS</td>
+<td>FF</td>
+<td>5</td>
+<td>coco2_machine.machine/sam/sam_s_d_2_s0/F</td>
+</tr>
+<tr>
+<td>10.993</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>coco2_machine.machine/sam/sam_s_d_1_s0/I3</td>
+</tr>
+<tr>
+<td>11.364</td>
+<td>0.371</td>
+<td>tINS</td>
+<td>FF</td>
+<td>1</td>
+<td>coco2_machine.machine/sam/sam_s_d_1_s0/F</td>
+</tr>
+<tr>
+<td>11.838</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>coco2_machine.machine/sam/sam_s_d_1_s/I2</td>
+</tr>
+<tr>
+<td>12.291</td>
+<td>0.453</td>
+<td>tINS</td>
+<td>FF</td>
+<td>9</td>
+<td>coco2_machine.machine/sam/sam_s_d_1_s/F</td>
+</tr>
+<tr>
+<td>12.765</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>coco2_machine.machine/cpu_mem_addr_Z_13_s0/I1</td>
+</tr>
+<tr>
+<td>13.320</td>
 <td>0.555</td>
 <td>tINS</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/prefetch_y_7_s2/F</td>
+<td>coco2_machine.machine/cpu_mem_addr_Z_13_s0/F</td>
 </tr>
 <tr>
-<td>13.073</td>
+<td>13.794</td>
 <td>0.474</td>
 <td>tNET</td>
 <td>FF</td>
 <td>1</td>
-<td>ntsc_video.encoder/prefetch_y_7_s1/I2</td>
+<td>coco2_machine.machine/cpu_mem_addr_Z_13_s/I1</td>
 </tr>
 <tr>
-<td>13.535</td>
-<td>0.462</td>
+<td>14.349</td>
+<td>0.555</td>
+<td>tINS</td>
+<td>FF</td>
+<td>2</td>
+<td>coco2_machine.machine/cpu_mem_addr_Z_13_s/F</td>
+</tr>
+<tr>
+<td>14.823</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>2</td>
+<td>memory/n124_s0/I0</td>
+</tr>
+<tr>
+<td>15.372</td>
+<td>0.549</td>
 <td>tINS</td>
 <td>FR</td>
-<td>9</td>
-<td>ntsc_video.encoder/prefetch_y_7_s1/F</td>
+<td>1</td>
+<td>memory/n124_s0/COUT</td>
 </tr>
 <tr>
-<td>13.895</td>
-<td>0.360</td>
+<td>15.372</td>
+<td>0.000</td>
 <td>tNET</td>
 <td>RR</td>
+<td>2</td>
+<td>memory/n125_s0/CIN</td>
+</tr>
+<tr>
+<td>15.407</td>
+<td>0.035</td>
+<td>tINS</td>
+<td>RF</td>
 <td>1</td>
-<td>coco3_machine.machine/cvbs_lines/prefetch_y_m_2_s0/RESET</td>
+<td>memory/n125_s0/COUT</td>
+</tr>
+<tr>
+<td>15.407</td>
+<td>0.000</td>
+<td>tNET</td>
+<td>FF</td>
+<td>2</td>
+<td>memory/n126_s0/CIN</td>
+</tr>
+<tr>
+<td>15.443</td>
+<td>0.035</td>
+<td>tINS</td>
+<td>FF</td>
+<td>1</td>
+<td>memory/n126_s0/COUT</td>
+</tr>
+<tr>
+<td>15.443</td>
+<td>0.000</td>
+<td>tNET</td>
+<td>FF</td>
+<td>2</td>
+<td>memory/n130_s0/CIN</td>
+</tr>
+<tr>
+<td>15.478</td>
+<td>0.035</td>
+<td>tINS</td>
+<td>FF</td>
+<td>2</td>
+<td>memory/n130_s0/COUT</td>
+</tr>
+<tr>
+<td>15.952</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>cpu_data_0_s4/I0</td>
+</tr>
+<tr>
+<td>16.469</td>
+<td>0.517</td>
+<td>tINS</td>
+<td>FF</td>
+<td>1</td>
+<td>cpu_data_0_s4/F</td>
+</tr>
+<tr>
+<td>16.943</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>cpu_data_0_s3/I0</td>
+</tr>
+<tr>
+<td>17.460</td>
+<td>0.517</td>
+<td>tINS</td>
+<td>FF</td>
+<td>18</td>
+<td>cpu_data_0_s3/F</td>
+</tr>
+<tr>
+<td>17.934</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>n1000_s2/I1</td>
+</tr>
+<tr>
+<td>18.489</td>
+<td>0.555</td>
+<td>tINS</td>
+<td>FF</td>
+<td>1</td>
+<td>n1000_s2/F</td>
+</tr>
+<tr>
+<td>18.963</td>
+<td>0.474</td>
+<td>tNET</td>
+<td>FF</td>
+<td>1</td>
+<td>debug_cycle_dout_4_s1/D</td>
 </tr>
 </table>
 <b>Data Required Path:</b>
@@ -1630,7 +2263,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>0.500</td>
 <td>tCL</td>
 <td>RR</td>
-<td>1577</td>
+<td>830</td>
 <td>clocks/sdram_pll/rpll_inst/CLKOUT</td>
 </tr>
 <tr>
@@ -1639,7 +2272,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>tNET</td>
 <td>RR</td>
 <td>1</td>
-<td>coco3_machine.machine/cvbs_lines/prefetch_y_m_2_s0/CLK</td>
+<td>debug_cycle_dout_4_s1/CLK</td>
 </tr>
 <tr>
 <td>10.084</td>
@@ -1647,7 +2280,7 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>tUnc</td>
 <td> </td>
 <td> </td>
-<td>coco3_machine.machine/cvbs_lines/prefetch_y_m_2_s0</td>
+<td>debug_cycle_dout_4_s1</td>
 </tr>
 <tr>
 <td>10.049</td>
@@ -1655,14 +2288,14 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 <td>tSu</td>
 <td> </td>
 <td>1</td>
-<td>coco3_machine.machine/cvbs_lines/prefetch_y_m_2_s0</td>
+<td>debug_cycle_dout_4_s1</td>
 </tr>
 </table>
 <b>Path Statistics:</b>
 <table class="summary_table">
 <tr>
 <td class="label">Clock Skew:</td>
-<td>0.016</td>
+<td>0.000</td>
 </tr>
 <tr>
 <td class="label">Setup Relationship:</td>
@@ -1670,12 +2303,12 @@ table.detail_table td.label { min-width: 100px; width: 8%;}
 </tr>
 <tr>
 <td class="label">Logic Level:</td>
-<td>6</td>
+<td>12</td>
 </tr>
 <tr>
 <td class="label">Arrival Clock Path Delay:</td><td> cell: 0.000, 0.000%; route: 0.360, 100.000%</td></tr>
 <tr>
-<td class="label">Arrival Data Path Delay:</td><td> cell: 2.682, 47.519%; route: 2.730, 48.370%; tC2Q: 0.232, 4.111%</td></tr>
+<td class="label">Arrival Data Path Delay:</td><td> cell: 5.250, 49.082%; route: 5.214, 48.749%; tC2Q: 0.232, 2.169%</td></tr>
 <tr>
 <td class="label">Required Clock Path Delay:</td><td> cell: 0.000, 0.000%; route: 0.360, 100.000%</td></tr>
 </table>

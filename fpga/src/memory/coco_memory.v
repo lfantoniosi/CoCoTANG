@@ -3,11 +3,13 @@ module coco_memory #(
     parameter integer ROM_BYTES = 16384
 ) (
     input clk, input reset_n, input loader_start,
-    input e, input e_rise, input e_fall,
+    input e, input q, input e_rise, input e_fall, input cpu_access_enable,
+    input cpu_bus_valid,
     input [7:0] cpu_wdata,
     input cpu_mem_read, input cpu_mem_write, input cpu_mem_is_rom,
     input [22:0] cpu_mem_addr,
     output [7:0] cpu_rdata, output cpu_data_oe,
+    output debug_cpu_req, output debug_cpu_ack,
     input video_read_request, input [22:0] video_addr,
     output [7:0] video_data, output [31:0] video_data32,
     output reg video_data_valid,
@@ -32,6 +34,9 @@ module coco_memory #(
     wire [7:0] cpu_read_value;
     reg [7:0] cpu_rdata_reg = 8'hff;
     reg cpu_data_valid = 1'b0;
+    reg [22:0] cpu_response_addr = 23'd0;
+    reg cpu_cycle_serviced = 1'b0;
+    reg [2:0] cpu_read_hold = 3'd0;
 
     wire [22:0] selected_read_addr = cpu_mem_is_rom ?
                                       ROM_BASE + cpu_mem_addr :
@@ -45,31 +50,62 @@ module coco_memory #(
             cpu_mem_wdata <= 8'd0;
             cpu_rdata_reg <= 8'hff;
             cpu_data_valid <= 1'b0;
+            cpu_response_addr <= 23'd0;
+            cpu_cycle_serviced <= 1'b0;
+            cpu_read_hold <= 3'd0;
         end else begin
-            if (cpu_ack) begin
+            if (!cpu_access_enable) begin
                 cpu_req <= 1'b0;
-                if (!cpu_wr) begin
-                    cpu_rdata_reg <= cpu_read_value;
-                    cpu_data_valid <= 1'b1;
-                end
-            end
-            if (e_fall) begin
-                cpu_data_valid <= 1'b0;
-                if (cpu_mem_write && !cpu_req) begin
-                    cpu_wr <= 1'b1;
-                    cpu_sdram_addr <= RAM_BASE + cpu_mem_addr;
-                    cpu_mem_wdata <= cpu_wdata;
-                    cpu_req <= 1'b1;
-                end
-            end else if (e_rise && cpu_mem_read && !cpu_req) begin
                 cpu_wr <= 1'b0;
-                cpu_sdram_addr <= selected_read_addr;
-                cpu_req <= 1'b1;
+                cpu_data_valid <= 1'b0;
+                cpu_cycle_serviced <= 1'b0;
+                cpu_read_hold <= 3'd0;
+            end else begin
+                if (cpu_read_hold != 3'd0)
+                    cpu_read_hold <= cpu_read_hold - 1'b1;
+                if (cpu_ack) begin
+                    cpu_req <= 1'b0;
+                    // Retain a late read response.  The output address check
+                    // below permits it on a repeated CPU cycle but prevents
+                    // stale data from being driven for a different address.
+                    if (!cpu_wr) begin
+                        cpu_rdata_reg <= cpu_read_value;
+                        cpu_response_addr <= cpu_sdram_addr;
+                        cpu_data_valid <= 1'b1;
+                    end
+                end
+                if (e_fall) begin
+                    // The 6809 samples read data at E falling.  Retain the
+                    // driven byte for about 37 ns afterward instead of
+                    // removing it on the sampling edge with zero hold time.
+                    if (cpu_mem_read && cpu_data_valid &&
+                        selected_read_addr == cpu_response_addr)
+                        cpu_read_hold <= 3'd4;
+                    cpu_cycle_serviced <= 1'b0;
+                    if (cpu_mem_write && !cpu_req) begin
+                        cpu_wr <= 1'b1;
+                        cpu_sdram_addr <= RAM_BASE + cpu_mem_addr;
+                        cpu_mem_wdata <= cpu_wdata;
+                        cpu_req <= 1'b1;
+                        cpu_cycle_serviced <= 1'b1;
+                    end
+                // Launch from the newly synchronized atomic bus snapshot.
+                end else if (cpu_bus_valid && cpu_mem_read &&
+                             !cpu_req && !cpu_cycle_serviced) begin
+                    cpu_wr <= 1'b0;
+                    cpu_sdram_addr <= selected_read_addr;
+                    cpu_req <= 1'b1;
+                    cpu_cycle_serviced <= 1'b1;
+                end
             end
         end
     end
     assign cpu_rdata = cpu_rdata_reg;
-    assign cpu_data_oe = e && cpu_mem_read && cpu_data_valid;
+    assign cpu_data_oe = (e && cpu_mem_read && cpu_data_valid &&
+                          (selected_read_addr == cpu_response_addr)) ||
+                         (cpu_read_hold != 3'd0);
+    assign debug_cpu_req = cpu_req;
+    assign debug_cpu_ack = cpu_ack;
 
     reg video_req = 1'b0;
     reg [22:0] video_mem_addr = 23'd0;

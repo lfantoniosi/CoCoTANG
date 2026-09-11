@@ -96,7 +96,7 @@ module tb_coco_cvbs_ntsc;
         end
         if (ones != 40) begin
             $display("blank density: %0d level135=%0d dac=%0d acc=%0d sync=%0d h=%0d v=%0d",
-                ones,dut.cvbs_level_135,dut.cvbs_dac_level,dut.cvbs_accumulator,
+                ones,dut.cvbs_level_135,dut.cvbs_dac_level,dut.cvbs_sigma[4:0],
                 dut.level_sync,dut.h_sample,dut.v_line);
             errors = errors + 1;
         end

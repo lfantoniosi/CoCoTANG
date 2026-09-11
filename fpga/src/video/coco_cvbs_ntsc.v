@@ -18,9 +18,9 @@ module coco_cvbs_ntsc (
     output wire        source_valid,
     output wire [7:0]  prefetch_y,
     output wire        prefetch_valid,
-    output reg         luma_out,
-    output reg         chroma_out,
-    output reg         cvbs_out
+    output wire        luma_out,
+    output wire        chroma_out,
+    output wire        cvbs_out
 );
     localparam [9:0] H_TOTAL        = 10'd858;
     localparam [9:0] H_SYNC         = 10'd64;
@@ -351,34 +351,43 @@ module coco_cvbs_ntsc (
     reg [5:0] luma_dac_level = LEVEL_SYNC;
     reg [5:0] chroma_dac_level = CHROMA_CENTER;
     reg [5:0] cvbs_dac_level = LEVEL_SYNC;
-    reg [4:0] luma_accumulator = 5'd0;
-    reg [4:0] chroma_accumulator = 5'd0;
-    reg [4:0] cvbs_accumulator = 5'd0;
-    wire [5:0] luma_sum = {1'b0,luma_accumulator} + luma_dac_level;
-    wire [5:0] chroma_sum = {1'b0,chroma_accumulator} + chroma_dac_level;
-    wire [5:0] cvbs_sum = {1'b0,cvbs_accumulator} + cvbs_dac_level;
+    // Keep the DAC output bit and five-bit error accumulator in one register.
+    // This is the same first-order sigma-delta recurrence, and lets the carry
+    // destination pack beside the adder instead of in a distant output flop.
+    reg [5:0] luma_sigma = 6'd0;
+    reg [5:0] chroma_sigma = 6'd0;
+    reg [5:0] cvbs_sigma = 6'd0;
+    reg luma_out_reg = 1'b0;
+    reg chroma_out_reg = 1'b0;
+    reg cvbs_out_reg = 1'b0;
+    wire [5:0] luma_sum = {1'b0,luma_sigma[4:0]} + luma_dac_level;
+    wire [5:0] chroma_sum = {1'b0,chroma_sigma[4:0]} + chroma_dac_level;
+    wire [5:0] cvbs_sum = {1'b0,cvbs_sigma[4:0]} + cvbs_dac_level;
+    assign luma_out = luma_out_reg;
+    assign chroma_out = chroma_out_reg;
+    assign cvbs_out = cvbs_out_reg;
 
     always @(posedge clk270) begin
         if (!reset_n) begin
             luma_dac_level <= LEVEL_SYNC;
             chroma_dac_level <= CHROMA_CENTER;
             cvbs_dac_level <= LEVEL_SYNC;
-            luma_accumulator <= 5'd0;
-            chroma_accumulator <= 5'd0;
-            cvbs_accumulator <= 5'd0;
-            luma_out <= 1'b0;
-            chroma_out <= 1'b0;
-            cvbs_out <= 1'b0;
+            luma_sigma <= 6'd0;
+            chroma_sigma <= 6'd0;
+            cvbs_sigma <= 6'd0;
+            luma_out_reg <= 1'b0;
+            chroma_out_reg <= 1'b0;
+            cvbs_out_reg <= 1'b0;
         end else begin
             luma_dac_level <= luma_level_135;
             chroma_dac_level <= chroma_level_135;
             cvbs_dac_level <= cvbs_level_135;
-            luma_accumulator <= luma_sum[4:0];
-            chroma_accumulator <= chroma_sum[4:0];
-            cvbs_accumulator <= cvbs_sum[4:0];
-            luma_out <= luma_sum[5];
-            chroma_out <= chroma_sum[5];
-            cvbs_out <= cvbs_sum[5];
+            luma_sigma <= luma_sum;
+            chroma_sigma <= chroma_sum;
+            cvbs_sigma <= cvbs_sum;
+            luma_out_reg <= luma_sigma[5];
+            chroma_out_reg <= chroma_sigma[5];
+            cvbs_out_reg <= cvbs_sigma[5];
         end
     end
 endmodule

@@ -1,6 +1,7 @@
 module coco_bus_mux (
     input         clk,
     input         reset_n,
+    input         scan_start,
     input  [7:0]  mp,
     output [1:0]  msel,
     output [15:0] addr,
@@ -14,50 +15,71 @@ module coco_bus_mux (
     output        nmi_n,
     output        snapshot_valid
 );
-    reg [1:0] select_reg = 2'b11;
-    reg [2:0] phase = 3'd0;
-    reg [23:0] previous = 24'hffffff;
-    reg [23:0] filtered = 24'hffffff;
+    // Allow the 6809 outputs, 74HC139 selector and LVC245 path to settle.
+    // Sixteen clk270 periods are about 59 ns per bank.  The shorter 19 ns
+    // diagnostic setting produced mixed-byte snapshots on the prototype
+    // (for example, FFFE appeared as FEFF).  Acquisition starts just after
+    // Q rises after the 6809E address and external mux inputs are stable.
+    localparam [3:0] SETTLE_CYCLES = 4'd15;
+    reg [1:0] select_reg = 2'b00;
+    reg [1:0] bank = 2'd0;
+    reg [3:0] settle_count = 4'd0;
+    reg       scanning = 1'b0;
+    reg [7:0] address_low = 8'hff;
+    reg [7:0] address_high = 8'hff;
     reg [23:0] snapshot = 24'hffffff;
     reg snapshot_valid_reg = 1'b0;
-    integer i;
-
-    task sample_bank;
-        input integer base;
-        begin
-            for (i = 0; i < 8; i = i + 1) begin
-                if (previous[base+i] == mp[i])
-                    filtered[base+i] <= mp[i];
-                previous[base+i] <= mp[i];
-            end
-        end
-    endtask
 
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
-            select_reg <= 2'b11;
-            phase <= 3'd0;
-            previous <= 24'hffffff;
-            filtered <= 24'hffffff;
+            select_reg <= 2'b00;
+            bank <= 2'd0;
+            settle_count <= 4'd0;
+            scanning <= 1'b0;
+            address_low <= 8'hff;
+            address_high <= 8'hff;
             snapshot <= 24'hffffff;
             snapshot_valid_reg <= 1'b0;
         end else begin
-            snapshot_valid_reg <= 1'b0;
-            case (phase)
-                3'd0: begin select_reg <= 2'b00; phase <= 3'd1; end
-                3'd1: begin sample_bank(0); select_reg <= 2'b01; phase <= 3'd2; end
-                3'd2: phase <= 3'd3;
-                3'd3: begin sample_bank(8); select_reg <= 2'b10; phase <= 3'd4; end
-                3'd4: phase <= 3'd5;
-                default: begin
-                    sample_bank(16);
-                    snapshot[15:0] <= filtered[15:0];
-                    snapshot[23:16] <= filtered[23:16];
-                    select_reg <= 2'b00;
-                    phase <= 3'd0;
-                    snapshot_valid_reg <= 1'b1;
+            if (scan_start) begin
+                // Q rising begins acquisition of the active CPU cycle. Bank
+                // zero is already selected while idle, but wait briefly for
+                // the external path to settle before sampling it.
+                select_reg <= 2'b00;
+                bank <= 2'd0;
+                settle_count <= 4'd0;
+                scanning <= 1'b1;
+                snapshot_valid_reg <= 1'b0;
+            end else if (scanning) begin
+                // Use a bounded settling interval so input noise cannot
+                // prevent the scanner from ever completing.
+                if (settle_count != SETTLE_CYCLES)
+                    settle_count <= settle_count + 1'b1;
+                else begin
+                    settle_count <= 4'd0;
+                    case (bank)
+                        2'd0: begin
+                            address_low <= mp;
+                            select_reg <= 2'b01;
+                            bank <= 2'd1;
+                        end
+                        2'd1: begin
+                            address_high <= mp;
+                            select_reg <= 2'b10;
+                            bank <= 2'd2;
+                        end
+                        default: begin
+                            // Publish one complete atomic snapshot, then hold
+                            // it until acquisition begins in the next cycle.
+                            snapshot <= {mp,address_high,address_low};
+                            snapshot_valid_reg <= 1'b1;
+                            select_reg <= 2'b00;
+                            bank <= 2'd0;
+                            scanning <= 1'b0;
+                        end
+                    endcase
                 end
-            endcase
+            end
         end
     end
 

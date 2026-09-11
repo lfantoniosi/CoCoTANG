@@ -45,6 +45,8 @@ test:
 	vvp /private/tmp/cocotang_tb_gime_scanline
 	iverilog -g2012 -o /private/tmp/cocotang_tb_framebuffer tests/tb_coco_framebuffer.v src/video/coco_framebuffer.v
 	vvp /private/tmp/cocotang_tb_framebuffer
+	iverilog -g2012 -o /private/tmp/cocotang_tb_hdmi_debug tests/tb_hdmi_debug_overlay.sv src/video/hdmi_debug_overlay.sv
+	vvp /private/tmp/cocotang_tb_hdmi_debug
 
 program: $(OUTPUT)
 	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(OUTPUT)"
