@@ -2,6 +2,9 @@ ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 PROJECT := $(ROOT)/CoCoTANG.gprj
 BUILD_TCL := $(ROOT)/scripts/build.tcl
 OUTPUT := $(ROOT)/impl/pnr/CoCoTANG.fs
+CPU_TEST_PROJECT := $(ROOT)/cpu_test/CoCoTANG_cpu_test.gprj
+CPU_TEST_BUILD_TCL := $(ROOT)/scripts/build_cpu_test.tcl
+CPU_TEST_OUTPUT := $(ROOT)/cpu_test/impl/pnr/CoCoTANG_cpu_test.fs
 
 ifeq ($(shell uname -s),Darwin)
 GOWIN_IDE ?= /Applications/GowinIDE.app/Contents/Resources/Gowin_EDA/IDE
@@ -17,7 +20,8 @@ PROGRAMMER_BOARD ?= tangnano20k
 ROM_OFFSET ?= 1048576
 
 .DEFAULT_GOAL := build
-.PHONY: build rebuild test program reprogram coco2_rom coco3_rom check-tools
+.PHONY: build rebuild test program reprogram cpu-test-rebuild cpu-test-program \
+	cpu-test-reprogram coco2_rom coco3_rom check-tools
 
 build: $(OUTPUT)
 
@@ -53,6 +57,16 @@ program: $(OUTPUT)
 
 reprogram:
 	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(OUTPUT)"
+
+cpu-test-rebuild: check-tools
+	@cd "$(ROOT)" && env $(GOWIN_ENV) COCOTANG_FPGA_ROOT="$(ROOT)" \
+	 "$(GW_SH)" "$(CPU_TEST_BUILD_TCL)"
+
+cpu-test-program: cpu-test-rebuild
+	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(CPU_TEST_OUTPUT)"
+
+cpu-test-reprogram:
+	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(CPU_TEST_OUTPUT)"
 
 coco2_rom: roms/coco2.rom
 	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f --external-flash \

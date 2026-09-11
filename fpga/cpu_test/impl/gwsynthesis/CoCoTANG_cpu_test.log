@@ -1,0 +1,72 @@
+GowinSynthesis start
+Running parser ...
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/gowin_rpll/clk108.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/gowin_rpll/clk270.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco_clocks.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco_startup.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/bus/coco_bus_mux.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco_sam.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/spi_flash_reader.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_flash_loader.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/sdram.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/cpu_sdram_arbiter.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/cpu_test_memory.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/audio_clock_regeneration_packet.sv'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/audio_info_frame.sv'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/audio_sample_packet.sv'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/auxiliary_video_information_info_frame.sv'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/source_product_description_info_frame.sv'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/packet_assembler.sv'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/packet_picker.sv'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/tmds_channel.sv'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/hdmi.sv'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/serializer.sv'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi_debug_overlay.sv'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/cpu_test_hdmi.sv'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_cpu_test.v'
+Compiling module 'top_cpu_test'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_cpu_test.v":5)
+Compiling module 'coco_clocks'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco_clocks.v":1)
+Compiling module 'CLK108'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/gowin_rpll/clk108.v":10)
+Compiling module 'CLK270'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/gowin_rpll/clk270.v":10)
+Compiling module 'coco_sam'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco_sam.v":2)
+Compiling module 'coco_bus_mux'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/bus/coco_bus_mux.v":1)
+Compiling module 'coco_startup'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco_startup.v":1)
+Compiling module 'sdram'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/sdram.v":27)
+WARN  (EX3791) : Expression size 16 truncated to fit in target size 15("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/sdram.v":285)
+Compiling module 'cpu_test_memory'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/cpu_test_memory.v":4)
+Compiling module 'coco_flash_loader(SDRAM_ADDRESS=23'b00010000000000000000000)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_flash_loader.v":1)
+Compiling module 'spi_flash_reader'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/spi_flash_reader.v":1)
+Compiling module 'cpu_sdram_arbiter'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/cpu_sdram_arbiter.v":4)
+Compiling module 'cpu_test_hdmi'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/cpu_test_hdmi.sv":2)
+Compiling module 'hdmi_debug_overlay(LOG_ADDR_WIDTH=12,LOG_COUNT_WIDTH=13,LOG_PAGE_WIDTH=6,LOG_DEPTH=4096,EXTENDED_HEADER=1)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi_debug_overlay.sv":4)
+Extracting RAM for identifier 'display_memory'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi_debug_overlay.sv":30)
+WARN  (EX3791) : Expression size 14 truncated to fit in target size 13("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi_debug_overlay.sv":142)
+Compiling module 'hdmi(VIDEO_ID_CODE=2,DVI_OUTPUT=1'b1,VIDEO_REFRESH_RATE=60.0,AUDIO_RATE=48000)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/hdmi.sv":4)
+Compiling module 'tmds_channel'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/tmds_channel.sv":4)
+Compiling module 'tmds_channel(CN=1)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/tmds_channel.sv":4)
+Compiling module 'tmds_channel(CN=2)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/tmds_channel.sv":4)
+WARN  (EX1998) : Net 'data_island_data[11]' does not have a driver("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/hdmi.sv":244)
+Compiling module 'serializer(VIDEO_RATE=0)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/serializer.sv":3)
+NOTE  (EX0101) : Current top module is "top_cpu_test"
+[5%] Running netlist conversion ...
+WARN  (CV0016) : Input irq_n_in is unused("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_cpu_test.v":15)
+WARN  (CV0016) : Input firq_n_in is unused("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_cpu_test.v":16)
+WARN  (CV0016) : Input audio_in is unused("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_cpu_test.v":17)
+Running device independent optimization ...
+[10%] Optimizing Phase 0 completed
+[15%] Optimizing Phase 1 completed
+[25%] Optimizing Phase 2 completed
+Running inference ...
+[30%] Inferring Phase 0 completed
+[40%] Inferring Phase 1 completed
+[50%] Inferring Phase 2 completed
+[55%] Inferring Phase 3 completed
+Running technical mapping ...
+[60%] Tech-Mapping Phase 0 completed
+[65%] Tech-Mapping Phase 1 completed
+[75%] Tech-Mapping Phase 2 completed
+[80%] Tech-Mapping Phase 3 completed
+[90%] Tech-Mapping Phase 4 completed
+[95%] Generate netlist file "/Users/felipe/src/fpga/CoCoTANG/fpga/cpu_test/impl/gwsynthesis/CoCoTANG_cpu_test.vg" completed
+[100%] Generate report file "/Users/felipe/src/fpga/CoCoTANG/fpga/cpu_test/impl/gwsynthesis/CoCoTANG_cpu_test_syn.rpt.html" completed
+GowinSynthesis finish

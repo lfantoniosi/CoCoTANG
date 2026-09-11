@@ -1,7 +1,13 @@
 // Full-screen 6809 bus logger for board bring-up. The 720x480 HDMI active
 // area is divided into 90x60 8-pixel character cells. Two columns show the
 // 116 bus cycles per page, with four pages captured after CPU reset.
-module hdmi_debug_overlay (
+module hdmi_debug_overlay #(
+    parameter integer LOG_ADDR_WIDTH = 9,
+    parameter integer LOG_COUNT_WIDTH = 9,
+    parameter integer LOG_PAGE_WIDTH = 2,
+    parameter integer LOG_DEPTH = 512,
+    parameter integer EXTENDED_HEADER = 0
+) (
     input  logic         pixel_clk,
     input  logic [9:0]   x,
     input  logic [9:0]   y,
@@ -9,57 +15,59 @@ module hdmi_debug_overlay (
     input  logic [319:0] debug_data,
     input  logic         debug_clk,
     input  logic         log_we,
-    input  logic [8:0]   log_addr,
+    input  logic [LOG_ADDR_WIDTH-1:0] log_addr,
     input  logic [39:0]  log_data,
-    input  logic [8:0]   log_count,
-    input  logic [1:0]   log_page,
+    input  logic [LOG_COUNT_WIDTH-1:0] log_count,
+    input  logic [LOG_PAGE_WIDTH-1:0] log_page,
     input  logic [4:0]   debug_status,
     input  logic [23:0]  rgb_in,
     output logic [23:0]  rgb_out
 );
-    // Cross each completed logger word as bundled data.  The source payload
-    // remains unchanged until the following CPU cycle (many pixel clocks),
-    // while the toggle passes through a normal two-flop synchronizer.  This
-    // avoids asynchronously reading a RAM written by debug_clk, which caused
-    // incoherent words and visible pixel tearing on hardware.
-    logic [48:0] log_payload_debug = 49'd0;
-    logic log_toggle_debug = 1'b0;
+    // Infer a true simple dual-port RAM: every debug-clock write is retained,
+    // while the renderer reads an independent port on pixel_clk.  A one-bit
+    // event toggle cannot be used here because consecutive 108 MHz log writes
+    // can occur before the 27 MHz pixel domain observes either edge.
+    logic [39:0] display_memory [0:LOG_DEPTH-1];
     always_ff @(posedge debug_clk) begin
-        if (log_we) begin
-            log_payload_debug <= {log_addr,log_data};
-            log_toggle_debug <= ~log_toggle_debug;
-        end
+        if (log_we)
+            display_memory[log_addr] <= log_data;
     end
 
-    logic log_toggle_meta = 1'b0, log_toggle_pixel = 1'b0;
-    logic log_toggle_previous = 1'b0;
-    logic [48:0] log_payload_meta = 49'd0, log_payload_pixel = 49'd0;
-    logic [39:0] display_memory [0:511];
-    logic [8:0] display_count = 9'd0;
-    logic [8:0] entry_index;
+    // Only the monotonically increasing count crosses domains.  Gray coding
+    // guarantees that at most one synchronized bit changes at a time, so the
+    // HDMI side never constructs a torn binary count.
+    wire [LOG_COUNT_WIDTH-1:0] log_count_gray =
+        log_count ^ (log_count >> 1);
+    logic [LOG_COUNT_WIDTH-1:0] count_gray_meta = '0;
+    logic [LOG_COUNT_WIDTH-1:0] count_gray_pixel = '0;
+    logic [LOG_COUNT_WIDTH-1:0] display_count = '0;
+    logic [LOG_ADDR_WIDTH-1:0] entry_index;
+    logic [LOG_ADDR_WIDTH:0] entry_index_full;
     logic [6:0] page_entry_index;
     logic [39:0] entry = 40'd0;
+
+    function automatic [LOG_COUNT_WIDTH-1:0] gray_to_binary(
+        input logic [LOG_COUNT_WIDTH-1:0] gray
+    );
+        integer bit_index;
+        begin
+            gray_to_binary[LOG_COUNT_WIDTH-1]=gray[LOG_COUNT_WIDTH-1];
+            for (bit_index=LOG_COUNT_WIDTH-2; bit_index>=0;
+                 bit_index=bit_index-1)
+                gray_to_binary[bit_index]=gray_to_binary[bit_index+1] ^
+                                          gray[bit_index];
+        end
+    endfunction
+
     always_ff @(posedge pixel_clk) begin
-        log_toggle_meta <= log_toggle_debug;
-        log_toggle_pixel <= log_toggle_meta;
-        log_toggle_previous <= log_toggle_pixel;
-        log_payload_meta <= log_payload_debug;
-        log_payload_pixel <= log_payload_meta;
+        count_gray_meta <= log_count_gray;
+        count_gray_pixel <= count_gray_meta;
+        display_count <= gray_to_binary(count_gray_pixel);
         // Gowin implements display_memory as synchronous embedded RAM.  Read
         // the selected row explicitly on pixel_clk rather than relying on an
         // asynchronous array access whose hardware behavior does not match
         // the renderer's combinational assumption.
         entry <= display_memory[entry_index];
-        if (log_toggle_pixel != log_toggle_previous) begin
-            display_memory[log_payload_pixel[48:40]] <= log_payload_pixel[39:0];
-            // Address zero starts a fresh warm/cold-reset capture.  Until
-            // later entries arrive, stale words from the prior trace remain
-            // outside display_count and therefore cannot be rendered.
-            if (log_payload_pixel[48:40] == 9'd0)
-                display_count <= 9'd1;
-            else if (log_payload_pixel[48:40] >= display_count)
-                display_count <= log_payload_pixel[48:40] + 1'b1;
-        end
     end
 
     function automatic logic [7:0] hex_char(input logic [3:0] value);
@@ -116,6 +124,9 @@ module hdmi_debug_overlay (
     logic [2:0] glyph_column,glyph_row;
     logic valid_entry,text_pixel,in_panel;
     logic [23:0] rgb_comb;
+    logic [11:0] entry_index_12;
+    logic [12:0] display_count_13;
+    logic [7:0] log_page_8;
 
     always_comb begin
         character_column=x[9:3];
@@ -128,12 +139,41 @@ module hdmi_debug_overlay (
         page_entry_index={1'b0,character_row}-7'd2;
         if (character_column >= 7'd45)
             page_entry_index=page_entry_index+7'd58;
-        entry_index=({7'd0,log_page} * 9'd116) + page_entry_index;
+        entry_index_full=(log_page * 116) + page_entry_index;
+        entry_index=entry_index_full[LOG_ADDR_WIDTH-1:0];
+        entry_index_12={{(12-LOG_ADDR_WIDTH){1'b0}},entry_index};
+        display_count_13={{(13-LOG_COUNT_WIDTH){1'b0}},display_count};
+        log_page_8={{(8-LOG_PAGE_WIDTH){1'b0}},log_page};
         valid_entry=(character_row >= 6'd2) &&
-                    (entry_index < display_count) && entry[39];
+                    (entry_index_full < LOG_DEPTH) &&
+                    (entry_index_full < display_count) && entry[39];
         character=" ";
 
-        if (character_row == 0) begin
+        if (character_row == 0 && EXTENDED_HEADER != 0) begin
+            case (character_column)
+                0:character="C"; 1:character="P"; 2:character="U";
+                4:character="B"; 5:character="U"; 6:character="S";
+                8:character="L"; 9:character="O"; 10:character="G";
+                13:character="C"; 14:character="A"; 15:character="P";
+                16:character=":";
+                17:character=hex_char({3'b000,display_count_13[12]});
+                18:character=hex_char(display_count_13[11:8]);
+                19:character=hex_char(display_count_13[7:4]);
+                20:character=hex_char(display_count_13[3:0]);
+                22:character="P"; 23:character=":";
+                24:character=hex_char(log_page_8[7:4]);
+                25:character=hex_char(log_page_8[3:0]);
+                28:character="R"; 29:character=":";
+                30:character=bit_char(debug_status[3]);
+                32:character="H"; 33:character=":";
+                34:character=bit_char(debug_status[2]);
+                36:character="A"; 37:character=":";
+                38:character=bit_char(debug_status[1]);
+                40:character="S"; 41:character=":";
+                42:character=bit_char(debug_status[0]);
+                default: ;
+            endcase
+        end else if (character_row == 0) begin
             case (character_column)
                 0:character="C"; 1:character="O"; 2:character="C";
                 3:character="O"; 4:character="2"; 6:character="B";
@@ -166,6 +206,29 @@ module hdmi_debug_overlay (
                 12:character="D"; 13:character="I"; 15:character="D";
                 16:character="O"; 18:character="O"; 19:character="E";
                 21:character="S";
+                default: ;
+            endcase
+        end else if (valid_entry && EXTENDED_HEADER != 0) begin
+            case (local_column)
+                0:character=hex_char(entry_index_12[11:8]);
+                1:character=hex_char(entry_index_12[7:4]);
+                2:character=hex_char(entry_index_12[3:0]);
+                4:character=entry[38] ? "R" : "W";
+                6:character="A"; 7:character=":";
+                8:character=hex_char(entry[33:30]);
+                9:character=hex_char(entry[29:26]);
+                10:character=hex_char(entry[25:22]);
+                11:character=hex_char(entry[21:18]);
+                13:character="D"; 14:character="I"; 15:character=":";
+                16:character=hex_char(entry[17:14]);
+                17:character=hex_char(entry[13:10]);
+                19:character="D"; 20:character="O"; 21:character=":";
+                22:character=entry[34] ? hex_char(entry[9:6]) : "-";
+                23:character=entry[34] ? hex_char(entry[5:2]) : "-";
+                25:character="O"; 26:character="E"; 27:character=":";
+                28:character=bit_char(entry[34]);
+                30:character="S"; 31:character=":";
+                32:character=hex_char({1'b0,entry[37:35]});
                 default: ;
             endcase
         end else if (valid_entry) begin
