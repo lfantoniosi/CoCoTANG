@@ -52,6 +52,7 @@ module coco2 #(
 
     coco_sam #(.SLOW_DIAGNOSTIC(DEBUG_CPU_SLOW)) sam (
         .clk(clk), .reset_n(reset_n), .register_reset_n(core_reset_n),
+        .memory_wait(1'b0),
         .addr(cpu_addr), .rw_n(cpu_rw_n),
         .s(sam_s), .e(e), .q(q), .e_rise(e_rise), .e_fall(e_fall),
         .video_mode(sam_video_mode), .video_offset(sam_video_offset),

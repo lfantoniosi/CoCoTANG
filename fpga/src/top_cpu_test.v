@@ -5,6 +5,7 @@
 module top_cpu_test #(
     parameter integer RESET_HOLD_CYCLES = 10800000,
     parameter integer LOG_DEPTH = 4096,
+    parameter [15:0] LOG_START_ADDRESS = 16'hA080,
     parameter integer DEBUG_OVERLAY = 0,
     parameter integer ANALOG_VIDEO_MODE = 1
 ) (
@@ -67,10 +68,13 @@ module top_cpu_test #(
     wire unused_page,unused_all_ram;
     wire [1:0] unused_rate,unused_memory_size;
     reg cpu_release = 1'b0;
+    wire cpu_memory_wait;
+    wire sam_memory_wait;
     wire [15:0] address;
     wire rw_n;
     coco_sam sam (
         .clk(clk108), .reset_n(board_reset_n), .register_reset_n(cpu_release),
+        .memory_wait(sam_memory_wait),
         .addr(address), .rw_n(rw_n), .s(internal_s),
         .e(e_out), .q(q_out), .e_rise(e_rise), .e_fall(e_fall),
         .video_mode(sam_video_mode), .video_offset(sam_video_offset),
@@ -113,6 +117,27 @@ module top_cpu_test #(
         end
     end
     wire bus_snapshot_valid=bus_ready_sync && !bus_ready_delay;
+    // The motherboard reset circuit may continue holding the physical CPU
+    // after our own release timer expires.  Do not turn reset-time bus noise
+    // into a memory request or park E at phase 6 before the 6309 is running.
+    wire cpu_bus_active=cpu_release && mux_reset_n;
+    // A 6309 write byte is valid during E high and may be released immediately
+    // after E falls. Keep the latest full-clock sample from that window so RAM,
+    // PIA shadowing and diagnostics do not depend on FPGA/input-buffer skew at
+    // the exact external falling edge.
+    reg [7:0] cpu_write_data=8'hff;
+    always @(posedge clk108 or negedge board_reset_n) begin
+        if (!board_reset_n)
+            cpu_write_data<=8'hff;
+        else if (cpu_bus_active && e_out && !rw_n)
+            cpu_write_data<=cpu_data;
+    end
+    // At phase 6, do not raise E until this Q cycle's multiplexed address is
+    // complete. The completion signal is a level held by coco_bus_mux, so it
+    // cannot be lost crossing from clk270 to clk108. Once the address exists,
+    // an SDRAM request may extend the same hold until its data is ready.
+    assign sam_memory_wait=cpu_memory_wait ||
+                           (cpu_bus_active && !bus_ready_sync);
     wire [2:0] filtered_pia_inputs;
     input_filter #(.WIDTH(3)) pia_input_filter (
         .clk(clk108), .reset_n(board_reset_n),
@@ -180,11 +205,12 @@ module top_cpu_test #(
     wire video_memory_valid;
     cpu_test_memory memory (
         .clk(clk108), .reset_n(sdram_reset_n), .loader_start(loader_start),
-        .cpu_access_enable(cpu_release), .cpu_bus_valid(bus_snapshot_valid),
+        .cpu_access_enable(cpu_bus_active), .cpu_bus_valid(bus_snapshot_valid),
         .e(e_out), .q(q_out), .e_fall(e_fall),
         .cpu_addr(address), .cpu_rw_n(rw_n),
-        .sam_s(internal_s), .cpu_wdata(cpu_data),
+        .sam_s(internal_s), .cpu_wdata(cpu_write_data),
         .cpu_rdata(fpga_read_data), .cpu_data_oe(fpga_data_oe),
+        .cpu_wait(cpu_memory_wait),
         .video_addr({7'd0,vdg_memory_addr}),
         .video_data(video_memory_data),
         .video_data_valid(video_memory_valid),
@@ -212,7 +238,7 @@ module top_cpu_test #(
     coco_vdg vdg (
         .clk(clk108), .reset_n(vdg_reset_n),
         .e_fall(e_fall), .cpu_rw_n(rw_n), .cpu_addr(address),
-        .cpu_data(cpu_data), .sam_video_mode(sam_video_mode),
+        .cpu_data(cpu_write_data), .sam_video_mode(sam_video_mode),
         .debug_an_g(1'b0), .debug_css(1'b0),
         .sam_video_offset(sam_video_offset),
         .memory_data(video_memory_data), .memory_addr(vdg_memory_addr),
@@ -234,17 +260,19 @@ module top_cpu_test #(
         .cvbs_data(cvbs_framebuffer_data)
     );
 
-    // Capture every observable {address,R/W,data} change after RESET release.
-    // Address/control come from an atomic mux snapshot; data is observed on
-    // the physical CPU-side bus so both CPU writes and FPGA reads are visible.
+    // Wait for an atomic snapshot at LOG_START_ADDRESS, capture that trigger
+    // cycle, then sample the physical bus at each E falling edge--the instant
+    // the 6309 consumes read data or completes a write. Consecutive cycles at
+    // the same address share one row, and only a new address advances the log.
     reg log_we=1'b0;
     reg [LOG_ADDR_WIDTH-1:0] log_addr=0;
     reg [39:0] log_data=0;
     reg [LOG_COUNT_WIDTH-1:0] log_count=0;
     reg [24:0] last_observation=0;
     reg observation_valid=1'b0;
-    reg bus_seen=1'b0;
-    wire [24:0] observation={rw_n,address,cpu_data};
+    reg log_started=1'b0;
+    wire [7:0] sampled_cpu_data=rw_n ? cpu_data : cpu_write_data;
+    wire [24:0] observation={rw_n,address,sampled_cpu_data};
     always @(posedge clk108 or negedge board_reset_n) begin
         if (!board_reset_n) begin
             log_we<=1'b0;
@@ -253,20 +281,31 @@ module top_cpu_test #(
             log_count<=0;
             last_observation<=0;
             observation_valid<=1'b0;
-            bus_seen<=1'b0;
+            log_started<=1'b0;
         end else begin
             log_we<=1'b0;
-            if (bus_snapshot_valid)
-                bus_seen<=1'b1;
             if (!cpu_release) begin
                 observation_valid<=1'b0;
-            end else if (bus_seen && log_count < LOG_DEPTH &&
-                         (!observation_valid || observation != last_observation)) begin
+                log_started<=1'b0;
+            end else if (!log_started && bus_snapshot_valid &&
+                         address == LOG_START_ADDRESS) begin
+                log_started<=1'b1;
+                observation_valid<=1'b0;
+            end else if (log_started && e_fall &&
+                         ((observation_valid &&
+                           address == last_observation[23:8]) ||
+                          log_count < LOG_DEPTH)) begin
                 log_we<=1'b1;
-                log_addr<=log_count[LOG_ADDR_WIDTH-1:0];
                 log_data<={1'b1,rw_n,internal_s,fpga_data_oe,address,
-                           cpu_data,fpga_read_data,q_out,e_out};
-                log_count<=log_count+1'b1;
+                           sampled_cpu_data,fpga_read_data,q_out,e_out};
+                if (observation_valid && address == last_observation[23:8]) begin
+                    // Preserve the row number but refresh it with the latest
+                    // data and control values observed at this address.
+                    log_addr<=log_count[LOG_ADDR_WIDTH-1:0]-1'b1;
+                end else begin
+                    log_addr<=log_count[LOG_ADDR_WIDTH-1:0];
+                    log_count<=log_count+1'b1;
+                end
                 last_observation<=observation;
                 observation_valid<=1'b1;
             end

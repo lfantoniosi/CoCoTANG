@@ -19,8 +19,9 @@ module cpu_test_memory #(
     input [7:0] cpu_wdata,
     output [7:0] cpu_rdata,
     output cpu_data_oe,
+    output cpu_wait,
     input [22:0] video_addr,
-    output [7:0] video_data,
+    output reg [7:0] video_data,
     output reg video_data_valid,
     output loader_done,
 
@@ -63,7 +64,13 @@ module cpu_test_memory #(
     reg [7:0] response_data = 8'hff;
     reg [22:0] response_addr = 23'h7fffff;
     reg response_valid = 1'b0;
-    reg cycle_requested = 1'b0;
+    // A new CPU cycle can arrive while the arbiter is still retiring the
+    // previous SDRAM request (especially when video is active).  Keep that
+    // transaction here instead of silently dropping it.
+    reg pending_valid = 1'b0;
+    reg pending_wr = 1'b0;
+    reg [22:0] pending_addr = 23'd0;
+    reg [7:0] pending_wdata = 8'd0;
     reg [2:0] read_hold = 3'd0;
 
     always @(posedge clk or negedge reset_n) begin
@@ -75,12 +82,15 @@ module cpu_test_memory #(
             response_data <= 8'hff;
             response_addr <= 23'h7fffff;
             response_valid <= 1'b0;
-            cycle_requested <= 1'b0;
+            pending_valid <= 1'b0;
+            pending_wr <= 1'b0;
+            pending_addr <= 23'd0;
+            pending_wdata <= 8'd0;
             read_hold <= 3'd0;
         end else if (!cpu_access_enable) begin
             cpu_req <= 1'b0;
             response_valid <= 1'b0;
-            cycle_requested <= 1'b0;
+            pending_valid <= 1'b0;
             read_hold <= 3'd0;
         end else begin
             if (read_hold != 0)
@@ -95,16 +105,26 @@ module cpu_test_memory #(
                 end
             end
 
-            // The atomic mux snapshot arrives during Q high.  Launch the
-            // SDRAM read immediately; do not wait for E to rise.
+            // Move a queued transaction into the SDRAM request slot as soon
+            // as it becomes free.  Keeping pending_valid asserted until this
+            // edge also keeps Q/E stopped continuously between transactions.
+            if (pending_valid && !cpu_req) begin
+                cpu_wr <= pending_wr;
+                request_addr <= pending_addr;
+                request_wdata <= pending_wdata;
+                cpu_req <= 1'b1;
+                pending_valid <= 1'b0;
+            end
+
+            // The atomic mux snapshot arrives during Q high. Queue every
+            // memory read, even if the previous SDRAM transaction is active.
             if (cpu_bus_valid) begin
-                cycle_requested <= 1'b0;
                 response_valid <= 1'b0;
-                if (cpu_mem_read && !cpu_req) begin
-                    cpu_wr <= 1'b0;
-                    request_addr <= selected_addr;
-                    cpu_req <= 1'b1;
-                    cycle_requested <= 1'b1;
+                if (cpu_mem_read) begin
+                    pending_wr <= 1'b0;
+                    pending_addr <= selected_addr;
+                    pending_wdata <= 8'd0;
+                    pending_valid <= 1'b1;
                 end
             end
 
@@ -114,12 +134,11 @@ module cpu_test_memory #(
                 if (cpu_mem_read && response_valid &&
                     response_addr == selected_addr)
                     read_hold <= 3'd4;
-                if (cpu_mem_write && !cpu_req && !cycle_requested) begin
-                    cpu_wr <= 1'b1;
-                    request_addr <= selected_addr;
-                    request_wdata <= cpu_wdata;
-                    cpu_req <= 1'b1;
-                    cycle_requested <= 1'b1;
+                if (cpu_mem_write) begin
+                    pending_wr <= 1'b1;
+                    pending_addr <= selected_addr;
+                    pending_wdata <= cpu_wdata;
+                    pending_valid <= 1'b1;
                 end
             end
 
@@ -133,6 +152,12 @@ module cpu_test_memory #(
     assign cpu_data_oe = cpu_access_enable &&
                          ((cpu_mem_read && response_valid &&
                            response_addr == selected_addr) || read_hold != 0);
+    // Keep the pre-E hold continuous from snapshot through queued/active SDRAM
+    // service. This prevents an old ACK from releasing E while the current
+    // cycle's read is still waiting to launch.
+    assign cpu_wait = cpu_access_enable &&
+                      (cpu_req || pending_valid ||
+                       (cpu_bus_valid && cpu_mem_read));
 
     // The MC6847 address advances independently of the CPU. Fetch one
     // aligned 32-bit SDRAM word whenever it enters a new group of four bytes;
@@ -152,15 +177,30 @@ module cpu_test_memory #(
             video_request_addr <= 23'd0;
             video_response_word <= 23'h7fffff;
             video_data_reg <= 32'd0;
+            video_data <= 8'h00;
             video_cache_valid <= 1'b0;
             video_data_valid <= 1'b0;
         end else if (!cpu_access_enable) begin
             video_req <= 1'b0;
             video_response_word <= 23'h7fffff;
             video_cache_valid <= 1'b0;
+            video_data <= 8'h00;
             video_data_valid <= 1'b0;
         end else begin
             video_data_valid <= 1'b0;
+            // Register the selected cache byte. The MC6847 advances at the
+            // much slower SAM rate, leaving several clk cycles before it uses
+            // this value and breaking a long VDG-address-to-pixel path.
+            if (!video_word_matches)
+                video_data <= 8'h00;
+            else begin
+                case (video_addr[1:0])
+                    2'd0: video_data <= video_data_reg[7:0];
+                    2'd1: video_data <= video_data_reg[15:8];
+                    2'd2: video_data <= video_data_reg[23:16];
+                    default: video_data <= video_data_reg[31:24];
+                endcase
+            end
             if (video_ack) begin
                 video_req <= 1'b0;
                 video_response_word <= video_request_addr;
@@ -181,12 +221,6 @@ module cpu_test_memory #(
                 video_cache_valid <= 1'b0;
         end
     end
-    assign video_data = !video_word_matches ? 8'h00 :
-                        video_addr[1:0] == 2'd0 ? video_data_reg[7:0] :
-                        video_addr[1:0] == 2'd1 ? video_data_reg[15:8] :
-                        video_addr[1:0] == 2'd2 ? video_data_reg[23:16] :
-                                                 video_data_reg[31:24];
-
     wire loader_req;
     wire loader_ack;
     wire [22:0] loader_addr;

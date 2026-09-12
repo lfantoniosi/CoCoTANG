@@ -179,7 +179,7 @@
      },
      {
       "InstFile" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco2.v",
-      "InstLine" : 79,
+      "InstLine" : 80,
       "InstName" : "s2_video_mode",
       "ModuleFile" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/video_mode_debug.v",
       "ModuleLine" : 1,
@@ -187,7 +187,7 @@
      },
      {
       "InstFile" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco2.v",
-      "InstLine" : 87,
+      "InstLine" : 88,
       "InstName" : "vdg",
       "ModuleFile" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco_vdg.v",
       "ModuleLine" : 1,

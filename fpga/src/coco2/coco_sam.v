@@ -5,6 +5,8 @@ module coco_sam #(
     input         clk,
     input         reset_n,
     input         register_reset_n,
+    // Stretch the Q-high/E-low interval while CPU memory is outstanding.
+    input         memory_wait,
     input  [15:0] addr,
     input         rw_n,
     output reg [2:0] s,
@@ -30,7 +32,6 @@ module coco_sam #(
     reg [23:0] accumulator = 24'd0;
     reg [3:0] phase = 4'd0;
     wire [24:0] sum = {1'b0, accumulator} + {1'b0, SAM_STEP};
-
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
             accumulator <= 24'd0;
@@ -40,18 +41,26 @@ module coco_sam #(
             e_rise <= 1'b0;
             e_fall <= 1'b0;
         end else begin
-            accumulator <= sum[23:0];
             e_rise <= 1'b0;
             e_fall <= 1'b0;
-            if (sum[24]) begin
-                phase <= phase + 1'b1;
-                case (phase)
-                    4'd2: q <= 1'b1;
-                    4'd6: begin e <= 1'b1; e_rise <= 1'b1; end
-                    4'd10: q <= 1'b0;
-                    4'd14: begin e <= 1'b0; e_fall <= 1'b1; end
-                    default: ;
-                endcase
+            // While waiting at the pre-E phase, restart and freeze the NCO.
+            // Once memory_wait drops this guarantees a complete SAM master
+            // interval of data setup instead of allowing E to rise on an
+            // arbitrary residual accumulator phase.
+            if (memory_wait && phase == 4'd6) begin
+                accumulator <= 24'd0;
+            end else begin
+                accumulator <= sum[23:0];
+                if (sum[24]) begin
+                    phase <= phase + 1'b1;
+                    case (phase)
+                        4'd2: q <= 1'b1;
+                        4'd6: begin e <= 1'b1; e_rise <= 1'b1; end
+                        4'd10: q <= 1'b0;
+                        4'd14: begin e <= 1'b0; e_fall <= 1'b1; end
+                        default: ;
+                    endcase
+                end
             end
         end
     end

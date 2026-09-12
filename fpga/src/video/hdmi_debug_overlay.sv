@@ -1,6 +1,6 @@
 // Full-screen 6809 bus logger for board bring-up. The 720x480 HDMI active
 // area is divided into 90x60 8-pixel character cells. Two columns show the
-// 116 bus cycles per page, with four pages captured after CPU reset.
+// 116 bus cycles per page.
 module hdmi_debug_overlay #(
     parameter integer LOG_ADDR_WIDTH = 9,
     parameter integer LOG_COUNT_WIDTH = 9,
@@ -124,8 +124,8 @@ module hdmi_debug_overlay #(
     logic [2:0] glyph_column,glyph_row;
     logic valid_entry,text_pixel,in_panel;
     logic [23:0] rgb_comb;
-    logic [11:0] entry_index_12;
-    logic [12:0] display_count_13;
+    logic [15:0] entry_index_16;
+    logic [15:0] display_count_16;
     logic [7:0] log_page_8;
 
     always_comb begin
@@ -141,8 +141,8 @@ module hdmi_debug_overlay #(
             page_entry_index=page_entry_index+7'd58;
         entry_index_full=(log_page * 116) + page_entry_index;
         entry_index=entry_index_full[LOG_ADDR_WIDTH-1:0];
-        entry_index_12={{(12-LOG_ADDR_WIDTH){1'b0}},entry_index};
-        display_count_13={{(13-LOG_COUNT_WIDTH){1'b0}},display_count};
+        entry_index_16={{(16-LOG_ADDR_WIDTH){1'b0}},entry_index};
+        display_count_16={{(16-LOG_COUNT_WIDTH){1'b0}},display_count};
         log_page_8={{(8-LOG_PAGE_WIDTH){1'b0}},log_page};
         valid_entry=(character_row >= 6'd2) &&
                     (entry_index_full < LOG_DEPTH) &&
@@ -156,10 +156,10 @@ module hdmi_debug_overlay #(
                 8:character="L"; 9:character="O"; 10:character="G";
                 13:character="C"; 14:character="A"; 15:character="P";
                 16:character=":";
-                17:character=hex_char({3'b000,display_count_13[12]});
-                18:character=hex_char(display_count_13[11:8]);
-                19:character=hex_char(display_count_13[7:4]);
-                20:character=hex_char(display_count_13[3:0]);
+                17:character=hex_char(display_count_16[15:12]);
+                18:character=hex_char(display_count_16[11:8]);
+                19:character=hex_char(display_count_16[7:4]);
+                20:character=hex_char(display_count_16[3:0]);
                 22:character="P"; 23:character=":";
                 24:character=hex_char(log_page_8[7:4]);
                 25:character=hex_char(log_page_8[3:0]);
@@ -198,6 +198,16 @@ module hdmi_debug_overlay #(
                 53:character=bit_char(debug_status[0]);
                 default: ;
             endcase
+        end else if (character_row == 1 && EXTENDED_HEADER != 0) begin
+            case (local_column)
+                0:character="I"; 1:character="D"; 5:character="R";
+                7:character="A"; 8:character=":"; 9:character="A";
+                10:character="D"; 11:character="D"; 12:character="R";
+                14:character="D"; 15:character="I"; 17:character="D";
+                18:character="O"; 20:character="O"; 21:character="E";
+                23:character="S";
+                default: ;
+            endcase
         end else if (character_row == 1) begin
             case (local_column)
                 0:character="I"; 1:character="D"; 3:character="R";
@@ -210,25 +220,26 @@ module hdmi_debug_overlay #(
             endcase
         end else if (valid_entry && EXTENDED_HEADER != 0) begin
             case (local_column)
-                0:character=hex_char(entry_index_12[11:8]);
-                1:character=hex_char(entry_index_12[7:4]);
-                2:character=hex_char(entry_index_12[3:0]);
-                4:character=entry[38] ? "R" : "W";
-                6:character="A"; 7:character=":";
-                8:character=hex_char(entry[33:30]);
-                9:character=hex_char(entry[29:26]);
-                10:character=hex_char(entry[25:22]);
-                11:character=hex_char(entry[21:18]);
-                13:character="D"; 14:character="I"; 15:character=":";
-                16:character=hex_char(entry[17:14]);
-                17:character=hex_char(entry[13:10]);
-                19:character="D"; 20:character="O"; 21:character=":";
-                22:character=entry[34] ? hex_char(entry[9:6]) : "-";
-                23:character=entry[34] ? hex_char(entry[5:2]) : "-";
-                25:character="O"; 26:character="E"; 27:character=":";
-                28:character=bit_char(entry[34]);
-                30:character="S"; 31:character=":";
-                32:character=hex_char({1'b0,entry[37:35]});
+                0:character=hex_char(entry_index_16[15:12]);
+                1:character=hex_char(entry_index_16[11:8]);
+                2:character=hex_char(entry_index_16[7:4]);
+                3:character=hex_char(entry_index_16[3:0]);
+                5:character=entry[38] ? "R" : "W";
+                7:character="A"; 8:character=":";
+                9:character=hex_char(entry[33:30]);
+                10:character=hex_char(entry[29:26]);
+                11:character=hex_char(entry[25:22]);
+                12:character=hex_char(entry[21:18]);
+                14:character="D"; 15:character="I"; 16:character=":";
+                17:character=hex_char(entry[17:14]);
+                18:character=hex_char(entry[13:10]);
+                20:character="D"; 21:character="O"; 22:character=":";
+                23:character=entry[34] ? hex_char(entry[9:6]) : "-";
+                24:character=entry[34] ? hex_char(entry[5:2]) : "-";
+                26:character="O"; 27:character="E"; 28:character=":";
+                29:character=bit_char(entry[34]);
+                31:character="S"; 32:character=":";
+                33:character=hex_char({1'b0,entry[37:35]});
                 default: ;
             endcase
         end else if (valid_entry) begin

@@ -1,6 +1,7 @@
 `timescale 1ns/1ps
 module tb_coco_sam;
-    reg clk=0, reset_n=0, register_reset_n=0, rw_n=1;
+    reg clk=0, reset_n=0, register_reset_n=0, rw_n=1, memory_wait=0;
+    integer release_cycles;
     reg [15:0] addr=0;
     wire [2:0] s, video_mode;
     wire e,q,e_rise,e_fall;
@@ -8,6 +9,7 @@ module tb_coco_sam;
     wire page,all_ram;
     wire [1:0] rate,memory_size;
     coco_sam dut(.clk(clk),.reset_n(reset_n),.register_reset_n(register_reset_n),
+      .memory_wait(memory_wait),
       .addr(addr),.rw_n(rw_n),.s(s),
       .e(e),.q(q),.e_rise(e_rise),.e_fall(e_fall),.video_mode(video_mode),
       .video_offset(video_offset),.page(page),.rate(rate),.memory_size(memory_size),
@@ -34,6 +36,23 @@ module tb_coco_sam;
       if(!all_ram || s!==0) $fatal(1,"all-RAM mapping");
       register_reset_n=0; repeat(2) @(posedge clk);
       if(all_ram) $fatal(1,"CPU reset did not clear SAM registers");
+      // A pending memory cycle must freeze at the pre-E phase and resume
+      // without shortening either clock edge interval.
+      wait(q && !e && dut.phase == 4'd6);
+      memory_wait=1;
+      repeat(30) begin
+        @(posedge clk);
+        if(!q || e || dut.phase != 4'd6)
+          $fatal(1,"memory wait did not hold Q high/E low");
+      end
+      memory_wait=0;
+      release_cycles=0;
+      while (!e_rise) begin
+        @(posedge clk); #1;
+        release_cycles=release_cycles+1;
+      end
+      if(release_cycles < 6)
+        $fatal(1,"E rose without a full post-wait setup interval");
       if(e_rise || e_fall) @(posedge clk);
       repeat(200) begin
         @(posedge clk);
