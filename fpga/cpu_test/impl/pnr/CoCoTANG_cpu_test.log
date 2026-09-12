@@ -7,7 +7,9 @@ Running placement......
 [10%] Placement Phase 0 completed
 [20%] Placement Phase 1 completed
 [30%] Placement Phase 2 completed
+WARN  (TA1117) : Can't calculate clocks' relationship between: "clkin" and "clk135"
 WARN  (TA1117) : Can't calculate clocks' relationship between: "clk270" and "clkin"
+WARN  (TA1117) : Can't calculate clocks' relationship between: "clk135" and "clkin"
 [50%] Placement Phase 3 completed
 Running routing......
 [60%] Routing Phase 0 completed
@@ -27,5 +29,5 @@ Generate file "/Users/felipe/src/fpga/CoCoTANG/fpga/cpu_test/impl/pnr/CoCoTANG_c
 Generate file "/Users/felipe/src/fpga/CoCoTANG/fpga/cpu_test/impl/pnr/CoCoTANG_cpu_test.rpt.html" completed
 Generate file "/Users/felipe/src/fpga/CoCoTANG/fpga/cpu_test/impl/pnr/CoCoTANG_cpu_test.rpt.txt" completed
 Generate file "/Users/felipe/src/fpga/CoCoTANG/fpga/cpu_test/impl/pnr/CoCoTANG_cpu_test.tr.html" completed
-Fri Sep 11 16:27:08 2026
+Fri Sep 11 17:48:28 2026
 

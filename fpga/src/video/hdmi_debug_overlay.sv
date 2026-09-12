@@ -167,7 +167,7 @@ module hdmi_debug_overlay #(
                 30:character=bit_char(debug_status[3]);
                 32:character="H"; 33:character=":";
                 34:character=bit_char(debug_status[2]);
-                36:character="A"; 37:character=":";
+                36:character="I"; 37:character=":";
                 38:character=bit_char(debug_status[1]);
                 40:character="S"; 41:character=":";
                 42:character=bit_char(debug_status[0]);

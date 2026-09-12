@@ -4,7 +4,9 @@
 // retained only because it is how the displacer presents CPU address/control.
 module top_cpu_test #(
     parameter integer RESET_HOLD_CYCLES = 10800000,
-    parameter integer LOG_DEPTH = 4096
+    parameter integer LOG_DEPTH = 4096,
+    parameter integer DEBUG_OVERLAY = 0,
+    parameter integer ANALOG_VIDEO_MODE = 1
 ) (
     input clkin,
     input s1,
@@ -60,8 +62,8 @@ module top_cpu_test #(
     // bank remains reset until the physical CPU is released much later.
     wire e_rise,e_fall;
     wire [2:0] internal_s;
-    wire [2:0] unused_video_mode;
-    wire [6:0] unused_video_offset;
+    wire [2:0] sam_video_mode;
+    wire [6:0] sam_video_offset;
     wire unused_page,unused_all_ram;
     wire [1:0] unused_rate,unused_memory_size;
     reg cpu_release = 1'b0;
@@ -71,7 +73,7 @@ module top_cpu_test #(
         .clk(clk108), .reset_n(board_reset_n), .register_reset_n(cpu_release),
         .addr(address), .rw_n(rw_n), .s(internal_s),
         .e(e_out), .q(q_out), .e_rise(e_rise), .e_fall(e_fall),
-        .video_mode(unused_video_mode), .video_offset(unused_video_offset),
+        .video_mode(sam_video_mode), .video_offset(sam_video_offset),
         .page(unused_page), .rate(unused_rate),
         .memory_size(unused_memory_size), .all_ram(unused_all_ram)
     );
@@ -111,6 +113,14 @@ module top_cpu_test #(
         end
     end
     wire bus_snapshot_valid=bus_ready_sync && !bus_ready_delay;
+    wire [2:0] filtered_pia_inputs;
+    input_filter #(.WIDTH(3)) pia_input_filter (
+        .clk(clk108), .reset_n(board_reset_n),
+        .in({irq_n_in,firq_n_in,audio_in}), .out(filtered_pia_inputs)
+    );
+    wire pia_interrupts_idle=filtered_pia_inputs[2] &&
+                             filtered_pia_inputs[1] &&
+                             mux_keyint_n && mux_sernt_n;
 
     wire sdram_reset_n,loader_start,system_ready,sdram_enabled,loader_done;
     coco_startup startup (
@@ -123,7 +133,7 @@ module top_cpu_test #(
     wire sd_rd,sd_wr,sd_refresh,sd_data_ready,sd_busy;
     wire [22:0] sd_addr;
     wire [15:0] sd_din,sd_dout;
-    wire [31:0] unused_sd_dout32;
+    wire [31:0] sd_dout32;
     wire [1:0] sd_wdm;
     sdram sdram_controller (
         .SDRAM_DQ(IO_sdram_dq), .SDRAM_A(O_sdram_addr),
@@ -134,7 +144,7 @@ module top_cpu_test #(
         .clk(clk108), .clk_sdram(clk108p), .resetn(sdram_reset_n),
         .rd(sd_rd), .wr(sd_wr), .refresh(sd_refresh), .addr(sd_addr),
         .din(sd_din), .wdm(sd_wdm), .dout(sd_dout),
-        .dout32(unused_sd_dout32), .data_ready(sd_data_ready),
+        .dout32(sd_dout32), .data_ready(sd_data_ready),
         .busy(sd_busy), .enabled(sdram_enabled)
     );
 
@@ -165,21 +175,64 @@ module top_cpu_test #(
 
     wire [7:0] fpga_read_data;
     wire fpga_data_oe;
+    wire [15:0] vdg_memory_addr;
+    wire [7:0] video_memory_data;
+    wire video_memory_valid;
     cpu_test_memory memory (
         .clk(clk108), .reset_n(sdram_reset_n), .loader_start(loader_start),
         .cpu_access_enable(cpu_release), .cpu_bus_valid(bus_snapshot_valid),
-        .e_fall(e_fall), .cpu_addr(address), .cpu_rw_n(rw_n),
+        .e(e_out), .q(q_out), .e_fall(e_fall),
+        .cpu_addr(address), .cpu_rw_n(rw_n),
         .sam_s(internal_s), .cpu_wdata(cpu_data),
         .cpu_rdata(fpga_read_data), .cpu_data_oe(fpga_data_oe),
+        .video_addr({7'd0,vdg_memory_addr}),
+        .video_data(video_memory_data),
+        .video_data_valid(video_memory_valid),
         .loader_done(loader_done),
         .mspi_cs(mspi_cs), .mspi_sclk(mspi_sclk),
         .mspi_miso(mspi_miso), .mspi_mosi(mspi_mosi),
         .sdram_enabled(sdram_enabled), .sd_rd(sd_rd), .sd_wr(sd_wr),
         .sd_refresh(sd_refresh), .sd_addr(sd_addr), .sd_din(sd_din),
-        .sd_wdm(sd_wdm), .sd_dout(sd_dout),
+        .sd_wdm(sd_wdm), .sd_dout(sd_dout), .sd_dout32(sd_dout32),
         .sd_data_ready(sd_data_ready), .sd_busy(sd_busy)
     );
     assign cpu_data=fpga_data_oe ? fpga_read_data : 8'bz;
+
+    // Restore the MC6847 around the proven physical-CPU path. PIA1 port-B
+    // writes at $FF22/$FF23 are shadowed inside coco_vdg for A/G, INT/EXT,
+    // and CSS. HS and FS return to their motherboard PIA input pins.
+    wire [7:0] vdg_red,vdg_green,vdg_blue;
+    wire [5:0] vdg_border_rgb;
+    wire vdg_hblank,vdg_vblank;
+    wire [7:0] unused_vdg_cvbs;
+    wire framebuffer_write;
+    wire [15:0] framebuffer_write_addr;
+    wire [5:0] framebuffer_write_data;
+    wire vdg_reset_n=board_reset_n && cpu_release && mux_reset_n;
+    coco_vdg vdg (
+        .clk(clk108), .reset_n(vdg_reset_n),
+        .e_fall(e_fall), .cpu_rw_n(rw_n), .cpu_addr(address),
+        .cpu_data(cpu_data), .sam_video_mode(sam_video_mode),
+        .debug_an_g(1'b0), .debug_css(1'b0),
+        .sam_video_offset(sam_video_offset),
+        .memory_data(video_memory_data), .memory_addr(vdg_memory_addr),
+        .hs_n(hs_n), .fs_n(fs_n), .red(vdg_red), .green(vdg_green),
+        .blue(vdg_blue), .border_rgb(vdg_border_rgb),
+        .hblank(vdg_hblank), .vblank(vdg_vblank),
+        .cvbs(unused_vdg_cvbs), .pixel_capture(framebuffer_write),
+        .capture_addr(framebuffer_write_addr),
+        .capture_rgb(framebuffer_write_data)
+    );
+
+    wire [15:0] hdmi_framebuffer_addr,cvbs_framebuffer_addr;
+    wire [5:0] hdmi_framebuffer_data,cvbs_framebuffer_data;
+    coco_framebuffer framebuffer (
+        .write_clk(clk108), .write_en(framebuffer_write),
+        .write_addr(framebuffer_write_addr), .write_data(framebuffer_write_data),
+        .read_clk(clk135), .hdmi_addr(hdmi_framebuffer_addr),
+        .hdmi_data(hdmi_framebuffer_data), .cvbs_addr(cvbs_framebuffer_addr),
+        .cvbs_data(cvbs_framebuffer_data)
+    );
 
     // Capture every observable {address,R/W,data} change after RESET release.
     // Address/control come from an atomic mux snapshot; data is observed on
@@ -220,10 +273,14 @@ module top_cpu_test #(
         end
     end
 
-    // One debounced S2 press advances one 116-entry page.  After the last
-    // physical log page it wraps directly to page zero.
+    // A short debounced S2 press advances one 116-entry log page. Holding S2
+    // for one second toggles the overlay, which starts hidden so VDG video is
+    // visible immediately after configuration.
     reg s2_meta=1'b0,s2_sync=1'b0,s2_state=1'b0;
     reg [20:0] s2_stable_count=0;
+    reg [26:0] s2_hold_count=0;
+    reg s2_long_handled=1'b0;
+    reg overlay_visible=(DEBUG_OVERLAY != 0);
     reg [LOG_PAGE_WIDTH-1:0] log_page=0;
     always @(posedge clk108 or negedge board_reset_n) begin
         if (!board_reset_n) begin
@@ -231,18 +288,34 @@ module top_cpu_test #(
             s2_sync<=1'b0;
             s2_state<=1'b0;
             s2_stable_count<=0;
+            s2_hold_count<=0;
+            s2_long_handled<=1'b0;
+            overlay_visible<=(DEBUG_OVERLAY != 0);
             log_page<=0;
         end else begin
             s2_meta<=s2;
             s2_sync<=s2_meta;
-            if (s2_sync == s2_state)
+            if (s2_sync == s2_state) begin
                 s2_stable_count<=0;
-            else if (s2_stable_count == 21'd1079999) begin
+                if (s2_state && !s2_long_handled) begin
+                    if (s2_hold_count == 27'd107999999) begin
+                        overlay_visible<=!overlay_visible;
+                        s2_long_handled<=1'b1;
+                    end else
+                        s2_hold_count<=s2_hold_count+1'b1;
+                end
+            end else if (s2_stable_count == 21'd1079999) begin
                 s2_state<=s2_sync;
                 s2_stable_count<=0;
-                if (s2_sync)
-                    log_page <= (log_page == LAST_PAGE) ?
-                                {LOG_PAGE_WIDTH{1'b0}} : log_page+1'b1;
+                if (s2_sync) begin
+                    s2_hold_count<=0;
+                    s2_long_handled<=1'b0;
+                end else begin
+                    s2_hold_count<=0;
+                    if (!s2_long_handled)
+                        log_page <= (log_page == LAST_PAGE) ?
+                                    {LOG_PAGE_WIDTH{1'b0}} : log_page+1'b1;
+                end
             end else
                 s2_stable_count<=s2_stable_count+1'b1;
         end
@@ -255,18 +328,39 @@ module top_cpu_test #(
         .pixel_clk(clkin), .serial_clk(clk135), .reset(!board_reset_n),
         .debug_clk(clk108), .log_we(log_we), .log_addr(log_addr),
         .log_data(log_data), .log_count(log_count), .log_page(log_page),
-        .debug_status({clocks_locked,cpu_release,mux_reset_n,
-                       bus_snapshot_ready_async,bus_ready_sync}),
+        .debug_status({clocks_locked,mux_reset_n,mux_halt_n,
+                       pia_interrupts_idle,bus_ready_sync}),
+        .overlay_enable(overlay_visible),
+        .framebuffer_data(hdmi_framebuffer_data),
+        .border_rgb(vdg_border_rgb),
+        .framebuffer_addr(hdmi_framebuffer_addr),
         .tmds_clk_p(tmds_clk_p), .tmds_clk_n(tmds_clk_n),
         .tmds_data_p(tmds_data_p), .tmds_data_n(tmds_data_n)
     );
 
-    // Constrained legacy outputs are intentionally inactive in this top.
-    assign hs_n=1'b1;
-    assign fs_n=1'b1;
-    assign y_out=1'b0;
-    assign pb_out=1'b0;
-    wire unused_inputs=irq_n_in ^ firq_n_in ^ audio_in ^ mux_slenb_n ^
-                       mux_sernt_n ^ mux_cart_n ^ mux_keyint_n ^
-                       mux_halt_n ^ mux_nmi_n;
+    wire [9:0] unused_cvbs_source_x;
+    wire [7:0] unused_cvbs_source_y,unused_cvbs_prefetch_y;
+    wire unused_cvbs_source_valid,unused_cvbs_prefetch_valid;
+    wire analog_luma,analog_chroma,analog_cvbs;
+    coco_cvbs_ntsc analog_encoder (
+        .clk135(clk135), .clk270(clk270), .reset_n(board_reset_n),
+        .high_resolution(1'b0), .framebuffer_data(cvbs_framebuffer_data),
+        .border_rgb(vdg_border_rgb), .active_height(8'd192),
+        .framebuffer_addr(cvbs_framebuffer_addr),
+        .source_x(unused_cvbs_source_x), .source_y(unused_cvbs_source_y),
+        .source_valid(unused_cvbs_source_valid),
+        .prefetch_y(unused_cvbs_prefetch_y),
+        .prefetch_valid(unused_cvbs_prefetch_valid),
+        .luma_out(analog_luma), .chroma_out(analog_chroma),
+        .cvbs_out(analog_cvbs)
+    );
+    assign y_out=analog_luma;
+    assign pb_out=(ANALOG_VIDEO_MODE == 0) ? analog_chroma : analog_cvbs;
+
+    // These motherboard-owned signals reach the physical CPU directly. They
+    // are observed here for diagnostics, but must never qualify FPGA memory.
+    wire unused_inputs=filtered_pia_inputs[0] ^ mux_slenb_n ^ mux_cart_n ^
+                       mux_nmi_n ^
+                       video_memory_valid ^ vdg_hblank ^ vdg_vblank ^
+                       ^vdg_red ^ ^vdg_green ^ ^vdg_blue;
 endmodule
