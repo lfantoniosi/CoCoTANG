@@ -16,14 +16,14 @@ module coco_bus_mux (
     output        snapshot_valid
 );
     // Allow the 6809 outputs, 74HC139 selector and LVC245 path to settle.
-    // Sixteen clk270 periods are about 59 ns per bank.  The shorter 19 ns
+    // Eight clk135 periods are about 59 ns per bank.  The shorter 19 ns
     // diagnostic setting produced mixed-byte snapshots on the prototype
     // (for example, FFFE appeared as FEFF).  Acquisition starts just after
     // Q rises after the 6809E address and external mux inputs are stable.
-    localparam [3:0] SETTLE_CYCLES = 4'd15;
+    localparam [2:0] SETTLE_CYCLES = 3'd7;
     reg [1:0] select_reg = 2'b00;
     reg [1:0] bank = 2'd0;
-    reg [3:0] settle_count = 4'd0;
+    reg [2:0] settle_count = 3'd0;
     reg       scanning = 1'b0;
     reg [7:0] address_low = 8'hff;
     reg [7:0] address_high = 8'hff;
@@ -34,7 +34,7 @@ module coco_bus_mux (
         if (!reset_n) begin
             select_reg <= 2'b00;
             bank <= 2'd0;
-            settle_count <= 4'd0;
+            settle_count <= 3'd0;
             scanning <= 1'b0;
             address_low <= 8'hff;
             address_high <= 8'hff;
@@ -47,7 +47,7 @@ module coco_bus_mux (
                 // the external path to settle before sampling it.
                 select_reg <= 2'b00;
                 bank <= 2'd0;
-                settle_count <= 4'd0;
+                settle_count <= 3'd0;
                 scanning <= 1'b1;
                 snapshot_valid_reg <= 1'b0;
             end else if (scanning) begin
@@ -56,7 +56,7 @@ module coco_bus_mux (
                 if (settle_count != SETTLE_CYCLES)
                     settle_count <= settle_count + 1'b1;
                 else begin
-                    settle_count <= 4'd0;
+                    settle_count <= 3'd0;
                     case (bank)
                         2'd0: begin
                             address_low <= mp;

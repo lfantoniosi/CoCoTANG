@@ -48,6 +48,7 @@ module cpu_sdram_arbiter #(
     reg [1:0] owner = OWNER_CPU;
     reg byte_lane = 1'b0;
     reg saw_busy = 1'b0;
+    reg [7:0] recovery_count = 8'd0;
     reg [15:0] refresh_count = 16'd0;
     wire owner_req = (owner == OWNER_CPU) ? cpu_req :
                      (owner == OWNER_VIDEO) ? video_req : loader_req;
@@ -72,6 +73,7 @@ module cpu_sdram_arbiter #(
             rd <= !selected_write;
             wr <= selected_write;
             saw_busy <= 1'b0;
+            recovery_count <= 8'd0;
             state <= selected_write ? ACTIVE_WRITE : ACTIVE_READ;
         end
     endtask
@@ -82,6 +84,7 @@ module cpu_sdram_arbiter #(
             owner <= OWNER_CPU;
             byte_lane <= 1'b0;
             saw_busy <= 1'b0;
+            recovery_count <= 8'd0;
             refresh_count <= 16'd0;
             rd <= 1'b0;
             wr <= 1'b0;
@@ -103,6 +106,10 @@ module cpu_sdram_arbiter #(
             loader_ack <= 1'b0;
             if (refresh_count != REFRESH_CYCLES)
                 refresh_count <= refresh_count + 1'b1;
+            if (state == IDLE)
+                recovery_count <= 8'd0;
+            else if (recovery_count != 8'hff)
+                recovery_count <= recovery_count + 1'b1;
 
             case (state)
                 IDLE: if (!busy) begin
@@ -120,15 +127,24 @@ module cpu_sdram_arbiter #(
                         state <= ACTIVE_REFRESH;
                     end
                 end
-                ACTIVE_READ: if (data_ready) begin
-                    if (owner == OWNER_CPU) begin
-                        cpu_rdata <= byte_lane ? dout[15:8] : dout[7:0];
-                        cpu_ack <= 1'b1;
-                    end else begin
-                        video_rdata <= dout32;
-                        video_ack <= 1'b1;
+                ACTIVE_READ: begin
+                    if (data_ready) begin
+                        if (owner == OWNER_CPU) begin
+                            cpu_rdata <= byte_lane ? dout[15:8] : dout[7:0];
+                            cpu_ack <= 1'b1;
+                        end else begin
+                            video_rdata <= dout32;
+                            video_ack <= 1'b1;
+                        end
+                        recovery_count <= 8'd0;
+                        state <= WAIT_DROP;
+                    end else if (recovery_count == 8'hff) begin
+                        // The requester still holds its request, so returning
+                        // to IDLE retries the same transaction once the SDRAM
+                        // controller is no longer busy.
+                        recovery_count <= 8'd0;
+                        state <= IDLE;
                     end
-                    state <= WAIT_DROP;
                 end
                 ACTIVE_WRITE: begin
                     if (busy)
@@ -138,17 +154,43 @@ module cpu_sdram_arbiter #(
                             loader_ack <= 1'b1;
                         else
                             cpu_ack <= 1'b1;
+                        recovery_count <= 8'd0;
+                        state <= WAIT_DROP;
+                    end else if (recovery_count == 8'hff && !busy) begin
+                        // Recover if the short busy assertion was not sampled.
+                        if (owner == OWNER_LOADER)
+                            loader_ack <= 1'b1;
+                        else
+                            cpu_ack <= 1'b1;
+                        recovery_count <= 8'd0;
                         state <= WAIT_DROP;
                     end
                 end
                 ACTIVE_REFRESH: begin
                     if (busy)
                         saw_busy <= 1'b1;
-                    if (saw_busy && !busy)
+                    if ((saw_busy || recovery_count == 8'hff) && !busy) begin
+                        recovery_count <= 8'd0;
                         state <= IDLE;
+                    end
                 end
-                default: if (!owner_req)
-                    state <= IDLE;
+                WAIT_DROP: begin
+                    if (!owner_req) begin
+                        recovery_count <= 8'd0;
+                        state <= IDLE;
+                    end else if (recovery_count == 8'hff) begin
+                        // ACK is a pulse. Replay it if the client missed the
+                        // original pulse and therefore never dropped request.
+                        if (owner == OWNER_CPU)
+                            cpu_ack <= 1'b1;
+                        else if (owner == OWNER_VIDEO)
+                            video_ack <= 1'b1;
+                        else
+                            loader_ack <= 1'b1;
+                        recovery_count <= 8'd0;
+                    end
+                end
+                default: state <= IDLE;
             endcase
         end
     end

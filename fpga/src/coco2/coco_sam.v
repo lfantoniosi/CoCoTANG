@@ -30,11 +30,13 @@ module coco_sam #(
     // and hold interval by four, making marginal external-bus timing obvious.
     localparam [23:0] SAM_STEP = SLOW_DIAGNOSTIC ? 24'd556063 : 24'd2224252;
     reg [23:0] accumulator = 24'd0;
+    reg tick = 1'b0;
     reg [3:0] phase = 4'd0;
     wire [24:0] sum = {1'b0, accumulator} + {1'b0, SAM_STEP};
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
             accumulator <= 24'd0;
+            tick <= 1'b0;
             phase <= 4'd0;
             e <= 1'b0;
             q <= 1'b0;
@@ -49,9 +51,11 @@ module coco_sam #(
             // arbitrary residual accumulator phase.
             if (memory_wait && phase == 4'd6) begin
                 accumulator <= 24'd0;
+                tick <= 1'b0;
             end else begin
                 accumulator <= sum[23:0];
-                if (sum[24]) begin
+                tick <= sum[24];
+                if (tick) begin
                     phase <= phase + 1'b1;
                     case (phase)
                         4'd2: q <= 1'b1;

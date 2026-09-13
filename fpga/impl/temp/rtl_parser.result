@@ -195,7 +195,7 @@
       "SubInsts" : [
        {
         "InstFile" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco_vdg.v",
-        "InstLine" : 71,
+        "InstLine" : 84,
         "InstName" : "character_rom",
         "ModuleFile" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847_char_rom.v",
         "ModuleLine" : 1,
@@ -203,7 +203,7 @@
        },
        {
         "InstFile" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco_vdg.v",
-        "InstLine" : 75,
+        "InstLine" : 88,
         "InstName" : "vdg",
         "ModuleFile" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847.vhd",
         "ModuleLine" : 6,

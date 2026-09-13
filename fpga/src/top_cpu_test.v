@@ -5,7 +5,7 @@
 module top_cpu_test #(
     parameter integer RESET_HOLD_CYCLES = 10800000,
     parameter integer LOG_DEPTH = 4096,
-    parameter [15:0] LOG_START_ADDRESS = 16'hA080,
+    parameter [15:0] LOG_START_ADDRESS = 16'h0000,
     parameter integer DEBUG_OVERLAY = 0,
     parameter integer ANALOG_VIDEO_MODE = 1
 ) (
@@ -69,12 +69,14 @@ module top_cpu_test #(
     wire [1:0] unused_rate,unused_memory_size;
     reg cpu_release = 1'b0;
     wire cpu_memory_wait;
-    wire sam_memory_wait;
     wire [15:0] address;
     wire rw_n;
     coco_sam sam (
         .clk(clk108), .reset_n(board_reset_n), .register_reset_n(cpu_release),
-        .memory_wait(sam_memory_wait),
+        // An external 6809E has no READY input.  E and Q are its master
+        // clocks and must run continuously; SDRAM latency may never be turned
+        // into a stopped-clock "wait state".
+        .memory_wait(1'b0),
         .addr(address), .rw_n(rw_n), .s(internal_s),
         .e(e_out), .q(q_out), .e_rise(e_rise), .e_fall(e_fall),
         .video_mode(sam_video_mode), .video_offset(sam_video_offset),
@@ -87,7 +89,7 @@ module top_cpu_test #(
     // Existing displacer acquisition hardware.  Nothing from the CoCo
     // motherboard is required or interpreted by this top.
     reg q_scan_delay = 1'b0;
-    always @(posedge clk270 or negedge board_reset_n) begin
+    always @(posedge clk135 or negedge board_reset_n) begin
         if (!board_reset_n)
             q_scan_delay<=1'b0;
         else
@@ -97,7 +99,7 @@ module top_cpu_test #(
     wire mux_reset_n,mux_slenb_n,mux_sernt_n,mux_cart_n,mux_keyint_n;
     wire mux_halt_n,mux_nmi_n,bus_snapshot_ready_async;
     coco_bus_mux bus_mux (
-        .clk(clk270), .reset_n(board_reset_n), .scan_start(bus_scan_start),
+        .clk(clk135), .reset_n(board_reset_n), .scan_start(bus_scan_start),
         .mp(mp), .msel(msel), .addr(address), .rw_n(rw_n),
         .cpu_reset_n(mux_reset_n), .slenb_n(mux_slenb_n),
         .sernt_n(mux_sernt_n), .cart_n(mux_cart_n),
@@ -117,10 +119,28 @@ module top_cpu_test #(
         end
     end
     wire bus_snapshot_valid=bus_ready_sync && !bus_ready_delay;
-    // The motherboard reset circuit may continue holding the physical CPU
-    // after our own release timer expires.  Do not turn reset-time bus noise
-    // into a memory request or park E at phase 6 before the 6309 is running.
-    wire cpu_bus_active=cpu_release && mux_reset_n;
+    // The motherboard RESET node has a slow RC rise and can cross the digital
+    // threshold many times.  It must not gate the synchronous memory state:
+    // doing so can park SAM at Q-high/E-low on one RESET sample and prevent
+    // the next mux scan needed for recovery.  Begin servicing the reset-vector
+    // address as soon as our open-collector RESET driver releases it.  The CPU
+    // continues holding FFFE during the RC rise, giving SDRAM time to prefetch
+    // and present the vector byte before the CPU recognizes RESET high.
+    wire cpu_bus_active=cpu_release;
+    // Before the CPU recognizes the slow external RESET rise it repeatedly
+    // presents FFFE.  Allow those cycles to prefetch the high vector byte, but
+    // never stop Q/E during that interval: stopping Q would also stop the mux
+    // scanner.  FFFF is the first proof that the CPU has entered its real
+    // reset-vector sequence; normal SDRAM clock stretching is safe afterward.
+    reg cpu_started=1'b0;
+    always @(posedge clk108 or negedge board_reset_n) begin
+        if (!board_reset_n)
+            cpu_started<=1'b0;
+        else if (!cpu_release)
+            cpu_started<=1'b0;
+        else if (bus_snapshot_valid && address == 16'hffff)
+            cpu_started<=1'b1;
+    end
     // A 6309 write byte is valid during E high and may be released immediately
     // after E falls. Keep the latest full-clock sample from that window so RAM,
     // PIA shadowing and diagnostics do not depend on FPGA/input-buffer skew at
@@ -132,12 +152,9 @@ module top_cpu_test #(
         else if (cpu_bus_active && e_out && !rw_n)
             cpu_write_data<=cpu_data;
     end
-    // At phase 6, do not raise E until this Q cycle's multiplexed address is
-    // complete. The completion signal is a level held by coco_bus_mux, so it
-    // cannot be lost crossing from clk270 to clk108. Once the address exists,
-    // an SDRAM request may extend the same hold until its data is ready.
-    assign sam_memory_wait=cpu_memory_wait ||
-                           (cpu_bus_active && !bus_ready_sync);
+    // cpu_memory_wait is diagnostic only.  It must never feed the SAM clock
+    // generator: the memory path has to prefetch/cache early enough to meet
+    // the fixed 6809 bus cycle.
     wire [2:0] filtered_pia_inputs;
     input_filter #(.WIDTH(3)) pia_input_filter (
         .clk(clk108), .reset_n(board_reset_n),
@@ -175,15 +192,16 @@ module top_cpu_test #(
 
     // ROM loading already holds reset for a substantial interval.  Add a
     // deterministic 100 ms default afterward and release only on E falling.
-    reg [31:0] reset_hold_count = 32'd0;
+    localparam integer RESET_HOLD_WIDTH = $clog2(RESET_HOLD_CYCLES + 1);
+    reg [RESET_HOLD_WIDTH-1:0] reset_hold_count = 0;
     reg release_pending = 1'b0;
     always @(posedge clk108 or negedge board_reset_n) begin
         if (!board_reset_n) begin
-            reset_hold_count<=32'd0;
+            reset_hold_count<=0;
             release_pending<=1'b0;
             cpu_release<=1'b0;
         end else if (!system_ready) begin
-            reset_hold_count<=32'd0;
+            reset_hold_count<=0;
             release_pending<=1'b0;
             cpu_release<=1'b0;
         end else if (!cpu_release) begin
@@ -234,7 +252,9 @@ module top_cpu_test #(
     wire framebuffer_write;
     wire [15:0] framebuffer_write_addr;
     wire [5:0] framebuffer_write_data;
-    wire vdg_reset_n=board_reset_n && cpu_release && mux_reset_n;
+    // Keep the asynchronous, mux-sampled RESET node out of the VDG reset path
+    // for the same reason. cpu_release is synchronous to clk108.
+    wire vdg_reset_n=board_reset_n && cpu_started;
     coco_vdg vdg (
         .clk(clk108), .reset_n(vdg_reset_n),
         .e_fall(e_fall), .cpu_rw_n(rw_n), .cpu_addr(address),
@@ -260,17 +280,19 @@ module top_cpu_test #(
         .cvbs_data(cvbs_framebuffer_data)
     );
 
-    // Wait for an atomic snapshot at LOG_START_ADDRESS, capture that trigger
-    // cycle, then sample the physical bus at each E falling edge--the instant
-    // the 6309 consumes read data or completes a write. Consecutive cycles at
-    // the same address share one row, and only a new address advances the log.
+    // Begin with the first active CPU bus cycle, regardless of its address.
+    // The first occurrence of LOG_START_ADDRESS rewinds the log and records
+    // that cycle as entry 000. Bus data is sampled at E falling, when the 6809
+    // consumes read data or completes a write. Consecutive cycles at the same
+    // address share one row.
     reg log_we=1'b0;
     reg [LOG_ADDR_WIDTH-1:0] log_addr=0;
     reg [39:0] log_data=0;
     reg [LOG_COUNT_WIDTH-1:0] log_count=0;
     reg [24:0] last_observation=0;
     reg observation_valid=1'b0;
-    reg log_started=1'b0;
+    reg log_rebased=1'b0;
+    reg log_rebase_pulse=1'b0;
     wire [7:0] sampled_cpu_data=rw_n ? cpu_data : cpu_write_data;
     wire [24:0] observation={rw_n,address,sampled_cpu_data};
     always @(posedge clk108 or negedge board_reset_n) begin
@@ -281,17 +303,27 @@ module top_cpu_test #(
             log_count<=0;
             last_observation<=0;
             observation_valid<=1'b0;
-            log_started<=1'b0;
+            log_rebased<=1'b0;
+            log_rebase_pulse<=1'b0;
         end else begin
             log_we<=1'b0;
+            log_rebase_pulse<=1'b0;
             if (!cpu_release) begin
                 observation_valid<=1'b0;
-                log_started<=1'b0;
-            end else if (!log_started && bus_snapshot_valid &&
-                         address == LOG_START_ADDRESS) begin
-                log_started<=1'b1;
-                observation_valid<=1'b0;
-            end else if (log_started && e_fall &&
+                log_rebased<=1'b0;
+            end else if (!log_rebased && e_fall &&
+                         address == LOG_START_ADDRESS && LOG_START_ADDRESS != 16'h0000) begin
+                // Include the trigger cycle itself as the first new entry.
+                log_we<=1'b1;
+                log_addr<=0;
+                log_data<={1'b1,rw_n,internal_s,fpga_data_oe,address,
+                           sampled_cpu_data,fpga_read_data,q_out,e_out};
+                log_count<=1;
+                last_observation<=observation;
+                observation_valid<=1'b1;
+                log_rebased<=1'b1;
+                log_rebase_pulse<=1'b1;
+            end else if (e_fall &&
                          ((observation_valid &&
                            address == last_observation[23:8]) ||
                           log_count < LOG_DEPTH)) begin
@@ -334,6 +366,10 @@ module top_cpu_test #(
         end else begin
             s2_meta<=s2;
             s2_sync<=s2_meta;
+            if (log_rebase_pulse) begin
+                // Always expose entry 000 after the trigger rewinds the log.
+                log_page<=0;
+            end
             if (s2_sync == s2_state) begin
                 s2_stable_count<=0;
                 if (s2_state && !s2_long_handled) begin
