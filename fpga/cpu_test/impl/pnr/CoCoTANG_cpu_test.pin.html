@@ -78,7 +78,7 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 </tr>
 <tr>
 <td class="label">Created Time</td>
-<td>Sat Sep 12 23:50:41 2026
+<td>Mon Sep 14 11:35:17 2026
 </td>
 </tr>
 <tr>
@@ -318,44 +318,6 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 <td>3.3</td>
 </tr>
 <tr>
-<td class="label">irq_n_in</td>
-<td>-</td>
-<td>19/6</td>
-<td>Y</td>
-<td>in</td>
-<td>IOL51[A]</td>
-<td>-</td>
-<td>LVCMOS33</td>
-<td>NA</td>
-<td>UP</td>
-<td>ON</td>
-<td>NONE</td>
-<td>NA</td>
-<td>NA</td>
-<td>OFF</td>
-<td>NA</td>
-<td>3.3</td>
-</tr>
-<tr>
-<td class="label">firq_n_in</td>
-<td>-</td>
-<td>18/6</td>
-<td>Y</td>
-<td>in</td>
-<td>IOL49[B]</td>
-<td>-</td>
-<td>LVCMOS33</td>
-<td>NA</td>
-<td>UP</td>
-<td>ON</td>
-<td>NONE</td>
-<td>NA</td>
-<td>NA</td>
-<td>OFF</td>
-<td>NA</td>
-<td>3.3</td>
-</tr>
-<tr>
 <td class="label">audio_in</td>
 <td>-</td>
 <td>55/3</td>
@@ -423,6 +385,44 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 <td>LVCMOS33</td>
 <td>8</td>
 <td>UP</td>
+<td>NA</td>
+<td>NA</td>
+<td>OFF</td>
+<td>NA</td>
+<td>OFF</td>
+<td>NA</td>
+<td>3.3</td>
+</tr>
+<tr>
+<td class="label">irq_n_in</td>
+<td>-</td>
+<td>19/6</td>
+<td>Y</td>
+<td>out</td>
+<td>IOL51[A]</td>
+<td>-</td>
+<td>LVCMOS33</td>
+<td>8</td>
+<td>DOWN</td>
+<td>NA</td>
+<td>NA</td>
+<td>OFF</td>
+<td>NA</td>
+<td>OFF</td>
+<td>NA</td>
+<td>3.3</td>
+</tr>
+<tr>
+<td class="label">firq_n_in</td>
+<td>-</td>
+<td>18/6</td>
+<td>Y</td>
+<td>out</td>
+<td>IOL49[B]</td>
+<td>-</td>
+<td>LVCMOS33</td>
+<td>8</td>
+<td>DOWN</td>
 <td>NA</td>
 <td>NA</td>
 <td>OFF</td>
@@ -529,11 +529,11 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 <tr>
 <td class="label">sam_s[0]</td>
 <td>-</td>
-<td>41/4</td>
+<td>15/6</td>
 <td>Y</td>
 <td>out</td>
-<td>IOB43[A]</td>
-<td>-</td>
+<td>IOL47[A]</td>
+<td>LPLL2_T_fb</td>
 <td>LVCMOS33</td>
 <td>8</td>
 <td>DOWN</td>
@@ -541,17 +541,17 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 <td>NA</td>
 <td>OFF</td>
 <td>NA</td>
-<td>NA</td>
+<td>OFF</td>
 <td>NA</td>
 <td>3.3</td>
 </tr>
 <tr>
 <td class="label">sam_s[1]</td>
 <td>-</td>
-<td>81/0</td>
+<td>41/4</td>
 <td>Y</td>
 <td>out</td>
-<td>IOT17[B]</td>
+<td>IOB43[A]</td>
 <td>-</td>
 <td>LVCMOS33</td>
 <td>8</td>
@@ -2059,16 +2059,16 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 </tr>
 <tr>
 <td class="label">81/0</td>
-<td>sam_s[1]</td>
-<td>out</td>
+<td>-</td>
+<td>in</td>
 <td>IOT17[B]</td>
 <td>-</td>
 <td>LVCMOS33</td>
-<td>8</td>
-<td>DOWN</td>
 <td>NA</td>
+<td>UP</td>
+<td>ON</td>
+<td>NONE</td>
 <td>NA</td>
-<td>OFF</td>
 <td>NA</td>
 <td>NA</td>
 <td>NA</td>
@@ -2552,7 +2552,7 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 </tr>
 <tr>
 <td class="label">41/4</td>
-<td>sam_s[0]</td>
+<td>sam_s[1]</td>
 <td>out</td>
 <td>IOB43[A]</td>
 <td>-</td>
@@ -3130,18 +3130,18 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 </tr>
 <tr>
 <td class="label">15/6</td>
-<td>-</td>
-<td>in</td>
+<td>sam_s[0]</td>
+<td>out</td>
 <td>IOL47[A]</td>
 <td>LPLL2_T_fb</td>
 <td>LVCMOS33</td>
-<td>NA</td>
-<td>UP</td>
-<td>ON</td>
-<td>NONE</td>
+<td>8</td>
+<td>DOWN</td>
 <td>NA</td>
 <td>NA</td>
+<td>OFF</td>
 <td>NA</td>
+<td>OFF</td>
 <td>NA</td>
 <td>3.3</td>
 </tr>
@@ -3182,15 +3182,15 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 <tr>
 <td class="label">18/6</td>
 <td>firq_n_in</td>
-<td>in</td>
+<td>out</td>
 <td>IOL49[B]</td>
 <td>-</td>
 <td>LVCMOS33</td>
+<td>8</td>
+<td>DOWN</td>
 <td>NA</td>
-<td>UP</td>
-<td>ON</td>
-<td>NONE</td>
 <td>NA</td>
+<td>OFF</td>
 <td>NA</td>
 <td>OFF</td>
 <td>NA</td>
@@ -3199,15 +3199,15 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 <tr>
 <td class="label">19/6</td>
 <td>irq_n_in</td>
-<td>in</td>
+<td>out</td>
 <td>IOL51[A]</td>
 <td>-</td>
 <td>LVCMOS33</td>
+<td>8</td>
+<td>DOWN</td>
 <td>NA</td>
-<td>UP</td>
-<td>ON</td>
-<td>NONE</td>
 <td>NA</td>
+<td>OFF</td>
 <td>NA</td>
 <td>OFF</td>
 <td>NA</td>

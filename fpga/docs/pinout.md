@@ -8,7 +8,7 @@ Package pins are for the GW2AR-LV18QN88C8/I7 on the Tang Nano 20K.
 | `mp[7:0]` | in | 31, 30, 29, 26, 25, 28, 27, 77 | Multiplexed address/control bus |
 | `msel[1:0]` | out | 20, 17 | 74HC139 mux selection |
 | `cpu_data[7:0]` | inout | 48, 49, 86, 79, 72, 71, 53, 52 | Buffered 6809 data bus |
-| `sam_s[2:0]` | out | 16, 81, 41 | SAM device selects to motherboard decoder |
+| `sam_s[2:0]` | out | 16, 41, 15 | SAM device selects to motherboard decoder |
 | `e_out`, `q_out` | out | 51, 76 | 6809 clocks; E uses the former PR_33 connection |
 | `halt_drive` | out | 42 | High turns Q2 on and pulls `/HALT` low |
 | `irq_n_in`, `firq_n_in` | in | 19, 18 | Interrupt observations |

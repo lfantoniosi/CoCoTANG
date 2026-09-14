@@ -8,7 +8,7 @@ module top #(
  parameter integer DEBUG_DATA_BUS_SWEEP = 0
 ) (
  input clkin,input s1,input s2,input [7:0] mp,output [1:0] msel,
- inout [7:0] cpu_data,input irq_n_in,input firq_n_in,input audio_in,
+ inout [7:0] cpu_data,output irq_n_in,output firq_n_in,input audio_in,
  output halt_drive,output e_out,output q_out,output hs_n,output fs_n,output [2:0] sam_s,
  output y_out,output pb_out,
  output tmds_clk_p,output tmds_clk_n,output [2:0] tmds_data_p,output [2:0] tmds_data_n,
@@ -17,6 +17,12 @@ module top #(
  output O_sdram_ras_n,output O_sdram_wen_n,inout [31:0] IO_sdram_dq,
  output [10:0] O_sdram_addr,output [1:0] O_sdram_ba,output [3:0] O_sdram_dqm
 );
+ // These FPGA pins drive the bases of the external IRQ/FIRQ pull-down
+ // transistors.  Low keeps both transistors off so the motherboard PIAs own
+ // the CPU's active-low interrupt lines.
+ assign irq_n_in=1'b0;
+ assign firq_n_in=1'b0;
+
  wire clk108,clk108p,clk270,clk135,board_reset_n,clocks_locked;
  coco_clocks clocks(.clkin(clkin),.button_reset(s1),.clk108(clk108),.clk108p(clk108p),
   .clk270(clk270),.clk135(clk135),.board_reset_n(board_reset_n),.clocks_locked(clocks_locked));
@@ -48,9 +54,11 @@ module top #(
   end
  end
  wire bus_snapshot_valid=bus_ready_sync && !bus_ready_delay;
- wire [2:0] filtered_interrupts;
- input_filter #(.WIDTH(3)) interrupt_filter(.clk(clk108),.reset_n(board_reset_n),
-  .in({irq_n_in,firq_n_in,audio_in}),.out(filtered_interrupts));
+ wire filtered_audio;
+ input_filter #(.WIDTH(1)) audio_filter(.clk(clk108),.reset_n(board_reset_n),
+  .in(audio_in),.out(filtered_audio));
+ // Preserve the debug-bus layout.  IRQ/FIRQ are controls, not observations.
+ wire [2:0] filtered_interrupts={1'b1,1'b1,filtered_audio};
 
  wire sdram_reset_n,loader_start,system_ready,sdram_enabled,loader_done;
  coco_startup startup(.clk(clk108),.board_reset_n(board_reset_n),.sdram_enabled(sdram_enabled),

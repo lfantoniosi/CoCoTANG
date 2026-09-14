@@ -56,27 +56,16 @@ architecture SYN of mc6847 is
     -- the video comes out of hblank
     -- so the phase relationship between char_d_o from the 6847 and character timing is maintained
 
-    -- 14.31818 MHz : 256 X 384    == 25 * 4 / 7   approx
--- constant H_FRONT_PORCH      : integer := 11-1 ; --11-1+1;
--- constant H_HORIZ_SYNC       : integer := H_FRONT_PORCH + 35+2;
--- constant H_BACK_PORCH       : integer := H_HORIZ_SYNC + 34+1;
--- constant H_LEFT_BORDER      : integer := H_BACK_PORCH + 61+1;--+3; -- adjust for hblank de-assert @sys_count=6
--- constant H_LEFT_RSTADDR     : integer := H_LEFT_BORDER -16;
--- constant H_VIDEO            : integer := H_LEFT_BORDER + 256;
--- -- constant H_RIGHT_BORDER     : integer := H_VIDEO + 61+1;---3;      -- "
--- constant H_RIGHT_BORDER     : integer := H_VIDEO + 54;---3;      -- tweak to get to 60hz exactly
--- constant H_TOTAL_PER_LINE   : integer := H_RIGHT_BORDER;
-
-
-    -- 12.5714 MHz = 32 * 11 / 28
-    constant H_FRONT_PORCH    : integer := 8;
-    constant H_HORIZ_SYNC     : integer := H_FRONT_PORCH + 48;
-    constant H_BACK_PORCH     : integer := H_HORIZ_SYNC + 24;
-    constant H_LEFT_BORDER    : integer := H_BACK_PORCH + 32;  -- adjust for hblank de-assert @sys_count=6
-    constant H_LEFT_RSTADDR   : integer := H_LEFT_BORDER - 16;
-    constant H_VIDEO          : integer := H_LEFT_BORDER + 256;
-    constant H_RIGHT_BORDER   : integer := H_VIDEO + 31;       -- "
-    constant H_TOTAL_PER_LINE : integer := H_RIGHT_BORDER;
+    -- Native 14.31818 MHz SAM/VDG master cadence. PROC_CLOCKS divides this
+    -- enable by two, giving 455 native dots per approximately 63.56 us line.
+    constant H_FRONT_PORCH      : integer := 11-1;
+    constant H_HORIZ_SYNC       : integer := H_FRONT_PORCH + 35+2;
+    constant H_BACK_PORCH       : integer := H_HORIZ_SYNC + 34+1;
+    constant H_LEFT_BORDER      : integer := H_BACK_PORCH + 61+1;
+    constant H_LEFT_RSTADDR     : integer := H_LEFT_BORDER - 16;
+    constant H_VIDEO            : integer := H_LEFT_BORDER + 256;
+    constant H_RIGHT_BORDER     : integer := H_VIDEO + 54;
+    constant H_TOTAL_PER_LINE   : integer := H_RIGHT_BORDER;
 
     constant V2_FRONT_PORCH     : integer := 2;
     constant V2_VERTICAL_SYNC   : integer := V2_FRONT_PORCH + 2;

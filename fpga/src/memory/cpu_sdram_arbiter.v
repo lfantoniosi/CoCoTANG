@@ -19,6 +19,8 @@ module cpu_sdram_arbiter #(
 
     input video_req,
     input [22:0] video_addr,
+    input video_slot_open,
+    input refresh_slot_open,
     output reg video_ack,
     output reg [31:0] video_rdata,
 
@@ -52,10 +54,17 @@ module cpu_sdram_arbiter #(
     reg [15:0] refresh_count = 16'd0;
     wire owner_req = (owner == OWNER_CPU) ? cpu_req :
                      (owner == OWNER_VIDEO) ? video_req : loader_req;
-    // Match the real SAM's interleaved DMA. VDG and refresh commands may
-    // begin only in the early E-low interval, before Q announces the next
-    // CPU address. Once Q rises, no new background transaction can launch.
-    wire background_slot = !e && !q;
+    // Match the real SAM's interleaved DMA. Background commands may begin
+    // only at the start of the early E-low interval. Each slot indication is
+    // deliberately shorter than the complete E-low/Q-low quadrant so an
+    // SDRAM operation can never be launched immediately before Q announces
+    // the next CPU address.
+    wire video_background_slot = !e && !q && video_slot_open;
+    // Refresh must remain available while the VDG is held in reset.  In
+    // particular, the ROM sits in SDRAM during the post-load CPU reset hold,
+    // so tying refresh eligibility to video_enable loses the boot image
+    // before the CPU can fetch its reset vector.
+    wire refresh_background_slot = !e && !q && refresh_slot_open;
 
     task launch;
         input [1:0] selected_owner;
@@ -115,11 +124,11 @@ module cpu_sdram_arbiter #(
                 IDLE: if (!busy) begin
                     if (cpu_req)
                         launch(OWNER_CPU,cpu_wr,cpu_addr,cpu_wdata);
-                    else if (video_req && background_slot)
+                    else if (video_req && video_background_slot)
                         launch(OWNER_VIDEO,1'b0,video_addr,8'd0);
                     else if (loader_req)
                         launch(OWNER_LOADER,1'b1,loader_addr,loader_wdata);
-                    else if (enabled && background_slot &&
+                    else if (enabled && refresh_background_slot &&
                              refresh_count == REFRESH_CYCLES) begin
                         refresh <= 1'b1;
                         refresh_count <= 16'd0;

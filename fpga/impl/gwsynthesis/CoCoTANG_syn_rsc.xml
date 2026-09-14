@@ -1,34 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Module name="top" Register="156" Alu="8" Lut="136" T_Register="1317(156)" T_Alu="221(8)" T_Lut="1863(136)" T_MULTADDALU18X18="1(0)" T_Bsram="27(0)">
- <SubModule name="clocks" Register="20" Alu="7" Lut="24" T_Register="20(20)" T_Alu="7(7)" T_Lut="24(24)">
+<Module name="top" Register="156" Alu="8" Lut="137" T_Register="1169(156)" T_Alu="233(8)" T_Lut="1824(137)" T_MULTADDALU18X18="1(0)" T_Bsram="27(0)" T_Ssram="3(0)">
+ <SubModule name="clocks" Register="20" Alu="7" Lut="23" T_Register="20(20)" T_Alu="7(7)" T_Lut="23(23)">
   <SubModule name="sdram_pll"/>
   <SubModule name="video_pll"/>
  </SubModule>
- <SubModule name="bus_mux" Register="43" Lut="15" T_Register="43(43)" T_Lut="15(15)"/>
+ <SubModule name="bus_mux" Register="42" Lut="13" T_Register="42(42)" T_Lut="13(13)"/>
  <SubModule name="startup" Register="13" Lut="26" T_Register="13(13)" T_Lut="26(26)"/>
- <SubModule name="sdram_controller" Register="55" Alu="14" Lut="71" T_Register="55(55)" T_Alu="14(14)" T_Lut="71(71)"/>
- <SubModule name="memory" Register="123" Alu="17" Lut="48" T_Register="298(123)" T_Alu="31(17)" T_Lut="271(48)">
-  <SubModule name="loader" Register="23" Alu="14" Lut="22" T_Register="80(23)" T_Alu="14(14)" T_Lut="107(22)">
-   <SubModule name="reader" Register="57" Lut="85" T_Register="57(57)" T_Lut="85(85)"/>
+ <SubModule name="sdram_controller" Register="55" Alu="14" Lut="75" T_Register="55(55)" T_Alu="14(14)" T_Lut="75(75)"/>
+ <SubModule name="memory" Register="123" Alu="17" Lut="50" T_Register="298(123)" T_Alu="31(17)" T_Lut="273(50)">
+  <SubModule name="loader" Register="23" Alu="14" Lut="23" T_Register="80(23)" T_Alu="14(14)" T_Lut="107(23)">
+   <SubModule name="reader" Register="57" Lut="84" T_Register="57(57)" T_Lut="84(84)"/>
   </SubModule>
   <SubModule name="arbiter" Register="95" Lut="116" T_Register="95(95)" T_Lut="116(116)"/>
  </SubModule>
- <SubModule name="coco2_machine.machine" Lut="6" T_Register="225(0)" T_Alu="14(0)" T_Lut="409(6)" T_Bsram="1(0)">
-  <SubModule name="sam" Register="41" Lut="68" T_Register="41(41)" T_Lut="68(68)"/>
-  <SubModule name="vdg" Register="69" Alu="7" Lut="72" T_Register="184(69)" T_Alu="14(7)" T_Lut="335(72)" T_Bsram="1(0)">
+ <SubModule name="coco2_machine.machine" Lut="5" T_Register="204(0)" T_Alu="35(0)" T_Lut="345(5)" T_Bsram="1(0)">
+  <SubModule name="sam" Register="42" Alu="21" Lut="37" T_Register="42(42)" T_Alu="21(21)" T_Lut="37(37)"/>
+  <SubModule name="vdg" Register="47" Alu="7" Lut="40" T_Register="162(47)" T_Alu="14(7)" T_Lut="303(40)" T_Bsram="1(0)">
    <SubModule name="character_rom" Bsram="1" T_Bsram="1(1)"/>
    <SubModule name="vdg" Register="115" Alu="7" Lut="263" T_Register="115(115)" T_Alu="7(7)" T_Lut="263(263)"/>
   </SubModule>
  </SubModule>
  <SubModule name="coco2_frame_store.framebuffer" Register="67" Lut="71" Bsram="24" T_Register="67(67)" T_Lut="71(71)" T_Bsram="24(24)"/>
- <SubModule name="hdmi_output" Register="20" Alu="8" Lut="14" T_Register="259(20)" T_Alu="67(8)" T_Lut="654(14)" T_MULTADDALU18X18="1(0)" T_Bsram="2(0)">
-  <SubModule name="debug_overlay" Register="164" Alu="23" Lut="484" MULTADDALU18X18="1" Bsram="2" T_Register="164(164)" T_Alu="23(23)" T_Lut="484(484)" T_MULTADDALU18X18="1(1)" T_Bsram="2(2)"/>
-  <SubModule name="hdmi_encoder" Register="34" Alu="9" Lut="34" T_Register="75(34)" T_Alu="36(9)" T_Lut="156(34)">
-   <SubModule name="tmds_gen[0].tmds_channel" Register="14" Alu="13" Lut="54" T_Register="14(14)" T_Alu="13(13)" T_Lut="54(54)"/>
+ <SubModule name="hdmi_output" Register="21" Alu="8" Lut="15" Ssram="3" T_Register="133(21)" T_Alu="58(8)" T_Lut="672(15)" T_MULTADDALU18X18="1(0)" T_Bsram="2(0)" T_Ssram="3(3)">
+  <SubModule name="debug_overlay" Register="37" Alu="14" Lut="497" MULTADDALU18X18="1" Bsram="2" T_Register="37(37)" T_Alu="14(14)" T_Lut="497(497)" T_MULTADDALU18X18="1(1)" T_Bsram="2(2)"/>
+  <SubModule name="hdmi_encoder" Register="34" Alu="9" Lut="35" T_Register="75(34)" T_Alu="36(9)" T_Lut="160(35)">
+   <SubModule name="tmds_gen[0].tmds_channel" Register="14" Alu="13" Lut="56" T_Register="14(14)" T_Alu="13(13)" T_Lut="56(56)"/>
    <SubModule name="tmds_gen[1].tmds_channel" Register="14" Alu="6" Lut="34" T_Register="14(14)" T_Alu="6(6)" T_Lut="34(34)"/>
-   <SubModule name="tmds_gen[2].tmds_channel" Register="13" Alu="8" Lut="34" T_Register="13(13)" T_Alu="8(8)" T_Lut="34(34)"/>
+   <SubModule name="tmds_gen[2].tmds_channel" Register="13" Alu="8" Lut="35" T_Register="13(13)" T_Alu="8(8)" T_Lut="35(35)"/>
   </SubModule>
   <SubModule name="serializer_inst"/>
  </SubModule>
- <SubModule name="encoder" Register="181" Alu="80" Lut="186" T_Register="181(181)" T_Alu="80(80)" T_Lut="186(186)"/>
+ <SubModule name="encoder" Register="181" Alu="80" Lut="189" T_Register="181(181)" T_Alu="80(80)" T_Lut="189(189)"/>
 </Module>

@@ -1,7 +1,7 @@
 // Physical-CPU CoCo 2 memory service. RAM occupies SDRAM byte addresses
 // 000000-00ffff and the 16 KiB flash-backed ROM starts at 080000. Separate
-// an aligned four-byte cache line feeds the VDG. The CPU retains the proven
-// byte-read path while the video arbitration is validated in hardware.
+// a SAM-timed byte latch feeds the VDG. The CPU retains the proven byte-read
+// path while video SDRAM reads are confined to deterministic idle slots.
 module cpu_test_memory #(
     parameter integer ROM_BYTES = 16384
 ) (
@@ -20,6 +20,7 @@ module cpu_test_memory #(
     output [7:0] cpu_rdata,
     output cpu_data_oe,
     output cpu_wait,
+    input video_enable,
     input [22:0] video_addr,
     output reg [7:0] video_data,
     output reg video_data_valid,
@@ -144,8 +145,7 @@ module cpu_test_memory #(
             end
 
             // Move a queued transaction into the SDRAM request slot as soon
-            // as it becomes free.  Keeping pending_valid asserted until this
-            // edge also keeps Q/E stopped continuously between transactions.
+            // as it becomes free. E/Q never depend on this queue.
             if (pending_valid && !cpu_req) begin
                 cpu_wr <= pending_wr;
                 request_addr <= pending_addr;
@@ -232,66 +232,86 @@ module cpu_test_memory #(
     assign cpu_wait = cpu_access_enable && cycle_mem_read &&
                       !current_read_ready;
 
-    // The MC6847 address advances independently of the CPU. Fetch one
-    // aligned 32-bit SDRAM word whenever it enters a new group of four bytes;
-    // the VDG consumes the selected byte until the next word arrives.
+    // SAM-style video service. The VDG presents only its next address and
+    // continuously consumes this latch; it never requests memory or waits for
+    // SDRAM. At E falling, open a short video slot and fetch the byte needed by
+    // the VDG. If the arbiter cannot launch immediately, defer the video fetch
+    // rather than allowing it to begin near the following CPU service window.
     reg video_req = 1'b0;
     reg [22:0] video_request_addr = 23'd0;
-    reg [22:0] video_response_word = 23'h7fffff;
-    reg [31:0] video_data_reg = 32'd0;
-    reg video_cache_valid = 1'b0;
+    reg [1:0] video_request_lane = 2'd0;
+    reg [22:0] video_latched_addr = 23'h7fffff;
+    reg video_latch_valid = 1'b0;
+    reg [3:0] video_slot_count = 4'd0;
+    reg [3:0] refresh_slot_count = 4'd0;
     wire video_ack;
     wire [31:0] video_read_value;
-    wire video_word_matches = video_cache_valid &&
-                              video_response_word[22:2] == video_addr[22:2];
+    wire video_slot_open = video_slot_count != 0;
+    wire refresh_slot_open = refresh_slot_count != 0;
+
+    // Refresh has its own early E-low window.  It must run before the VDG is
+    // enabled, including while the loaded ROM waits for CPU RESET release.
+    always @(posedge clk or negedge reset_n) begin
+        if (!reset_n)
+            refresh_slot_count <= 4'd0;
+        else if (e_fall)
+            refresh_slot_count <= 4'd8;
+        else if (refresh_slot_count != 0)
+            refresh_slot_count <= refresh_slot_count - 1'b1;
+    end
+
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
             video_req <= 1'b0;
             video_request_addr <= 23'd0;
-            video_response_word <= 23'h7fffff;
-            video_data_reg <= 32'd0;
+            video_request_lane <= 2'd0;
+            video_latched_addr <= 23'h7fffff;
+            video_latch_valid <= 1'b0;
+            video_slot_count <= 4'd0;
             video_data <= 8'h00;
-            video_cache_valid <= 1'b0;
             video_data_valid <= 1'b0;
-        end else if (!cpu_access_enable) begin
+        end else if (!video_enable) begin
             video_req <= 1'b0;
-            video_response_word <= 23'h7fffff;
-            video_cache_valid <= 1'b0;
+            video_latched_addr <= 23'h7fffff;
+            video_latch_valid <= 1'b0;
+            video_slot_count <= 4'd0;
             video_data <= 8'h00;
             video_data_valid <= 1'b0;
         end else begin
             video_data_valid <= 1'b0;
-            // Register the selected cache byte. The MC6847 advances at the
-            // much slower SAM rate, leaving several clk cycles before it uses
-            // this value and breaking a long VDG-address-to-pixel path.
-            if (!video_word_matches)
-                video_data <= 8'h00;
-            else begin
-                case (video_addr[1:0])
-                    2'd0: video_data <= video_data_reg[7:0];
-                    2'd1: video_data <= video_data_reg[15:8];
-                    2'd2: video_data <= video_data_reg[23:16];
-                    default: video_data <= video_data_reg[31:24];
-                endcase
-            end
+            if (video_slot_count != 0)
+                video_slot_count <= video_slot_count - 1'b1;
             if (video_ack) begin
                 video_req <= 1'b0;
-                video_response_word <= video_request_addr;
-                video_data_reg <= video_read_value;
-                video_cache_valid <= 1'b1;
+                case (video_request_lane)
+                    2'd0: video_data <= video_read_value[7:0];
+                    2'd1: video_data <= video_read_value[15:8];
+                    2'd2: video_data <= video_read_value[23:16];
+                    default: video_data <= video_read_value[31:24];
+                endcase
+                video_latched_addr <=
+                    {video_request_addr[22:2],video_request_lane};
+                video_latch_valid <= 1'b1;
                 video_data_valid <= 1'b1;
             end
-            // Start video work immediately after the CPU sampling edge. This
-            // keeps VDG traffic out of the CPU's Q-to-E read-data window.
-            if (e_fall && !video_req && !video_word_matches) begin
+            if (e_fall) begin
+                // Eight clk108 clocks is about 74 ns. The request is visible
+                // to the arbiter on the following clock, leaving most of the
+                // approximately 279 ns E-low/Q-low SAM video interval for the
+                // SDRAM operation to finish.
+                video_slot_count <= 4'd8;
+            end
+            if (e_fall && !video_req &&
+                (!video_latch_valid || video_latched_addr != video_addr)) begin
                 video_request_addr <= {video_addr[22:2],2'b00};
+                video_request_lane <= video_addr[1:0];
                 video_req <= 1'b1;
             end
-            if ((cpu_req && cpu_wr && video_cache_valid &&
-                 video_response_word[22:2] == request_addr[22:2]) ||
-                (e_fall && cycle_mem_write && video_cache_valid &&
-                 video_response_word[22:2] == cycle_addr[22:2]))
-                video_cache_valid <= 1'b0;
+            // A CPU write to the byte held for display makes the latch stale;
+            // SAM will fetch it again in a later video slot.
+            if (e_fall && cycle_mem_write && video_latch_valid &&
+                video_latched_addr == cycle_addr)
+                video_latch_valid <= 1'b0;
         end
     end
     wire loader_req;
@@ -312,6 +332,8 @@ module cpu_test_memory #(
         .cpu_req(cpu_req), .cpu_wr(cpu_wr), .cpu_addr(request_addr),
         .cpu_wdata(request_wdata), .cpu_ack(cpu_ack), .cpu_rdata(cpu_read_value),
         .video_req(video_req), .video_addr(video_request_addr),
+        .video_slot_open(video_slot_open),
+        .refresh_slot_open(refresh_slot_open),
         .video_ack(video_ack), .video_rdata(video_read_value),
         .loader_req(loader_req), .loader_addr(loader_addr),
         .loader_wdata(loader_wdata), .loader_ack(loader_ack),

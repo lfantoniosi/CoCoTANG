@@ -5,6 +5,9 @@ OUTPUT := $(ROOT)/impl/pnr/CoCoTANG.fs
 CPU_TEST_PROJECT := $(ROOT)/cpu_test/CoCoTANG_cpu_test.gprj
 CPU_TEST_BUILD_TCL := $(ROOT)/scripts/build_cpu_test.tcl
 CPU_TEST_OUTPUT := $(ROOT)/cpu_test/impl/pnr/CoCoTANG_cpu_test.fs
+CMPX_STRESS_SOURCE := $(ROOT)/diagnostics/cmpx_stress.asm
+CMPX_STRESS_ROM := $(ROOT)/roms/cmpx-stress.rom
+CMPX_STRESS_LIST := $(ROOT)/roms/cmpx-stress.lst
 
 ifeq ($(shell uname -s),Darwin)
 GOWIN_IDE ?= /Applications/GowinIDE.app/Contents/Resources/Gowin_EDA/IDE
@@ -21,7 +24,8 @@ ROM_OFFSET ?= 1048576
 
 .DEFAULT_GOAL := build
 .PHONY: build rebuild test program reprogram cpu-test-rebuild cpu-test-program \
-	cpu-test-reprogram coco2_rom coco3_rom check-tools
+	cpu-test-reprogram coco2_rom coco3_rom cmpx-stress-rom \
+	cmpx-stress-program check-tools
 
 build: $(OUTPUT)
 
@@ -37,6 +41,8 @@ test:
 	vvp /private/tmp/cocotang_tb_cvbs
 	iverilog -g2012 -o /private/tmp/cocotang_tb_fill tests/tb_sdram_test_fill.v src/memory/sdram_test_fill.v
 	vvp /private/tmp/cocotang_tb_fill
+	iverilog -g2012 -o /private/tmp/cocotang_tb_cpu_arbiter tests/tb_cpu_sdram_arbiter.v src/memory/cpu_sdram_arbiter.v
+	vvp /private/tmp/cocotang_tb_cpu_arbiter
 	iverilog -g2012 -o /private/tmp/cocotang_tb_video_mode tests/tb_video_mode_debug.v src/video/video_mode_debug.v
 	vvp /private/tmp/cocotang_tb_video_mode
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_mode tests/tb_gime_mode_debug.v src/coco3/gime_mode_debug.v
@@ -67,6 +73,18 @@ cpu-test-program: cpu-test-rebuild
 
 cpu-test-reprogram:
 	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(CPU_TEST_OUTPUT)"
+
+cmpx-stress-rom: $(CMPX_STRESS_ROM)
+
+$(CMPX_STRESS_ROM): $(CMPX_STRESS_SOURCE)
+	lwasm --6809 --format=raw --list="$(CMPX_STRESS_LIST)" \
+	 --output="$@" "$<"
+	@test "$$(wc -c < "$@")" -eq 16384 || \
+	 (echo "CMPX stress ROM is not 16384 bytes"; exit 1)
+
+cmpx-stress-program: $(CMPX_STRESS_ROM)
+	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f --external-flash \
+	 -o "$(ROM_OFFSET)" "$<"
 
 coco2_rom: roms/coco2.rom
 	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f --external-flash \

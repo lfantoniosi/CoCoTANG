@@ -5,8 +5,9 @@
 module top_cpu_test #(
     parameter integer RESET_HOLD_CYCLES = 10800000,
     parameter integer LOG_DEPTH = 4096,
-    parameter [15:0] LOG_START_ADDRESS = 16'h0000,
+    parameter [15:0] LOG_START_ADDRESS = 16'hA199, //16'hA056,
     parameter integer DEBUG_OVERLAY = 0,
+    parameter integer DEBUG_S_STROBE = 0,
     parameter integer ANALOG_VIDEO_MODE = 1
 ) (
     input clkin,
@@ -15,8 +16,8 @@ module top_cpu_test #(
     input [7:0] mp,
     output [1:0] msel,
     inout [7:0] cpu_data,
-    input irq_n_in,
-    input firq_n_in,
+    output irq_n_in,
+    output firq_n_in,
     input audio_in,
     output halt_drive,
     output e_out,
@@ -45,6 +46,11 @@ module top_cpu_test #(
     output [1:0] O_sdram_ba,
     output [3:0] O_sdram_dqm
 );
+    // These pins feed NPN transistor bases, not FPGA interrupt inputs.  Keep
+    // them low to release the motherboard's active-low IRQ and FIRQ nets.
+    assign irq_n_in = 1'b0;
+    assign firq_n_in = 1'b0;
+
     localparam integer LOG_ADDR_WIDTH = 12;
     localparam integer LOG_COUNT_WIDTH = 13;
     localparam integer LOG_PAGE_WIDTH = 6;
@@ -67,6 +73,7 @@ module top_cpu_test #(
     wire [6:0] sam_video_offset;
     wire unused_page,unused_all_ram;
     wire [1:0] unused_rate,unused_memory_size;
+    wire sam_master_tick;
     reg cpu_release = 1'b0;
     wire cpu_memory_wait;
     wire [15:0] address;
@@ -79,13 +86,34 @@ module top_cpu_test #(
         .memory_wait(1'b0),
         .addr(address), .rw_n(rw_n), .s(internal_s),
         .e(e_out), .q(q_out), .e_rise(e_rise), .e_fall(e_fall),
+        .master_tick(sam_master_tick),
         .video_mode(sam_video_mode), .video_offset(sam_video_offset),
         .page(unused_page), .rate(unused_rate),
         .memory_size(unused_memory_size), .all_ram(unused_all_ram)
     );
 
-    assign sam_s = internal_s;
-
+    // Decoder diagnostic: walk all eight physical S2:S0 combinations, holding
+    // each for 1 ms.  A 12 MHz analyzer therefore gets 12,000 samples per
+    // code, making the external 74LS138/74LS11 DATAEN response unambiguous.
+    localparam integer S_STROBE_HOLD_CYCLES = 108000;
+    localparam integer S_STROBE_COUNT_WIDTH =
+        $clog2(S_STROBE_HOLD_CYCLES);
+    reg [S_STROBE_COUNT_WIDTH-1:0] s_strobe_count = 0;
+    reg [2:0] s_strobe_pattern = 3'b000;
+    always @(posedge clk108 or negedge board_reset_n) begin
+        if (!board_reset_n) begin
+            s_strobe_count <= 0;
+            s_strobe_pattern <= 3'b000;
+        end else if (DEBUG_S_STROBE != 0) begin
+            if (s_strobe_count == S_STROBE_HOLD_CYCLES-1) begin
+                s_strobe_count <= 0;
+                s_strobe_pattern <= s_strobe_pattern + 1'b1;
+            end else begin
+                s_strobe_count <= s_strobe_count + 1'b1;
+            end
+        end
+    end
+    assign sam_s = (DEBUG_S_STROBE != 0) ? s_strobe_pattern : internal_s;
     // Existing displacer acquisition hardware.  Nothing from the CoCo
     // motherboard is required or interpreted by this top.
     reg q_scan_delay = 1'b0;
@@ -119,6 +147,11 @@ module top_cpu_test #(
         end
     end
     wire bus_snapshot_valid=bus_ready_sync && !bus_ready_delay;
+    wire filtered_mux_reset_n;
+    input_filter #(.WIDTH(1)) mux_reset_filter (
+        .clk(clk108), .reset_n(board_reset_n),
+        .in(mux_reset_n), .out(filtered_mux_reset_n)
+    );
     // The motherboard RESET node has a slow RC rise and can cross the digital
     // threshold many times.  It must not gate the synchronous memory state:
     // doing so can park SAM at Q-high/E-low on one RESET sample and prevent
@@ -155,14 +188,9 @@ module top_cpu_test #(
     // cpu_memory_wait is diagnostic only.  It must never feed the SAM clock
     // generator: the memory path has to prefetch/cache early enough to meet
     // the fixed 6809 bus cycle.
-    wire [2:0] filtered_pia_inputs;
-    input_filter #(.WIDTH(3)) pia_input_filter (
-        .clk(clk108), .reset_n(board_reset_n),
-        .in({irq_n_in,firq_n_in,audio_in}), .out(filtered_pia_inputs)
-    );
-    wire pia_interrupts_idle=filtered_pia_inputs[2] &&
-                             filtered_pia_inputs[1] &&
-                             mux_keyint_n && mux_sernt_n;
+    // IRQ/FIRQ cannot be observed through their one-way base-drive pins.
+    // KEYINT/SERNT are the interrupt-source states visible through the mux.
+    wire pia_interrupts_idle=mux_keyint_n && mux_sernt_n;
 
     wire sdram_reset_n,loader_start,system_ready,sdram_enabled,loader_done;
     coco_startup startup (
@@ -214,13 +242,16 @@ module top_cpu_test #(
         end
     end
     // Q2 on the displacer is the inverting open-collector RESET driver.
-    assign halt_drive=!cpu_release;
+    // Keep the physical CPU reset asserted while the decoder test pattern is
+    // active; only the S outputs and external DATAEN logic are under test.
+    assign halt_drive=(DEBUG_S_STROBE != 0) ? 1'b1 : !cpu_release;
 
     wire [7:0] fpga_read_data;
     wire fpga_data_oe;
     wire [15:0] vdg_memory_addr;
     wire [7:0] video_memory_data;
     wire video_memory_valid;
+    wire vdg_reset_n=board_reset_n && cpu_started;
     cpu_test_memory memory (
         .clk(clk108), .reset_n(sdram_reset_n), .loader_start(loader_start),
         .cpu_access_enable(cpu_bus_active), .cpu_bus_valid(bus_snapshot_valid),
@@ -229,6 +260,7 @@ module top_cpu_test #(
         .sam_s(internal_s), .cpu_wdata(cpu_write_data),
         .cpu_rdata(fpga_read_data), .cpu_data_oe(fpga_data_oe),
         .cpu_wait(cpu_memory_wait),
+        .video_enable(vdg_reset_n),
         .video_addr({7'd0,vdg_memory_addr}),
         .video_data(video_memory_data),
         .video_data_valid(video_memory_valid),
@@ -254,9 +286,8 @@ module top_cpu_test #(
     wire [5:0] framebuffer_write_data;
     // Keep the asynchronous, mux-sampled RESET node out of the VDG reset path
     // for the same reason. cpu_release is synchronous to clk108.
-    wire vdg_reset_n=board_reset_n && cpu_started;
     coco_vdg vdg (
-        .clk(clk108), .reset_n(vdg_reset_n),
+        .clk(clk108), .reset_n(vdg_reset_n), .sam_tick(sam_master_tick),
         .e_fall(e_fall), .cpu_rw_n(rw_n), .cpu_addr(address),
         .cpu_data(cpu_write_data), .sam_video_mode(sam_video_mode),
         .debug_an_g(1'b0), .debug_css(1'b0),
@@ -281,10 +312,13 @@ module top_cpu_test #(
     );
 
     // Begin with the first active CPU bus cycle, regardless of its address.
-    // The first occurrence of LOG_START_ADDRESS rewinds the log and records
-    // that cycle as entry 000. Bus data is sampled at E falling, when the 6809
-    // consumes read data or completes a write. Consecutive cycles at the same
-    // address share one row.
+    // The first READ from LOG_START_ADDRESS after FPGA reset rewinds the log
+    // and records that cycle as entry 000. Writes to that address do not arm
+    // the trigger. The trigger is permanently
+    // disarmed afterward, even if the CPU resets or later wraps through the
+    // same address.  LOG_START_ADDRESS=0000 disables rebasing. Bus data is
+    // sampled at E falling, when the 6809 consumes read data or completes a
+    // write. Consecutive cycles at the same address share one row.
     reg log_we=1'b0;
     reg [LOG_ADDR_WIDTH-1:0] log_addr=0;
     reg [39:0] log_data=0;
@@ -293,8 +327,82 @@ module top_cpu_test #(
     reg observation_valid=1'b0;
     reg log_rebased=1'b0;
     reg log_rebase_pulse=1'b0;
-    wire [7:0] sampled_cpu_data=rw_n ? cpu_data : cpu_write_data;
-    wire [24:0] observation={rw_n,address,sampled_cpu_data};
+
+    // e_fall is registered by coco_sam on the same clk108 edge that lowers
+    // the physical E output. Other synchronous blocks observe that pulse one
+    // clk108 edge later. Preserve the bus state on every edge so that, when
+    // e_fall is observed, the logger uses the state that existed immediately
+    // before E physically fell -- not data that arrived up to 9.26 ns late.
+    reg [15:0] cpu_sample_address=16'hffff;
+    reg [7:0] cpu_sample_data=8'hff;
+    reg [7:0] cpu_sample_expected=8'hff;
+    reg [2:0] cpu_sample_s=3'd7;
+    reg cpu_sample_rw_n=1'b1;
+    reg cpu_sample_oe=1'b0;
+    reg cpu_sample_wait=1'b1;
+    reg q_sample_previous=1'b0;
+    reg q_read_window_seen=1'b0;
+    reg q_read_window_met=1'b0;
+    reg [15:0] q_read_window_address=16'hffff;
+    always @(posedge clk108 or negedge board_reset_n) begin
+        if (!board_reset_n) begin
+            cpu_sample_address<=16'hffff;
+            cpu_sample_data<=8'hff;
+            cpu_sample_expected<=8'hff;
+            cpu_sample_s<=3'd7;
+            cpu_sample_rw_n<=1'b1;
+            cpu_sample_oe<=1'b0;
+            cpu_sample_wait<=1'b1;
+            q_sample_previous<=1'b0;
+            q_read_window_seen<=1'b0;
+            q_read_window_met<=1'b0;
+            q_read_window_address<=16'hffff;
+        end else begin
+            cpu_sample_address<=address;
+            cpu_sample_data<=cpu_data;
+            cpu_sample_expected<=fpga_read_data;
+            cpu_sample_s<=internal_s;
+            cpu_sample_rw_n<=rw_n;
+            cpu_sample_oe<=fpga_data_oe;
+            cpu_sample_wait<=cpu_memory_wait;
+            q_sample_previous<=q_out;
+
+            // q_out changes just after a clk108 edge. Detect its falling edge
+            // on the following clock, about 9.26 ns after physical Q falls.
+            // Requiring the byte here reserves almost the complete final
+            // Q-low/E-high quadrant as CPU read-data setup margin.
+            if (!q_sample_previous && q_out) begin
+                q_read_window_seen<=1'b0;
+                q_read_window_met<=1'b0;
+            end else if (q_sample_previous && !q_out) begin
+                q_read_window_seen<=rw_n && internal_s <= 3'd2;
+                q_read_window_address<=address;
+                q_read_window_met<=rw_n && internal_s <= 3'd2 &&
+                                   fpga_data_oe && !cpu_memory_wait &&
+                                   cpu_data == fpga_read_data;
+            end
+        end
+    end
+
+    // Per-entry CPU-facing SDRAM deadline status. A read passes only if its
+    // exact tagged response is on the physical bus just after Q falls and is
+    // still correct at the E-falling sampling edge. Writes pass when their
+    // byte is captured at E falling; physical SDRAM retirement is later.
+    wire logged_sdram_cycle=(cpu_sample_rw_n && cpu_sample_s <= 3'd2) ||
+                            (!cpu_sample_rw_n && cpu_sample_s == 3'd0);
+    wire e_read_window_met=cpu_sample_oe && !cpu_sample_wait &&
+                           cpu_sample_data == cpu_sample_expected;
+    wire q_window_for_sample=q_read_window_seen && q_read_window_met &&
+                             q_read_window_address == cpu_sample_address;
+    // Timing code stored in log bits [1:0]:
+    //   00 = not SDRAM, 01 = missed E, 10 = valid by E only/write at E,
+    //   11 = read valid from the Q-falling checkpoint through E falling.
+    wire [1:0] memory_timing_status=!logged_sdram_cycle ? 2'b00 :
+        !cpu_sample_rw_n ? 2'b10 :
+        !e_read_window_met ? 2'b01 :
+        q_window_for_sample ? 2'b11 : 2'b10;
+    wire [24:0] observation={cpu_sample_rw_n,cpu_sample_address,
+                             cpu_sample_data};
     always @(posedge clk108 or negedge board_reset_n) begin
         if (!board_reset_n) begin
             log_we<=1'b0;
@@ -308,16 +416,25 @@ module top_cpu_test #(
         end else begin
             log_we<=1'b0;
             log_rebase_pulse<=1'b0;
-            if (!cpu_release) begin
+            // Clear the capture when RESET is observed through the atomic bus
+            // snapshot.  Keep this synchronous: the motherboard RESET node
+            // has a slow/noisy edge and must not reset unrelated FPGA state.
+            if (!cpu_release || !filtered_mux_reset_n) begin
+                log_addr<=0;
+                log_data<=0;
+                log_count<=0;
+                last_observation<=0;
                 observation_valid<=1'b0;
                 log_rebased<=1'b0;
-            end else if (!log_rebased && e_fall &&
-                         address == LOG_START_ADDRESS && LOG_START_ADDRESS != 16'h0000) begin
+            end else if (!log_rebased && e_fall && cpu_sample_rw_n &&
+                         cpu_sample_address == LOG_START_ADDRESS &&
+                         LOG_START_ADDRESS != 16'h0000) begin
                 // Include the trigger cycle itself as the first new entry.
                 log_we<=1'b1;
                 log_addr<=0;
-                log_data<={1'b1,rw_n,internal_s,fpga_data_oe,address,
-                           sampled_cpu_data,fpga_read_data,q_out,e_out};
+                log_data<={1'b1,cpu_sample_rw_n,cpu_sample_s,cpu_sample_oe,
+                           cpu_sample_address,cpu_sample_data,cpu_sample_expected,
+                           memory_timing_status};
                 log_count<=1;
                 last_observation<=observation;
                 observation_valid<=1'b1;
@@ -325,14 +442,14 @@ module top_cpu_test #(
                 log_rebase_pulse<=1'b1;
             end else if (e_fall &&
                          ((observation_valid &&
-                           address == last_observation[23:8]) ||
+                           cpu_sample_address == last_observation[23:8]) ||
                           log_count < LOG_DEPTH)) begin
                 log_we<=1'b1;
-                log_data<={1'b1,rw_n,internal_s,fpga_data_oe,address,
-                           sampled_cpu_data,fpga_read_data,q_out,e_out};
-                if (observation_valid && address == last_observation[23:8]) begin
-                    // Preserve the row number but refresh it with the latest
-                    // data and control values observed at this address.
+                log_data<={1'b1,cpu_sample_rw_n,cpu_sample_s,cpu_sample_oe,
+                           cpu_sample_address,cpu_sample_data,cpu_sample_expected,
+                           memory_timing_status};
+                if (observation_valid &&
+                    cpu_sample_address == last_observation[23:8]) begin
                     log_addr<=log_count[LOG_ADDR_WIDTH-1:0]-1'b1;
                 end else begin
                     log_addr<=log_count[LOG_ADDR_WIDTH-1:0];
@@ -403,7 +520,7 @@ module top_cpu_test #(
         .pixel_clk(clkin), .serial_clk(clk135), .reset(!board_reset_n),
         .debug_clk(clk108), .log_we(log_we), .log_addr(log_addr),
         .log_data(log_data), .log_count(log_count), .log_page(log_page),
-        .debug_status({clocks_locked,mux_reset_n,mux_halt_n,
+        .debug_status({clocks_locked,filtered_mux_reset_n,mux_halt_n,
                        pia_interrupts_idle,bus_ready_sync}),
         .overlay_enable(overlay_visible),
         .framebuffer_data(hdmi_framebuffer_data),
@@ -434,7 +551,7 @@ module top_cpu_test #(
 
     // These motherboard-owned signals reach the physical CPU directly. They
     // are observed here for diagnostics, but must never qualify FPGA memory.
-    wire unused_inputs=filtered_pia_inputs[0] ^ mux_slenb_n ^ mux_cart_n ^
+    wire unused_inputs=audio_in ^ mux_slenb_n ^ mux_cart_n ^
                        mux_nmi_n ^
                        video_memory_valid ^ vdg_hblank ^ vdg_vblank ^
                        ^vdg_red ^ ^vdg_green ^ ^vdg_blue;

@@ -14,6 +14,7 @@ module coco_sam #(
     output reg       q,
     output reg       e_rise,
     output reg       e_fall,
+    output           master_tick,
     output reg [2:0] video_mode,
     output reg [6:0] video_offset,
     output reg       page,
@@ -33,6 +34,7 @@ module coco_sam #(
     reg tick = 1'b0;
     reg [3:0] phase = 4'd0;
     wire [24:0] sum = {1'b0, accumulator} + {1'b0, SAM_STEP};
+    assign master_tick = tick;
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
             accumulator <= 24'd0;

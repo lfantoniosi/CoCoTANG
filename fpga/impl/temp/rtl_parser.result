@@ -171,7 +171,7 @@
     "SubInsts" : [
      {
       "InstFile" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco2.v",
-      "InstLine" : 53,
+      "InstLine" : 54,
       "InstName" : "sam",
       "ModuleFile" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco_sam.v",
       "ModuleLine" : 2,
@@ -179,7 +179,7 @@
      },
      {
       "InstFile" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco2.v",
-      "InstLine" : 80,
+      "InstLine" : 82,
       "InstName" : "s2_video_mode",
       "ModuleFile" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/video_mode_debug.v",
       "ModuleLine" : 1,
@@ -187,7 +187,7 @@
      },
      {
       "InstFile" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco2.v",
-      "InstLine" : 88,
+      "InstLine" : 90,
       "InstName" : "vdg",
       "ModuleFile" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco_vdg.v",
       "ModuleLine" : 1,
@@ -195,7 +195,7 @@
       "SubInsts" : [
        {
         "InstFile" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco_vdg.v",
-        "InstLine" : 84,
+        "InstLine" : 67,
         "InstName" : "character_rom",
         "ModuleFile" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847_char_rom.v",
         "ModuleLine" : 1,
@@ -203,7 +203,7 @@
        },
        {
         "InstFile" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco_vdg.v",
-        "InstLine" : 88,
+        "InstLine" : 71,
         "InstName" : "vdg",
         "ModuleFile" : "/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847.vhd",
         "ModuleLine" : 6,

@@ -103,6 +103,7 @@ module hdmi_debug_overlay #(
                 "L": glyph={5'b10000,5'b10000,5'b10000,5'b10000,5'b10000,5'b10000,5'b11111};
                 "O": glyph={5'b01110,5'b10001,5'b10001,5'b10001,5'b10001,5'b10001,5'b01110};
                 "P": glyph={5'b11110,5'b10001,5'b10001,5'b11110,5'b10000,5'b10000,5'b10000};
+                "Q": glyph={5'b01110,5'b10001,5'b10001,5'b10001,5'b10101,5'b10010,5'b01101};
                 "R": glyph={5'b11110,5'b10001,5'b10001,5'b11110,5'b10100,5'b10010,5'b10001};
                 "S": glyph={5'b01111,5'b10000,5'b10000,5'b01110,5'b00001,5'b00001,5'b11110};
                 "T": glyph={5'b11111,5'b00100,5'b00100,5'b00100,5'b00100,5'b00100,5'b00100};
@@ -205,7 +206,7 @@ module hdmi_debug_overlay #(
                 10:character="D"; 11:character="D"; 12:character="R";
                 14:character="D"; 15:character="I"; 17:character="D";
                 18:character="O"; 20:character="O"; 21:character="E";
-                23:character="S";
+                31:character="S"; 35:character="T";
                 default: ;
             endcase
         end else if (character_row == 1) begin
@@ -240,6 +241,15 @@ module hdmi_debug_overlay #(
                 29:character=bit_char(entry[34]);
                 31:character="S"; 32:character=":";
                 33:character=hex_char({1'b0,entry[37:35]});
+                35:character="T"; 36:character=":";
+                37:begin
+                    case (entry[1:0])
+                        2'b01: character="0";
+                        2'b10: character="E";
+                        2'b11: character="Q";
+                        default: character="-";
+                    endcase
+                end
                 default: ;
             endcase
         end else if (valid_entry) begin
@@ -273,6 +283,10 @@ module hdmi_debug_overlay #(
             rgb_comb=rgb_in;
         else if (text_pixel)
             rgb_comb=(character_row == 0) ? 24'h40ffff :
+                     (EXTENDED_HEADER != 0 && valid_entry &&
+                      entry[1:0] == 2'b01) ? 24'hff4040 :
+                     (EXTENDED_HEADER != 0 && valid_entry && entry[38] &&
+                      entry[1:0] == 2'b10) ? 24'hffb040 :
                      (valid_entry && !entry[38]) ? 24'hffff40 : 24'hffffff;
         else
             rgb_comb=24'h001020;

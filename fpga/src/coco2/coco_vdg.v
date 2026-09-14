@@ -3,6 +3,7 @@ module coco_vdg #(
 ) (
     input clk,
     input reset_n,
+    input sam_tick,
     input e_fall,
     input cpu_rw_n,
     input [15:0] cpu_addr,
@@ -26,28 +27,10 @@ module coco_vdg #(
     output reg [15:0] capture_addr,
     output reg [5:0] capture_rgb
 );
-    // This MC6847 core's 400-dot horizontal timing table is designed for a
-    // 12.571428 MHz enable (32 MHz * 11 / 28), not the SAM's 14.31818 MHz
-    // master rate.  The core divides this enable by two for its native scan,
-    // producing about 15.714 kHz lines and 59.978 Hz frames.  Keeping this
-    // NCO separate from the SAM also leaves E/Q at the physical CPU rate.
-    localparam [23:0] VDG_STEP = 24'd1952903;
-    reg [23:0] accumulator = 24'd0;
-    reg vdg_enable_reg = 1'b0;
-    wire [24:0] accumulator_sum = {1'b0,accumulator} + {1'b0,VDG_STEP};
-    wire vdg_enable = vdg_enable_reg;
-    always @(posedge clk or negedge reset_n) begin
-        if (!reset_n) begin
-            accumulator <= 24'd0;
-            vdg_enable_reg <= 1'b0;
-        end else begin
-            accumulator <= accumulator_sum[23:0];
-            // Register the carry before it fans out through the MC6847 and
-            // framebuffer capture logic. This changes only the fixed startup
-            // phase by one clk108 tick, not the VDG rate.
-            vdg_enable_reg <= accumulator_sum[24];
-        end
-    end
+    // The real MC6847 and SAM share the 14.31818 MHz master cadence.  Do not
+    // run an independent video NCO: using the SAM tick keeps every VDG byte
+    // boundary at a deterministic phase of the CPU E/Q cycle.
+    wire vdg_enable = sam_tick;
 
     // Shadow PIA1 port B so A/G, INT/EXT and CSS remain available even
     // though those physical MC6847 pins are not routed to the FPGA.

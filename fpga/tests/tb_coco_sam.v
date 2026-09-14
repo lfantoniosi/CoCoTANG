@@ -4,7 +4,7 @@ module tb_coco_sam;
     integer release_cycles;
     reg [15:0] addr=0;
     wire [2:0] s, video_mode;
-    wire e,q,e_rise,e_fall;
+    wire e,q,e_rise,e_fall,master_tick;
     wire [6:0] video_offset;
     wire page,all_ram;
     wire [1:0] rate,memory_size;
@@ -12,6 +12,7 @@ module tb_coco_sam;
       .memory_wait(memory_wait),
       .addr(addr),.rw_n(rw_n),.s(s),
       .e(e),.q(q),.e_rise(e_rise),.e_fall(e_fall),.video_mode(video_mode),
+      .master_tick(master_tick),
       .video_offset(video_offset),.page(page),.rate(rate),.memory_size(memory_size),
       .all_ram(all_ram));
     always #4.6295 clk=~clk;

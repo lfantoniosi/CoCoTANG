@@ -49,12 +49,14 @@ module coco2 #(
     wire sam_all_ram;
     wire [1:0] sam_rate;
     wire [1:0] sam_memory_size;
+    wire sam_master_tick;
 
     coco_sam #(.SLOW_DIAGNOSTIC(DEBUG_CPU_SLOW)) sam (
         .clk(clk), .reset_n(reset_n), .register_reset_n(core_reset_n),
         .memory_wait(1'b0),
         .addr(cpu_addr), .rw_n(cpu_rw_n),
         .s(sam_s), .e(e), .q(q), .e_rise(e_rise), .e_fall(e_fall),
+        .master_tick(sam_master_tick),
         .video_mode(sam_video_mode), .video_offset(sam_video_offset),
         .page(sam_page), .rate(sam_rate), .memory_size(sam_memory_size),
         .all_ram(sam_all_ram)
@@ -86,7 +88,8 @@ module coco2 #(
     wire [15:0] vdg_memory_addr;
     assign video_memory_addr = {7'd0,vdg_memory_addr};
     coco_vdg #(.DEBUG_VIDEO_MODE(DEBUG_S2_VIDEO_MODE)) vdg (
-        .clk(clk), .reset_n(core_reset_n), .e_fall(e_fall),
+        .clk(clk), .reset_n(core_reset_n), .sam_tick(sam_master_tick),
+        .e_fall(e_fall),
         .cpu_rw_n(cpu_rw_n), .cpu_addr(cpu_addr), .cpu_data(cpu_data),
         .sam_video_mode(effective_video_mode),
         .debug_an_g(debug_an_g), .debug_css(debug_css),
