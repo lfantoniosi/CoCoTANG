@@ -116,14 +116,24 @@ module top_cpu_test #(
     assign sam_s = (DEBUG_S_STROBE != 0) ? s_strobe_pattern : internal_s;
     // Existing displacer acquisition hardware.  Nothing from the CoCo
     // motherboard is required or interpreted by this top.
+    // Q is generated in the clk108 domain.  Pass it through a conventional
+    // two-flop synchronizer before edge detection in clk135; sampling Q with
+    // one clk135 flop made the scan launch phase placement-dependent.
+    reg q_scan_meta = 1'b0;
+    reg q_scan_sync = 1'b0;
     reg q_scan_delay = 1'b0;
     always @(posedge clk135 or negedge board_reset_n) begin
-        if (!board_reset_n)
+        if (!board_reset_n) begin
+            q_scan_meta<=1'b0;
+            q_scan_sync<=1'b0;
             q_scan_delay<=1'b0;
-        else
-            q_scan_delay<=q_out;
+        end else begin
+            q_scan_meta<=q_out;
+            q_scan_sync<=q_scan_meta;
+            q_scan_delay<=q_scan_sync;
+        end
     end
-    wire bus_scan_start=q_out && !q_scan_delay;
+    wire bus_scan_start=q_scan_sync && !q_scan_delay;
     wire mux_reset_n,mux_slenb_n,mux_sernt_n,mux_cart_n,mux_keyint_n;
     wire mux_halt_n,mux_nmi_n,bus_snapshot_ready_async;
     coco_bus_mux bus_mux (
@@ -272,7 +282,22 @@ module top_cpu_test #(
         .sd_wdm(sd_wdm), .sd_dout(sd_dout), .sd_dout32(sd_dout32),
         .sd_data_ready(sd_data_ready), .sd_busy(sd_busy)
     );
-    assign cpu_data=fpga_data_oe ? fpga_read_data : 8'bz;
+    // Put one clk108 register boundary immediately before the bidirectional
+    // CPU pins.  response_data is already registered, so this costs one clock
+    // of the large Q-to-E window while removing the long live-address compare
+    // from the physical OE timing.
+    reg [7:0] cpu_drive_data=8'hff;
+    reg cpu_drive_oe=1'b0;
+    always @(posedge clk108 or negedge board_reset_n) begin
+        if (!board_reset_n) begin
+            cpu_drive_data<=8'hff;
+            cpu_drive_oe<=1'b0;
+        end else begin
+            cpu_drive_data<=fpga_read_data;
+            cpu_drive_oe<=fpga_data_oe;
+        end
+    end
+    assign cpu_data=cpu_drive_oe ? cpu_drive_data : 8'bz;
 
     // Restore the MC6847 around the proven physical-CPU path. PIA1 port-B
     // writes at $FF22/$FF23 are shadowed inside coco_vdg for A/G, INT/EXT,
@@ -344,6 +369,10 @@ module top_cpu_test #(
     reg q_read_window_seen=1'b0;
     reg q_read_window_met=1'b0;
     reg [15:0] q_read_window_address=16'hffff;
+    // Pipeline the configurable trigger comparison.  This keeps its 16-bit
+    // comparator out of the log-address update path, whose placement used to
+    // change substantially with each LOG_START_ADDRESS value.
+    reg log_trigger_match=1'b0;
     always @(posedge clk108 or negedge board_reset_n) begin
         if (!board_reset_n) begin
             cpu_sample_address<=16'hffff;
@@ -357,15 +386,19 @@ module top_cpu_test #(
             q_read_window_seen<=1'b0;
             q_read_window_met<=1'b0;
             q_read_window_address<=16'hffff;
+            log_trigger_match<=1'b0;
         end else begin
             cpu_sample_address<=address;
             cpu_sample_data<=cpu_data;
-            cpu_sample_expected<=fpga_read_data;
+            cpu_sample_expected<=cpu_drive_data;
             cpu_sample_s<=internal_s;
             cpu_sample_rw_n<=rw_n;
-            cpu_sample_oe<=fpga_data_oe;
+            cpu_sample_oe<=cpu_drive_oe;
             cpu_sample_wait<=cpu_memory_wait;
             q_sample_previous<=q_out;
+            log_trigger_match<=cpu_sample_rw_n &&
+                               cpu_sample_address == LOG_START_ADDRESS &&
+                               LOG_START_ADDRESS != 16'h0000;
 
             // q_out changes just after a clk108 edge. Detect its falling edge
             // on the following clock, about 9.26 ns after physical Q falls.
@@ -378,8 +411,8 @@ module top_cpu_test #(
                 q_read_window_seen<=rw_n && internal_s <= 3'd2;
                 q_read_window_address<=address;
                 q_read_window_met<=rw_n && internal_s <= 3'd2 &&
-                                   fpga_data_oe && !cpu_memory_wait &&
-                                   cpu_data == fpga_read_data;
+                                   cpu_drive_oe && !cpu_memory_wait &&
+                                   cpu_data == cpu_drive_data;
             end
         end
     end
@@ -426,9 +459,7 @@ module top_cpu_test #(
                 last_observation<=0;
                 observation_valid<=1'b0;
                 log_rebased<=1'b0;
-            end else if (!log_rebased && e_fall && cpu_sample_rw_n &&
-                         cpu_sample_address == LOG_START_ADDRESS &&
-                         LOG_START_ADDRESS != 16'h0000) begin
+            end else if (!log_rebased && e_fall && log_trigger_match) begin
                 // Include the trigger cycle itself as the first new entry.
                 log_we<=1'b1;
                 log_addr<=0;
