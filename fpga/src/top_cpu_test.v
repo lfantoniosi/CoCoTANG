@@ -5,7 +5,10 @@
 module top_cpu_test #(
     parameter integer RESET_HOLD_CYCLES = 10800000,
     parameter integer LOG_DEPTH = 4096,
-    parameter [15:0] LOG_START_ADDRESS = 16'hA199, //16'hA056,
+    //parameter [15:0] LOG_START_ADDRESS = 16'hA199, //16'hA056,
+    parameter [15:0] LOG_START_ADDRESS = 16'h8002, //16'hA056,
+    parameter [15:0] LOG_WRITE_START_ADDRESS = 16'h0000,
+    parameter [15:0] LOG_WRITE_END_ADDRESS = 16'h0000,
     parameter integer DEBUG_OVERLAY = 0,
     parameter integer DEBUG_S_STROBE = 0,
     parameter integer ANALOG_VIDEO_MODE = 1
@@ -176,6 +179,12 @@ module top_cpu_test #(
     // scanner.  FFFF is the first proof that the CPU has entered its real
     // reset-vector sequence; normal SDRAM clock stretching is safe afterward.
     reg cpu_started=1'b0;
+    wire [7:0] cpu_data_in;
+    // These two buses are pad-side only. Gowin IOLOGIC outputs cannot also
+    // feed fabric logic; diagnostics use fpga_read_data/fpga_data_oe as the
+    // matching fabric-side expected value and cpu_data_in as pin readback.
+    wire [7:0] cpu_pin_data;
+    wire [7:0] cpu_pin_oen;
     always @(posedge clk108 or negedge board_reset_n) begin
         if (!board_reset_n)
             cpu_started<=1'b0;
@@ -193,7 +202,7 @@ module top_cpu_test #(
         if (!board_reset_n)
             cpu_write_data<=8'hff;
         else if (cpu_bus_active && e_out && !rw_n)
-            cpu_write_data<=cpu_data;
+            cpu_write_data<=cpu_data_in;
     end
     // cpu_memory_wait is diagnostic only.  It must never feed the SAM clock
     // generator: the memory path has to prefetch/cache early enough to meet
@@ -282,22 +291,32 @@ module top_cpu_test #(
         .sd_wdm(sd_wdm), .sd_dout(sd_dout), .sd_dout32(sd_dout32),
         .sd_data_ready(sd_data_ready), .sd_busy(sd_busy)
     );
-    // Put one clk108 register boundary immediately before the bidirectional
-    // CPU pins.  response_data is already registered, so this costs one clock
-    // of the large Q-to-E window while removing the long live-address compare
-    // from the physical OE timing.
-    reg [7:0] cpu_drive_data=8'hff;
-    reg cpu_drive_oe=1'b0;
-    always @(posedge clk108 or negedge board_reset_n) begin
-        if (!board_reset_n) begin
-            cpu_drive_data<=8'hff;
-            cpu_drive_oe<=1'b0;
-        end else begin
-            cpu_drive_data<=fpga_read_data;
-            cpu_drive_oe<=fpga_data_oe;
+    // Register data and tristate control in each physical CPU-data I/O cell.
+    // Fabric registers were still independently routed to the eight pins, so
+    // a placement change could skew one transition (observed as $27 -> $A7).
+    // ODDR with D0=D1 acts as an SDR output register; Q1 is the matching
+    // active-high OEN register for the adjacent IOBUF.
+    genvar cpu_data_bit;
+    generate
+        for (cpu_data_bit=0;cpu_data_bit<8;cpu_data_bit=cpu_data_bit+1) begin : cpu_data_iologic
+            ODDR cpu_output_register (
+                .Q0(cpu_pin_data[cpu_data_bit]),
+                .Q1(cpu_pin_oen[cpu_data_bit]),
+                .D0(fpga_read_data[cpu_data_bit]),
+                .D1(fpga_read_data[cpu_data_bit]),
+                .TX(!fpga_data_oe),
+                .CLK(clk108)
+            );
+            defparam cpu_output_register.INIT=1'b1;
+            defparam cpu_output_register.TXCLK_POL=1'b0;
+            IOBUF cpu_data_buffer (
+                .O(cpu_data_in[cpu_data_bit]),
+                .IO(cpu_data[cpu_data_bit]),
+                .I(cpu_pin_data[cpu_data_bit]),
+                .OEN(cpu_pin_oen[cpu_data_bit])
+            );
         end
-    end
-    assign cpu_data=cpu_drive_oe ? cpu_drive_data : 8'bz;
+    endgenerate
 
     // Restore the MC6847 around the proven physical-CPU path. PIA1 port-B
     // writes at $FF22/$FF23 are shadowed inside coco_vdg for A/G, INT/EXT,
@@ -337,13 +356,14 @@ module top_cpu_test #(
     );
 
     // Begin with the first active CPU bus cycle, regardless of its address.
-    // The first READ from LOG_START_ADDRESS after FPGA reset rewinds the log
-    // and records that cycle as entry 000. Writes to that address do not arm
-    // the trigger. The trigger is permanently
-    // disarmed afterward, even if the CPU resets or later wraps through the
-    // same address.  LOG_START_ADDRESS=0000 disables rebasing. Bus data is
-    // sampled at E falling, when the 6809 consumes read data or completes a
-    // write. Consecutive cycles at the same address share one row.
+    // The first READ from LOG_START_ADDRESS rewinds the log and arms a second
+    // trigger.  The first subsequent RAM write in the inclusive
+    // LOG_WRITE_START_ADDRESS..LOG_WRITE_END_ADDRESS range rewinds the log a
+    // second time, recording that write as entry 000.  A 0000 read address
+    // disables both stages; setting both write-range endpoints to 0000
+    // disables only the second stage. Bus data is sampled at E falling, when
+    // the 6809 consumes read data or completes a write. Consecutive cycles at
+    // the same address share one row.
     reg log_we=1'b0;
     reg [LOG_ADDR_WIDTH-1:0] log_addr=0;
     reg [39:0] log_data=0;
@@ -351,6 +371,7 @@ module top_cpu_test #(
     reg [24:0] last_observation=0;
     reg observation_valid=1'b0;
     reg log_rebased=1'b0;
+    reg log_write_rebased=1'b0;
     reg log_rebase_pulse=1'b0;
 
     // e_fall is registered by coco_sam on the same clk108 edge that lowers
@@ -373,6 +394,7 @@ module top_cpu_test #(
     // comparator out of the log-address update path, whose placement used to
     // change substantially with each LOG_START_ADDRESS value.
     reg log_trigger_match=1'b0;
+    reg log_write_trigger_match=1'b0;
     always @(posedge clk108 or negedge board_reset_n) begin
         if (!board_reset_n) begin
             cpu_sample_address<=16'hffff;
@@ -387,18 +409,25 @@ module top_cpu_test #(
             q_read_window_met<=1'b0;
             q_read_window_address<=16'hffff;
             log_trigger_match<=1'b0;
+            log_write_trigger_match<=1'b0;
         end else begin
             cpu_sample_address<=address;
-            cpu_sample_data<=cpu_data;
-            cpu_sample_expected<=cpu_drive_data;
+            cpu_sample_data<=cpu_data_in;
+            cpu_sample_expected<=fpga_read_data;
             cpu_sample_s<=internal_s;
             cpu_sample_rw_n<=rw_n;
-            cpu_sample_oe<=cpu_drive_oe;
+            cpu_sample_oe<=fpga_data_oe;
             cpu_sample_wait<=cpu_memory_wait;
             q_sample_previous<=q_out;
             log_trigger_match<=cpu_sample_rw_n &&
                                cpu_sample_address == LOG_START_ADDRESS &&
                                LOG_START_ADDRESS != 16'h0000;
+            log_write_trigger_match<=!cpu_sample_rw_n &&
+                cpu_sample_s == 3'd0 &&
+                (LOG_WRITE_START_ADDRESS != 16'h0000 ||
+                 LOG_WRITE_END_ADDRESS != 16'h0000) &&
+                cpu_sample_address >= LOG_WRITE_START_ADDRESS &&
+                cpu_sample_address <= LOG_WRITE_END_ADDRESS;
 
             // q_out changes just after a clk108 edge. Detect its falling edge
             // on the following clock, about 9.26 ns after physical Q falls.
@@ -411,8 +440,8 @@ module top_cpu_test #(
                 q_read_window_seen<=rw_n && internal_s <= 3'd2;
                 q_read_window_address<=address;
                 q_read_window_met<=rw_n && internal_s <= 3'd2 &&
-                                   cpu_drive_oe && !cpu_memory_wait &&
-                                   cpu_data == cpu_drive_data;
+                                   fpga_data_oe && !cpu_memory_wait &&
+                                   cpu_data_in == fpga_read_data;
             end
         end
     end
@@ -445,6 +474,7 @@ module top_cpu_test #(
             last_observation<=0;
             observation_valid<=1'b0;
             log_rebased<=1'b0;
+            log_write_rebased<=1'b0;
             log_rebase_pulse<=1'b0;
         end else begin
             log_we<=1'b0;
@@ -459,6 +489,7 @@ module top_cpu_test #(
                 last_observation<=0;
                 observation_valid<=1'b0;
                 log_rebased<=1'b0;
+                log_write_rebased<=1'b0;
             end else if (!log_rebased && e_fall && log_trigger_match) begin
                 // Include the trigger cycle itself as the first new entry.
                 log_we<=1'b1;
@@ -471,16 +502,33 @@ module top_cpu_test #(
                 observation_valid<=1'b1;
                 log_rebased<=1'b1;
                 log_rebase_pulse<=1'b1;
+            end else if (log_rebased && !log_write_rebased && e_fall &&
+                         log_write_trigger_match) begin
+                // Include the range-matching RAM write as the first entry in
+                // the final capture, then permanently disarm this stage.
+                log_we<=1'b1;
+                log_addr<=0;
+                log_data<={1'b1,cpu_sample_rw_n,cpu_sample_s,cpu_sample_oe,
+                           cpu_sample_address,cpu_sample_data,cpu_sample_expected,
+                           memory_timing_status};
+                log_count<=1;
+                last_observation<=observation;
+                observation_valid<=1'b1;
+                log_write_rebased<=1'b1;
+                log_rebase_pulse<=1'b1;
             end else if (e_fall &&
                          ((observation_valid &&
-                           cpu_sample_address == last_observation[23:8]) ||
+                           observation == last_observation) ||
                           log_count < LOG_DEPTH)) begin
                 log_we<=1'b1;
                 log_data<={1'b1,cpu_sample_rw_n,cpu_sample_s,cpu_sample_oe,
                            cpu_sample_address,cpu_sample_data,cpu_sample_expected,
                            memory_timing_status};
-                if (observation_valid &&
-                    cpu_sample_address == last_observation[23:8]) begin
+                // Collapse only a truly repeated bus observation.  A 6809
+                // read-modify-write instruction performs consecutive read
+                // and write cycles at the same address; those must remain as
+                // separate rows so PIA transactions can be diagnosed.
+                if (observation_valid && observation == last_observation) begin
                     log_addr<=log_count[LOG_ADDR_WIDTH-1:0]-1'b1;
                 end else begin
                     log_addr<=log_count[LOG_ADDR_WIDTH-1:0];

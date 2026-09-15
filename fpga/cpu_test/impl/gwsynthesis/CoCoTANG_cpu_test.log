@@ -88,7 +88,7 @@ Compiling module 'coco_cvbs_ntsc'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/vide
 WARN  (EX3791) : Expression size 9 truncated to fit in target size 8("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_cvbs_ntsc.v":68)
 NOTE  (EX0101) : Current top module is "top_cpu_test"
 [5%] Running netlist conversion ...
-WARN  (CV0016) : Input audio_in is unused("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_cpu_test.v":21)
+WARN  (CV0016) : Input audio_in is unused("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_cpu_test.v":24)
 Running device independent optimization ...
 [10%] Optimizing Phase 0 completed
 [15%] Optimizing Phase 1 completed

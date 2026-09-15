@@ -43,10 +43,15 @@ module coco_bus_mux (
         end else begin
             if (scan_start) begin
                 // Q rising begins acquisition of the active CPU cycle. Bank
-                // zero is already selected while idle, but wait briefly for
-                // the external path to settle before sampling it.
-                select_reg <= 2'b00;
-                bank <= 2'd0;
+                // zero has remained selected throughout the idle interval,
+                // and the synchronizer has already delayed us beyond Q, so
+                // capture it immediately and start settling the high bank.
+                // This advances the address/S decode by another complete
+                // bank interval without shortening settling after an actual
+                // MSEL transition.
+                address_low <= mp;
+                select_reg <= 2'b01;
+                bank <= 2'd1;
                 settle_count <= 3'd0;
                 scanning <= 1'b1;
                 snapshot_valid_reg <= 1'b0;
@@ -83,11 +88,17 @@ module coco_bus_mux (
         end
     end
 
-    // U10 routes A15,A14,A13 through MP5,MP6,MP7 respectively.
-    wire [7:0] high_addr = {snapshot[13], snapshot[14], snapshot[15],
-                            snapshot[12], snapshot[11:8]};
+    // U10 routes A15,A14,A13 through MP5,MP6,MP7 respectively.  Publish the
+    // address directly from the two settled address-bank registers instead
+    // of waiting for the third (control) bank.  This advances the external
+    // SAM S decode by one complete mux-bank interval while E is still low,
+    // giving devices such as the MC6821 their required select setup time.
+    // snapshot remains the atomic source for all control signals and its
+    // valid pulse still marks completion of the complete transaction scan.
+    wire [7:0] high_addr = {address_high[5], address_high[6], address_high[7],
+                            address_high[4:0]};
     assign msel = select_reg;
-    assign addr = {high_addr, snapshot[7:0]};
+    assign addr = {high_addr, address_low};
     assign rw_n = snapshot[16];
     assign cpu_reset_n = snapshot[17];
     assign slenb_n = snapshot[18];

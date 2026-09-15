@@ -23,6 +23,12 @@ module tb_coco_bus_mux;
       repeat(3) @(posedge clk); reset_n=1;
       @(posedge clk); scan_start=1;
       @(posedge clk); scan_start=0;
+      // The address must be available after the two address banks, before
+      // the final control-bank sample publishes snapshot_valid.
+      wait(msel==2'b10);
+      @(posedge clk);
+      if(addr!==16'hd5a3) $fatal(1,"early address reconstruction: %h",addr);
+      if(valid!==1'b0) $fatal(1,"snapshot published before control bank");
       repeat(70) @(posedge clk);
       if(valid_count!=1) $fatal(1,"expected one snapshot, got %0d",valid_count);
       if(addr!==16'hd5a3) $fatal(1,"address reconstruction: %h",addr);
