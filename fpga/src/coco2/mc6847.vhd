@@ -379,10 +379,11 @@ begin
                 elsif h_count = H_BACK_PORCH then
                 elsif h_count = H_LEFT_RSTADDR then
                     active_h_count := (others => '0');
-                elsif h_count = H_LEFT_RSTADDR+3 then
+                elsif h_count = H_LEFT_RSTADDR+2 then
                     -- videoaddr now identifies one of the first four bytes
                     -- of the upcoming scanline.  Its aligned 32-bit word can
-                    -- be fetched during the remainder of horizontal blank.
+                    -- be fetched at the earliest valid point in horizontal
+                    -- blank, giving SDRAM one extra native-pixel interval.
                     row_prefetch <= '1';
                 elsif h_count = H_LEFT_BORDER then
                     cvbs_hblank    <= '0';

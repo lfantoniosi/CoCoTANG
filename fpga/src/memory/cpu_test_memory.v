@@ -243,10 +243,13 @@ module cpu_test_memory #(
     reg [22:0] video_request_addr = 23'd0;
     reg [31:0] video_cache_data0 = 32'd0;
     reg [31:0] video_cache_data1 = 32'd0;
+    reg [31:0] video_row_cache_data = 32'd0;
     reg [20:0] video_cache_tag0 = 21'h1fffff;
     reg [20:0] video_cache_tag1 = 21'h1fffff;
+    reg [20:0] video_row_cache_tag = 21'h1fffff;
     reg video_cache_valid0 = 1'b0;
     reg video_cache_valid1 = 1'b0;
+    reg video_row_cache_valid = 1'b0;
     reg [20:0] video_address_tag_pipe = 21'd0;
     reg [3:0] video_slot_count = 4'd0;
     reg [3:0] refresh_slot_count = 4'd0;
@@ -262,16 +265,25 @@ module cpu_test_memory #(
                             video_cache_tag0 == video_addr[22:2];
     wire video_cache_hit1 = video_cache_valid1 &&
                             video_cache_tag1 == video_addr[22:2];
-    wire video_cache_hit = video_cache_hit0 || video_cache_hit1;
-    wire video_request_hit = (video_cache_valid0 &&
+    wire video_row_cache_hit = video_row_cache_valid &&
+                               video_row_cache_tag == video_addr[22:2];
+    wire video_cache_hit = video_row_cache_hit ||
+                           video_cache_hit0 || video_cache_hit1;
+    wire video_request_hit = (video_row_cache_valid &&
+                              video_row_cache_tag == video_address_tag_pipe) ||
+                             (video_cache_valid0 &&
                               video_cache_tag0 == video_address_tag_pipe) ||
                              (video_cache_valid1 &&
                               video_cache_tag1 == video_address_tag_pipe);
     wire [20:0] video_request_next_tag = video_address_tag_pipe + 1'b1;
     wire video_request_next_hit =
+        (video_row_cache_valid &&
+         video_row_cache_tag == video_request_next_tag) ||
         (video_cache_valid0 && video_cache_tag0 == video_request_next_tag) ||
         (video_cache_valid1 && video_cache_tag1 == video_request_next_tag);
-    wire [31:0] video_selected_data = video_cache_hit0 ?
+    wire [31:0] video_selected_data = video_row_cache_hit ?
+                                      video_row_cache_data :
+                                      video_cache_hit0 ?
                                       video_cache_data0 : video_cache_data1;
 
     // Refresh has its own early E-low window.  It must run before the VDG is
@@ -291,10 +303,13 @@ module cpu_test_memory #(
             video_request_addr <= 23'd0;
             video_cache_data0 <= 32'd0;
             video_cache_data1 <= 32'd0;
+            video_row_cache_data <= 32'd0;
             video_cache_tag0 <= 21'h1fffff;
             video_cache_tag1 <= 21'h1fffff;
+            video_row_cache_tag <= 21'h1fffff;
             video_cache_valid0 <= 1'b0;
             video_cache_valid1 <= 1'b0;
+            video_row_cache_valid <= 1'b0;
             video_address_tag_pipe <= 21'd0;
             video_slot_count <= 4'd0;
             prior_video_row_prefetch <= 1'b0;
@@ -307,8 +322,10 @@ module cpu_test_memory #(
             video_req <= 1'b0;
             video_cache_tag0 <= 21'h1fffff;
             video_cache_tag1 <= 21'h1fffff;
+            video_row_cache_tag <= 21'h1fffff;
             video_cache_valid0 <= 1'b0;
             video_cache_valid1 <= 1'b0;
+            video_row_cache_valid <= 1'b0;
             video_address_tag_pipe <= 21'd0;
             video_slot_count <= 4'd0;
             prior_video_row_prefetch <= 1'b0;
@@ -321,6 +338,9 @@ module cpu_test_memory #(
             if (video_row_prefetch && !prior_video_row_prefetch) begin
                 row_prefetch_tag <= video_addr[22:2];
                 row_prefetch_pending <= 1'b1;
+                if (!video_row_cache_valid ||
+                    video_row_cache_tag != video_addr[22:2])
+                    video_row_cache_valid <= 1'b0;
             end
             video_address_tag_pipe <= video_addr[22:2];
             // Register the cache mux before the MC6847 input.  Besides
@@ -344,7 +364,14 @@ module cpu_test_memory #(
                 if (video_req_is_row_prefetch)
                     row_prefetch_pending <= 1'b0;
                 video_req_is_row_prefetch <= 1'b0;
-                if (!video_cache_valid0 ||
+                if (video_req_is_row_prefetch) begin
+                    // Keep the first aligned word pinned for the complete
+                    // scanline.  The MC6847 pixel pipeline consumes its
+                    // final few pixels again at the physical end of the row.
+                    video_row_cache_data <= video_read_value;
+                    video_row_cache_tag <= video_request_addr[22:2];
+                    video_row_cache_valid <= 1'b1;
+                end else if (!video_cache_valid0 ||
                     video_cache_tag0 == video_request_addr[22:2] ||
                     (video_cache_hit1 && !video_cache_hit0)) begin
                     video_cache_data0 <= video_read_value;
@@ -393,6 +420,9 @@ module cpu_test_memory #(
                 if (video_cache_valid1 &&
                     video_cache_tag1 == cycle_addr[22:2])
                     video_cache_valid1 <= 1'b0;
+                if (video_row_cache_valid &&
+                    video_row_cache_tag == cycle_addr[22:2])
+                    video_row_cache_valid <= 1'b0;
             end
         end
     end
