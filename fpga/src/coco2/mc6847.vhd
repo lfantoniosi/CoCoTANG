@@ -260,7 +260,11 @@ begin
                 end if;
 
                 if h_count = H_LEFT_BORDER then
-                    active_h_count := (others => '1');
+                    -- Prime the synchronous scan-doubler RAM one address
+                    -- earlier.  Its output pipeline otherwise starts with
+                    -- FF,00,... while the native writer's first pixel is at
+                    -- FC, producing a three-pixel circular wrap at both edges.
+                    active_h_count := X"FC";
                 else
                     active_h_count := std_logic_vector(unsigned(active_h_count) + 1);
                 end if;
