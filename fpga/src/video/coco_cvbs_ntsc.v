@@ -22,14 +22,20 @@ module coco_cvbs_ntsc (
     output wire        chroma_out,
     output wire        cvbs_out
 );
+    parameter integer STREAMING_INPUT = 0;
     localparam [9:0] H_TOTAL        = 10'd858;
     localparam [9:0] H_SYNC         = 10'd64;
     // Advance the calibrated back-porch content by four 13.5 MHz samples.
     // Horizontal sync remains fixed; burst and active picture move together.
     localparam [9:0] BURST_START    = 10'd68;
     localparam [9:0] BURST_END      = 10'd102;
-    wire [9:0] picture_left  = high_resolution ? 10'd158 : 10'd222;
-    wire [9:0] picture_right = high_resolution ? 10'd798 : 10'd734;
+    // A framebuffer scales the 256 source pixels to 512 samples.  A live VDG
+    // stream instead occupies its native 256/455 share of the 858-sample
+    // line, or approximately 483 samples.
+    wire [9:0] picture_left  = high_resolution ? 10'd158 :
+                               STREAMING_INPUT ? 10'd271 : 10'd222;
+    wire [9:0] picture_right = high_resolution ? 10'd798 :
+                               STREAMING_INPUT ? 10'd754 : 10'd734;
     wire [9:0] border_left   = 10'd158;
     wire [9:0] border_right  = high_resolution ? 10'd798 : 10'd796;
     localparam [8:0] V_TOTAL        = 9'd262;

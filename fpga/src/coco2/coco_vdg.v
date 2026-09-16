@@ -1,5 +1,9 @@
 module coco_vdg #(
-    parameter integer DEBUG_VIDEO_MODE = 0
+    parameter integer DEBUG_VIDEO_MODE = 0,
+    // The MC6847 core always renders its native stream and stores one line.
+    // Select 0 for native RGB or 1 for the line-buffered, scan-doubled RGB
+    // output used by a 480p display.  The cvbs port remains the native stream.
+    parameter integer SCAN_DOUBLED_OUTPUT = 0
 ) (
     input clk,
     input reset_n,
@@ -22,7 +26,9 @@ module coco_vdg #(
     output [5:0] border_rgb,
     output hblank,
     output vblank,
+    output row_prefetch,
     output [7:0] cvbs,
+    output reg [5:0] native_rgb,
     output reg pixel_capture,
     output reg [15:0] capture_addr,
     output reg [5:0] capture_rgb
@@ -61,6 +67,7 @@ module coco_vdg #(
 
     wire da0;
     wire [12:0] video_address;
+    reg [6:0] video_offset_pipe = 7'd0;
     wire [10:0] char_address;
     wire [7:0] char_data;
     wire unused_hsync, unused_vsync;
@@ -68,7 +75,17 @@ module coco_vdg #(
         .clk(clk), .addr(char_address), .data(char_data)
     );
 
-    mc6847 #(.CVBS_NOT_VGA(1'b1)) vdg (
+    // SAM's display offset changes only through its memory-mapped control
+    // registers. Register it locally so that the offset adder is not fed by
+    // the long SAM-register route on every video-cache lookup.
+    always @(posedge clk or negedge reset_n) begin
+        if (!reset_n)
+            video_offset_pipe <= 7'd0;
+        else
+            video_offset_pipe <= sam_video_offset;
+    end
+
+    mc6847 #(.CVBS_NOT_VGA(SCAN_DOUBLED_OUTPUT == 0)) vdg (
         .clk(clk), .clk_ena(vdg_enable), .reset(!reset_n),
         .da0(da0), .videoaddr(video_address), .dd(memory_data),
         .hs_n(hs_n), .fs_n(fs_n),
@@ -77,12 +94,37 @@ module coco_vdg #(
         .css(effective_css), .inv(memory_data[6]),
         .red(red), .green(green), .blue(blue),
         .hsync(unused_hsync), .vsync(unused_vsync),
-        .hblank(hblank), .vblank(vblank),
+        .hblank(hblank), .vblank(vblank), .row_prefetch(row_prefetch),
         .artifact_en(1'b1), .artifact_set(1'b0), .artifact_phase(1'b0),
         .cvbs(cvbs), .black_backgnd(1'b0),
         .char_a(char_address), .char_d_o(char_data)
     );
-    assign memory_addr = {sam_video_offset,9'b0} + {3'b000,video_address};
+    assign memory_addr = {video_offset_pipe,9'b0} + {3'b000,video_address};
+
+    // Decode the native MC6847 pixel token independently of the selected RGB
+    // output.  This lets CVBS consume the native 15.7 kHz stream while HDMI
+    // consumes the core's scan-doubled stream, without a full-frame store.
+    // Active tokens are {0,CSS,A/G,A/S,LUMA,CHROMA[2:0]}.
+    always @(*) begin
+        native_rgb = 6'b000000;
+        if (hs_n && fs_n) begin
+            if (cvbs[3]) begin
+                case (cvbs[2:0])
+                    3'd0: native_rgb = 6'b001100; // green
+                    3'd1: native_rgb = 6'b111100; // yellow
+                    3'd2: native_rgb = 6'b000011; // blue
+                    3'd3: native_rgb = 6'b110000; // red
+                    3'd4: native_rgb = 6'b111111; // white
+                    3'd5: native_rgb = 6'b001111; // cyan
+                    3'd6: native_rgb = 6'b110011; // magenta
+                    default: native_rgb = 6'b111000; // orange
+                endcase
+            end else if (!cvbs[5] && !cvbs[4]) begin
+                // MC6847's dark alpha background (green or orange).
+                native_rgb = {1'b0,cvbs[6],2'b01,2'b00};
+            end
+        end
+    end
 
     reg pixel_half = 1'b0;
     reg prior_hblank = 1'b1;

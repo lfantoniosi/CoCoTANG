@@ -24,8 +24,7 @@ module coco_sam #(
 );
     // 108 MHz to the CoCo 14.31818 MHz SAM master tick. The accumulator
     // gives the correct average frequency with one 108 MHz cycle of jitter.
-    // A 24-bit NCO is accurate to 0.072 ppm and keeps the shared SAM/VDG
-    // carry chain comfortably inside the 108 MHz timing budget.
+    // Keep this proven physical-CPU cadence independent from video locking.
     // Quarter speed is used only by the physical-CPU delivery diagnostic.
     // It preserves the E/Q phase relationship while expanding every setup
     // and hold interval by four, making marginal external-bus timing obvious.

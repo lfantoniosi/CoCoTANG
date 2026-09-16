@@ -9,8 +9,11 @@ module top_cpu_test #(
     parameter [15:0] LOG_START_ADDRESS = 16'h8002, //16'hA056,
     parameter [15:0] LOG_WRITE_START_ADDRESS = 16'h0000,
     parameter [15:0] LOG_WRITE_END_ADDRESS = 16'h0000,
+    // Set to 1 to synthesize the CPU bus logger and HDMI overlay.  At 0 the
+    // overlay instance is not elaborated and synthesis removes the complete
+    // unobserved logger cone, keeping it out of CPU/SDRAM placement entirely.
+    parameter integer ENABLE_BUS_LOGGER = 0,
     parameter integer DEBUG_OVERLAY = 0,
-    parameter integer DEBUG_S_STROBE = 0,
     parameter integer ANALOG_VIDEO_MODE = 1
 ) (
     input clkin,
@@ -61,10 +64,11 @@ module top_cpu_test #(
     localparam [LOG_PAGE_WIDTH-1:0] LAST_PAGE =
         (LOG_DEPTH-1)/ENTRIES_PER_PAGE;
 
-    wire clk108,clk108p,clk270,clk135,board_reset_n,clocks_locked;
+    wire clk108,clk108p,clk270,clk135,clk27,board_reset_n,clocks_locked;
     coco_clocks clocks (
         .clkin(clkin), .button_reset(s1), .clk108(clk108), .clk108p(clk108p),
-        .clk270(clk270), .clk135(clk135), .board_reset_n(board_reset_n),
+        .clk270(clk270), .clk135(clk135), .clk27(clk27),
+        .board_reset_n(board_reset_n),
         .clocks_locked(clocks_locked)
     );
 
@@ -95,28 +99,7 @@ module top_cpu_test #(
         .memory_size(unused_memory_size), .all_ram(unused_all_ram)
     );
 
-    // Decoder diagnostic: walk all eight physical S2:S0 combinations, holding
-    // each for 1 ms.  A 12 MHz analyzer therefore gets 12,000 samples per
-    // code, making the external 74LS138/74LS11 DATAEN response unambiguous.
-    localparam integer S_STROBE_HOLD_CYCLES = 108000;
-    localparam integer S_STROBE_COUNT_WIDTH =
-        $clog2(S_STROBE_HOLD_CYCLES);
-    reg [S_STROBE_COUNT_WIDTH-1:0] s_strobe_count = 0;
-    reg [2:0] s_strobe_pattern = 3'b000;
-    always @(posedge clk108 or negedge board_reset_n) begin
-        if (!board_reset_n) begin
-            s_strobe_count <= 0;
-            s_strobe_pattern <= 3'b000;
-        end else if (DEBUG_S_STROBE != 0) begin
-            if (s_strobe_count == S_STROBE_HOLD_CYCLES-1) begin
-                s_strobe_count <= 0;
-                s_strobe_pattern <= s_strobe_pattern + 1'b1;
-            end else begin
-                s_strobe_count <= s_strobe_count + 1'b1;
-            end
-        end
-    end
-    assign sam_s = (DEBUG_S_STROBE != 0) ? s_strobe_pattern : internal_s;
+    assign sam_s = internal_s;
     // Existing displacer acquisition hardware.  Nothing from the CoCo
     // motherboard is required or interpreted by this top.
     // Q is generated in the clk108 domain.  Pass it through a conventional
@@ -261,16 +244,54 @@ module top_cpu_test #(
         end
     end
     // Q2 on the displacer is the inverting open-collector RESET driver.
-    // Keep the physical CPU reset asserted while the decoder test pattern is
-    // active; only the S outputs and external DATAEN logic are under test.
-    assign halt_drive=(DEBUG_S_STROBE != 0) ? 1'b1 : !cpu_release;
+    assign halt_drive=!cpu_release;
+
+    // Keep HDMI continuously standards-compliant from board reset. Release
+    // the VDG only on a clean HDMI frame boundary, then pace it from an exact
+    // 35/264 divider without altering the proven physical-CPU SAM clock.
+    wire hdmi_vdg_start;
+    reg hdmi_frame_meta=1'b0,hdmi_frame_sync=1'b0,hdmi_frame_delay=1'b0;
+    reg vdg_release=1'b0;
+    reg [8:0] vdg_accumulator=9'd0;
+    reg vdg_master_tick=1'b0;
+    wire [9:0] vdg_sum={1'b0,vdg_accumulator}+10'd35;
+    wire [9:0] vdg_wrapped_sum=vdg_sum-10'd264;
+    always @(posedge clk108 or negedge board_reset_n) begin
+        if (!board_reset_n) begin
+            hdmi_frame_meta<=1'b0;
+            hdmi_frame_sync<=1'b0;
+            hdmi_frame_delay<=1'b0;
+            vdg_release<=1'b0;
+            vdg_accumulator<=9'd0;
+            vdg_master_tick<=1'b0;
+        end else begin
+            hdmi_frame_meta<=hdmi_vdg_start;
+            hdmi_frame_sync<=hdmi_frame_meta;
+            hdmi_frame_delay<=hdmi_frame_sync;
+            if (!cpu_started)
+                vdg_release<=1'b0;
+            else if (hdmi_frame_sync && !hdmi_frame_delay)
+                vdg_release<=1'b1;
+            if (!vdg_release) begin
+                vdg_accumulator<=9'd0;
+                vdg_master_tick<=1'b0;
+            end else if (vdg_sum >= 10'd264) begin
+                vdg_accumulator<=vdg_wrapped_sum[8:0];
+                vdg_master_tick<=1'b1;
+            end else begin
+                vdg_accumulator<=vdg_sum[8:0];
+                vdg_master_tick<=1'b0;
+            end
+        end
+    end
+    wire vdg_reset_n=board_reset_n && vdg_release;
 
     wire [7:0] fpga_read_data;
     wire fpga_data_oe;
     wire [15:0] vdg_memory_addr;
     wire [7:0] video_memory_data;
     wire video_memory_valid;
-    wire vdg_reset_n=board_reset_n && cpu_started;
+    wire vdg_row_prefetch;
     cpu_test_memory memory (
         .clk(clk108), .reset_n(sdram_reset_n), .loader_start(loader_start),
         .cpu_access_enable(cpu_bus_active), .cpu_bus_valid(bus_snapshot_valid),
@@ -281,6 +302,7 @@ module top_cpu_test #(
         .cpu_wait(cpu_memory_wait),
         .video_enable(vdg_reset_n),
         .video_addr({7'd0,vdg_memory_addr}),
+        .video_hs_n(hs_n), .video_row_prefetch(vdg_row_prefetch),
         .video_data(video_memory_data),
         .video_data_valid(video_memory_valid),
         .loader_done(loader_done),
@@ -322,16 +344,14 @@ module top_cpu_test #(
     // writes at $FF22/$FF23 are shadowed inside coco_vdg for A/G, INT/EXT,
     // and CSS. HS and FS return to their motherboard PIA input pins.
     wire [7:0] vdg_red,vdg_green,vdg_blue;
+    wire [5:0] vdg_native_rgb;
     wire [5:0] vdg_border_rgb;
     wire vdg_hblank,vdg_vblank;
     wire [7:0] unused_vdg_cvbs;
-    wire framebuffer_write;
-    wire [15:0] framebuffer_write_addr;
-    wire [5:0] framebuffer_write_data;
     // Keep the asynchronous, mux-sampled RESET node out of the VDG reset path
     // for the same reason. cpu_release is synchronous to clk108.
-    coco_vdg vdg (
-        .clk(clk108), .reset_n(vdg_reset_n), .sam_tick(sam_master_tick),
+    coco_vdg #(.SCAN_DOUBLED_OUTPUT(1)) vdg (
+        .clk(clk108), .reset_n(vdg_reset_n), .sam_tick(vdg_master_tick),
         .e_fall(e_fall), .cpu_rw_n(rw_n), .cpu_addr(address),
         .cpu_data(cpu_write_data), .sam_video_mode(sam_video_mode),
         .debug_an_g(1'b0), .debug_css(1'b0),
@@ -340,19 +360,9 @@ module top_cpu_test #(
         .hs_n(hs_n), .fs_n(fs_n), .red(vdg_red), .green(vdg_green),
         .blue(vdg_blue), .border_rgb(vdg_border_rgb),
         .hblank(vdg_hblank), .vblank(vdg_vblank),
-        .cvbs(unused_vdg_cvbs), .pixel_capture(framebuffer_write),
-        .capture_addr(framebuffer_write_addr),
-        .capture_rgb(framebuffer_write_data)
-    );
-
-    wire [15:0] hdmi_framebuffer_addr,cvbs_framebuffer_addr;
-    wire [5:0] hdmi_framebuffer_data,cvbs_framebuffer_data;
-    coco_framebuffer framebuffer (
-        .write_clk(clk108), .write_en(framebuffer_write),
-        .write_addr(framebuffer_write_addr), .write_data(framebuffer_write_data),
-        .read_clk(clk135), .hdmi_addr(hdmi_framebuffer_addr),
-        .hdmi_data(hdmi_framebuffer_data), .cvbs_addr(cvbs_framebuffer_addr),
-        .cvbs_data(cvbs_framebuffer_data)
+        .row_prefetch(vdg_row_prefetch),
+        .cvbs(unused_vdg_cvbs), .native_rgb(vdg_native_rgb),
+        .pixel_capture(), .capture_addr(), .capture_rgb()
     );
 
     // Begin with the first active CPU bus cycle, regardless of its address.
@@ -594,30 +604,33 @@ module top_cpu_test #(
 
     cpu_test_hdmi #(
         .LOG_ADDR_WIDTH(LOG_ADDR_WIDTH), .LOG_COUNT_WIDTH(LOG_COUNT_WIDTH),
-        .LOG_PAGE_WIDTH(LOG_PAGE_WIDTH), .LOG_DEPTH(LOG_DEPTH)
+        .LOG_PAGE_WIDTH(LOG_PAGE_WIDTH), .LOG_DEPTH(LOG_DEPTH),
+        .ENABLE_DEBUG_OVERLAY(ENABLE_BUS_LOGGER)
     ) hdmi_output (
-        .pixel_clk(clkin), .serial_clk(clk135), .reset(!board_reset_n),
+        .pixel_clk(clk27), .serial_clk(clk135), .reset(!board_reset_n),
+        .vdg_clk(clk108), .vdg_pixel_tick(vdg_master_tick),
         .debug_clk(clk108), .log_we(log_we), .log_addr(log_addr),
         .log_data(log_data), .log_count(log_count), .log_page(log_page),
         .debug_status({clocks_locked,filtered_mux_reset_n,mux_halt_n,
                        pia_interrupts_idle,bus_ready_sync}),
-        .overlay_enable(overlay_visible),
-        .framebuffer_data(hdmi_framebuffer_data),
-        .border_rgb(vdg_border_rgb),
-        .framebuffer_addr(hdmi_framebuffer_addr),
+        .overlay_enable(overlay_visible), .vdg_red(vdg_red),
+        .vdg_green(vdg_green), .vdg_blue(vdg_blue),
+        .vdg_hblank(vdg_hblank), .vdg_vblank(vdg_vblank),
         .tmds_clk_p(tmds_clk_p), .tmds_clk_n(tmds_clk_n),
-        .tmds_data_p(tmds_data_p), .tmds_data_n(tmds_data_n)
+        .tmds_data_p(tmds_data_p), .tmds_data_n(tmds_data_n),
+        .vdg_start(hdmi_vdg_start)
     );
 
     wire [9:0] unused_cvbs_source_x;
     wire [7:0] unused_cvbs_source_y,unused_cvbs_prefetch_y;
     wire unused_cvbs_source_valid,unused_cvbs_prefetch_valid;
     wire analog_luma,analog_chroma,analog_cvbs;
-    coco_cvbs_ntsc analog_encoder (
-        .clk135(clk135), .clk270(clk270), .reset_n(board_reset_n),
-        .high_resolution(1'b0), .framebuffer_data(cvbs_framebuffer_data),
+    wire [15:0] unused_cvbs_framebuffer_addr;
+    coco_cvbs_ntsc #(.STREAMING_INPUT(1)) analog_encoder (
+        .clk135(clk135), .clk270(clk270), .reset_n(vdg_reset_n),
+        .high_resolution(1'b0), .framebuffer_data(vdg_native_rgb),
         .border_rgb(vdg_border_rgb), .active_height(8'd192),
-        .framebuffer_addr(cvbs_framebuffer_addr),
+        .framebuffer_addr(unused_cvbs_framebuffer_addr),
         .source_x(unused_cvbs_source_x), .source_y(unused_cvbs_source_y),
         .source_valid(unused_cvbs_source_valid),
         .prefetch_y(unused_cvbs_prefetch_y),

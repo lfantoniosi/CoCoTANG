@@ -5,6 +5,7 @@ module coco_clocks (
     output clk108p,
     output clk270,
     output clk135,
+    output clk27,
     output reg board_reset_n,
     output clocks_locked
 );
@@ -30,6 +31,14 @@ module coco_clocks (
     CLK270 video_pll (
         .clkout(clk270), .lock(video_lock), .clkoutd(clk135),
         .reset(pll_reset), .clkin(clkin)
+    );
+    // OSER10 requires PCLK and FCLK to have a fixed phase relationship.
+    // Dividing the PLL's 135 MHz output with the dedicated clock divider is
+    // deterministic; using the unrelated raw 27 MHz input made HDMI lock
+    // depend on PLL power-up phase and placement.
+    CLKDIV #(.DIV_MODE("5"), .GSREN("false")) video_pixel_divider (
+        .HCLKIN(clk135), .RESETN(video_lock && !pll_reset),
+        .CALIB(1'b0), .CLKOUT(clk27)
     );
 
     reg [9:0] lock_count = 10'd0;

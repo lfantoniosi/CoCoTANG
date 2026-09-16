@@ -31,6 +31,7 @@ entity mc6847 is
             vsync          : out std_logic;
             hblank         : out std_logic;
             vblank         : out std_logic;
+            row_prefetch   : out std_logic;
             artifact_en    : in  std_logic;
             artifact_set   : in  std_logic;
             artifact_phase : in  std_logic;
@@ -101,6 +102,7 @@ architecture SYN of mc6847 is
     signal cvbs_vblank       : std_logic;
     signal cvbs_hborder      : std_logic;
     signal cvbs_vborder      : std_logic;
+    signal field_odd         : std_logic := '0';
     signal cvbs_linebuf_we   : std_logic;
     signal cvbs_linebuf_addr : std_logic_vector(8 downto 0);
 
@@ -297,15 +299,28 @@ begin
             vga_vblank     <= '1';
             da0_int        <= (others => '0');
             cvbs_hblank_r  := '0';
+            field_odd      <= '0';
+            row_prefetch   <= '0';
             row_v          := (others => '0');
             
         elsif rising_edge (clk) and cvbs_clk_ena = '1' then
 
             active_h_start <= '0';
-            if h_count = H_TOTAL_PER_LINE then
+            row_prefetch   <= '0';
+            -- NTSC has 262.5 lines per field.  The old integer-only terminal
+            -- count emitted 263 complete lines, while HDMI emits 525 lines
+            -- for every two native fields; their vertical phases therefore
+            -- rolled continuously. End the final blanking line after 227 and
+            -- 228 dots on alternating fields, averaging exactly half of the
+            -- 455-dot native line without disturbing active video.
+            if h_count = H_TOTAL_PER_LINE or
+               (v_count = V2_TOTAL_PER_FIELD and
+                ((field_odd = '0' and h_count = 226) or
+                 (field_odd = '1' and h_count = 227))) then
                 h_count := 0;
                 if v_count = V2_TOTAL_PER_FIELD then
                     v_count := (others => '0');
+                    field_odd <= not field_odd;
                 else
                     v_count := v_count + 1;
                 end if;
@@ -360,6 +375,11 @@ begin
                 elsif h_count = H_BACK_PORCH then
                 elsif h_count = H_LEFT_RSTADDR then
                     active_h_count := (others => '0');
+                elsif h_count = H_LEFT_RSTADDR+3 then
+                    -- videoaddr now identifies one of the first four bytes
+                    -- of the upcoming scanline.  Its aligned 32-bit word can
+                    -- be fetched during the remainder of horizontal blank.
+                    row_prefetch <= '1';
                 elsif h_count = H_LEFT_BORDER then
                     cvbs_hblank    <= '0';
                     active_h_start <= '1';
@@ -440,9 +460,9 @@ begin
         elsif rising_edge(clk) and cvbs_clk_ena = '1' then
             if active_h_start = '1' then
                 -- Account for the character-ROM/pixel pipeline at the active
-                -- display boundary. This is the phase used by the newer
-                -- MiSTer mc6847pace core; phase zero splits a character
-                -- between the right and left edges of consecutive lines.
+                -- display boundary.  Horizontal wrap is handled by priming
+                -- the VGA line-buffer read address above, not by disturbing
+                -- this native-pixel phase.
                 count := "0010";
             end if;
             if an_g_s = '0' then

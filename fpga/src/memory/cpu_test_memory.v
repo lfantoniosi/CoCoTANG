@@ -22,6 +22,8 @@ module cpu_test_memory #(
     output cpu_wait,
     input video_enable,
     input [22:0] video_addr,
+    input video_hs_n,
+    input video_row_prefetch,
     output reg [7:0] video_data,
     output reg video_data_valid,
     output loader_done,
@@ -239,15 +241,38 @@ module cpu_test_memory #(
     // rather than allowing it to begin near the following CPU service window.
     reg video_req = 1'b0;
     reg [22:0] video_request_addr = 23'd0;
-    reg [1:0] video_request_lane = 2'd0;
-    reg [22:0] video_latched_addr = 23'h7fffff;
-    reg video_latch_valid = 1'b0;
+    reg [31:0] video_cache_data0 = 32'd0;
+    reg [31:0] video_cache_data1 = 32'd0;
+    reg [20:0] video_cache_tag0 = 21'h1fffff;
+    reg [20:0] video_cache_tag1 = 21'h1fffff;
+    reg video_cache_valid0 = 1'b0;
+    reg video_cache_valid1 = 1'b0;
+    reg [20:0] video_address_tag_pipe = 21'd0;
     reg [3:0] video_slot_count = 4'd0;
     reg [3:0] refresh_slot_count = 4'd0;
+    reg prior_video_row_prefetch = 1'b0;
+    reg row_prefetch_pending = 1'b0;
+    reg [20:0] row_prefetch_tag = 21'd0;
+    reg video_req_is_row_prefetch = 1'b0;
     wire video_ack;
     wire [31:0] video_read_value;
     wire video_slot_open = video_slot_count != 0;
     wire refresh_slot_open = refresh_slot_count != 0;
+    wire video_cache_hit0 = video_cache_valid0 &&
+                            video_cache_tag0 == video_addr[22:2];
+    wire video_cache_hit1 = video_cache_valid1 &&
+                            video_cache_tag1 == video_addr[22:2];
+    wire video_cache_hit = video_cache_hit0 || video_cache_hit1;
+    wire video_request_hit = (video_cache_valid0 &&
+                              video_cache_tag0 == video_address_tag_pipe) ||
+                             (video_cache_valid1 &&
+                              video_cache_tag1 == video_address_tag_pipe);
+    wire [20:0] video_request_next_tag = video_address_tag_pipe + 1'b1;
+    wire video_request_next_hit =
+        (video_cache_valid0 && video_cache_tag0 == video_request_next_tag) ||
+        (video_cache_valid1 && video_cache_tag1 == video_request_next_tag);
+    wire [31:0] video_selected_data = video_cache_hit0 ?
+                                      video_cache_data0 : video_cache_data1;
 
     // Refresh has its own early E-low window.  It must run before the VDG is
     // enabled, including while the loaded ROM waits for CPU RESET release.
@@ -264,35 +289,72 @@ module cpu_test_memory #(
         if (!reset_n) begin
             video_req <= 1'b0;
             video_request_addr <= 23'd0;
-            video_request_lane <= 2'd0;
-            video_latched_addr <= 23'h7fffff;
-            video_latch_valid <= 1'b0;
+            video_cache_data0 <= 32'd0;
+            video_cache_data1 <= 32'd0;
+            video_cache_tag0 <= 21'h1fffff;
+            video_cache_tag1 <= 21'h1fffff;
+            video_cache_valid0 <= 1'b0;
+            video_cache_valid1 <= 1'b0;
+            video_address_tag_pipe <= 21'd0;
             video_slot_count <= 4'd0;
+            prior_video_row_prefetch <= 1'b0;
+            row_prefetch_pending <= 1'b0;
+            row_prefetch_tag <= 21'd0;
+            video_req_is_row_prefetch <= 1'b0;
             video_data <= 8'h00;
             video_data_valid <= 1'b0;
         end else if (!video_enable) begin
             video_req <= 1'b0;
-            video_latched_addr <= 23'h7fffff;
-            video_latch_valid <= 1'b0;
+            video_cache_tag0 <= 21'h1fffff;
+            video_cache_tag1 <= 21'h1fffff;
+            video_cache_valid0 <= 1'b0;
+            video_cache_valid1 <= 1'b0;
+            video_address_tag_pipe <= 21'd0;
             video_slot_count <= 4'd0;
+            prior_video_row_prefetch <= 1'b0;
+            row_prefetch_pending <= 1'b0;
+            video_req_is_row_prefetch <= 1'b0;
             video_data <= 8'h00;
             video_data_valid <= 1'b0;
         end else begin
-            video_data_valid <= 1'b0;
+            prior_video_row_prefetch <= video_row_prefetch;
+            if (video_row_prefetch && !prior_video_row_prefetch) begin
+                row_prefetch_tag <= video_addr[22:2];
+                row_prefetch_pending <= 1'b1;
+            end
+            video_address_tag_pipe <= video_addr[22:2];
+            // Register the cache mux before the MC6847 input.  Besides
+            // supplying a full cycle of settling time, this breaks the long
+            // SAM-offset -> cache-tag/lane -> VDG shift-register path.
+            video_data_valid <= video_cache_hit;
+            if (!video_cache_hit)
+                video_data <= 8'h00;
+            else begin
+                case (video_addr[1:0])
+                    2'd0: video_data <= video_selected_data[7:0];
+                    2'd1: video_data <= video_selected_data[15:8];
+                    2'd2: video_data <= video_selected_data[23:16];
+                    default: video_data <= video_selected_data[31:24];
+                endcase
+            end
             if (video_slot_count != 0)
                 video_slot_count <= video_slot_count - 1'b1;
             if (video_ack) begin
                 video_req <= 1'b0;
-                case (video_request_lane)
-                    2'd0: video_data <= video_read_value[7:0];
-                    2'd1: video_data <= video_read_value[15:8];
-                    2'd2: video_data <= video_read_value[23:16];
-                    default: video_data <= video_read_value[31:24];
-                endcase
-                video_latched_addr <=
-                    {video_request_addr[22:2],video_request_lane};
-                video_latch_valid <= 1'b1;
-                video_data_valid <= 1'b1;
+                if (video_req_is_row_prefetch)
+                    row_prefetch_pending <= 1'b0;
+                video_req_is_row_prefetch <= 1'b0;
+                if (!video_cache_valid0 ||
+                    video_cache_tag0 == video_request_addr[22:2] ||
+                    (video_cache_hit1 && !video_cache_hit0)) begin
+                    video_cache_data0 <= video_read_value;
+                    video_cache_tag0 <= video_request_addr[22:2];
+                    video_cache_valid0 <= 1'b1;
+                end else begin
+                    video_cache_data1 <= video_read_value;
+                    video_cache_tag1 <= video_request_addr[22:2];
+                    video_cache_valid1 <= 1'b1;
+                end
             end
             if (e_fall) begin
                 // Eight clk108 clocks is about 74 ns. The request is visible
@@ -301,17 +363,37 @@ module cpu_test_memory #(
                 // SDRAM operation to finish.
                 video_slot_count <= 4'd8;
             end
-            if (e_fall && !video_req &&
-                (!video_latch_valid || video_latched_addr != video_addr)) begin
-                video_request_addr <= {video_addr[22:2],2'b00};
-                video_request_lane <= video_addr[1:0];
-                video_req <= 1'b1;
+            // During horizontal blank the VDG address counter traverses
+            // values that are not consumed as pixels. Do not let those evict
+            // useful cache words. The explicit row strobe above captures the
+            // aligned first four bytes of the upcoming scanline early enough
+            // to fetch them in a normal safe SAM video slot.
+            if (!video_ack && !video_req) begin
+                if (row_prefetch_pending) begin
+                    video_request_addr <= {row_prefetch_tag,2'b00};
+                    video_req <= 1'b1;
+                    video_req_is_row_prefetch <= 1'b1;
+                end else if (video_hs_n &&
+                             (!video_request_hit ||
+                              !video_request_next_hit)) begin
+                    video_request_addr <= {!video_request_hit ?
+                                           video_address_tag_pipe :
+                                           video_request_next_tag,
+                                           2'b00};
+                    video_req <= 1'b1;
+                    video_req_is_row_prefetch <= 1'b0;
+                end
             end
             // A CPU write to the byte held for display makes the latch stale;
             // SAM will fetch it again in a later video slot.
-            if (e_fall && cycle_mem_write && video_latch_valid &&
-                video_latched_addr == cycle_addr)
-                video_latch_valid <= 1'b0;
+            if (e_fall && cycle_mem_write) begin
+                if (video_cache_valid0 &&
+                    video_cache_tag0 == cycle_addr[22:2])
+                    video_cache_valid0 <= 1'b0;
+                if (video_cache_valid1 &&
+                    video_cache_tag1 == cycle_addr[22:2])
+                    video_cache_valid1 <= 1'b0;
+            end
         end
     end
     wire loader_req;
