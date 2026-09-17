@@ -7,6 +7,7 @@ module coco_vdg #(
 ) (
     input clk,
     input reset_n,
+    input bus_reset_n,
     input sam_tick,
     input e_fall,
     input cpu_rw_n,
@@ -43,8 +44,12 @@ module coco_vdg #(
     reg [7:0] pia1_pb = 8'd0;
     reg [7:0] pia1_ddrb = 8'd0;
     reg [7:0] pia1_crb = 8'd0;
-    always @(posedge clk or negedge reset_n) begin
-        if (!reset_n) begin
+    // The renderer is deliberately released on an HDMI frame boundary, but
+    // PIA initialization starts as soon as the CPU runs.  Keep this shadow in
+    // the board-reset domain so early DDR/data writes are not discarded while
+    // the MC6847 timing core is still held reset.
+    always @(posedge clk or negedge bus_reset_n) begin
+        if (!bus_reset_n) begin
             pia1_pb <= 8'd0;
             pia1_ddrb <= 8'd0;
             pia1_crb <= 8'd0;
@@ -90,7 +95,11 @@ module coco_vdg #(
         .da0(da0), .videoaddr(video_address), .dd(memory_data),
         .hs_n(hs_n), .fs_n(fs_n),
         .an_g(effective_an_g), .an_s(memory_data[7]),
-        .intn_ext(pia1_effective[4]), .gm(sam_video_mode),
+        // PIA1 PB6:PB4 directly drive the physical MC6847 GM2:GM0 pins.
+        // The SAM mode is programmed separately to select the matching memory
+        // geometry (PMODE 3 and PMODE 4 both use SAM mode 110).
+        .intn_ext(pia1_effective[4]),
+        .gm(pia1_effective[6:4]),
         .css(effective_css), .inv(memory_data[6]),
         .red(red), .green(green), .blue(blue),
         .hsync(unused_hsync), .vsync(unused_vsync),

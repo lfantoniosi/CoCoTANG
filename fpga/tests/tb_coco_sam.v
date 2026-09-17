@@ -1,7 +1,8 @@
 `timescale 1ns/1ps
 module tb_coco_sam;
     reg clk=0, reset_n=0, register_reset_n=0, rw_n=1, memory_wait=0;
-    integer release_cycles;
+    integer release_cycles,slow_time,fast_time,slow_again_time;
+    time period_start;
     reg [15:0] addr=0;
     wire [2:0] s, video_mode;
     wire e,q,e_rise,e_fall,master_tick;
@@ -23,6 +24,13 @@ module tb_coco_sam;
         rw_n=1;
       end
     endtask
+    task measure_four_e_periods(output integer elapsed);
+      begin
+        @(posedge e); period_start=$time;
+        repeat(4) @(posedge e);
+        elapsed=$time-period_start;
+      end
+    endtask
     initial begin
       repeat(4) @(posedge clk); reset_n=1; register_reset_n=1;
       addr=16'h1234; #1; if(s!==0) $fatal(1,"RAM decode");
@@ -35,8 +43,24 @@ module tb_coco_sam;
       sam_write(16'hffc1); if(video_mode[0]!==1) $fatal(1,"V0 latch");
       sam_write(16'hffdf); addr=16'h8123; #1;
       if(!all_ram || s!==0) $fatal(1,"all-RAM mapping");
+      // The standard CoCo POKEs must change the physical E/Q rate without
+      // changing their four-quadrant phase relationship.
+      addr=16'h8000;
+      measure_four_e_periods(slow_time);
+      sam_write(16'hffd9);
+      if(rate!==2'b10) $fatal(1,"FFD9 did not select fast mode");
+      measure_four_e_periods(fast_time);
+      if(fast_time*2 < slow_time-20 || fast_time*2 > slow_time+20)
+        $fatal(1,"fast E rate is not 2x: slow=%0d fast=%0d",slow_time,fast_time);
+      sam_write(16'hffd8);
+      if(rate!==2'b00) $fatal(1,"FFD8 did not return to slow mode");
+      measure_four_e_periods(slow_again_time);
+      if(slow_again_time < slow_time-20 || slow_again_time > slow_time+20)
+        $fatal(1,"slow E rate not restored: before=%0d after=%0d",
+               slow_time,slow_again_time);
       register_reset_n=0; repeat(2) @(posedge clk);
-      if(all_ram) $fatal(1,"CPU reset did not clear SAM registers");
+      if(all_ram || rate!==2'b00)
+        $fatal(1,"CPU reset did not clear SAM registers");
       // A pending memory cycle must freeze at the pre-E phase and resume
       // without shortening either clock edge interval.
       wait(q && !e && dut.phase == 4'd6);

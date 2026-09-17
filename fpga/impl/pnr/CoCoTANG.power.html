@@ -89,7 +89,7 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 </tr>
 <tr>
 <td class="label">Created Time</td>
-<td>Mon Sep 14 10:57:40 2026
+<td>Wed Sep 16 23:49:39 2026
 </td>
 </tr>
 <tr>
@@ -161,7 +161,7 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 <table class="summary_table">
 <tr>
 <td class="label">Total Power (mW)</td>
-<td>651.839</td>
+<td>261.779</td>
 </tr>
 <tr>
 <td class="label">Quiescent Power (mW)</td>
@@ -169,14 +169,14 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 </tr>
 <tr>
 <td class="label">Dynamic Power (mW)</td>
-<td>529.039</td>
+<td>138.979</td>
 </tr>
 </table>
 <h2><a name="Thermal_Info">Thermal Information:</a></h2>
 <table class="summary_table">
 <tr>
 <td class="label">Junction Temperature</td>
-<td>44.451</td>
+<td>32.811</td>
 </tr>
 <tr>
 <td class="label">Theta JA</td>
@@ -184,7 +184,7 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 </tr>
 <tr>
 <td class="label">Max Allowed Ambient Temperature</td>
-<td>65.549</td>
+<td>77.189</td>
 </tr>
 </table>
 <h2><a name="Supply_Summary">Supply Information:</a></h2>
@@ -199,23 +199,23 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 <tr>
 <td>VCC</td>
 <td>1.000</td>
-<td>460.961</td>
+<td>79.274</td>
 <td>70.000</td>
-<td>530.961</td>
+<td>149.274</td>
 </tr>
 <tr>
 <td>VCCX</td>
 <td>3.300</td>
-<td>10.315</td>
+<td>9.046</td>
 <td>15.000</td>
-<td>83.539</td>
+<td>79.353</td>
 </tr>
 <tr>
 <td>VCCIO33</td>
 <td>3.300</td>
-<td>10.315</td>
+<td>9.046</td>
 <td>1.000</td>
-<td>37.339</td>
+<td>33.153</td>
 </tr>
 </table>
 <h1><a name="Detail">Power Details</a></h1>
@@ -229,19 +229,19 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 </tr>
 <tr>
 <td>Logic</td>
-<td>3.972</td>
+<td>4.028</td>
 <td>NA</td>
-<td>12.207</td>
+<td>13.304</td>
 </tr>
 <tr>
 <td>IO</td>
-<td>97.449
-<td>19.005
-<td>15.858
+<td>87.812
+<td>18.955
+<td>14.050
 </tr>
 <tr>
 <td>BSRAM</td>
-<td>406.075
+<td>26.444
 <td>NA</td>
 <td>NA</td>
 </tr>
@@ -250,12 +250,6 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 <td>39.540
 <td>NA</td>
 <td>NA</td>
-</tr>
-<tr>
-<td>DSP</td>
-<td>0.881
-<td>NA</td>
-<td>0.773
 </tr>
 </table>
 <h2><a name="By_Hierarchy">Power By Hierarchy:</a></h2>
@@ -267,12 +261,16 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 </tr>
 <tr>
 <td>top</td>
-<td>450.468</td>
-<td>450.468(450.161)</td>
+<td>70.011</td>
+<td>70.011(69.879)</td>
+<tr>
+<td>top/analog_encoder/</td>
+<td>1.214</td>
+<td>1.214(0.000)</td>
 <tr>
 <td>top/bus_mux/</td>
-<td>0.094</td>
-<td>0.094(0.000)</td>
+<td>0.034</td>
+<td>0.034(0.000)</td>
 <tr>
 <td>top/clocks/</td>
 <td>39.581</td>
@@ -286,81 +284,65 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 <td>28.243</td>
 <td>28.243(0.000)</td>
 <tr>
-<td>top/coco2_frame_store.framebuffer/</td>
-<td>383.298</td>
-<td>383.298(0.000)</td>
-<tr>
-<td>top/coco2_machine.machine/</td>
-<td>2.219</td>
-<td>2.219(2.206)</td>
-<tr>
-<td>top/coco2_machine.machine/sam/</td>
-<td>0.284</td>
-<td>0.284(0.000)</td>
-<tr>
-<td>top/coco2_machine.machine/vdg/</td>
-<td>1.923</td>
-<td>1.923(1.791)</td>
-<tr>
-<td>top/coco2_machine.machine/vdg/character_rom/</td>
-<td>1.390</td>
-<td>1.390(0.000)</td>
-<tr>
-<td>top/coco2_machine.machine/vdg/vdg_0/</td>
-<td>0.401</td>
-<td>0.401(0.000)</td>
-<tr>
-<td>top/encoder/</td>
-<td>1.250</td>
-<td>1.250(0.000)</td>
-<tr>
 <td>top/hdmi_output/</td>
-<td>22.696</td>
-<td>22.696(22.671)</td>
+<td>9.816</td>
+<td>9.816(0.097)</td>
 <tr>
-<td>top/hdmi_output/debug_overlay/</td>
-<td>22.546</td>
-<td>22.546(0.000)</td>
+<td>top/hdmi_output/encoder/</td>
+<td>0.097</td>
+<td>0.097(0.065)</td>
 <tr>
-<td>top/hdmi_output/hdmi_encoder/</td>
-<td>0.125</td>
-<td>0.125(0.092)</td>
-<tr>
-<td>top/hdmi_output/hdmi_encoder/tmds_gen[0].tmds_channel/</td>
-<td>0.042</td>
-<td>0.042(0.000)</td>
-<tr>
-<td>top/hdmi_output/hdmi_encoder/tmds_gen[1].tmds_channel/</td>
+<td>top/hdmi_output/encoder/tmds_gen[0].tmds_channel/</td>
 <td>0.023</td>
 <td>0.023(0.000)</td>
 <tr>
-<td>top/hdmi_output/hdmi_encoder/tmds_gen[2].tmds_channel/</td>
-<td>0.027</td>
-<td>0.027(0.000)</td>
+<td>top/hdmi_output/encoder/tmds_gen[1].tmds_channel/</td>
+<td>0.021</td>
+<td>0.021(0.000)</td>
+<tr>
+<td>top/hdmi_output/encoder/tmds_gen[2].tmds_channel/</td>
+<td>0.021</td>
+<td>0.021(0.000)</td>
 <tr>
 <td>top/memory/</td>
-<td>0.763</td>
-<td>0.763(0.451)</td>
+<td>1.282</td>
+<td>1.282(0.487)</td>
 <tr>
 <td>top/memory/arbiter/</td>
-<td>0.178</td>
-<td>0.178(0.000)</td>
+<td>0.211</td>
+<td>0.211(0.000)</td>
 <tr>
 <td>top/memory/loader/</td>
-<td>0.273</td>
-<td>0.273(0.122)</td>
+<td>0.277</td>
+<td>0.277(0.124)</td>
 <tr>
 <td>top/memory/loader/reader/</td>
-<td>0.122</td>
-<td>0.122(0.000)</td>
+<td>0.124</td>
+<td>0.124(0.000)</td>
+<tr>
+<td>top/sam/</td>
+<td>0.249</td>
+<td>0.249(0.000)</td>
 <tr>
 <td>top/sdram_controller/</td>
-<td>0.225</td>
-<td>0.225(0.000)</td>
+<td>0.219</td>
+<td>0.219(0.000)</td>
 <tr>
 <td>top/startup/</td>
 <td>0.035</td>
 <td>0.035(0.000)</td>
+<tr>
+<td>top/vdg/</td>
+<td>17.450</td>
+<td>17.450(17.370)</td>
+<tr>
+<td>top/vdg/character_rom/</td>
+<td>1.390</td>
+<td>1.390(0.000)</td>
+<tr>
+<td>top/vdg/vdg_0/</td>
+<td>15.980</td>
+<td>15.980(0.000)</td>
 </table>
 <h2><a name="By_Clock_Domain">Power By Clock Domain:</a></h2>
 <table class="detail_table">
@@ -370,14 +352,24 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 <th class="label">Total Dynamic Power(mW)</th>
 </tr>
 <tr>
-<td>clkin</td>
-<td>27.000</td>
-<td>45.056</td>
-</tr>
-<tr>
 <td>clk108</td>
 <td>108.003</td>
-<td>190.812</td>
+<td>27.126</td>
+</tr>
+<tr>
+<td>clk135</td>
+<td>135.007</td>
+<td>1.080</td>
+</tr>
+<tr>
+<td>clk27</td>
+<td>27.000</td>
+<td>2.048</td>
+</tr>
+<tr>
+<td>clkin</td>
+<td>27.000</td>
+<td>39.560</td>
 </tr>
 <tr>
 <td>NO CLOCK DOMAIN</td>
@@ -387,12 +379,7 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 <tr>
 <td>clk270</td>
 <td>269.978</td>
-<td>0.722</td>
-</tr>
-<tr>
-<td>clk135</td>
-<td>135.007</td>
-<td>214.004</td>
+<td>0.308</td>
 </tr>
 </table>
 </div><!-- content -->

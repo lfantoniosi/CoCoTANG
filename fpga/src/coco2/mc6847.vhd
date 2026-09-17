@@ -633,6 +633,8 @@ begin
     begin
         if reset = '1' then
             count := '0';
+            p_in  := (others => '0');
+            p_out := (others => '0');
         elsif rising_edge(clk) then
             if CVBS_NOT_VGA then
                 if cvbs_clk_ena = '1' then
@@ -654,6 +656,9 @@ begin
                     if vga_hblank = '1' then
                         count := '0';
                         p_in  := (others => '0');
+                        -- Do not carry the final artifact pair from the prior
+                        -- scanline into the first pixel of the next one.
+                        p_out := (others => '0');
                     end if;
                     if vga_hblank = '0' and vga_vblank = '0' then
                         -- artifacting test only --

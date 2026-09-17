@@ -1,135 +1,174 @@
-module coco_hdmi (
+// 720x480 DVI output sampled directly from the MC6847 scan-doubled stream.
+// The source and DVI line rates are identical; no full-frame store is used.
+// The CPU bus logger remains available as an optional bring-up overlay.
+module coco_hdmi #(
+    parameter integer LOG_ADDR_WIDTH = 12,
+    parameter integer LOG_COUNT_WIDTH = 13,
+    parameter integer LOG_PAGE_WIDTH = 6,
+    parameter integer LOG_DEPTH = 4096,
+    parameter integer ENABLE_DEBUG_OVERLAY = 1
+) (
     input logic pixel_clk,
     input logic serial_clk,
     input logic reset,
-    input logic high_resolution,
-    input logic [5:0] framebuffer_data,
-    input logic [5:0] border_rgb,
-    input logic [7:0] active_height,
-    input logic debug_enable,
-    input logic [319:0] debug_data,
+    input logic vdg_clk,
+    input logic vdg_pixel_tick,
     input logic debug_clk,
-    input logic debug_log_we,
-    input logic [8:0] debug_log_addr,
-    input logic [39:0] debug_log_data,
-    input logic [8:0] debug_log_count,
-    input logic [1:0] debug_log_page,
+    input logic log_we,
+    input logic [LOG_ADDR_WIDTH-1:0] log_addr,
+    input logic [39:0] log_data,
+    input logic [LOG_COUNT_WIDTH-1:0] log_count,
+    input logic [LOG_PAGE_WIDTH-1:0] log_page,
     input logic [4:0] debug_status,
-    output logic [15:0] framebuffer_addr,
-    output logic [9:0] source_x,
-    output logic [7:0] source_y,
-    output logic source_valid,
-    output logic [7:0] prefetch_y,
-    output logic prefetch_valid,
-    output logic tmds_clk_p, output logic tmds_clk_n,
-    output logic [2:0] tmds_data_p, output logic [2:0] tmds_data_n
+    input logic overlay_enable,
+    input logic [7:0] vdg_red,
+    input logic [7:0] vdg_green,
+    input logic [7:0] vdg_blue,
+    input logic vdg_hblank,
+    input logic vdg_vblank,
+    output logic tmds_clk_p,
+    output logic tmds_clk_n,
+    output logic [2:0] tmds_data_p,
+    output logic [2:0] tmds_data_n,
+    output logic vdg_start
 );
-    logic [9:0] x, y;
-    logic [23:0] framebuffer_rgb;
+    logic [9:0] x,y;
+    // A complete MC6847 visible/border line is 371 master pixels.  Capture it
+    // into alternating halves of a dual-clock line store.  Directly sampling
+    // RGB here made the left edge depend on the phase between the 108 MHz and
+    // 27 MHz PLLs and allowed pixel transitions to flicker by one HDMI pixel.
+    logic [5:0] line_memory [0:1023];
+    logic write_bank = 1'b0;
+    logic complete_bank = 1'b0;
+    logic prior_vdg_hblank = 1'b1;
+    logic [8:0] write_x = 9'd0;
+    always_ff @(posedge vdg_clk) begin
+        if (reset) begin
+            write_bank <= 1'b0;
+            complete_bank <= 1'b0;
+            prior_vdg_hblank <= 1'b1;
+            write_x <= 9'd0;
+        end else if (vdg_pixel_tick) begin
+            prior_vdg_hblank <= vdg_hblank;
+            if (!vdg_hblank) begin
+                if (prior_vdg_hblank) begin
+                    write_x <= 9'd1;
+                    line_memory[{write_bank,9'd0}] <=
+                        {vdg_red[7:6],vdg_green[7:6],vdg_blue[7:6]};
+                end else if (write_x < 9'd371) begin
+                    line_memory[{write_bank,write_x}] <=
+                        {vdg_red[7:6],vdg_green[7:6],vdg_blue[7:6]};
+                    write_x <= write_x + 1'b1;
+                end
+            end else if (!prior_vdg_hblank) begin
+                complete_bank <= write_bank;
+                write_bank <= !write_bank;
+                write_x <= 9'd0;
+            end
+        end
+    end
+
+    logic complete_bank_meta = 1'b0;
+    logic complete_bank_sync = 1'b0;
+    logic display_bank = 1'b0;
+    logic [8:0] line_read_addr = 9'd0;
+    logic [6:0] scale_accumulator = 7'd0;
+    logic [5:0] line_rgb = 6'd0;
+    logic line_active = 1'b0;
+    logic [23:0] stream_rgb;
     logic [23:0] rgb;
-    logic [5:0] border_meta, border_pixel;
-    logic [7:0] height_meta, height_pixel;
+    // Start the VDG 38 lines before HDMI wraps.  Its native reset-to-active
+    // interval then places the 384 active scan-doubled lines near the vertical
+    // center, without changing the VDG or memory timing after release.
+    assign vdg_start = (x == 10'd0) && (y == 10'd487);
+
+    // 371 VDG pixels occupy 700 HDMI pixels: 700*35/66 = 371.21.  Ten black
+    // pixels on either side center the resulting 700-pixel line in 720p-wide
+    // active video.  Select the finished bank during horizontal blanking so
+    // the CDC cannot change buffers part-way through a displayed line.
     always_ff @(posedge pixel_clk) begin
         if (reset) begin
-            border_meta <= 6'd0;
-            border_pixel <= 6'd0;
-            height_meta <= 8'd192;
-            height_pixel <= 8'd192;
+            complete_bank_meta <= 1'b0;
+            complete_bank_sync <= 1'b0;
+            display_bank <= 1'b0;
+            line_read_addr <= 9'd0;
+            scale_accumulator <= 7'd0;
+            line_rgb <= 6'd0;
+            line_active <= 1'b0;
         end else begin
-            border_meta <= border_rgb;
-            border_pixel <= border_meta;
-            height_meta <= active_height;
-            height_pixel <= height_meta;
+            complete_bank_meta <= complete_bank;
+            complete_bank_sync <= complete_bank_meta;
+            if (x == 10'd800)
+                display_bank <= complete_bank_sync;
+
+            line_rgb <= line_memory[{display_bank,line_read_addr}];
+            line_active <= (x >= 10'd10) && (x < 10'd710);
+            if (x == 10'd8) begin
+                line_read_addr <= 9'd0;
+                scale_accumulator <= 7'd0;
+            end else if (x >= 10'd9 && x < 10'd709) begin
+                if (scale_accumulator + 7'd35 >= 7'd66) begin
+                    scale_accumulator <= scale_accumulator + 7'd35 - 7'd66;
+                    if (line_read_addr < 9'd370)
+                        line_read_addr <= line_read_addr + 1'b1;
+                end else begin
+                    scale_accumulator <= scale_accumulator + 7'd35;
+                end
+            end
         end
     end
+    assign stream_rgb = line_active ?
+                        {{4{line_rgb[5:4]}},{4{line_rgb[3:2]}},
+                         {4{line_rgb[1:0]}}} : 24'd0;
 
-    logic [9:0] picture_top;
-    logic [9:0] picture_bottom;
-    always_comb begin
-        picture_top = (10'd480 - {height_pixel,1'b0}) >> 1;
-        picture_bottom = picture_top + {height_pixel,1'b0};
-    end
-
-    always_comb begin
-        framebuffer_addr = 16'd0;
-        source_x = 10'd0;
-        source_y = 8'd0;
-        source_valid = 1'b0;
-        prefetch_y = 8'd0;
-        prefetch_valid = 1'b0;
-        framebuffer_rgb = 24'd0;
-        if (y + 2'd2 >= picture_top && y < picture_bottom) begin
-            // Ask for the following source line from the first of the two
-            // HDMI scanlines, leaving almost a full 63.5 us to render it.
-            prefetch_y = ((y + 2'd2 - picture_top) >> 1);
-            prefetch_valid = 1'b1;
+    // START_X makes the first HDMI x=0 transition approximately coincide
+    // with the VDG left border.  Never reset the encoder once running: even a
+    // one-pixel reset every VDG field breaks the fixed 858x525 TMDS cadence
+    // and prevents some monitors from locking.
+    generate
+        if (ENABLE_DEBUG_OVERLAY != 0) begin : debug_overlay_enabled
+            hdmi_debug_overlay #(
+                .LOG_ADDR_WIDTH(LOG_ADDR_WIDTH),
+                .LOG_COUNT_WIDTH(LOG_COUNT_WIDTH),
+                .LOG_PAGE_WIDTH(LOG_PAGE_WIDTH),
+                .LOG_DEPTH(LOG_DEPTH),
+                .EXTENDED_HEADER(1)
+            ) overlay (
+                .pixel_clk(pixel_clk), .x(x), .y(y),
+                .enable(overlay_enable), .debug_data(320'd0),
+                .debug_clk(debug_clk), .log_we(log_we),
+                .log_addr(log_addr), .log_data(log_data),
+                .log_count(log_count), .log_page(log_page),
+                .debug_status(debug_status), .rgb_in(stream_rgb),
+                .rgb_out(rgb)
+            );
+        end else begin : debug_overlay_disabled
+            assign rgb=stream_rgb;
         end
-        if (x >= (high_resolution ? 10'd40 : 10'd104) &&
-            x <  (high_resolution ? 10'd680 : 10'd616) &&
-            y >= picture_top && y < picture_bottom) begin
-            source_x = high_resolution ? (x - 10'd40) : ((x - 10'd104) >> 1);
-            source_y = (y - picture_top) >> 1;
-            source_valid = 1'b1;
-            framebuffer_addr = (((y - picture_top) >> 1) << 8) +
-                               ((x - 10'd104) >> 1);
-            framebuffer_rgb = {{4{framebuffer_data[5:4]}},
-                               {4{framebuffer_data[3:2]}},
-                               {4{framebuffer_data[1:0]}}};
-        end else if (x >= 10'd40 && x < 10'd680 && y < 10'd480) begin
-            // 32/32 source-pixel side borders.  The 27-line native top and
-            // bottom borders are clipped to 24 lines each by 480p.
-            framebuffer_rgb = {{4{border_pixel[5:4]}},
-                               {4{border_pixel[3:2]}},
-                               {4{border_pixel[1:0]}}};
-        end
-    end
-
-    logic [319:0] debug_pixel = 320'd0;
-    logic debug_enable_meta = 1'b0, debug_enable_pixel = 1'b0;
-    logic [8:0] debug_count_meta = 9'd0, debug_count_pixel = 9'd0;
-    logic [1:0] debug_page_meta = 2'd0, debug_page_pixel = 2'd0;
-    logic [4:0] debug_status_meta = 5'd0, debug_status_pixel = 5'd0;
-    always_ff @(posedge pixel_clk) begin
-        // Bring-up data is held for roughly 0.31 seconds between updates;
-        // one diagnostic-only capture avoids a large duplicate register bank.
-        debug_pixel <= debug_data;
-        debug_enable_meta <= debug_enable;
-        debug_enable_pixel <= debug_enable_meta;
-        debug_count_meta <= debug_log_count;
-        debug_count_pixel <= debug_count_meta;
-        debug_page_meta <= debug_log_page;
-        debug_page_pixel <= debug_page_meta;
-        debug_status_meta <= debug_status;
-        debug_status_pixel <= debug_status_meta;
-    end
-    hdmi_debug_overlay debug_overlay(
-        .pixel_clk(pixel_clk), .x(x), .y(y), .enable(debug_enable_pixel),
-        .debug_data(debug_pixel),
-        .debug_clk(debug_clk), .log_we(debug_log_we),
-        .log_addr(debug_log_addr), .log_data(debug_log_data),
-        .log_count(debug_count_pixel), .log_page(debug_page_pixel),
-        .debug_status(debug_status_pixel),
-        .rgb_in(framebuffer_rgb), .rgb_out(rgb)
-    );
+    endgenerate
 
     logic [15:0] audio_samples [1:0];
-    assign audio_samples[0] = 16'd0;
-    assign audio_samples[1] = 16'd0;
+    assign audio_samples[0]=16'd0;
+    assign audio_samples[1]=16'd0;
     logic [9:0] tmds_internal [2:0];
     hdmi #(
         .VIDEO_ID_CODE(2), .DVI_OUTPUT(1'b1), .VIDEO_REFRESH_RATE(60.0),
-        .AUDIO_RATE(48000), .AUDIO_BIT_WIDTH(16), .NUM_CHANNELS(3)
-    ) hdmi_encoder (
-        .clk_pixel_x5(serial_clk), .clk_pixel(pixel_clk), .clk_audio(pixel_clk),
-        .reset(reset), .rgb(rgb), .audio_sample_word(audio_samples),
-        .cx(x), .cy(y), .frame_width(), .frame_height(),
-        .screen_width(), .screen_height(), .tmds_internal(tmds_internal)
+        .AUDIO_RATE(48000), .AUDIO_BIT_WIDTH(16), .NUM_CHANNELS(3),
+        .START_X(0), .START_Y(0)
+    ) encoder (
+        .clk_pixel_x5(serial_clk), .clk_pixel(pixel_clk),
+        .clk_audio(pixel_clk), .reset(reset), .rgb(rgb),
+        .audio_sample_word(audio_samples), .cx(x), .cy(y),
+        .frame_width(), .frame_height(), .screen_width(), .screen_height(),
+        .tmds_internal(tmds_internal)
     );
+
     logic [2:0] tmds;
     logic unused_clock;
-    serializer #(.NUM_CHANNELS(3), .VIDEO_RATE(0)) serializer_inst (
+    serializer #(.NUM_CHANNELS(3),.VIDEO_RATE(0)) serializer_inst (
         .clk_pixel(pixel_clk), .clk_pixel_x5(serial_clk), .reset(reset),
-        .tmds_internal(tmds_internal), .tmds(tmds), .tmds_clock(unused_clock)
+        .tmds_internal(tmds_internal), .tmds(tmds),
+        .tmds_clock(unused_clock)
     );
     ELVDS_OBUF output_buffers [3:0] (
         .I({pixel_clk,tmds}), .O({tmds_clk_p,tmds_data_p}),

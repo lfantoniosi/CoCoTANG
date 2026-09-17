@@ -1,4 +1,4 @@
-<?xml version="1" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE gowin-fpga-project>
 <Project>
     <Template>FPGA</Template>
@@ -7,32 +7,20 @@
     <FileList>
         <File path="src/gowin_rpll/clk108.v" type="file.verilog" enable="1"/>
         <File path="src/gowin_rpll/clk270.v" type="file.verilog" enable="1"/>
-        <File path="src/bus/input_filter.v" type="file.verilog" enable="1"/>
-        <File path="src/bus/coco_bus_mux.v" type="file.verilog" enable="1"/>
         <File path="src/coco_clocks.v" type="file.verilog" enable="1"/>
         <File path="src/coco_startup.v" type="file.verilog" enable="1"/>
+        <File path="src/bus/input_filter.v" type="file.verilog" enable="1"/>
+        <File path="src/bus/coco_bus_mux.v" type="file.verilog" enable="1"/>
         <File path="src/coco2/coco_sam.v" type="file.verilog" enable="1"/>
         <File path="src/memory/spi_flash_reader.v" type="file.verilog" enable="1"/>
-        <File path="src/memory/sdram.v" type="file.verilog" enable="1"/>
-        <File path="src/memory/sdram_arbiter.v" type="file.verilog" enable="1"/>
         <File path="src/memory/coco_flash_loader.v" type="file.verilog" enable="1"/>
-        <File path="src/memory/sdram_test_fill.v" type="file.verilog" enable="1"/>
+        <File path="src/memory/sdram.v" type="file.verilog" enable="1"/>
+        <File path="src/memory/cpu_sdram_arbiter.v" type="file.verilog" enable="1"/>
         <File path="src/memory/coco_memory.v" type="file.verilog" enable="1"/>
         <File path="src/coco2/mc6847.vhd" type="file.vhdl" enable="1"/>
         <File path="src/coco2/mc6847_char_rom.v" type="file.verilog" enable="1"/>
-        <File path="src/video/video_mode_debug.v" type="file.verilog" enable="1"/>
         <File path="src/coco2/coco_vdg.v" type="file.verilog" enable="1"/>
-        <File path="src/coco2/coco2.v" type="file.verilog" enable="1"/>
-        <File path="src/coco3/gime_timing.v" type="file.verilog" enable="1"/>
-        <File path="src/coco3/gime_registers.v" type="file.verilog" enable="1"/>
-        <File path="src/coco3/gime_mode_debug.v" type="file.verilog" enable="1"/>
-        <File path="src/coco3/gime_video.v" type="file.verilog" enable="1"/>
-        <File path="src/coco3/gime_scanline_buffer.v" type="file.verilog" enable="1"/>
-        <File path="src/coco3/gime_native_video.v" type="file.verilog" enable="1"/>
-        <File path="src/coco3/coco3.v" type="file.verilog" enable="1"/>
         <File path="src/video/coco_framebuffer.v" type="file.verilog" enable="1"/>
-        <File path="src/video/sigma_delta_dac.v" type="file.verilog" enable="1"/>
-        <File path="src/video/coco_analog_video.v" type="file.verilog" enable="1"/>
         <File path="src/video/coco_cvbs_ntsc.v" type="file.verilog" enable="1"/>
         <File path="src/video/hdmi/audio_clock_regeneration_packet.sv" type="file.verilog" enable="1"/>
         <File path="src/video/hdmi/audio_info_frame.sv" type="file.verilog" enable="1"/>

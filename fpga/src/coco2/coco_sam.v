@@ -28,11 +28,22 @@ module coco_sam #(
     // Quarter speed is used only by the physical-CPU delivery diagnostic.
     // It preserves the E/Q phase relationship while expanding every setup
     // and hold interval by four, making marginal external-bus timing obvious.
-    localparam [23:0] SAM_STEP = SLOW_DIAGNOSTIC ? 24'd556063 : 24'd2224252;
+    localparam [23:0] SLOW_SAM_STEP =
+        SLOW_DIAGNOSTIC ? 24'd556063 : 24'd2224252;
+    localparam [23:0] FAST_SAM_STEP =
+        SLOW_DIAGNOSTIC ? 24'd1112126 : 24'd4448504;
     reg [23:0] accumulator = 24'd0;
     reg tick = 1'b0;
     reg [3:0] phase = 4'd0;
-    wire [24:0] sum = {1'b0, accumulator} + {1'b0, SAM_STEP};
+    // R1 selects the SAM's full crystal/8 CPU rate.  In address-dependent
+    // mode (R1:R0 == 01), RAM and the first PIA page stay slow while ROM,
+    // cartridge/I/O and the 6809's $FFFF internal cycles run fast.
+    wire address_dependent_fast = rate == 2'b01 &&
+                                  addr[15] &&
+                                  !(addr[15:5] == 11'b11111111000);
+    wire fast_cpu_rate = rate[1] || address_dependent_fast;
+    wire [23:0] sam_step = fast_cpu_rate ? FAST_SAM_STEP : SLOW_SAM_STEP;
+    wire [24:0] sum = {1'b0, accumulator} + {1'b0, sam_step};
     assign master_tick = tick;
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
