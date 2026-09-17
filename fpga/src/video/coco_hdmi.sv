@@ -72,7 +72,6 @@ module coco_hdmi #(
     logic complete_bank_sync = 1'b0;
     logic display_bank = 1'b0;
     logic [8:0] line_read_addr = 9'd0;
-    logic [6:0] scale_accumulator = 7'd0;
     logic [5:0] line_rgb = 6'd0;
     logic line_active = 1'b0;
     logic [23:0] stream_rgb;
@@ -82,17 +81,16 @@ module coco_hdmi #(
     // center, without changing the VDG or memory timing after release.
     assign vdg_start = (x == 10'd0) && (y == 10'd487);
 
-    // 371 VDG pixels occupy 700 HDMI pixels: 700*35/66 = 371.21.  Ten black
-    // pixels on either side center the resulting 700-pixel line in 720p-wide
-    // active video.  Select the finished bank during horizontal blanking so
-    // the CDC cannot change buffers part-way through a displayed line.
+    // Display 350 centered source pixels at exactly 2x, cropping 10/11 pixels
+    // from the MC6847 border.  This keeps every text stroke the same width.
+    // Select the finished bank during horizontal blanking so the CDC cannot
+    // change buffers part-way through a displayed line.
     always_ff @(posedge pixel_clk) begin
         if (reset) begin
             complete_bank_meta <= 1'b0;
             complete_bank_sync <= 1'b0;
             display_bank <= 1'b0;
             line_read_addr <= 9'd0;
-            scale_accumulator <= 7'd0;
             line_rgb <= 6'd0;
             line_active <= 1'b0;
         end else begin
@@ -104,16 +102,14 @@ module coco_hdmi #(
             line_rgb <= line_memory[{display_bank,line_read_addr}];
             line_active <= (x >= 10'd10) && (x < 10'd710);
             if (x == 10'd8) begin
-                line_read_addr <= 9'd0;
-                scale_accumulator <= 7'd0;
+                line_read_addr <= 9'd10;
             end else if (x >= 10'd9 && x < 10'd709) begin
-                if (scale_accumulator + 7'd35 >= 7'd66) begin
-                    scale_accumulator <= scale_accumulator + 7'd35 - 7'd66;
-                    if (line_read_addr < 9'd370)
-                        line_read_addr <= line_read_addr + 1'b1;
-                end else begin
-                    scale_accumulator <= scale_accumulator + 7'd35;
-                end
+                // Advance after the first pixel of each pair.  The
+                // synchronous line-memory read then presents each source
+                // pixel for exactly two consecutive HDMI clocks.
+                if ((x >= 10'd10) && !x[0] &&
+                    (line_read_addr < 9'd359))
+                    line_read_addr <= line_read_addr + 1'b1;
             end
         end
     end

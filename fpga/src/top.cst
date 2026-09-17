@@ -65,6 +65,11 @@ IO_PORT "hs_n" IO_TYPE=LVCMOS33 PULL_MODE=UP DRIVE=8 BANK_VCCIO=3.3;
 IO_PORT "fs_n" IO_TYPE=LVCMOS33 PULL_MODE=UP DRIVE=8 BANK_VCCIO=3.3;
 IO_PORT "e_out" IO_TYPE=LVCMOS33 PULL_MODE=DOWN DRIVE=8 BANK_VCCIO=3.3;
 IO_PORT "q_out" IO_TYPE=LVCMOS33 PULL_MODE=DOWN DRIVE=8 BANK_VCCIO=3.3;
+// Keep the two physical 6809 clock registers at the locations used by the
+// proven booting image.  Otherwise unrelated HDMI netlist changes can move
+// them and alter the clock-to-pin delay by nearly a nanosecond.
+INS_LOC "sam/e_s0" R16C35[1][A];
+INS_LOC "sam/q_s0" R16C35[0][A];
 IO_PORT "halt_drive" IO_TYPE=LVCMOS33 PULL_MODE=DOWN DRIVE=8 BANK_VCCIO=3.3;
 IO_PORT "sam_s[0]" IO_TYPE=LVCMOS33 PULL_MODE=DOWN DRIVE=8 BANK_VCCIO=3.3;
 IO_PORT "sam_s[1]" IO_TYPE=LVCMOS33 PULL_MODE=DOWN DRIVE=8 BANK_VCCIO=3.3;
