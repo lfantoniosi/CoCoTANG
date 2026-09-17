@@ -101,7 +101,7 @@ module coco_hdmi #(
 
             line_rgb <= line_memory[{display_bank,line_read_addr}];
             line_active <= (x >= 10'd10) && (x < 10'd710);
-            if (x == 10'd8) begin
+            if (x == 10'd7) begin
                 line_read_addr <= 9'd10;
             end else if (x >= 10'd9 && x < 10'd709) begin
                 // Advance after the first pixel of each pair.  The

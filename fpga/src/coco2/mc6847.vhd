@@ -260,11 +260,12 @@ begin
                 end if;
 
                 if h_count = H_LEFT_BORDER then
-                    -- Prime the synchronous scan-doubler RAM one address
-                    -- earlier.  Its output pipeline otherwise starts with
-                    -- FF,00,... while the native writer's first pixel is at
-                    -- FC, producing a three-pixel circular wrap at both edges.
-                    active_h_count := X"FC";
+                    -- Prime the synchronous scan-doubler read pipeline.  The
+                    -- byte-boundary shifter phase removes two former pipeline
+                    -- samples, so FE places the writer's first pixel at the
+                    -- first visible output instead of emitting the final
+                    -- pixel of the prior line first.
+                    active_h_count := X"FE";
                 else
                     active_h_count := std_logic_vector(unsigned(active_h_count) + 1);
                 end if;
