@@ -13,6 +13,7 @@ module top #(
     // unobserved logger cone, keeping it out of CPU/SDRAM placement entirely.
     parameter integer ENABLE_BUS_LOGGER = 0,
     parameter integer DEBUG_OVERLAY = 0,
+    parameter integer ENABLE_ARTIFACT_COLOR = 1,
     parameter integer ANALOG_VIDEO_MODE = 1
 ) (
     input clkin,
@@ -349,7 +350,10 @@ module top #(
     wire [7:0] unused_vdg_cvbs;
     // Keep the asynchronous, mux-sampled RESET node out of the VDG reset path
     // for the same reason. cpu_release is synchronous to clk108.
-    coco_vdg #(.SCAN_DOUBLED_OUTPUT(1)) vdg (
+    coco_vdg #(
+        .SCAN_DOUBLED_OUTPUT(1),
+        .ENABLE_ARTIFACT_COLOR(ENABLE_ARTIFACT_COLOR)
+    ) vdg (
         .clk(clk108), .reset_n(vdg_reset_n), .bus_reset_n(board_reset_n),
         .sam_tick(vdg_master_tick),
         .e_fall(e_fall), .cpu_rw_n(rw_n), .cpu_addr(address),

@@ -464,11 +464,11 @@ begin
             count := (others => '0');
         elsif rising_edge(clk) and cvbs_clk_ena = '1' then
             if active_h_start = '1' then
-                -- Account for the character-ROM/pixel pipeline at the active
-                -- display boundary.  Horizontal wrap is handled by priming
-                -- the VGA line-buffer read address above, not by disturbing
-                -- this native-pixel phase.
-                count := "0010";
+                -- Begin each source line on a byte boundary. The scan-doubler
+                -- RAM read address is primed independently in PROC_VGA; an
+                -- added two-pixel source phase made RG6's third byte straddle
+                -- the first aligned-word transition.
+                count := (others => '0');
             end if;
             if an_g_s = '0' then
                 -- alpha-semi modes

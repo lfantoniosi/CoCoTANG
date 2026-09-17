@@ -48,10 +48,10 @@ Compiling module 'coco_memory'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/
 Compiling module 'coco_flash_loader(SDRAM_ADDRESS=23'b00010000000000000000000)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_flash_loader.v":1)
 Compiling module 'spi_flash_reader'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/spi_flash_reader.v":1)
 Compiling module 'cpu_sdram_arbiter'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/cpu_sdram_arbiter.v":5)
-Compiling module 'coco_vdg(SCAN_DOUBLED_OUTPUT=1)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco_vdg.v":1)
+Compiling module 'coco_vdg(ENABLE_ARTIFACT_COLOR=1,SCAN_DOUBLED_OUTPUT=1)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco_vdg.v":1)
 Compiling module 'mc6847_char_rom'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847_char_rom.v":1)
 Extracting RAM for identifier 'memory'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847_char_rom.v":6)
-Switching to VHDL mode to elaborate design unit 'mc6847'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco_vdg.v":110)
+Switching to VHDL mode to elaborate design unit 'mc6847'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco_vdg.v":114)
 Processing 'mc6847(SYN)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847.vhd":6)
 Extracting RAM for identifier 'VRAM'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847.vhd":133)
 WARN  (EX4749) : 'clk_ena' should be on the sensitivity list of the process. Signal missing is added and assuming complete sensitivity list specified. RTL design and post-synthesis netlist simulations may differ as a result("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847.vhd":235)
@@ -69,7 +69,7 @@ WARN  (EX4749) : 'vga_vsync' should be on the sensitivity list of the process. S
 WARN  (EX4749) : 'vga_hborder' should be on the sensitivity list of the process. Signal missing is added and assuming complete sensitivity list specified. RTL design and post-synthesis netlist simulations may differ as a result("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847.vhd":708)
 WARN  (EX4749) : 'cvbs_vborder' should be on the sensitivity list of the process. Signal missing is added and assuming complete sensitivity list specified. RTL design and post-synthesis netlist simulations may differ as a result("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847.vhd":709)
 WARN  (EX4387) : Incomplete sensitivity list specified, assuming completeness("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847.vhd":712)
-Returning to Verilog mode to proceed with elaboration("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco_vdg.v":110)
+Returning to Verilog mode to proceed with elaboration("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco_vdg.v":114)
 Compiling module 'coco_hdmi(ENABLE_DEBUG_OVERLAY=0)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_hdmi.sv":4)
 Extracting RAM for identifier 'line_memory'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_hdmi.sv":40)
 Compiling module 'hdmi(VIDEO_ID_CODE=2,DVI_OUTPUT=1'b1,VIDEO_REFRESH_RATE=60.0,AUDIO_RATE=48000)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/hdmi.sv":4)
@@ -82,8 +82,8 @@ Compiling module 'coco_cvbs_ntsc(STREAMING_INPUT=1)'("/Users/felipe/src/fpga/CoC
 WARN  (EX3791) : Expression size 9 truncated to fit in target size 8("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_cvbs_ntsc.v":74)
 NOTE  (EX0101) : Current top module is "top"
 [5%] Running netlist conversion ...
-WARN  (CV0016) : Input s2 is unused("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v":20)
-WARN  (CV0016) : Input audio_in is unused("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v":26)
+WARN  (CV0016) : Input s2 is unused("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v":21)
+WARN  (CV0016) : Input audio_in is unused("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v":27)
 Running device independent optimization ...
 [10%] Optimizing Phase 0 completed
 [15%] Optimizing Phase 1 completed
@@ -99,7 +99,7 @@ Running technical mapping ...
 [75%] Tech-Mapping Phase 2 completed
 [80%] Tech-Mapping Phase 3 completed
 [90%] Tech-Mapping Phase 4 completed
-WARN  (NL0002) : The module "input_filter" instantiated to "mux_reset_filter" is swept in optimizing("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v":149)
+WARN  (NL0002) : The module "input_filter" instantiated to "mux_reset_filter" is swept in optimizing("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v":150)
 [95%] Generate netlist file "/Users/felipe/src/fpga/CoCoTANG/fpga/impl/gwsynthesis/CoCoTANG.vg" completed
 [100%] Generate report file "/Users/felipe/src/fpga/CoCoTANG/fpga/impl/gwsynthesis/CoCoTANG_syn.rpt.html" completed
 GowinSynthesis finish

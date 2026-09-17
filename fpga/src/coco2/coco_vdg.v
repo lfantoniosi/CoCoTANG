@@ -1,5 +1,6 @@
 module coco_vdg #(
     parameter integer DEBUG_VIDEO_MODE = 0,
+    parameter integer ENABLE_ARTIFACT_COLOR = 0,
     // The MC6847 core always renders its native stream and stores one line.
     // Select 0 for native RGB or 1 for the line-buffered, scan-doubled RGB
     // output used by a 480p display.  The cvbs port remains the native stream.
@@ -104,7 +105,10 @@ module coco_vdg #(
         .red(red), .green(green), .blue(blue),
         .hsync(unused_hsync), .vsync(unused_vsync),
         .hblank(hblank), .vblank(vblank), .row_prefetch(row_prefetch),
-        .artifact_en(1'b1), .artifact_set(1'b0), .artifact_phase(1'b0),
+        // When artifact colour is disabled, CSS selects black/green
+        // (SCREEN 1,0) or black/white (SCREEN 1,1).
+        .artifact_en(ENABLE_ARTIFACT_COLOR != 0),
+        .artifact_set(1'b0), .artifact_phase(1'b0),
         .cvbs(cvbs), .black_backgnd(1'b0),
         .char_a(char_address), .char_d_o(char_data)
     );
