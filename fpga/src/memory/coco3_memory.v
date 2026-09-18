@@ -1,7 +1,7 @@
 // CoCo 3 physical-CPU memory service.  The GIME supplies the translated
-// 19-bit RAM address; ROM bytes live in a separate SDRAM window.  CPU and
-// scanline traffic share the proven SDRAM controller in alternating CPU and
-// early-E-low background slots, so video never requires a framebuffer.
+// 19-bit RAM address. The internal 32 KiB ROM is loaded from SPI flash into
+// dedicated dual-port BSRAM; CPU RAM and scanline traffic alone share SDRAM
+// in alternating CPU and early-E-low background slots.
 module coco3_memory #(
     parameter integer ROM_BYTES = 32768
 ) (
@@ -30,15 +30,14 @@ module coco3_memory #(
     input [15:0] sd_dout, input [31:0] sd_dout32,
     input sd_data_ready, input sd_busy
 );
-    localparam [22:0] ROM_BASE = 23'h080000;
-    wire [22:0] selected_addr = cpu_mem_is_rom ?
-                                ROM_BASE + cpu_mem_addr : cpu_mem_addr;
+    wire [22:0] selected_addr = cpu_mem_addr;
 
     // Decode/address are available before the atomic mux snapshot pulse.
     // Pipeline them continuously, then freeze one complete transaction for
     // the remainder of the external CPU cycle.
     reg [22:0] selected_addr_pipe=0,cycle_addr=0;
     reg pipe_read=0,pipe_write=0,cycle_read=0,cycle_write=0;
+    reg pipe_rom=0,cycle_rom=0;
     reg cycle_snapshot_seen=0;
     reg cpu_req=0,cpu_wr=0;
     reg [22:0] request_addr=0;
@@ -54,10 +53,12 @@ module coco3_memory #(
     reg [2:0] read_hold=0;
 
     wire snapshot_response_ready = pipe_read &&
-        ((response_valid && response_addr == selected_addr_pipe) ||
+        ((pipe_rom && rom_read_addr_tag == selected_addr_pipe[14:0]) ||
+         (response_valid && response_addr == selected_addr_pipe) ||
          (cpu_ack && !cpu_wr && request_addr == selected_addr_pipe));
     wire current_read_ready = cycle_snapshot_seen && cycle_read &&
-                              response_valid && response_addr == cycle_addr;
+        ((cycle_rom && rom_read_addr_tag == cycle_addr[14:0]) ||
+         (response_valid && response_addr == cycle_addr));
     wire selected_read_in_flight =
         (cpu_req && !cpu_wr && request_addr == selected_addr_pipe) ||
         (pending_valid && !pending_wr &&
@@ -67,6 +68,7 @@ module coco3_memory #(
         if (!reset_n) begin
             selected_addr_pipe<=0; pipe_read<=0; pipe_write<=0;
             cycle_addr<=0; cycle_read<=0; cycle_write<=0;
+            pipe_rom<=0; cycle_rom<=0;
             cycle_snapshot_seen<=0; cpu_req<=0; cpu_wr<=0;
             request_addr<=0; request_wdata<=0;
             response_data<=8'hff; response_addr<=23'h7fffff;
@@ -76,11 +78,13 @@ module coco3_memory #(
         end else if (!cpu_access_enable) begin
             cpu_req<=0; response_valid<=0;
             cycle_read<=0; cycle_write<=0;
+            cycle_rom<=0;
             cycle_snapshot_seen<=0; pending_valid<=0; read_hold<=0;
         end else begin
             selected_addr_pipe<=selected_addr;
             pipe_read<=cpu_mem_read;
             pipe_write<=cpu_mem_write;
+            pipe_rom<=cpu_mem_is_rom;
             if (read_hold != 0) read_hold<=read_hold-1'b1;
 
             if (cpu_ack) begin
@@ -100,7 +104,8 @@ module coco3_memory #(
             // bank has completed its scan.  Speculatively fetch that byte;
             // reads then have the full remainder of Q-low/Q-high to settle,
             // while writes and I/O cycles merely discard the harmless read.
-            if (cpu_address_valid && !selected_read_in_flight) begin
+            if (cpu_address_valid && !pipe_rom &&
+                !selected_read_in_flight) begin
                 if (!cpu_req) begin
                     cpu_wr<=0; request_addr<=selected_addr_pipe;
                     request_wdata<=0; cpu_req<=1;
@@ -113,8 +118,12 @@ module coco3_memory #(
                 cycle_snapshot_seen<=1;
                 cycle_addr<=selected_addr_pipe;
                 cycle_read<=pipe_read; cycle_write<=pipe_write;
+                cycle_rom<=pipe_rom;
                 if (pipe_read) begin
-                    if (snapshot_response_ready) begin
+                    if (pipe_rom) begin
+                        // Internal ROM is already available from BSRAM; leave
+                        // any unrelated SDRAM response alone.
+                    end else if (snapshot_response_ready) begin
                         response_valid<=1;
                         if (pending_valid && !pending_wr &&
                             pending_addr == selected_addr_pipe)
@@ -126,14 +135,17 @@ module coco3_memory #(
                     end else response_valid<=0;
                 end else response_valid<=0;
             end
-            if (cycle_snapshot_seen && cycle_read && !current_read_ready &&
+            if (cycle_snapshot_seen && cycle_read && !cycle_rom &&
+                !current_read_ready &&
                 !cpu_req && !pending_valid) begin
                 pending_wr<=0; pending_addr<=cycle_addr;
                 pending_wdata<=0; pending_valid<=1;
             end
             if (e_fall) begin
                 cycle_snapshot_seen<=0;
-                if (cycle_read && response_valid && response_addr==cycle_addr)
+                if (cycle_read && ((cycle_rom &&
+                    rom_read_addr_tag==cycle_addr[14:0]) ||
+                    (response_valid && response_addr==cycle_addr)))
                     read_hold<=3'd4;
                 if (cycle_write) begin
                     pending_wr<=1; pending_addr<=cycle_addr;
@@ -143,7 +155,11 @@ module coco3_memory #(
         end
     end
 
-    assign cpu_rdata=response_data;
+    // Keep ROM data tied to its synchronous BSRAM address tag instead of
+    // freezing an untagged sample at the mux snapshot. This is important for
+    // interrupt vectors, whose reads immediately follow a burst of stack
+    // writes to unrelated RAM addresses.
+    assign cpu_rdata=cycle_rom ? rom_read_data : response_data;
     // Once the control-bank snapshot arrives, drive the CPU bus from the
     // frozen transaction tag.  Re-decoding the live address through the GIME
     // ROM/MMU mapping here put INIT0 and the complete translated-address
@@ -189,7 +205,7 @@ module coco3_memory #(
     wire [15:0] flash_tail_vector;
     wire [22:0] flash_loader_addr;
     wire [7:0] flash_loader_wdata;
-    coco_flash_loader #(.SDRAM_ADDRESS(ROM_BASE),.BYTE_COUNT(ROM_BYTES)) loader(
+    coco_flash_loader #(.SDRAM_ADDRESS(23'd0),.BYTE_COUNT(ROM_BYTES)) loader(
         .clk(clk),.reset_n(reset_n),.start(sdram_test_pass),.done(raw_loader_done),
         .tail_vector_valid(flash_tail_valid),.tail_vector(flash_tail_vector),
         .mem_req(flash_loader_req),.mem_addr(flash_loader_addr),
@@ -200,64 +216,72 @@ module coco3_memory #(
     assign flash_vector=flash_tail_vector;
     assign flash_vector_pass=flash_tail_valid && flash_tail_vector==16'h8c1b;
 
-    // Before releasing the CPU, read the reset vector back through the same
-    // SDRAM path used by normal CPU cycles.  This distinguishes a bad flash
-    // copy/SDRAM read from corruption later on the physical CPU data bus.
-    localparam VERIFY_WAIT=3'd0,VERIFY_GAP=3'd1,VERIFY_HIGH_REQ=3'd2,
-               VERIFY_HIGH_WAIT=3'd3,VERIFY_HIGH_DROP=3'd4,
-               VERIFY_LOW_WAIT=3'd5,VERIFY_DONE=3'd6;
+    // Dedicated internal CoCo 3 ROM. Port A is written once by the SPI flash
+    // loader; port B continuously follows the CPU ROM address after startup.
+    // During verification, port B is temporarily directed at FFFE/FFFF.
+    (* syn_ramstyle = "block_ram" *) reg [7:0] rom_memory [0:ROM_BYTES-1];
+    reg [7:0] rom_read_data=8'hff;
+    reg [14:0] rom_read_addr_tag=15'h7fff;
+    reg [14:0] verify_rom_addr=15'd0;
+    wire [14:0] rom_read_addr =
+        (raw_loader_done && !rom_verify_done) ? verify_rom_addr :
+                                               cpu_mem_addr[14:0];
+    wire rom_loader_write = sdram_test_pass && !raw_loader_done &&
+                            flash_loader_req;
+    always @(posedge clk) begin
+        if (rom_loader_write)
+            rom_memory[flash_loader_addr[14:0]] <= flash_loader_wdata;
+        rom_read_data <= rom_memory[rom_read_addr];
+        rom_read_addr_tag <= rom_read_addr;
+    end
+    // The loader holds mem_req until it sees mem_ack. The BSRAM write occurs
+    // on the same rising edge at which this combinational acknowledge is
+    // observed, so every flash byte produces exactly one write.
+    assign flash_loader_ack=rom_loader_write;
+
+    // Read the reset vector back from BSRAM before releasing the CPU. Two
+    // prime states account for the synchronous BSRAM read-port latency.
+    localparam VERIFY_WAIT=3'd0,VERIFY_HIGH_PRIME=3'd1,
+               VERIFY_HIGH_CAPTURE=3'd2,VERIFY_LOW_PRIME=3'd3,
+               VERIFY_LOW_CAPTURE=3'd4,VERIFY_DONE=3'd5;
     reg [2:0] verify_state=VERIFY_WAIT;
-    reg verify_req=1'b0;
-    reg [22:0] verify_addr=23'd0;
     reg verify_high_pass=1'b0;
-    wire loader_req=!sdram_test_done ? test_req :
-                    !sdram_test_pass ? 1'b0 :
-                    raw_loader_done ? verify_req : flash_loader_req;
-    wire loader_wr=!sdram_test_done ? test_wr :
-                   !sdram_test_pass ? 1'b0 : !raw_loader_done;
-    wire [22:0] loader_addr=!sdram_test_done ? test_addr :
-                            raw_loader_done ? verify_addr : flash_loader_addr;
-    wire [7:0] loader_wdata=!sdram_test_done ? test_wdata : flash_loader_wdata;
+    wire loader_req=!sdram_test_done && test_req;
+    wire loader_wr=test_wr;
+    wire [22:0] loader_addr=test_addr;
+    wire [7:0] loader_wdata=test_wdata;
     assign test_ack=!sdram_test_done && loader_ack;
-    assign flash_loader_ack=sdram_test_pass && !raw_loader_done && loader_ack;
     assign loader_done=rom_verify_done;
 
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
-            verify_state<=VERIFY_WAIT; verify_req<=1'b0;
-            verify_addr<=23'd0; verify_high_pass<=1'b0;
+            verify_state<=VERIFY_WAIT; verify_rom_addr<=15'd0;
+            verify_high_pass<=1'b0;
             rom_verify_done<=1'b0; rom_verify_pass<=1'b0;
             rom_verify_vector<=16'hffff;
         end else begin
             case (verify_state)
                 VERIFY_WAIT: if (raw_loader_done) begin
-                    // Give the arbiter one request-low cycle after the final
-                    // flash write before changing that client into a reader.
-                    verify_req<=1'b0; verify_state<=VERIFY_GAP;
+                    verify_rom_addr<=ROM_BYTES-2;
+                    verify_state<=VERIFY_HIGH_PRIME;
                 end
-                VERIFY_GAP: begin
-                    verify_addr<=ROM_BASE+ROM_BYTES-2;
-                    verify_state<=VERIFY_HIGH_REQ;
+                VERIFY_HIGH_PRIME:
+                    verify_state<=VERIFY_HIGH_CAPTURE;
+                VERIFY_HIGH_CAPTURE: begin
+                    rom_verify_vector[15:8]<=rom_read_data;
+                    verify_high_pass<=rom_read_data==8'h8c;
+                    verify_rom_addr<=ROM_BYTES-1;
+                    verify_state<=VERIFY_LOW_PRIME;
                 end
-                VERIFY_HIGH_REQ: begin
-                    verify_req<=1'b1; verify_state<=VERIFY_HIGH_WAIT;
-                end
-                VERIFY_HIGH_WAIT: if (loader_ack) begin
-                    rom_verify_vector[15:8]<=loader_rdata;
-                    verify_high_pass<=loader_rdata==8'h8c;
-                    verify_req<=1'b0; verify_state<=VERIFY_HIGH_DROP;
-                end
-                VERIFY_HIGH_DROP: begin
-                    verify_addr<=ROM_BASE+ROM_BYTES-1;
-                    verify_req<=1'b1; verify_state<=VERIFY_LOW_WAIT;
-                end
-                VERIFY_LOW_WAIT: if (loader_ack) begin
-                    rom_verify_vector[7:0]<=loader_rdata;
-                    rom_verify_pass<=verify_high_pass && loader_rdata==8'h1b;
-                    rom_verify_done<=1'b1; verify_req<=1'b0;
+                VERIFY_LOW_PRIME:
+                    verify_state<=VERIFY_LOW_CAPTURE;
+                VERIFY_LOW_CAPTURE: begin
+                    rom_verify_vector[7:0]<=rom_read_data;
+                    rom_verify_pass<=verify_high_pass && rom_read_data==8'h1b;
+                    rom_verify_done<=1'b1;
                     verify_state<=VERIFY_DONE;
                 end
-                default: verify_req<=1'b0;
+                default: begin end
             endcase
         end
     end

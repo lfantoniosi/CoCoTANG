@@ -5,8 +5,9 @@ module top_coco3 #(
     parameter integer RESET_HOLD_CYCLES=10800000,
     parameter integer LOG_DEPTH=4096,
     parameter [15:0] LOG_START_ADDRESS=16'hC0D1,
+    //parameter [15:0] LOG_START_ADDRESS=16'hA0CB,
     parameter [15:0] LOG_WRITE_START_ADDRESS=16'h0000,
-    parameter [15:0] LOG_WRITE_END_ADDRESS=16'h0000,
+    parameter [15:0] LOG_WRITE_END_ADDRESS=16'h000,
     parameter integer LOG_REBASE_EVERY_MATCH=1,
     parameter integer ENABLE_BUS_LOGGER=1,
     parameter integer DEBUG_OVERLAY=1,
@@ -36,6 +37,7 @@ module top_coco3 #(
     reg cpu_release=0;
     wire [15:0] address;
     wire rw_n;
+    wire e_core,q_core,e_rise,e_fall;
     wire mux_reset_n,mux_slenb_n,mux_sernt_n,mux_cart_n,mux_keyint_n;
     wire mux_halt_n,mux_nmi_n,bus_address_ready_async,bus_snapshot_ready_async;
 
@@ -62,7 +64,7 @@ module top_coco3 #(
             q_scan_meta<=0; q_scan_sync<=0; q_scan_delay<=0;
             bus_scan_start<=0;
         end else begin
-            q_scan_meta<=q_out; q_scan_sync<=q_scan_meta;
+            q_scan_meta<=q_core; q_scan_sync<=q_scan_meta;
             q_scan_delay<=q_scan_sync;
             // Register the edge pulse before it fans into the mux scanner.
             // One 135 MHz clock is well inside the Q-to-E acquisition budget.
@@ -101,7 +103,6 @@ module top_coco3 #(
     input_filter #(.WIDTH(1)) mux_reset_filter(.clk(clk108),
         .reset_n(board_reset_n),.in(mux_reset_n),.out(filtered_mux_reset_n));
 
-    wire e_rise,e_fall;
     wire cpu_mem_read,cpu_mem_write,cpu_mem_is_rom;
     wire [22:0] cpu_mem_addr;
     wire [7:0] core_rdata;
@@ -132,7 +133,8 @@ module top_coco3 #(
         .cpu_rw_n(rw_n),.cpu_data(cpu_write_data),
         .serint_n(gime_serint_n),.keyint_n(gime_keyint_n),.cart_n(mux_cart_n),
         .irq_assert(gime_irq),.firq_assert(gime_firq),.sam_s(sam_s),
-        .e(e_out),.q(q_out),.e_rise(e_rise),.e_fall(e_fall),
+        .e(e_core),.q(q_core),.e_pin(e_out),.q_pin(q_out),
+        .e_rise(e_rise),.e_fall(e_fall),
         .cpu_mem_read(cpu_mem_read),.cpu_mem_write(cpu_mem_write),
         .cpu_mem_is_rom(cpu_mem_is_rom),.cpu_mem_addr(cpu_mem_addr),
         .core_rdata(core_rdata),.core_data_oe(core_data_oe),
@@ -212,7 +214,7 @@ module top_coco3 #(
     wire cpu_memory_service=system_ready;
     always @(posedge clk108 or negedge board_reset_n) begin
         if (!board_reset_n) cpu_write_data<=8'hff;
-        else if (cpu_bus_active && e_out && !rw_n) cpu_write_data<=cpu_data_in;
+        else if (cpu_bus_active && e_core && !rw_n) cpu_write_data<=cpu_data_in;
     end
 
     wire [7:0] memory_rdata;
@@ -220,7 +222,7 @@ module top_coco3 #(
     coco3_memory memory(.clk(clk108),.reset_n(sdram_reset_n),
         .loader_start(loader_start),.cpu_access_enable(cpu_memory_service),
         .cpu_bus_valid(bus_snapshot_valid),.cpu_address_valid(bus_address_valid),
-        .e(e_out),.q(q_out),.e_fall(e_fall),
+        .e(e_core),.q(q_core),.e_fall(e_fall),
         .cpu_mem_read(cpu_mem_read),
         .cpu_mem_write(cpu_mem_write && cpu_bus_active),
         .cpu_mem_is_rom(cpu_mem_is_rom),.cpu_mem_addr(cpu_mem_addr),
@@ -281,7 +283,7 @@ module top_coco3 #(
         .LOG_WRITE_END_ADDRESS(LOG_WRITE_END_ADDRESS),
         .LOG_REBASE_EVERY_MATCH(LOG_REBASE_EVERY_MATCH)) logger(
         .clk(clk108),.reset_n(board_reset_n),.capture_enable(cpu_release),
-        .bus_reset_n(filtered_mux_reset_n),.e_fall(e_fall),.q(q_out),
+        .bus_reset_n(filtered_mux_reset_n),.e_fall(e_fall),.q(q_core),
         .rw_n(rw_n),.address(address),.cpu_data(cpu_data_in),
         .expected_data(fpga_read_data),.s(sam_s),.data_oe(fpga_data_oe),
         .memory_wait(cpu_memory_wait),.log_we(log_we),.log_addr(log_addr),
@@ -332,8 +334,8 @@ module top_coco3 #(
         // Display asserted levels: KEYINT and SERNT are active-low inputs;
         // IRQ and FIRQ are active-high requests to the output transistors.
         .interrupt_status({!gime_keyint_n,!gime_serint_n,gime_irq,gime_firq}),
-        .rom_verify_done(flash_vector_done),.rom_verify_pass(flash_vector_pass),
-        .rom_verify_vector(flash_vector),
+        .rom_verify_done(rom_verify_done),.rom_verify_pass(rom_verify_pass),
+        .rom_verify_vector(rom_verify_vector),
         .sdram_test_done(sdram_test_done),.sdram_test_pass(sdram_test_pass),
         .sdram_test_error_addr(sdram_test_error_addr),
         .sdram_test_expected(sdram_test_expected),

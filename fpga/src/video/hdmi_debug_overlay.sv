@@ -200,8 +200,8 @@ module hdmi_debug_overlay #(
                 41:character=":";
                 42:character=bit_char((EXTENDED_HEADER==2) ?
                                       interrupt_status[0] : debug_status[0]);
-                44:character="F"; 45:character="L"; 46:character="A";
-                47:character="S"; 48:character="H"; 49:character=":";
+                44:character="B"; 45:character="R"; 46:character="O";
+                47:character="M"; 49:character=":";
                 50:character=rom_verify_done ? hex_char(rom_verify_vector[15:12]) : "-";
                 51:character=rom_verify_done ? hex_char(rom_verify_vector[11:8]) : "-";
                 52:character=rom_verify_done ? hex_char(rom_verify_vector[7:4]) : "-";

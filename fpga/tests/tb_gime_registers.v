@@ -118,6 +118,11 @@ module tb_gime_registers;
         cpu_addr=16'hc03c; cpu_rw_n=1; #1;
         if (cpu_mem_is_rom || !cpu_mem_read || cpu_mem_addr!=23'h07c03c || sam_s!=0)
             errors=errors+1;
+        // TY/all-RAM never displaces the internal hardware vectors.
+        cpu_addr=16'hfff8; cpu_rw_n=1; #1;
+        if (!cpu_mem_read || !cpu_mem_is_rom ||
+            cpu_mem_addr!=23'h007ff8 || sam_s!=0)
+            errors=errors+1;
         write_reg(16'hffde,8'h00);
         cpu_addr=16'h8000; cpu_rw_n=1; #1;
         if (!cpu_mem_is_rom) errors=errors+1;

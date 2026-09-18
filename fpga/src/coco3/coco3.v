@@ -19,6 +19,8 @@ module coco3 #(
     output      [2:0] sam_s,
     output            e,
     output            q,
+    output            e_pin,
+    output            q_pin,
     output            e_rise,
     output            e_fall,
     output            cpu_mem_read,
@@ -68,6 +70,7 @@ module coco3 #(
         // E/Q must run while the physical CPU is held in RESET; register and
         // video state remain reset until cpu_reset_n is released.
         .clk(clk), .reset_n(reset_n), .fast_mode(fast_mode), .e(e), .q(q),
+        .e_pin(e_pin), .q_pin(q_pin),
         .e_rise(e_rise), .e_fall(e_fall)
     );
 

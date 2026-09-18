@@ -32,7 +32,13 @@ module gime_registers (
     wire gime_selected = cpu_addr >= 16'hff90 && cpu_addr <= 16'hffbf;
     wire io_selected = cpu_addr >= 16'hff00 && cpu_addr < 16'hffe0;
     wire vector_selected = cpu_addr >= 16'hffe0;
-    wire rom_window = !ram_mode && cpu_addr >= 16'h8000 && !io_selected;
+    // The hardware-vector page is always supplied by the internal ROM,
+    // including while TY selects all-RAM mode.  Keeping vector_selected
+    // outside the ram_mode qualification is essential: IRQ entry commonly
+    // occurs after Extended BASIC has enabled all-RAM, and otherwise FFF8/9
+    // are incorrectly translated through the RAM/MMU path.
+    wire rom_window = vector_selected ||
+                      (!ram_mode && cpu_addr >= 16'h8000 && !io_selected);
     wire [1:0] rom_map = init0[1:0];
     // INIT0.MC1:MC0: 0x is 16K internal plus 16K external, 10 is
     // 32K internal, and 11 is 32K external except for vectors.  The FPGA

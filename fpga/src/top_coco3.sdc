@@ -1,6 +1,7 @@
 create_clock -name clkin -period 37.037 [get_ports {clkin}] -add
 create_clock -name clk108 -period 9.259 [get_nets {clk108}] -add
 # clk108p is the PLL-generated SDRAM clock; Gowin derives it from CLKOUTP.
+create_clock -name clk108p -period 9.259 -waveform {4.629 9.259} [get_ports {O_sdram_clk}] -add
 create_clock -name clk270 -period 3.704 [get_nets {clk270}] -add
 create_clock -name clk135 -period 7.407 [get_nets {clk135}] -add
 create_clock -name clk27 -period 37.037 [get_nets {clk27}] -add

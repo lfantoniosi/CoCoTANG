@@ -213,12 +213,16 @@ always @(posedge clk or negedge resetn) begin
             //  ff_data_ready ____________________________/       \_______   
             //  ff_busy   ________/                               \_______
             //                 `-T_RCD-'------CAS------'
-            {READ, T_RCD}: begin
-                {FF_SDRAM_nRAS, FF_SDRAM_nCAS, FF_SDRAM_nWE} <= CMD_Read;
+            // Pre-drive column address and DQM a complete controller clock
+            // before the phase-shifted SDRAM samples the READ command.
+            {READ, T_RCD-5'd1}: begin
                 FF_SDRAM_A[10] <= 1'b1;        // set auto precharge
                 FF_SDRAM_A[9:0] <= {1'b0, addr[COL_WIDTH-1+1:1]};  // column address
                 FF_SDRAM_DQM <= 4'b0;
                 off <= addr[0];
+            end
+            {READ, T_RCD}: begin
+                {FF_SDRAM_nRAS, FF_SDRAM_nCAS, FF_SDRAM_nWE} <= CMD_Read;
             end
             {READ, T_RCD+CAS+5'd1}: begin
                 read_data <= dq_in;
@@ -237,14 +241,19 @@ always @(posedge clk or negedge resetn) begin
             //  DQ                    | Din   |
             //  ff_busy   _______/                               \_______
             //                `-T_RCD-'-------T_WR+T_RP-------'
-            {WRITE, T_RCD}: begin
-                {FF_SDRAM_nRAS, FF_SDRAM_nCAS, FF_SDRAM_nWE} <= CMD_Write;
+            // Pre-drive address, mask and DQ one full clock before WRITE.
+            // Previously they changed on the command edge and had only the
+            // half-cycle clk108/clk108p phase interval to settle at the RAM.
+            {WRITE, T_RCD-5'd1}: begin
                 FF_SDRAM_A[10] <= 1'b1;        // set auto precharge
                 FF_SDRAM_A[9:0] <= {1'b0, addr[COL_WIDTH-1+1:1]};  // column address
                 FF_SDRAM_DQM <= addr[0] == 1'd0 ? { 2'b11, wdm } : { wdm, 2'b11 } ;     // only write the correct byte
                 off <= addr[0];
                 dq_out <= {din,din};
                 dq_oen <= 1'b0;                 // DQ output on
+            end
+            {WRITE, T_RCD}: begin
+                {FF_SDRAM_nRAS, FF_SDRAM_nCAS, FF_SDRAM_nWE} <= CMD_Write;
             end
             {WRITE, T_RCD+5'd1}: begin
                 dq_oen <= 1'b1;
