@@ -1,13 +1,14 @@
 Reading netlist file: "/Users/felipe/src/fpga/CoCoTANG/fpga/impl/gwsynthesis/CoCoTANG.vg"
 Parsing netlist file "/Users/felipe/src/fpga/CoCoTANG/fpga/impl/gwsynthesis/CoCoTANG.vg" completed
 Processing netlist completed
-Reading constraint file: "/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.cst"
+Reading constraint file: "/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.cst"
 Physical Constraint parsed completed
 Running placement......
 [10%] Placement Phase 0 completed
 [20%] Placement Phase 1 completed
 [30%] Placement Phase 2 completed
 WARN  (TA1117) : Can't calculate clocks' relationship between: "clkin" and "clk135"
+WARN  (TA1117) : Can't calculate clocks' relationship between: "clk270" and "clk27"
 [50%] Placement Phase 3 completed
 Running routing......
 [60%] Routing Phase 0 completed
@@ -27,5 +28,5 @@ Generate file "/Users/felipe/src/fpga/CoCoTANG/fpga/impl/pnr/CoCoTANG.pin.html" 
 Generate file "/Users/felipe/src/fpga/CoCoTANG/fpga/impl/pnr/CoCoTANG.rpt.html" completed
 Generate file "/Users/felipe/src/fpga/CoCoTANG/fpga/impl/pnr/CoCoTANG.rpt.txt" completed
 Generate file "/Users/felipe/src/fpga/CoCoTANG/fpga/impl/pnr/CoCoTANG.tr.html" completed
-Thu Sep 17 00:50:08 2026
+Thu Sep 17 21:25:56 2026
 

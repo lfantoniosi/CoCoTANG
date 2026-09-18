@@ -65,11 +65,11 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 </tr>
 <tr>
 <td class="label">Physical Constraints File</td>
-<td>/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.cst</td>
+<td>/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.cst</td>
 </tr>
 <tr>
 <td class="label">Timing Constraints File</td>
-<td>/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.sdc</td>
+<td>/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.sdc</td>
 </tr>
 <tr>
 <td class="label">Tool Version</td>
@@ -89,7 +89,7 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 </tr>
 <tr>
 <td class="label">Created Time</td>
-<td>Thu Sep 17 00:50:08 2026
+<td>Thu Sep 17 21:25:56 2026
 </td>
 </tr>
 <tr>
@@ -161,7 +161,7 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 <table class="summary_table">
 <tr>
 <td class="label">Total Power (mW)</td>
-<td>261.777</td>
+<td>412.530</td>
 </tr>
 <tr>
 <td class="label">Quiescent Power (mW)</td>
@@ -169,14 +169,14 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 </tr>
 <tr>
 <td class="label">Dynamic Power (mW)</td>
-<td>138.977</td>
+<td>289.730</td>
 </tr>
 </table>
 <h2><a name="Thermal_Info">Thermal Information:</a></h2>
 <table class="summary_table">
 <tr>
 <td class="label">Junction Temperature</td>
-<td>32.811</td>
+<td>37.310</td>
 </tr>
 <tr>
 <td class="label">Theta JA</td>
@@ -184,7 +184,7 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 </tr>
 <tr>
 <td class="label">Max Allowed Ambient Temperature</td>
-<td>77.189</td>
+<td>72.690</td>
 </tr>
 </table>
 <h2><a name="Supply_Summary">Supply Information:</a></h2>
@@ -199,23 +199,23 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 <tr>
 <td>VCC</td>
 <td>1.000</td>
-<td>79.272</td>
+<td>219.949</td>
 <td>70.000</td>
-<td>149.272</td>
+<td>289.949</td>
 </tr>
 <tr>
 <td>VCCX</td>
 <td>3.300</td>
-<td>9.046</td>
+<td>10.573</td>
 <td>15.000</td>
-<td>79.353</td>
+<td>84.391</td>
 </tr>
 <tr>
 <td>VCCIO33</td>
 <td>3.300</td>
-<td>9.046</td>
+<td>10.573</td>
 <td>1.000</td>
-<td>33.153</td>
+<td>38.191</td>
 </tr>
 </table>
 <h1><a name="Detail">Power Details</a></h1>
@@ -229,19 +229,19 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 </tr>
 <tr>
 <td>Logic</td>
-<td>4.026</td>
+<td>9.123</td>
 <td>NA</td>
-<td>13.379</td>
+<td>12.896</td>
 </tr>
 <tr>
 <td>IO</td>
-<td>87.812
-<td>18.955
-<td>14.050
+<td>99.465
+<td>19.005
+<td>15.957
 </tr>
 <tr>
 <td>BSRAM</td>
-<td>26.444
+<td>149.678
 <td>NA</td>
 <td>NA</td>
 </tr>
@@ -250,6 +250,12 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 <td>39.540
 <td>NA</td>
 <td>NA</td>
+</tr>
+<tr>
+<td>DSP</td>
+<td>10.827
+<td>NA</td>
+<td>8.630
 </tr>
 </table>
 <h2><a name="By_Hierarchy">Power By Hierarchy:</a></h2>
@@ -260,89 +266,117 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 <th class="label">Block Dynamic Power(mW)</th>
 </tr>
 <tr>
-<td>top</td>
-<td>70.009</td>
-<td>70.009(69.877)</td>
+<td>top_coco3</td>
+<td>209.167</td>
+<td>209.167(208.873)</td>
 <tr>
-<td>top/analog_encoder/</td>
-<td>1.214</td>
-<td>1.214(0.000)</td>
+<td>top_coco3/analog_encoder/</td>
+<td>1.619</td>
+<td>1.619(0.000)</td>
 <tr>
-<td>top/bus_mux/</td>
-<td>0.034</td>
-<td>0.034(0.000)</td>
+<td>top_coco3/bus_mux/</td>
+<td>0.095</td>
+<td>0.095(0.000)</td>
 <tr>
-<td>top/clocks/</td>
+<td>top_coco3/clocks/</td>
 <td>39.581</td>
 <td>39.581(39.540)</td>
 <tr>
-<td>top/clocks/sdram_pll/</td>
+<td>top_coco3/clocks/sdram_pll/</td>
 <td>11.297</td>
 <td>11.297(0.000)</td>
 <tr>
-<td>top/clocks/video_pll/</td>
+<td>top_coco3/clocks/video_pll/</td>
 <td>28.243</td>
 <td>28.243(0.000)</td>
 <tr>
-<td>top/hdmi_output/</td>
-<td>9.799</td>
-<td>9.799(0.097)</td>
+<td>top_coco3/hdmi_output/</td>
+<td>96.907</td>
+<td>96.907(96.829)</td>
 <tr>
-<td>top/hdmi_output/encoder/</td>
-<td>0.097</td>
-<td>0.097(0.065)</td>
+<td>top_coco3/hdmi_output/encoder/</td>
+<td>0.137</td>
+<td>0.137(0.106)</td>
 <tr>
-<td>top/hdmi_output/encoder/tmds_gen[0].tmds_channel/</td>
-<td>0.023</td>
-<td>0.023(0.000)</td>
+<td>top_coco3/hdmi_output/encoder/tmds_gen[0].tmds_channel/</td>
+<td>0.042</td>
+<td>0.042(0.000)</td>
 <tr>
-<td>top/hdmi_output/encoder/tmds_gen[1].tmds_channel/</td>
-<td>0.021</td>
-<td>0.021(0.000)</td>
+<td>top_coco3/hdmi_output/encoder/tmds_gen[1].tmds_channel/</td>
+<td>0.037</td>
+<td>0.037(0.000)</td>
 <tr>
-<td>top/hdmi_output/encoder/tmds_gen[2].tmds_channel/</td>
-<td>0.021</td>
-<td>0.021(0.000)</td>
+<td>top_coco3/hdmi_output/encoder/tmds_gen[2].tmds_channel/</td>
+<td>0.027</td>
+<td>0.027(0.000)</td>
 <tr>
-<td>top/memory/</td>
-<td>1.286</td>
-<td>1.286(0.484)</td>
+<td>top_coco3/hdmi_output/overlay_enabled.overlay/</td>
+<td>96.692</td>
+<td>96.692(0.000)</td>
 <tr>
-<td>top/memory/arbiter/</td>
-<td>0.209</td>
-<td>0.209(0.000)</td>
+<td>top_coco3/logger_enabled.logger/</td>
+<td>0.385</td>
+<td>0.385(0.000)</td>
 <tr>
-<td>top/memory/loader/</td>
-<td>0.276</td>
-<td>0.276(0.124)</td>
+<td>top_coco3/machine/</td>
+<td>69.151</td>
+<td>69.151(69.058)</td>
 <tr>
-<td>top/memory/loader/reader/</td>
-<td>0.124</td>
-<td>0.124(0.000)</td>
+<td>top_coco3/machine/cvbs_lines/</td>
+<td>41.465</td>
+<td>41.465(1.390)</td>
 <tr>
-<td>top/sam/</td>
-<td>0.257</td>
-<td>0.257(0.000)</td>
-<tr>
-<td>top/sdram_controller/</td>
-<td>0.221</td>
-<td>0.221(0.000)</td>
-<tr>
-<td>top/startup/</td>
-<td>0.033</td>
-<td>0.033(0.000)</td>
-<tr>
-<td>top/vdg/</td>
-<td>17.452</td>
-<td>17.452(17.371)</td>
-<tr>
-<td>top/vdg/character_rom/</td>
+<td>top_coco3/machine/cvbs_lines/character_rom/</td>
 <td>1.390</td>
 <td>1.390(0.000)</td>
 <tr>
-<td>top/vdg/vdg_0/</td>
-<td>15.981</td>
-<td>15.981(0.000)</td>
+<td>top_coco3/machine/hdmi_lines/</td>
+<td>26.032</td>
+<td>26.032(1.390)</td>
+<tr>
+<td>top_coco3/machine/hdmi_lines/character_rom/</td>
+<td>1.390</td>
+<td>1.390(0.000)</td>
+<tr>
+<td>top_coco3/machine/native_video/</td>
+<td>0.333</td>
+<td>0.333(0.000)</td>
+<tr>
+<td>top_coco3/machine/registers/</td>
+<td>0.925</td>
+<td>0.925(0.000)</td>
+<tr>
+<td>top_coco3/machine/timing/</td>
+<td>0.304</td>
+<td>0.304(0.000)</td>
+<tr>
+<td>top_coco3/memory/</td>
+<td>0.878</td>
+<td>0.878(0.485)</td>
+<tr>
+<td>top_coco3/memory/arbiter/</td>
+<td>0.211</td>
+<td>0.211(0.000)</td>
+<tr>
+<td>top_coco3/memory/loader/</td>
+<td>0.274</td>
+<td>0.274(0.123)</td>
+<tr>
+<td>top_coco3/memory/loader/reader/</td>
+<td>0.123</td>
+<td>0.123(0.000)</td>
+<tr>
+<td>top_coco3/mux_reset_filter/</td>
+<td>0.003</td>
+<td>0.003(0.000)</td>
+<tr>
+<td>top_coco3/sdram_controller/</td>
+<td>0.219</td>
+<td>0.219(0.000)</td>
+<tr>
+<td>top_coco3/startup/</td>
+<td>0.035</td>
+<td>0.035(0.000)</td>
 </table>
 <h2><a name="By_Clock_Domain">Power By Clock Domain:</a></h2>
 <table class="detail_table">
@@ -354,12 +388,12 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 <tr>
 <td>clkin</td>
 <td>27.000</td>
-<td>39.560</td>
+<td>39.558</td>
 </tr>
 <tr>
 <td>clk108</td>
 <td>108.003</td>
-<td>27.135</td>
+<td>125.277</td>
 </tr>
 <tr>
 <td>NO CLOCK DOMAIN</td>
@@ -367,19 +401,19 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 <td>0.000</td>
 </tr>
 <tr>
-<td>clk135</td>
-<td>135.007</td>
-<td>1.086</td>
+<td>clk270</td>
+<td>269.978</td>
+<td>0.891</td>
 </tr>
 <tr>
 <td>clk27</td>
 <td>27.000</td>
-<td>2.031</td>
+<td>22.857</td>
 </tr>
 <tr>
-<td>clk270</td>
-<td>269.978</td>
-<td>0.308</td>
+<td>clk135</td>
+<td>135.007</td>
+<td>20.686</td>
 </tr>
 </table>
 </div><!-- content -->

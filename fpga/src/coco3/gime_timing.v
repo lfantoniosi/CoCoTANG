@@ -1,6 +1,7 @@
 module gime_timing (
     input      clk,
     input      reset_n,
+    input      fast_mode,
     output reg e,
     output reg q,
     output reg e_rise,
@@ -8,10 +9,12 @@ module gime_timing (
 );
     // CoCo master timing: 108 MHz -> average 14.31818 MHz, divided into the
     // sixteen SAM/GIME phases which produce E and Q.
-    localparam [31:0] STEP = 32'd569408471;
+    localparam [31:0] SLOW_STEP = 32'd569408471;
+    localparam [31:0] FAST_STEP = 32'd1138816942;
     reg [31:0] accumulator = 32'd0;
     reg [3:0] phase = 4'd0;
-    wire [32:0] sum = {1'b0,accumulator} + {1'b0,STEP};
+    wire [32:0] sum = {1'b0,accumulator} +
+                      {1'b0,(fast_mode ? FAST_STEP : SLOW_STEP)};
 
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin

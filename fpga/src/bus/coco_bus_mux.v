@@ -1,4 +1,6 @@
-module coco_bus_mux (
+module coco_bus_mux #(
+    parameter integer SETTLE_CYCLES = 7
+) (
     input         clk,
     input         reset_n,
     input         scan_start,
@@ -13,6 +15,7 @@ module coco_bus_mux (
     output        keyint_n,
     output        halt_n,
     output        nmi_n,
+    output        address_ready,
     output        snapshot_valid
 );
     // Allow the 6809 outputs, 74HC139 selector and LVC245 path to settle.
@@ -20,25 +23,28 @@ module coco_bus_mux (
     // diagnostic setting produced mixed-byte snapshots on the prototype
     // (for example, FFFE appeared as FEFF).  Acquisition starts just after
     // Q rises after the 6809E address and external mux inputs are stable.
-    localparam [2:0] SETTLE_CYCLES = 3'd7;
+    localparam integer SETTLE_WIDTH =
+        (SETTLE_CYCLES < 1) ? 1 : $clog2(SETTLE_CYCLES+1);
     reg [1:0] select_reg = 2'b00;
     reg [1:0] bank = 2'd0;
-    reg [2:0] settle_count = 3'd0;
+    reg [SETTLE_WIDTH-1:0] settle_count = {SETTLE_WIDTH{1'b0}};
     reg       scanning = 1'b0;
     reg [7:0] address_low = 8'hff;
     reg [7:0] address_high = 8'hff;
     reg [23:0] snapshot = 24'hffffff;
+    reg address_ready_reg = 1'b0;
     reg snapshot_valid_reg = 1'b0;
 
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
             select_reg <= 2'b00;
             bank <= 2'd0;
-            settle_count <= 3'd0;
+            settle_count <= {SETTLE_WIDTH{1'b0}};
             scanning <= 1'b0;
             address_low <= 8'hff;
             address_high <= 8'hff;
             snapshot <= 24'hffffff;
+            address_ready_reg <= 1'b0;
             snapshot_valid_reg <= 1'b0;
         end else begin
             if (scan_start) begin
@@ -52,8 +58,9 @@ module coco_bus_mux (
                 address_low <= mp;
                 select_reg <= 2'b01;
                 bank <= 2'd1;
-                settle_count <= 3'd0;
+                settle_count <= {SETTLE_WIDTH{1'b0}};
                 scanning <= 1'b1;
+                address_ready_reg <= 1'b0;
                 snapshot_valid_reg <= 1'b0;
             end else if (scanning) begin
                 // Use a bounded settling interval so input noise cannot
@@ -61,7 +68,7 @@ module coco_bus_mux (
                 if (settle_count != SETTLE_CYCLES)
                     settle_count <= settle_count + 1'b1;
                 else begin
-                    settle_count <= 3'd0;
+                    settle_count <= {SETTLE_WIDTH{1'b0}};
                     case (bank)
                         2'd0: begin
                             address_low <= mp;
@@ -70,6 +77,7 @@ module coco_bus_mux (
                         end
                         2'd1: begin
                             address_high <= mp;
+                            address_ready_reg <= 1'b1;
                             select_reg <= 2'b10;
                             bank <= 2'd2;
                         end
@@ -107,5 +115,6 @@ module coco_bus_mux (
     assign keyint_n = snapshot[21];
     assign halt_n = snapshot[22];
     assign nmi_n = snapshot[23];
+    assign address_ready = address_ready_reg;
     assign snapshot_valid = snapshot_valid_reg;
 endmodule

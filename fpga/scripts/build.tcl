@@ -1,8 +1,20 @@
 if {![info exists ::env(COCOTANG_FPGA_ROOT)]} {
     error "COCOTANG_FPGA_ROOT is not set"
 }
+if {![info exists ::env(COCOTANG_PROJECT)]} {
+    set ::env(COCOTANG_PROJECT) CoCoTANG.gprj
+}
+if {![info exists ::env(COCOTANG_TOP)]} {
+    set ::env(COCOTANG_TOP) top_coco3
+}
+if {![info exists ::env(COCOTANG_OUTPUT)]} {
+    set ::env(COCOTANG_OUTPUT) CoCoTANG
+}
 cd $::env(COCOTANG_FPGA_ROOT)
-open_project [file join $::env(COCOTANG_FPGA_ROOT) CoCoTANG.gprj]
-set_option -top_module top
-set_option -output_base_name CoCoTANG
+open_project [file join $::env(COCOTANG_FPGA_ROOT) $::env(COCOTANG_PROJECT)]
+set_option -top_module $::env(COCOTANG_TOP)
+set_option -output_base_name $::env(COCOTANG_OUTPUT)
+set_option -verilog_std sysv2017
+set_option -use_mspi_as_gpio 1
+set_option -use_sspi_as_gpio 1
 run all

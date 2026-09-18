@@ -59,11 +59,11 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 </tr>
 <tr>
 <td class="label">Physical Constraints File</td>
-<td>/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.cst</td>
+<td>/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.cst</td>
 </tr>
 <tr>
 <td class="label">Timing Constraints File</td>
-<td>/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.sdc</td>
+<td>/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.sdc</td>
 </tr>
 <tr>
 <td class="label">Tool Version</td>
@@ -83,7 +83,7 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 </tr>
 <tr>
 <td class="label">Created Time</td>
-<td>Thu Sep 17 00:50:08 2026
+<td>Thu Sep 17 21:25:56 2026
 </td>
 </tr>
 <tr>
@@ -97,24 +97,24 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 <tr>
 <td class="label">Place & Route Process</td>
 <td>Running placement:
-   Placement Phase 0: CPU time = 0h 0m 0.075s, Elapsed time = 0h 0m 0.075s
-   Placement Phase 1: CPU time = 0h 0m 0.064s, Elapsed time = 0h 0m 0.064s
-   Placement Phase 2: CPU time = 0h 0m 0.092s, Elapsed time = 0h 0m 0.092s
-   Placement Phase 3: CPU time = 0h 0m 0.225s, Elapsed time = 0h 0m 0.225s
-   Total Placement: CPU time = 0h 0m 0.456s, Elapsed time = 0h 0m 0.456s
+   Placement Phase 0: CPU time = 0h 0m 0.17s, Elapsed time = 0h 0m 0.17s
+   Placement Phase 1: CPU time = 0h 0m 0.067s, Elapsed time = 0h 0m 0.067s
+   Placement Phase 2: CPU time = 0h 0m 0.33s, Elapsed time = 0h 0m 0.33s
+   Placement Phase 3: CPU time = 0h 0m 0.434s, Elapsed time = 0h 0m 0.434s
+   Total Placement: CPU time = 0h 0m 1s, Elapsed time = 0h 0m 1s
 Running routing:
-   Routing Phase 0: CPU time = 0h 0m 0s, Elapsed time = 0h 0m 0s
-   Routing Phase 1: CPU time = 0h 0m 0.727s, Elapsed time = 0h 0m 0.727s
-   Routing Phase 2: CPU time = 0h 0m 0.422s, Elapsed time = 0h 0m 0.423s
+   Routing Phase 0: CPU time = 0h 0m 0.001s, Elapsed time = 0h 0m 0.001s
+   Routing Phase 1: CPU time = 0h 0m 0.686s, Elapsed time = 0h 0m 0.687s
+   Routing Phase 2: CPU time = 0h 0m 1s, Elapsed time = 0h 0m 1s
    Routing Phase 3: CPU time = 0h 0m 0s, Elapsed time = 0h 0m 0s
-   Total Routing: CPU time = 0h 0m 1s, Elapsed time = 0h 0m 1s
+   Total Routing: CPU time = 0h 0m 2s, Elapsed time = 0h 0m 2s
 Generate output files:
-   CPU time = 0h 0m 0.646s, Elapsed time = 0h 0m 0.646s
+   CPU time = 0h 0m 0.618s, Elapsed time = 0h 0m 0.621s
 </td>
 </tr>
 <tr>
 <td class="label">Total Time and Memory Usage</td>
-<td>CPU time = 0h 0m 2s, Elapsed time = 0h 0m 2s, Peak memory usage = 465MB</td>
+<td>CPU time = 0h 0m 3s, Elapsed time = 0h 0m 3s, Peak memory usage = 505MB</td>
 </tr>
 </table>
 <br/>
@@ -129,23 +129,23 @@ Generate output files:
 </tr>
 <tr>
 <td class="label">Logic</td>
-<td>1991/20736</td>
-<td>10%</td>
+<td>4132/20736</td>
+<td>20%</td>
 </tr>
 <tr>
 <td class="label">&nbsp &nbsp --LUT,ALU,ROM16</td>
-<td>1991(1740 LUT, 251 ALU, 0 ROM16)</td>
+<td>4072(3212 LUT, 860 ALU, 0 ROM16)</td>
 <td>-</td>
 </tr>
 <tr>
 <td class="label">&nbsp &nbsp --SSRAM(RAM16)</td>
-<td>0</td>
+<td>10</td>
 <td>-</td>
 </tr>
 <tr>
 <td class="label">Register</td>
-<td>1200/15915</td>
-<td>8%</td>
+<td>2352/15915</td>
+<td>15%</td>
 </tr>
 <tr>
 <td class="label">&nbsp &nbsp --Logic Register as Latch</td>
@@ -154,8 +154,8 @@ Generate output files:
 </tr>
 <tr>
 <td class="label">&nbsp &nbsp --Logic Register as FF</td>
-<td>1149/15552</td>
-<td>8%</td>
+<td>2299/15552</td>
+<td>15%</td>
 </tr>
 <tr>
 <td class="label">&nbsp &nbsp --I/O Register as Latch</td>
@@ -164,13 +164,13 @@ Generate output files:
 </tr>
 <tr>
 <td class="label">&nbsp &nbsp --I/O Register as FF</td>
-<td>51/363</td>
+<td>53/363</td>
 <td>15%</td>
 </tr>
 <tr>
 <td class="label">CLS</td>
-<td>1374/10368</td>
-<td>14%</td>
+<td>3026/10368</td>
+<td>30%</td>
 </tr>
 <tr>
 <td class="label">I/O Port</td>
@@ -179,12 +179,12 @@ Generate output files:
 </tr>
 <tr>
 <td class="label">I/O Buf</td>
-<td>40</td>
+<td>41</td>
 <td>-</td>
 </tr>
 <tr>
 <td class="label"> &nbsp &nbsp --Input Buf</td>
-<td>11</td>
+<td>12</td>
 <td>-</td>
 </tr>
 <tr>
@@ -204,8 +204,12 @@ Generate output files:
 </tr>
 <tr>
 <td class="label">BSRAM</td>
-<td>2 SDPB<br/>1 pROM<br/></td>
-<td>7%</td>
+<td>14 SDPB<br/>2 pROM<br/></td>
+<td>35%</td>
+</tr>
+<tr>
+<td class="label">DSP</td>
+<td>3 MULTADDALU18X18<br/></td><td>13%</td>
 </tr>
 </table>
 <h2><a name="I/O_Bank_Usage_Summary">I/O Bank Usage Summary:</a></h2>
@@ -262,8 +266,8 @@ Generate output files:
 </tr>
 <tr>
 <td class="label">LW</td>
-<td>4/8</td>
-<td>50%</td>
+<td>7/8</td>
+<td>88%</td>
 </tr>
 <tr>
 <td class="label">GCLK_PIN</td>
@@ -292,12 +296,12 @@ Generate output files:
 <tr>
 <td class="label">clkin_d</td>
 <td>PRIMARY</td>
-<td> TR TL BR BL</td>
+<td> BR BL</td>
 </tr>
 <tr>
 <td class="label">clk27</td>
 <td>PRIMARY</td>
-<td> TR BR BL</td>
+<td> TR TL BR BL</td>
 </tr>
 <tr>
 <td class="label">clk108</td>
@@ -317,10 +321,15 @@ Generate output files:
 <tr>
 <td class="label">clk135</td>
 <td>PRIMARY</td>
-<td> TR TL BR BL</td>
+<td> TR TL BR</td>
 </tr>
 <tr>
-<td class="label">board_reset_n_Z</td>
+<td class="label">n665_6</td>
+<td>LW</td>
+<td> -</td>
+</tr>
+<tr>
+<td class="label">halt_drive_d_4</td>
 <td>LW</td>
 <td> -</td>
 </tr>
@@ -330,12 +339,22 @@ Generate output files:
 <td> -</td>
 </tr>
 <tr>
-<td class="label">n283_12</td>
+<td class="label">system_ready_Z</td>
 <td>LW</td>
 <td> -</td>
 </tr>
 <tr>
-<td class="label">vdg/vdg_0/n2381_5</td>
+<td class="label">machine/n217_5</td>
+<td>LW</td>
+<td> -</td>
+</tr>
+<tr>
+<td class="label">machine/hdmi_lines/fill_bank_16</td>
+<td>LW</td>
+<td> -</td>
+</tr>
+<tr>
+<td class="label">machine/cvbs_lines/fill_bank_16</td>
 <td>LW</td>
 <td> -</td>
 </tr>

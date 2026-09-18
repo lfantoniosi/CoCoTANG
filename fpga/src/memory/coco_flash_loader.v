@@ -1,7 +1,12 @@
 module coco_flash_loader #(
     parameter [23:0] FLASH_ADDRESS = 24'h100000,
     parameter [22:0] SDRAM_ADDRESS = 23'h010000,
-    parameter integer BYTE_COUNT = 16384
+    parameter integer BYTE_COUNT = 16384,
+    // The MSPI pins are ordinary fabric I/O in this design.  Use a generous
+    // half-period so MISO is settled before each sample across placements and
+    // boards; ROM loading is a one-time boot operation, so the added latency
+    // is negligible.
+    parameter integer SPI_CLK_DIV = 4
 ) (
     input clk, input reset_n, input start,
     output reg done,
@@ -16,7 +21,7 @@ module coco_flash_loader #(
     wire [7:0] flash_byte;
     wire flash_valid;
 
-    spi_flash_reader #(.CLK_DIV(2)) reader (
+    spi_flash_reader #(.CLK_DIV(SPI_CLK_DIV)) reader (
         .clk(clk), .reset_n(reset_n), .start(flash_start), .stop(flash_stop),
         .start_addr(FLASH_ADDRESS), .byte_ready(byte_ready),
         .byte_data(flash_byte), .byte_valid(flash_valid), .busy(),

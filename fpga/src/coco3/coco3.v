@@ -11,6 +11,11 @@ module coco3 #(
     input      [15:0] cpu_addr,
     input             cpu_rw_n,
     input       [7:0] cpu_data,
+    input             serint_n,
+    input             keyint_n,
+    input             cart_n,
+    output            irq_assert,
+    output            firq_assert,
     output      [2:0] sam_s,
     output            e,
     output            q,
@@ -58,8 +63,11 @@ module coco3 #(
 );
     wire core_reset_n = reset_n && cpu_reset_n;
 
+    wire fast_mode;
     gime_timing timing (
-        .clk(clk), .reset_n(core_reset_n), .e(e), .q(q),
+        // E/Q must run while the physical CPU is held in RESET; register and
+        // video state remain reset until cpu_reset_n is released.
+        .clk(clk), .reset_n(reset_n), .fast_mode(fast_mode), .e(e), .q(q),
         .e_rise(e_rise), .e_fall(e_fall)
     );
 
@@ -69,16 +77,24 @@ module coco3 #(
     wire [3:0] vertical_scroll;
     wire [15:0] video_offset;
     wire [7:0] horizontal_offset;
+    wire compatibility_mode;
+    wire [6:0] sam_video_offset;
     wire [95:0] palettes;
     gime_registers registers (
         .clk(clk), .reset_n(core_reset_n), .e(e), .e_fall(e_fall),
         .cpu_addr(cpu_addr), .cpu_rw_n(cpu_rw_n), .cpu_data(cpu_data),
+        .serint_n(serint_n), .keyint_n(keyint_n), .cart_n(cart_n),
+        .hs_n(hs_n), .fs_n(fs_n),
+        .irq_assert(irq_assert), .firq_assert(firq_assert),
+        .fast_mode(fast_mode),
         .core_rdata(core_rdata), .core_data_oe(core_data_oe), .sam_s(sam_s),
         .cpu_mem_read(cpu_mem_read), .cpu_mem_write(cpu_mem_write),
         .cpu_mem_is_rom(cpu_mem_is_rom), .cpu_mem_addr(cpu_mem_addr),
         .vmode(vmode), .vres(vres), .border_color(border_color),
         .vertical_scroll(vertical_scroll), .video_offset(video_offset),
-        .horizontal_offset(horizontal_offset), .palettes(palettes)
+        .horizontal_offset(horizontal_offset),
+        .compatibility_mode(compatibility_mode),
+        .sam_video_offset(sam_video_offset), .palettes(palettes)
     );
 
     wire debug_bit_plane;
@@ -110,14 +126,24 @@ module coco3 #(
             effective_lines_per_row_code <= 3'd3;
             effective_screen_base <= 19'd0;
         end else begin
-            effective_bit_plane <= DEBUG_S2_VIDEO_MODE ? debug_bit_plane : vmode[7];
-            effective_hres <= DEBUG_S2_VIDEO_MODE ? debug_hres : vres[4:2];
-            effective_cres <= DEBUG_S2_VIDEO_MODE ? debug_cres : vres[1:0];
-            effective_lpf <= DEBUG_S2_VIDEO_MODE ? debug_lpf : vres[6:5];
+            effective_bit_plane <= DEBUG_S2_VIDEO_MODE ? debug_bit_plane :
+                                   compatibility_mode ? 1'b0 : vmode[7];
+            effective_hres <= DEBUG_S2_VIDEO_MODE ? debug_hres :
+                              compatibility_mode ? 3'b000 : vres[4:2];
+            effective_cres <= DEBUG_S2_VIDEO_MODE ? debug_cres :
+                              compatibility_mode ? 2'b00 : vres[1:0];
+            effective_lpf <= DEBUG_S2_VIDEO_MODE ? debug_lpf :
+                             compatibility_mode ? 2'b00 : vres[6:5];
+            // GIME LPR=000 means one raster line in native mode.  It must
+            // not be used as the reset value while COCO=1: compatible
+            // 32-column text is the MC6847 twelve-raster character cell.
             effective_lines_per_row_code <= DEBUG_S2_VIDEO_MODE ?
-                                                  debug_lines_per_row_code : vmode[2:0];
-            effective_screen_base <= DEBUG_S2_VIDEO_MODE ?
-                                                  19'd0 : {video_offset,3'b000};
+                debug_lines_per_row_code : compatibility_mode ? 3'b111 :
+                vmode[2:0];
+            effective_screen_base <= DEBUG_S2_VIDEO_MODE ? 19'd0 :
+                compatibility_mode ?
+                    19'h70000 + {sam_video_offset,9'b0} :
+                    {video_offset,3'b000};
         end
     end
 
@@ -159,7 +185,10 @@ module coco3 #(
 
     // Lock ownership from request through response; wait for the selected
     // renderer to drop its request before accepting another transaction.
-    localparam M_IDLE=2'd0,M_LAUNCH=2'd1,M_WAIT=2'd2,M_DROP=2'd3;
+    // The request must remain asserted until memory acknowledges it: SDRAM
+    // accepts video traffic only in an interleaved E-low slot, so a one-clock
+    // pulse can miss that window and leave the renderer waiting forever.
+    localparam M_IDLE=2'd0,M_WAIT=2'd1,M_DROP=2'd2;
     reg [1:0] mux_state=0;
     reg mux_owner=0;
     reg round_robin=0;
@@ -172,15 +201,16 @@ module coco3 #(
             mux_state<=M_IDLE; mux_owner<=0; round_robin<=0;
             video_request_reg<=0; video_addr_reg<=0; hdmi_valid<=0; cvbs_valid<=0;
         end else begin
-            video_request_reg<=0; hdmi_valid<=0; cvbs_valid<=0;
+            hdmi_valid<=0; cvbs_valid<=0;
             case (mux_state)
                 M_IDLE: if (hdmi_req || cvbs_req) begin
                     mux_owner <= hdmi_req && cvbs_req ? round_robin : cvbs_req;
                     video_addr_reg <= (hdmi_req && (!cvbs_req || !round_robin)) ? hdmi_addr : cvbs_addr;
-                    mux_state<=M_LAUNCH;
+                    video_request_reg<=1;
+                    mux_state<=M_WAIT;
                 end
-                M_LAUNCH: begin video_request_reg<=1; mux_state<=M_WAIT; end
                 M_WAIT: if (video_memory_valid) begin
+                    video_request_reg<=0;
                     if (mux_owner) cvbs_valid<=1; else hdmi_valid<=1;
                     round_robin<=!mux_owner; mux_state<=M_DROP;
                 end

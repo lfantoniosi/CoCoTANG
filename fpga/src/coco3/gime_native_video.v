@@ -7,15 +7,18 @@ module gime_native_video (
     localparam [31:0] RASTER_STEP = 32'd569408471;
     reg [31:0] accumulator=0;
     wire [32:0] sum={1'b0,accumulator}+{1'b0,RASTER_STEP};
+    reg raster_tick=0;
     reg [9:0] x=0;
     reg [8:0] y=0;
     wire [8:0] top=(9'd262-{1'b0,active_height})>>1;
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
-            accumulator<=0; x<=0; y<=0; hs_n<=1; fs_n<=1; hblank<=1; vblank<=1;
+            accumulator<=0; raster_tick<=0; x<=0; y<=0;
+            hs_n<=1; fs_n<=1; hblank<=1; vblank<=1;
         end else begin
             accumulator<=sum[31:0];
-            if (sum[32]) begin
+            raster_tick<=sum[32];
+            if (raster_tick) begin
                 hs_n<=x>=10'd64; fs_n<=y>=9'd3;
                 hblank<=x<10'd200 || x>=10'd840;
                 vblank<=y<top || y>=top+active_height;

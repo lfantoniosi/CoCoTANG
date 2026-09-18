@@ -98,6 +98,11 @@ module gime_scanline_buffer (
                              (prefetch_valid_s && !prefetch_cached);
     wire [7:0] requested_y = (display_valid_s && !display_cached) ?
                              display_y_s : prefetch_y_s;
+    // Register the cache/tag decision before it fans into the rendering
+    // state machine and all of the captured line-configuration registers.
+    // This is also a clean CDC settling stage for the output coordinates.
+    reg request_available_pipe = 1'b0;
+    reg [7:0] requested_y_pipe = 8'd0;
 
     reg fill_bank = 1'b0;
     reg next_bank = 1'b0;
@@ -138,8 +143,11 @@ module gime_scanline_buffer (
                                  cres == 2'd1 ? {2'd0,live_graphics_bytes,2'b00} :
                                                {1'd0,live_graphics_bytes,1'b0};
     wire [10:0] live_width = bit_plane ? graphics_width : {1'b0,live_columns,3'b000};
-    wire [10:0] graphics_byte_index = cres == 2'd0 ? (source_x >> 3) :
-                                        cres == 2'd1 ? (source_x >> 2) : (source_x >> 1);
+    // Rendering uses the mode captured when this line fill began.  Using the
+    // live CRES input here both mixed configurations within a line and left a
+    // long live-register-to-address path.
+    wire [10:0] graphics_byte_index = fill_cres == 2'd0 ? (source_x >> 3) :
+                                        fill_cres == 2'd1 ? (source_x >> 2) : (source_x >> 1);
     wire [6:0] character_column = source_x[9:3];
     wire [18:0] calculated_byte_address = fill_bit_plane ?
         fill_base + row_address + graphics_byte_index + {11'd0,fill_hoff,1'b0} :
@@ -190,6 +198,16 @@ module gime_scanline_buffer (
 
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
+            request_available_pipe <= 1'b0;
+            requested_y_pipe <= 8'd0;
+        end else begin
+            request_available_pipe <= (state == IDLE) && request_available;
+            requested_y_pipe <= requested_y;
+        end
+    end
+
+    always @(posedge clk or negedge reset_n) begin
+        if (!reset_n) begin
             state<=IDLE; memory_request<=0; memory_addr<=0;
             tag0_valid<=0; tag1_valid<=0; next_bank<=0; mode_signature<=9'h1ff;
             last_screen_base<=19'h7ffff; last_horizontal_offset<=8'hff;
@@ -203,8 +221,8 @@ module gime_scanline_buffer (
                 tag0_valid <= 1'b0; tag1_valid <= 1'b0;
                 state <= IDLE; memory_request <= 1'b0; word_valid <= 1'b0;
             end else case (state)
-                IDLE: if (request_available) begin
-                    fill_y <= requested_y;
+                IDLE: if (request_available_pipe) begin
+                    fill_y <= requested_y_pipe;
                     // Never overwrite a line which is currently being scanned.
                     if (tag0_valid && tag0 == display_y_s) fill_bank <= 1'b1;
                     else if (tag1_valid && tag1 == display_y_s) fill_bank <= 1'b0;
@@ -213,7 +231,7 @@ module gime_scanline_buffer (
                     fill_attributes<=live_attributes; fill_lpr<=lines_per_row(lines_per_row_code);
                     fill_stride<=live_stride; fill_width<=live_width;
                     fill_base<=screen_base; fill_hoff<=horizontal_offset[6:0];
-                    fill_palettes<=palettes; row_remainder<=requested_y; source_row<=0;
+                    fill_palettes<=palettes; row_remainder<=requested_y_pipe; source_row<=0;
                     word_valid<=0; state<=DIVIDE_ROW;
                 end
                 DIVIDE_ROW: begin
