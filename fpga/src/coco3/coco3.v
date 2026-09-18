@@ -114,55 +114,8 @@ module coco3 #(
         .lines_per_row_code(debug_lines_per_row_code)
     );
 
-    reg effective_bit_plane = 1'b0;
-    reg [2:0] effective_hres = 3'd0;
-    reg [1:0] effective_cres = 2'd0;
-    reg [1:0] effective_lpf = 2'd0;
-    reg [2:0] effective_lines_per_row_code = 3'd3;
-    // Debug modes always view physical RAM from zero. Normal operation uses
-    // the GIME's 19-bit screen-base register (FF9D:FF9E multiplied by eight).
-    reg [18:0] effective_screen_base = 19'd0;
-    always @(posedge clk or negedge core_reset_n) begin
-        if (!core_reset_n) begin
-            effective_bit_plane <= 1'b0;
-            effective_hres <= 3'd0;
-            effective_cres <= 2'd0;
-            effective_lpf <= 2'd0;
-            effective_lines_per_row_code <= 3'd3;
-            effective_screen_base <= 19'd0;
-        end else begin
-            effective_bit_plane <= DEBUG_S2_VIDEO_MODE ? debug_bit_plane :
-                                   compatibility_mode ? 1'b0 : vmode[7];
-            effective_hres <= DEBUG_S2_VIDEO_MODE ? debug_hres :
-                              compatibility_mode ? 3'b000 : vres[4:2];
-            effective_cres <= DEBUG_S2_VIDEO_MODE ? debug_cres :
-                              compatibility_mode ? 2'b00 : vres[1:0];
-            effective_lpf <= DEBUG_S2_VIDEO_MODE ? debug_lpf :
-                             compatibility_mode ? 2'b00 : vres[6:5];
-            // GIME LPR=000 means one raster line in native mode.  It must
-            // not be used as the reset value while COCO=1: compatible
-            // 32-column text is the MC6847 twelve-raster character cell.
-            effective_lines_per_row_code <= DEBUG_S2_VIDEO_MODE ?
-                debug_lines_per_row_code : compatibility_mode ? 3'b111 :
-                vmode[2:0];
-            effective_screen_base <= DEBUG_S2_VIDEO_MODE ? 19'd0 :
-                compatibility_mode ?
-                    19'h70000 + {sam_video_offset,9'b0} :
-                    {video_offset,3'b000};
-        end
-    end
-
-    function [5:0] palette_rgb;
-        input [5:0] color;
-        begin palette_rgb={color[5],color[2],color[4],color[1],color[3],color[0]}; end
-    endfunction
-    assign border_rgb=palette_rgb(border_color);
-    assign framebuffer_write=1'b0;
-    assign framebuffer_write_addr=16'd0;
-    assign framebuffer_write_data=6'd0;
-
     // PIA1 PB drives the compatibility-mode MC6847 controls on a real
-    // CoCo 3. Shadow the DDR/data selection for CSS and SG4/SG6 decoding.
+    // CoCo 3. Shadow the DDR/data selection for A/G, GM, CSS and SG4/SG6.
     reg [7:0] pia1_pb = 8'd0;
     reg [7:0] pia1_ddrb = 8'd0;
     reg [7:0] pia1_crb = 8'd0;
@@ -181,6 +134,82 @@ module coco3 #(
         end
     end
     wire [7:0] pia1_effective = pia1_pb & pia1_ddrb;
+    wire compatibility_an_g = pia1_effective[7];
+    wire [2:0] compatibility_gm = pia1_effective[6:4];
+
+    function [2:0] compatibility_hres;
+        input [2:0] gm;
+        begin
+            case (gm)
+                3'd2,3'd4,3'd6,3'd7: compatibility_hres=3'd2; // 32 bytes
+                default: compatibility_hres=3'd0;              // 16 bytes
+            endcase
+        end
+    endfunction
+
+    function [2:0] compatibility_lpr;
+        input [2:0] gm;
+        begin
+            if (gm <= 3'd2) compatibility_lpr=3'b010;      // 64 lines, 3x
+            else if (gm <= 3'd4) compatibility_lpr=3'b001; // 96 lines, 2x
+            else compatibility_lpr=3'b000;                 // 192 lines
+        end
+    endfunction
+
+    reg effective_bit_plane = 1'b0;
+    reg [2:0] effective_hres = 3'd0;
+    reg [1:0] effective_cres = 2'd0;
+    reg [1:0] effective_lpf = 2'd0;
+    reg [2:0] effective_lines_per_row_code = 3'd3;
+    // Debug modes always view physical RAM from zero. Normal operation uses
+    // the GIME's 19-bit screen-base register (FF9D:FF9E multiplied by eight).
+    reg [18:0] effective_screen_base = 19'd0;
+    always @(posedge clk or negedge core_reset_n) begin
+        if (!core_reset_n) begin
+            effective_bit_plane <= 1'b0;
+            effective_hres <= 3'd0;
+            effective_cres <= 2'd0;
+            effective_lpf <= 2'd0;
+            effective_lines_per_row_code <= 3'd3;
+            effective_screen_base <= 19'd0;
+        end else begin
+            effective_bit_plane <= DEBUG_S2_VIDEO_MODE ? debug_bit_plane :
+                                   compatibility_mode ? compatibility_an_g : vmode[7];
+            effective_hres <= DEBUG_S2_VIDEO_MODE ? debug_hres :
+                              compatibility_mode ? compatibility_hres(compatibility_gm) :
+                                                   vres[4:2];
+            effective_cres <= DEBUG_S2_VIDEO_MODE ? debug_cres :
+                              compatibility_mode ?
+                                  (compatibility_an_g ?
+                                      (compatibility_gm[0] ? 2'b00 : 2'b01) :
+                                      2'b00) : vres[1:0];
+            effective_lpf <= DEBUG_S2_VIDEO_MODE ? debug_lpf :
+                             compatibility_mode ? 2'b00 : vres[6:5];
+            // GIME LPR=000 means one raster line in native mode.  It must
+            // not be used as the reset value while COCO=1: compatible
+            // 32-column text is the MC6847 twelve-raster character cell.
+            effective_lines_per_row_code <= DEBUG_S2_VIDEO_MODE ?
+                debug_lines_per_row_code : compatibility_mode ?
+                (compatibility_an_g ? compatibility_lpr(compatibility_gm) : 3'b111) :
+                vmode[2:0];
+            effective_screen_base <= DEBUG_S2_VIDEO_MODE ? 19'd0 :
+                compatibility_mode ?
+                    19'h70000 + {sam_video_offset,9'b0} :
+                    {video_offset,3'b000};
+        end
+    end
+
+    function [5:0] palette_rgb;
+        input [5:0] color;
+        begin palette_rgb={color[5],color[2],color[4],color[1],color[3],color[0]}; end
+    endfunction
+    assign border_rgb=compatibility_mode ?
+        (compatibility_an_g ?
+            (pia1_effective[3] ? 6'b111111 : 6'b001100) : 6'b000000) :
+        palette_rgb(border_color);
+    assign framebuffer_write=1'b0;
+    assign framebuffer_write_addr=16'd0;
+    assign framebuffer_write_data=6'd0;
 
     wire hdmi_req,cvbs_req;
     wire [22:0] hdmi_addr,cvbs_addr;
@@ -192,9 +221,10 @@ module coco3 #(
         .screen_base(effective_screen_base),
         .horizontal_offset(horizontal_offset), .palettes(palettes),
         .compatibility_mode(compatibility_mode),
+        .compatibility_an_g(compatibility_an_g),
         .compatibility_css(pia1_effective[3]),
         .compatibility_int_ext(pia1_effective[4]),
-        .output_width(compatibility_mode ? 10'd512 : 10'd640),
+        .output_width(10'd512),
         .read_clk(hdmi_read_clk),.read_x(hdmi_source_x),
         .display_y(hdmi_source_y),.display_valid(hdmi_source_valid),
         .prefetch_y(hdmi_prefetch_y),.prefetch_valid(hdmi_prefetch_valid),
@@ -207,6 +237,7 @@ module coco3 #(
         .lines_per_row_code(effective_lines_per_row_code),.screen_base(effective_screen_base),
         .horizontal_offset(horizontal_offset),.palettes(palettes),
         .compatibility_mode(compatibility_mode),
+        .compatibility_an_g(compatibility_an_g),
         .compatibility_css(pia1_effective[3]),
         .compatibility_int_ext(pia1_effective[4]),
         .output_width(10'd640),

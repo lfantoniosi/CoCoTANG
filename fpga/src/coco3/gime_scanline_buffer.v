@@ -12,6 +12,7 @@ module gime_scanline_buffer (
     input      [7:0]  horizontal_offset,
     input      [95:0] palettes,
     input             compatibility_mode,
+    input             compatibility_an_g,
     input             compatibility_css,
     input             compatibility_int_ext,
     input      [9:0]  output_width,
@@ -210,7 +211,22 @@ module gime_scanline_buffer (
                 (pixel_set ? {1'b0,attribute[5:3]} : {1'b1,attribute[2:0]}) :
                 (pixel_set ? 4'd1 : 4'd0);
 
-        if (fill_compatibility) begin
+        if (fill_compatibility && fill_bit_plane) begin
+            // Legacy MC6847 graphics: CRES=0 is one-bit resolution graphics;
+            // CRES=1 is two-bit colour graphics. Unlike alpha mode, zero in
+            // a resolution mode is black, while every colour-graphics pair
+            // selects a bright chroma value.
+            if (fill_cres == 2'd0) begin
+                if (color_index[0])
+                    compatibility_rgb = mc6847_bright_rgb(
+                        {fill_compatibility_css,2'b00});
+                else
+                    compatibility_rgb = 6'b000000;
+            end else begin
+                compatibility_rgb = mc6847_bright_rgb(
+                    {fill_compatibility_css,color_index[1:0]});
+            end
+        end else if (fill_compatibility) begin
             if (character[7]) begin
                 if (!fill_compatibility_int_ext) begin
                     if (glyph_line < 4'd6)
@@ -239,6 +255,7 @@ module gime_scanline_buffer (
         end
     end
     reg [3:0] pixel_color_index = 4'd0;
+    reg [5:0] pixel_compatibility_rgb = 6'd0;
     wire [5:0] pixel_palette = fill_palettes[pixel_color_index*6 +: 6];
 
     localparam IDLE=4'd0, DIVIDE_ROW=4'd1, ROW_ADDRESS=4'd2, LINE_ADDRESS=4'd3,
@@ -248,13 +265,13 @@ module gime_scanline_buffer (
                COLOR_INDEX=4'd11, WRITE_PIXEL=4'd12;
     reg [3:0] state = IDLE;
     reg [10:0] phase_sum;
-    reg [11:0] mode_signature = 12'hfff;
+    reg [12:0] mode_signature = 13'h1fff;
     reg [18:0] last_screen_base = 19'h7ffff;
     reg [7:0] last_horizontal_offset = 8'hff;
     reg [9:0] last_output_width = 10'd0;
-    wire [11:0] live_signature = {compatibility_mode,compatibility_css,
-                                  compatibility_int_ext,bit_plane,hres,cres,
-                                  lines_per_row_code};
+    wire [12:0] live_signature = {compatibility_mode,compatibility_an_g,
+                                  compatibility_css,compatibility_int_ext,
+                                  bit_plane,hres,cres,lines_per_row_code};
     wire configuration_diff = live_signature != mode_signature ||
                               screen_base != last_screen_base ||
                               horizontal_offset != last_horizontal_offset ||
@@ -274,7 +291,7 @@ module gime_scanline_buffer (
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
             state<=IDLE; memory_request<=0; memory_addr<=0;
-            tag0_valid<=0; tag1_valid<=0; next_bank<=0; mode_signature<=12'hfff;
+            tag0_valid<=0; tag1_valid<=0; next_bank<=0; mode_signature<=13'h1fff;
             last_screen_base<=19'h7ffff; last_horizontal_offset<=8'hff;
             last_output_width<=10'd0;
             configuration_changed<=1'b1;
@@ -354,13 +371,17 @@ module gime_scanline_buffer (
                     memory_request<=0; state<=CHECK_ATTRIBUTE;
                 end
                 FONT_WAIT: state<=COLOR_INDEX;
-                COLOR_INDEX: begin pixel_color_index<=color_index; state<=WRITE_PIXEL; end
+                COLOR_INDEX: begin
+                    pixel_color_index<=color_index;
+                    pixel_compatibility_rgb<=compatibility_rgb;
+                    state<=WRITE_PIXEL;
+                end
                 WRITE_PIXEL: begin
                     if (fill_bank)
-                        line1[out_x] <= fill_compatibility ? compatibility_rgb :
+                        line1[out_x] <= fill_compatibility ? pixel_compatibility_rgb :
                                         palette_rgb(pixel_palette);
                     else
-                        line0[out_x] <= fill_compatibility ? compatibility_rgb :
+                        line0[out_x] <= fill_compatibility ? pixel_compatibility_rgb :
                                         palette_rgb(pixel_palette);
                     if (out_x == fill_output_width-1'b1) begin
                         if (fill_bank) begin tag1<=fill_y; tag1_valid<=1; end

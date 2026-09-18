@@ -58,7 +58,10 @@ module coco3_hdmi #(
     always_comb begin
         doubled_height={1'b0,height_s,1'b0};
         top=(10'd480-doubled_height)>>1;
-        picture_width=compatibility_s ? 10'd512 : 10'd640;
+        // The GIME's 640-dot modes describe the same 4:3 display aperture as
+        // its 256-dot modes. Resample every mode into 512x(2*LPF) rather than
+        // exposing the CRT's non-square 640-dot sampling as square HDMI pixels.
+        picture_width=10'd512;
         picture_lead=((10'd720-picture_width)>>1)-1'b1;
         source_line=(y>=top) ? ((y-top)>>1) : 10'd0;
         next_source_line=(y+1'b1>=top) ? ((y+1'b1-top)>>1) : 10'd0;
