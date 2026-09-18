@@ -37,9 +37,20 @@ module hdmi_debug_overlay #(
     // event toggle cannot be used here because consecutive 108 MHz log writes
     // can occur before the 27 MHz pixel domain observes either edge.
     logic [39:0] display_memory [0:LOG_DEPTH-1];
+    // Bridge on the opposite 108 MHz edge before writing embedded RAM.  This
+    // gives address/data/WE a half-cycle path and avoids a fragile same-edge
+    // hold path from the logger flops directly into the BSRAM write port.
+    logic log_we_half = 1'b0;
+    logic [LOG_ADDR_WIDTH-1:0] log_addr_half = '0;
+    logic [39:0] log_data_half = '0;
+    always_ff @(negedge debug_clk) begin
+        log_we_half <= log_we;
+        log_addr_half <= log_addr;
+        log_data_half <= log_data;
+    end
     always_ff @(posedge debug_clk) begin
-        if (log_we)
-            display_memory[log_addr] <= log_data;
+        if (log_we_half)
+            display_memory[log_addr_half] <= log_data_half;
     end
 
     // Only the monotonically increasing count crosses domains.  Gray coding

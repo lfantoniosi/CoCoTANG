@@ -152,7 +152,7 @@ always @(posedge clk or negedge resetn) begin
     begin
         cycle <= cycle == 5'd31 ? 5'd31 : cycle + 5'd1;
         // defaults
-        {FF_SDRAM_nRAS, FF_SDRAM_nCAS, FF_SDRAM_nWE} <= CMD_NOP; 
+        {FF_SDRAM_nRAS, FF_SDRAM_nCAS, FF_SDRAM_nWE} <= CMD_NOP;
         casex ({state, cycle})
             // wait 200 us on power-on
             {INIT, 5'bxxxxx} : if (cfg_now) begin

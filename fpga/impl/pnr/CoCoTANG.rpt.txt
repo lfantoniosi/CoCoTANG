@@ -12,27 +12,27 @@
   <Part Number>: GW2AR-LV18QN88C8/I7
   <Device>: GW2AR-18
   <Device Version>: C
-  <Created Time>:Fri Sep 18 02:18:05 2026
+  <Created Time>:Fri Sep 18 13:12:32 2026
 
 
 2. PnR Details
 
   Running placement:
-    Placement Phase 0: CPU time = 0h 0m 0.185s, Elapsed time = 0h 0m 0.185s
-    Placement Phase 1: CPU time = 0h 0m 0.07s, Elapsed time = 0h 0m 0.07s
-    Placement Phase 2: CPU time = 0h 0m 0.386s, Elapsed time = 0h 0m 0.386s
-    Placement Phase 3: CPU time = 0h 0m 0.368s, Elapsed time = 0h 0m 0.368s
+    Placement Phase 0: CPU time = 0h 0m 0.186s, Elapsed time = 0h 0m 0.186s
+    Placement Phase 1: CPU time = 0h 0m 0.067s, Elapsed time = 0h 0m 0.068s
+    Placement Phase 2: CPU time = 0h 0m 0.397s, Elapsed time = 0h 0m 0.398s
+    Placement Phase 3: CPU time = 0h 0m 0.383s, Elapsed time = 0h 0m 0.383s
     Total Placement: CPU time = 0h 0m 1s, Elapsed time = 0h 0m 1s
  Running routing:
     Routing Phase 0: CPU time = 0h 0m 0.001s, Elapsed time = 0h 0m 0.001s
-    Routing Phase 1: CPU time = 0h 0m 0.662s, Elapsed time = 0h 0m 0.662s
-    Routing Phase 2: CPU time = 0h 0m 0.872s, Elapsed time = 0h 0m 0.873s
+    Routing Phase 1: CPU time = 0h 0m 0.686s, Elapsed time = 0h 0m 0.687s
+    Routing Phase 2: CPU time = 0h 0m 0.889s, Elapsed time = 0h 0m 0.889s
     Routing Phase 3: CPU time = 0h 0m 0s, Elapsed time = 0h 0m 0s
     Total Routing: CPU time = 0h 0m 2s, Elapsed time = 0h 0m 2s
  Generate output files:
-    CPU time = 0h 0m 0.61s, Elapsed time = 0h 0m 0.611s
+    CPU time = 0h 0m 0.608s, Elapsed time = 0h 0m 0.61s
 
- Total Time and Memory Usage: CPU time = 0h 0m 3s, Elapsed time = 0h 0m 3s, Peak memory usage = 511MB
+ Total Time and Memory Usage: CPU time = 0h 0m 3s, Elapsed time = 0h 0m 3s, Peak memory usage = 506MB
 
 
 3. Resource Usage Summary
@@ -40,15 +40,15 @@
   --------------------------------------------------------------------------------
   Resources                   | Usage                               | Utilization
   --------------------------------------------------------------------------------
-  Logic                       | 4521/20736                          |  22%
-    --LUT,ALU,ROM16           | 4401(3527 LUT, 874 ALU, 0 ROM16)    | -
+  Logic                       | 4439/20736                          |  22%
+    --LUT,ALU,ROM16           | 4319(3523 LUT, 796 ALU, 0 ROM16)    | -
     --SSRAM(RAM16)            | 20                                  | -
-  Register                    | 2480/15915                          |  16%
+  Register                    | 2570/15915                          |  17%
     --Logic Register as Latch | 0/15552                             |  0%
-    --Logic Register as FF    | 2427/15552                          |  16%
+    --Logic Register as FF    | 2517/15552                          |  17%
     --I/O Register as Latch   | 0/363                               |  0%
     --I/O Register as FF      | 53/363                              |  15%
-  CLS                         | 3298/10368                          |  32%
+  CLS                         | 3290/10368                          |  32%
   I/O Port                    | 46/66                               |  70%
   I/O Buf                     | 41                                  | -
     --Input Buf               | 12                                  | -
@@ -101,19 +101,19 @@
   -------------------------------------------
   Signal         | Global Clock   | Location
   -------------------------------------------
-  clkin_d        | PRIMARY        |  BR BL
-  clk27          | PRIMARY        |  TR BR BL
+  clkin_d        | PRIMARY        |  TR BR BL
+  clk27          | PRIMARY        |  TR TL BR BL
   clk108         | PRIMARY        |  TR TL BR BL
   O_sdram_clk_d  | PRIMARY        |  TR
-  clk270         | PRIMARY        |  TR TL BR BL
-  clk135         | PRIMARY        |  TR TL BR
+  clk270         | PRIMARY        |  TR TL BR
+  clk135         | PRIMARY        |  TR TL BR BL
   n752_6         | LW             |  -
   halt_drive_d_4 | LW             |  -
   sdram_reset_n_Z| LW             |  -
   system_ready_Z | LW             |  -
   machine/n217_5 | LW             |  -
   machine/hdmi_lines/fill_bank_26| LW             |  -
-  machine/cvbs_lines/fill_bank_16| LW             |  -
+  machine/cvbs_lines/fill_bank_24| LW             |  -
   clk135         | HCLK           | BANK4_BANK5_HCLK0
   ===========================================
 

@@ -47,24 +47,26 @@ module tb_hdmi_debug_overlay;
         check(2,0,24'h40ffff);       // Lit title pixel is cyan.
         log_addr=0;
         log_data={1'b1,1'b1,3'd2,1'b1,16'hfffe,8'ha0,8'ha0,2'b11};
-        log_we=1; @(posedge debug_clk); #1; log_we=0; log_count=1;
+        log_we=1; @(negedge debug_clk); @(posedge debug_clk); #1;
+        log_we=0; log_count=1;
         repeat (4) @(posedge pixel_clk);
         check(2,16,24'hffffff);      // Entry zero index is rendered.
         check(58,16,24'hffffff);     // First address digit is rendered.
         check(298,16,24'hffffff);    // T:Q: valid by Q fall and E fall.
         log_addr=0;
         log_data={1'b1,1'b1,3'd1,1'b1,16'h8000,8'h45,8'h45,2'b10};
-        log_we=1; @(posedge debug_clk); #1; log_we=0;
+        log_we=1; @(negedge debug_clk); @(posedge debug_clk); #1; log_we=0;
         repeat (4) @(posedge pixel_clk);
         check(2,16,24'hffb040);      // T:E: late after Q but valid by E.
         log_addr=0;
         log_data={1'b1,1'b1,3'd1,1'b0,16'h8000,8'hff,8'h45,2'b01};
-        log_we=1; @(posedge debug_clk); #1; log_we=0;
+        log_we=1; @(negedge debug_clk); @(posedge debug_clk); #1; log_we=0;
         repeat (4) @(posedge pixel_clk);
         check(2,16,24'hff4040);      // A T:0 read failure makes the row red.
         log_addr=9'd116;
         log_data={1'b1,1'b1,3'd2,1'b1,16'ha05a,8'h1f,8'h1f,2'b00};
-        log_we=1; @(posedge debug_clk); #1; log_we=0; log_count=9'd117;
+        log_we=1; @(negedge debug_clk); @(posedge debug_clk); #1;
+        log_we=0; log_count=9'd117;
         repeat (4) @(posedge pixel_clk);
         log_page=2'd1;
         repeat (4) @(posedge pixel_clk);

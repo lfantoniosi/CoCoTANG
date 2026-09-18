@@ -4,7 +4,7 @@
 module top_coco3 #(
     parameter integer RESET_HOLD_CYCLES=10800000,
     parameter integer LOG_DEPTH=4096,
-    parameter [15:0] LOG_START_ADDRESS=16'hA093,
+    parameter [15:0] LOG_START_ADDRESS=16'hC0D1,
     parameter [15:0] LOG_WRITE_START_ADDRESS=16'h0000,
     parameter [15:0] LOG_WRITE_END_ADDRESS=16'h0000,
     parameter integer LOG_REBASE_EVERY_MATCH=1,
@@ -40,23 +40,24 @@ module top_coco3 #(
     wire mux_halt_n,mux_nmi_n,bus_address_ready_async,bus_snapshot_ready_async;
 
     // Capture the asynchronous motherboard mux inputs in the physical input
-    // IOLOGIC.  Keeping this pin-to-register path inside each I/O cell prevents
-    // unrelated placement changes (such as a logger trigger constant) from
-    // changing the scanner's sampling margin.  Q0 is the rising-edge sample;
-    // the unused falling-edge output is retained inside the IDDR primitive.
+    // IOLOGIC.  Run the capture and scanner at 135 MHz: five settling clocks
+    // retain the proven ~44 ns per switched bank, while doubling the internal
+    // IDDR-Q-to-snapshot timing budget compared with the former 270 MHz path.
+    // Q0 is the rising-edge sample; Q1 remains available for implementation.
     wire [7:0] mp_iob,mp_iob_falling;
     genvar mp_bit;
     generate for(mp_bit=0;mp_bit<8;mp_bit=mp_bit+1) begin:mp_input_iologic
       IDDR mp_input_register(.Q0(mp_iob[mp_bit]),
-          .Q1(mp_iob_falling[mp_bit]),.D(mp[mp_bit]),.CLK(clk270));
+          .Q1(mp_iob_falling[mp_bit]),.D(mp[mp_bit]),.CLK(clk135));
       defparam mp_input_register.Q0_INIT=1'b1;
       defparam mp_input_register.Q1_INIT=1'b1;
     end endgenerate
 
-    // At 1.79 MHz the Q-to-E quadrant is about 140 ns. Scan the three mux
-    // banks at 270 MHz so the complete atomic snapshot is ready before E.
+    // At 1.79 MHz the Q-to-E quadrant is about 140 ns.  The first bank is
+    // already selected and captured at scan start; the remaining two banks
+    // consume about 89 ns at 135 MHz and complete before E rises.
     reg q_scan_meta=0,q_scan_sync=0,q_scan_delay=0,bus_scan_start=0;
-    always @(posedge clk270 or negedge board_reset_n) begin
+    always @(posedge clk135 or negedge board_reset_n) begin
         if (!board_reset_n) begin
             q_scan_meta<=0; q_scan_sync<=0; q_scan_delay<=0;
             bus_scan_start<=0;
@@ -64,11 +65,11 @@ module top_coco3 #(
             q_scan_meta<=q_out; q_scan_sync<=q_scan_meta;
             q_scan_delay<=q_scan_sync;
             // Register the edge pulse before it fans into the mux scanner.
-            // One 270 MHz clock is well inside the Q-to-E acquisition budget.
+            // One 135 MHz clock is well inside the Q-to-E acquisition budget.
             bus_scan_start<=q_scan_sync && !q_scan_delay;
         end
     end
-    coco_bus_mux #(.SETTLE_CYCLES(12)) bus_mux(.clk(clk270),.reset_n(board_reset_n),
+    coco_bus_mux #(.SETTLE_CYCLES(5)) bus_mux(.clk(clk135),.reset_n(board_reset_n),
         .scan_start(bus_scan_start),.mp(mp_iob),.msel(msel),.addr(address),
         .rw_n(rw_n),.cpu_reset_n(mux_reset_n),.slenb_n(mux_slenb_n),
         .sernt_n(mux_sernt_n),.cart_n(mux_cart_n),

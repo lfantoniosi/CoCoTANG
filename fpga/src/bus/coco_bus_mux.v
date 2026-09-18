@@ -19,10 +19,10 @@ module coco_bus_mux #(
     output        snapshot_valid
 );
     // Allow the 6809 outputs, 74HC139 selector and LVC245 path to settle.
-    // Eight clk135 periods are about 59 ns per bank.  The shorter 19 ns
-    // diagnostic setting produced mixed-byte snapshots on the prototype
-    // (for example, FFFE appeared as FEFF).  Acquisition starts just after
-    // Q rises after the 6809E address and external mux inputs are stable.
+    // SETTLE_CYCLES is selected by the top level for about 44 ns per switched
+    // bank.  Shorter diagnostic settings produced mixed-byte snapshots on
+    // the prototype (for example, FFFE appeared as FEFF).  Acquisition starts
+    // just after Q rises, once the address and external mux inputs are stable.
     localparam integer SETTLE_WIDTH =
         (SETTLE_CYCLES < 1) ? 1 : $clog2(SETTLE_CYCLES+1);
     reg [1:0] select_reg = 2'b00;

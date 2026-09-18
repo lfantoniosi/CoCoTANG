@@ -123,6 +123,7 @@ module gime_scanline_buffer (
     reg [10:0] source_x = 11'd0;
     reg [10:0] scale_phase = 11'd0;
     reg [18:0] row_address = 19'd0;
+    reg [18:0] line_address = 19'd0;
     reg [18:0] byte_address = 19'd0;
     reg [31:0] word_cache = 32'd0;
     reg [18:0] word_tag = 19'd0;
@@ -149,11 +150,14 @@ module gime_scanline_buffer (
     wire [10:0] graphics_byte_index = fill_cres == 2'd0 ? (source_x >> 3) :
                                         fill_cres == 2'd1 ? (source_x >> 2) : (source_x >> 1);
     wire [6:0] character_column = source_x[9:3];
-    wire [18:0] calculated_byte_address = fill_bit_plane ?
-        fill_base + row_address + graphics_byte_index + {11'd0,fill_hoff,1'b0} :
-        fill_base + row_address + (fill_attributes ? {11'd0,character_column,1'b0} :
-                                                    {12'd0,character_column}) +
-                                  {11'd0,fill_hoff,1'b0};
+    // The invariant base/row/horizontal-offset sum is pipelined once per
+    // scanline.  PIXEL_ADDRESS then contains only the CRES-dependent index
+    // selection and one 19-bit addition instead of a four-operand chain.
+    wire [18:0] pixel_byte_index = fill_bit_plane ?
+        {8'd0,graphics_byte_index} :
+        (fill_attributes ? {11'd0,character_column,1'b0} :
+                           {12'd0,character_column});
+    wire [18:0] calculated_byte_address = line_address + pixel_byte_index;
     wire [18:0] aligned_address = {byte_address[18:2],2'b00};
     wire [7:0] cached_byte = byte_address[1:0] == 2'd0 ? word_cache[7:0] :
                              byte_address[1:0] == 2'd1 ? word_cache[15:8] :
@@ -181,10 +185,11 @@ module gime_scanline_buffer (
     reg [3:0] pixel_color_index = 4'd0;
     wire [5:0] pixel_palette = fill_palettes[pixel_color_index*6 +: 6];
 
-    localparam IDLE=4'd0, DIVIDE_ROW=4'd1, ROW_ADDRESS=4'd2, PIXEL_ADDRESS=4'd3,
-               CHECK_WORD=4'd4, WAIT_WORD=4'd5, GOT_CHARACTER=4'd6,
-               CHECK_ATTRIBUTE=4'd7, WAIT_ATTRIBUTE=4'd8, FONT_WAIT=4'd9,
-               COLOR_INDEX=4'd10, WRITE_PIXEL=4'd11;
+    localparam IDLE=4'd0, DIVIDE_ROW=4'd1, ROW_ADDRESS=4'd2, LINE_ADDRESS=4'd3,
+               PIXEL_ADDRESS=4'd4, CHECK_WORD=4'd5, WAIT_WORD=4'd6,
+               GOT_CHARACTER=4'd7, CHECK_ATTRIBUTE=4'd8,
+               WAIT_ATTRIBUTE=4'd9, FONT_WAIT=4'd10,
+               COLOR_INDEX=4'd11, WRITE_PIXEL=4'd12;
     reg [3:0] state = IDLE;
     reg [10:0] phase_sum;
     reg [8:0] mode_signature = 9'h1ff;
@@ -246,6 +251,11 @@ module gime_scanline_buffer (
                 ROW_ADDRESS: begin
                     row_address <= source_row * fill_stride;
                     out_x<=0; source_x<=0; scale_phase<=0;
+                    state<=LINE_ADDRESS;
+                end
+                LINE_ADDRESS: begin
+                    line_address<=fill_base+row_address+
+                                  {11'd0,fill_hoff,1'b0};
                     state<=PIXEL_ADDRESS;
                 end
                 PIXEL_ADDRESS: begin byte_address<=calculated_byte_address; state<=CHECK_WORD; end

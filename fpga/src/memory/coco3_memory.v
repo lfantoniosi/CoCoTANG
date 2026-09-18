@@ -144,9 +144,13 @@ module coco3_memory #(
     end
 
     assign cpu_rdata=response_data;
+    // Once the control-bank snapshot arrives, drive the CPU bus from the
+    // frozen transaction tag.  Re-decoding the live address through the GIME
+    // ROM/MMU mapping here put INIT0 and the complete translated-address
+    // comparator on the physical DQ output-enable path.  current_read_ready
+    // is equivalent for the active cycle and is entirely register based.
     assign cpu_data_oe=cpu_access_enable &&
-        ((cpu_mem_read && response_valid && response_addr==selected_addr) ||
-         read_hold!=0);
+                       (current_read_ready || read_hold!=0);
     assign cpu_wait=cpu_access_enable && cycle_read && !current_read_ready;
 
     // A fast CoCo 3 cycle still has a complete E-low/Q-low quadrant.  Open a
