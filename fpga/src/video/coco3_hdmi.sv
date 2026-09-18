@@ -19,7 +19,8 @@ module coco3_hdmi #(
     input logic sdram_test_done,input logic sdram_test_pass,
     input logic [15:0] sdram_test_error_addr,
     input logic [7:0] sdram_test_expected,input logic [7:0] sdram_test_actual,
-    input logic [7:0] active_height,input logic [5:0] border_rgb,
+    input logic [7:0] active_height,input logic compatibility_mode,
+    input logic [5:0] border_rgb,
     input logic [5:0] pixel_data,
     output logic [9:0] source_x,output logic [7:0] source_y,
     output logic source_valid,output logic [7:0] prefetch_y,
@@ -29,6 +30,7 @@ module coco3_hdmi #(
 );
     logic [9:0] x,y;
     logic [7:0] height_m=8'd192,height_s=8'd192;
+    logic compatibility_m=1'b1,compatibility_s=1'b1;
     logic rom_done_m=0,rom_done_s=0,rom_pass_m=0,rom_pass_s=0;
     logic [15:0] rom_vector_m=16'hffff,rom_vector_s=16'hffff;
     logic ram_done_m=0,ram_done_s=0,ram_pass_m=0,ram_pass_s=0;
@@ -36,10 +38,13 @@ module coco3_hdmi #(
     logic [7:0] ram_expected_m=0,ram_expected_s=0;
     logic [7:0] ram_actual_m=0,ram_actual_s=0;
     logic [3:0] interrupt_m=0,interrupt_s=0;
-    logic [8:0] top;
+    logic [9:0] top,doubled_height,picture_width,picture_lead;
+    logic [9:0] source_line,next_source_line;
     always_ff @(posedge pixel_clk) begin
         height_m<=active_height;
         height_s<=height_m;
+        compatibility_m<=compatibility_mode;
+        compatibility_s<=compatibility_m;
         rom_done_m<=rom_verify_done; rom_done_s<=rom_done_m;
         rom_pass_m<=rom_verify_pass; rom_pass_s<=rom_pass_m;
         rom_vector_m<=rom_verify_vector; rom_vector_s<=rom_vector_m;
@@ -50,16 +55,23 @@ module coco3_hdmi #(
         ram_actual_m<=sdram_test_actual; ram_actual_s<=ram_actual_m;
         interrupt_m<=interrupt_status; interrupt_s<=interrupt_m;
     end
-    always_comb top=(9'd480-{1'b0,height_s})>>1;
+    always_comb begin
+        doubled_height={1'b0,height_s,1'b0};
+        top=(10'd480-doubled_height)>>1;
+        picture_width=compatibility_s ? 10'd512 : 10'd640;
+        picture_lead=((10'd720-picture_width)>>1)-1'b1;
+        source_line=(y>=top) ? ((y-top)>>1) : 10'd0;
+        next_source_line=(y+1'b1>=top) ? ((y+1'b1-top)>>1) : 10'd0;
+    end
 
     // Lead the visible window by one clock for the synchronous line RAM.
     always_comb begin
-        source_valid=(x>=10'd39 && x<10'd679 &&
-                      y>=top && y<top+height_s);
-        source_x=source_valid ? x-10'd39 : 10'd0;
-        source_y=(y>=top) ? y-top : 8'd0;
-        prefetch_y=(y+1'b1>=top) ? y+1'b1-top : 8'd0;
-        prefetch_valid=(y+1'b1>=top && y+1'b1<top+height_s);
+        source_valid=(x>=picture_lead && x<picture_lead+picture_width &&
+                      y>=top && y<top+doubled_height);
+        source_x=source_valid ? x-picture_lead : 10'd0;
+        source_y=source_line[7:0];
+        prefetch_y=next_source_line[7:0];
+        prefetch_valid=(y+1'b1>=top && y+1'b1<top+doubled_height);
     end
 
     logic picture_d=0;

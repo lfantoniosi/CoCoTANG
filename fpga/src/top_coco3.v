@@ -10,7 +10,7 @@ module top_coco3 #(
     parameter [15:0] LOG_WRITE_END_ADDRESS=16'h000,
     parameter integer LOG_REBASE_EVERY_MATCH=1,
     parameter integer ENABLE_BUS_LOGGER=1,
-    parameter integer DEBUG_OVERLAY=1,
+    parameter integer DEBUG_OVERLAY=0,
     parameter integer ANALOG_VIDEO_MODE=1
 ) (
     input clkin,input s1,input s2,input [7:0] mp,output [1:0] msel,
@@ -108,6 +108,7 @@ module top_coco3 #(
     wire [7:0] core_rdata;
     wire core_data_oe,gime_irq,gime_firq;
     wire [7:0] active_height;
+    wire compatibility_video;
     wire [5:0] border_rgb,hdmi_pixel_data,cvbs_pixel_data;
     wire [7:0] native_red,native_green,native_blue;
     wire native_hblank,native_vblank;
@@ -143,6 +144,7 @@ module top_coco3 #(
         .video_memory_valid(video_memory_valid),
         .video_memory_request(video_memory_request),
         .video_memory_addr(video_memory_addr),.active_height(active_height),
+        .compatibility_video(compatibility_video),
         .hs_n(hs_n),.fs_n(fs_n),.red(native_red),.green(native_green),
         .blue(native_blue),.border_rgb(border_rgb),
         .hblank(native_hblank),.vblank(native_vblank),
@@ -341,6 +343,7 @@ module top_coco3 #(
         .sdram_test_expected(sdram_test_expected),
         .sdram_test_actual(sdram_test_actual),
         .overlay_enable(overlay_visible),.active_height(active_height),
+        .compatibility_mode(compatibility_video),
         .border_rgb(border_rgb),.pixel_data(hdmi_pixel_data),
         .source_x(hdmi_source_x),.source_y(hdmi_source_y),
         .source_valid(hdmi_source_valid),.prefetch_y(hdmi_prefetch_y),

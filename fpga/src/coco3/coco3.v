@@ -36,6 +36,7 @@ module coco3 #(
     output            video_memory_request,
     output     [22:0] video_memory_addr,
     output      [7:0] active_height,
+    output            compatibility_video,
     output            hs_n,
     output            fs_n,
     output      [7:0] red,
@@ -81,6 +82,7 @@ module coco3 #(
     wire [15:0] video_offset;
     wire [7:0] horizontal_offset;
     wire compatibility_mode;
+    assign compatibility_video = compatibility_mode;
     wire [6:0] sam_video_offset;
     wire [95:0] palettes;
     gime_registers registers (
@@ -159,6 +161,27 @@ module coco3 #(
     assign framebuffer_write_addr=16'd0;
     assign framebuffer_write_data=6'd0;
 
+    // PIA1 PB drives the compatibility-mode MC6847 controls on a real
+    // CoCo 3. Shadow the DDR/data selection for CSS and SG4/SG6 decoding.
+    reg [7:0] pia1_pb = 8'd0;
+    reg [7:0] pia1_ddrb = 8'd0;
+    reg [7:0] pia1_crb = 8'd0;
+    always @(posedge clk or negedge core_reset_n) begin
+        if (!core_reset_n) begin
+            pia1_pb <= 8'd0;
+            pia1_ddrb <= 8'd0;
+            pia1_crb <= 8'd0;
+        end else if (e_fall && !cpu_rw_n) begin
+            if (cpu_addr == 16'hff23)
+                pia1_crb <= cpu_data;
+            else if (cpu_addr == 16'hff22) begin
+                if (pia1_crb[2]) pia1_pb <= cpu_data;
+                else pia1_ddrb <= cpu_data;
+            end
+        end
+    end
+    wire [7:0] pia1_effective = pia1_pb & pia1_ddrb;
+
     wire hdmi_req,cvbs_req;
     wire [22:0] hdmi_addr,cvbs_addr;
     reg hdmi_valid=0,cvbs_valid=0;
@@ -168,6 +191,10 @@ module coco3 #(
         .cres(effective_cres), .lines_per_row_code(effective_lines_per_row_code),
         .screen_base(effective_screen_base),
         .horizontal_offset(horizontal_offset), .palettes(palettes),
+        .compatibility_mode(compatibility_mode),
+        .compatibility_css(pia1_effective[3]),
+        .compatibility_int_ext(pia1_effective[4]),
+        .output_width(compatibility_mode ? 10'd512 : 10'd640),
         .read_clk(hdmi_read_clk),.read_x(hdmi_source_x),
         .display_y(hdmi_source_y),.display_valid(hdmi_source_valid),
         .prefetch_y(hdmi_prefetch_y),.prefetch_valid(hdmi_prefetch_valid),
@@ -179,6 +206,10 @@ module coco3 #(
         .bit_plane(effective_bit_plane),.hres(effective_hres),.cres(effective_cres),
         .lines_per_row_code(effective_lines_per_row_code),.screen_base(effective_screen_base),
         .horizontal_offset(horizontal_offset),.palettes(palettes),
+        .compatibility_mode(compatibility_mode),
+        .compatibility_css(pia1_effective[3]),
+        .compatibility_int_ext(pia1_effective[4]),
+        .output_width(10'd640),
         .read_clk(cvbs_read_clk),.read_x(cvbs_source_x),
         .display_y(cvbs_source_y),.display_valid(cvbs_source_valid),
         .prefetch_y(cvbs_prefetch_y),.prefetch_valid(cvbs_prefetch_valid),

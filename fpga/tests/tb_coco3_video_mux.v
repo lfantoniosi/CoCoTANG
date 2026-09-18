@@ -28,6 +28,7 @@ module tb_coco3_video_mux;
         .video_memory_valid(video_memory_valid),
         .video_memory_request(video_memory_request),
         .video_memory_addr(video_memory_addr),.active_height(),
+        .compatibility_video(),
         .hs_n(),.fs_n(),.red(),.green(),.blue(),.border_rgb(),
         .hblank(),.vblank(),.framebuffer_write(),.framebuffer_write_addr(),
         .framebuffer_write_data(),

@@ -11,11 +11,18 @@ module tb_gime_scanline_buffer;
     integer errors=0;
     integer i;
     reg [1:0] responder_state=0;
+    reg compatibility_mode=0;
+    reg [9:0] output_width=10'd640;
+    reg bit_plane=1;
+    reg [1:0] cres=2'd1;
+    reg [2:0] hres=3'd7;
 
     gime_scanline_buffer dut(
-        .clk(clk),.reset_n(reset_n),.bit_plane(1'b1),.hres(3'd7),.cres(2'd1),
+        .clk(clk),.reset_n(reset_n),.bit_plane(bit_plane),.hres(hres),.cres(cres),
         .lines_per_row_code(3'd0),.screen_base(19'd0),.horizontal_offset(8'd0),
-        .palettes(palettes),.read_clk(read_clk),.read_x(10'd0),
+        .palettes(palettes),.compatibility_mode(compatibility_mode),
+        .compatibility_css(1'b0),.compatibility_int_ext(1'b0),
+        .output_width(output_width),.read_clk(read_clk),.read_x(10'd0),
         .display_y(8'd0),.display_valid(1'b0),.prefetch_y(8'd0),
         .prefetch_valid(1'b1),.pixel_data(pixel_data),
         .memory_request(memory_request),.memory_addr(memory_addr),
@@ -58,6 +65,28 @@ module tb_gime_scanline_buffer;
                 errors=errors+1;
             end
         end
+
+        // Compatible SG4 byte $98: yellow top-left quadrant, background on
+        // the right. Exact 256->512 scaling must duplicate each source pixel.
+        memory_data=32'h98989898;
+        compatibility_mode=1;
+        bit_plane=0;
+        cres=0;
+        hres=0;
+        output_width=10'd512;
+        wait(!dut.tag0_valid && !dut.tag1_valid);
+        wait(dut.tag0_valid || dut.tag1_valid);
+        for (i=0;i<8;i=i+1)
+            if (dut.tag0_valid ? dut.line0[i] !== 6'b111100 :
+                                dut.line1[i] !== 6'b111100) begin
+                $display("SG4 foreground pixel %0d wrong: %0h",i,
+                    dut.tag0_valid ? dut.line0[i] : dut.line1[i]); errors=errors+1;
+            end
+        for (i=8;i<16;i=i+1)
+            if (dut.tag0_valid ? dut.line0[i] !== 6'b000100 :
+                                dut.line1[i] !== 6'b000100) begin
+                $display("SG4 background pixel %0d wrong",i); errors=errors+1;
+            end
         if (errors==0) $display("tb_gime_scanline_buffer PASS");
         else $display("tb_gime_scanline_buffer FAIL: %0d",errors);
         $finish;

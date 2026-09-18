@@ -45,8 +45,8 @@ Compiling module 'gime_timing'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/g
 Compiling module 'gime_registers'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_registers.v":1)
 Compiling module 'gime_mode_debug'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_mode_debug.v":1)
 Compiling module 'gime_scanline_buffer'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":4)
-Extracting RAM for identifier 'line0'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":77)
-Extracting RAM for identifier 'line1'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":78)
+Extracting RAM for identifier 'line0'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":97)
+Extracting RAM for identifier 'line1'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":98)
 Compiling module 'mc6847_char_rom'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847_char_rom.v":1)
 Extracting RAM for identifier 'memory'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847_char_rom.v":6)
 Compiling module 'gime_native_video'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_native_video.v":1)
@@ -61,10 +61,8 @@ Compiling module 'coco_flash_loader(SDRAM_ADDRESS=23'd0,BYTE_COUNT=32768)'("/Use
 Compiling module 'spi_flash_reader(CLK_DIV=4)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/spi_flash_reader.v":1)
 Compiling module 'cpu_sdram_arbiter'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/cpu_sdram_arbiter.v":5)
 Compiling module 'cpu_bus_logger(LOG_START_ADDRESS=16'b1100000011010001,LOG_WRITE_START_ADDRESS=16'b0000000000000000,LOG_WRITE_END_ADDRESS=16'b0000000000000000,LOG_REBASE_EVERY_MATCH=1)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/debug/cpu_bus_logger.v":3)
-WARN  (EX3791) : Expression size 7 truncated to fit in target size 6("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":319)
+WARN  (EX3791) : Expression size 7 truncated to fit in target size 6("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":321)
 Compiling module 'coco3_hdmi(ENABLE_DEBUG_OVERLAY=1)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco3_hdmi.sv":3)
-WARN  (EX3791) : Expression size 10 truncated to fit in target size 8("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco3_hdmi.sv":60)
-WARN  (EX3791) : Expression size 10 truncated to fit in target size 8("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco3_hdmi.sv":61)
 Compiling module 'hdmi_debug_overlay(LOG_ADDR_WIDTH=12,LOG_COUNT_WIDTH=13,LOG_PAGE_WIDTH=6,LOG_DEPTH=4096,EXTENDED_HEADER=2)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi_debug_overlay.sv":4)
 Extracting RAM for identifier 'display_memory'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi_debug_overlay.sv":39)
 WARN  (EX3791) : Expression size 14 truncated to fit in target size 13("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi_debug_overlay.sv":164)
@@ -94,7 +92,7 @@ Running technical mapping ...
 [75%] Tech-Mapping Phase 2 completed
 [80%] Tech-Mapping Phase 3 completed
 [90%] Tech-Mapping Phase 4 completed
-WARN  (NL0002) : The module "gime_mode_debug" instantiated to "debug_modes" is swept in optimizing("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/coco3.v":113)
+WARN  (NL0002) : The module "gime_mode_debug" instantiated to "debug_modes" is swept in optimizing("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/coco3.v":115)
 [95%] Generate netlist file "/Users/felipe/src/fpga/CoCoTANG/fpga/impl/gwsynthesis/CoCoTANG.vg" completed
 [100%] Generate report file "/Users/felipe/src/fpga/CoCoTANG/fpga/impl/gwsynthesis/CoCoTANG_syn.rpt.html" completed
 GowinSynthesis finish

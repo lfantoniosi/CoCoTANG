@@ -11,6 +11,10 @@ module gime_scanline_buffer (
     input      [18:0] screen_base,
     input      [7:0]  horizontal_offset,
     input      [95:0] palettes,
+    input             compatibility_mode,
+    input             compatibility_css,
+    input             compatibility_int_ext,
+    input      [9:0]  output_width,
 
     input             read_clk,
     input      [9:0]  read_x,
@@ -28,6 +32,22 @@ module gime_scanline_buffer (
     function [5:0] palette_rgb;
         input [5:0] color;
         begin palette_rgb = {color[5],color[2],color[4],color[1],color[3],color[0]}; end
+    endfunction
+
+    function [5:0] mc6847_bright_rgb;
+        input [2:0] color;
+        begin
+            case (color)
+                3'd0: mc6847_bright_rgb=6'b001100;
+                3'd1: mc6847_bright_rgb=6'b111100;
+                3'd2: mc6847_bright_rgb=6'b000011;
+                3'd3: mc6847_bright_rgb=6'b110000;
+                3'd4: mc6847_bright_rgb=6'b111111;
+                3'd5: mc6847_bright_rgb=6'b001111;
+                3'd6: mc6847_bright_rgb=6'b110011;
+                default: mc6847_bright_rgb=6'b111000;
+            endcase
+        end
     endfunction
 
     function [7:0] graphics_row_bytes;
@@ -115,6 +135,10 @@ module gime_scanline_buffer (
     reg [18:0] fill_base = 19'd0;
     reg [6:0] fill_hoff = 7'd0;
     reg [95:0] fill_palettes = 96'd0;
+    reg fill_compatibility = 1'b0;
+    reg fill_compatibility_css = 1'b0;
+    reg fill_compatibility_int_ext = 1'b0;
+    reg [9:0] fill_output_width = 10'd640;
     reg [7:0] fill_y = 8'd0;
     reg [7:0] row_remainder = 8'd0;
     reg [7:0] source_row = 8'd0;
@@ -165,6 +189,8 @@ module gime_scanline_buffer (
 
     reg [3:0] color_index = 4'd0;
     reg pixel_set = 1'b0;
+    reg [5:0] compatibility_rgb = 6'd0;
+    reg semigraphics_set = 1'b0;
     always @(*) begin
         case (fill_cres)
             2'd0: color_index = {3'b000,cached_byte[7-source_x[2:0]]};
@@ -177,10 +203,40 @@ module gime_scanline_buffer (
             default: color_index = source_x[0] ? cached_byte[3:0] : cached_byte[7:4];
         endcase
         pixel_set = char_rom_data[7-source_x[2:0]];
+        semigraphics_set = 1'b0;
+        compatibility_rgb = fill_compatibility_css ? 6'b010100 : 6'b000100;
         if (!fill_bit_plane)
             color_index = fill_attributes ?
                 (pixel_set ? {1'b0,attribute[5:3]} : {1'b1,attribute[2:0]}) :
                 (pixel_set ? 4'd1 : 4'd0);
+
+        if (fill_compatibility) begin
+            if (character[7]) begin
+                if (!fill_compatibility_int_ext) begin
+                    if (glyph_line < 4'd6)
+                        semigraphics_set = source_x[2] ? character[2] : character[3];
+                    else
+                        semigraphics_set = source_x[2] ? character[0] : character[1];
+                    if (semigraphics_set)
+                        compatibility_rgb = mc6847_bright_rgb(character[6:4]);
+                end else begin
+                    if (glyph_line < 4'd4)
+                        semigraphics_set = source_x[2] ? character[4] : character[5];
+                    else if (glyph_line < 4'd8)
+                        semigraphics_set = source_x[2] ? character[2] : character[3];
+                    else
+                        semigraphics_set = source_x[2] ? character[0] : character[1];
+                    if (semigraphics_set)
+                        compatibility_rgb = mc6847_bright_rgb(
+                            {fill_compatibility_css,character[7:6]});
+                end
+            end else begin
+                pixel_set = char_rom_data[7-source_x[2:0]] ^ character[6];
+                if (pixel_set)
+                    compatibility_rgb = mc6847_bright_rgb(
+                        {3{fill_compatibility_css}});
+            end
+        end
     end
     reg [3:0] pixel_color_index = 4'd0;
     wire [5:0] pixel_palette = fill_palettes[pixel_color_index*6 +: 6];
@@ -192,13 +248,17 @@ module gime_scanline_buffer (
                COLOR_INDEX=4'd11, WRITE_PIXEL=4'd12;
     reg [3:0] state = IDLE;
     reg [10:0] phase_sum;
-    reg [8:0] mode_signature = 9'h1ff;
+    reg [11:0] mode_signature = 12'hfff;
     reg [18:0] last_screen_base = 19'h7ffff;
     reg [7:0] last_horizontal_offset = 8'hff;
-    wire [8:0] live_signature = {bit_plane,hres,cres,lines_per_row_code};
+    reg [9:0] last_output_width = 10'd0;
+    wire [11:0] live_signature = {compatibility_mode,compatibility_css,
+                                  compatibility_int_ext,bit_plane,hres,cres,
+                                  lines_per_row_code};
     wire configuration_diff = live_signature != mode_signature ||
                               screen_base != last_screen_base ||
-                              horizontal_offset != last_horizontal_offset;
+                              horizontal_offset != last_horizontal_offset ||
+                              output_width != last_output_width;
     reg configuration_changed = 1'b1;
 
     always @(posedge clk or negedge reset_n) begin
@@ -214,8 +274,9 @@ module gime_scanline_buffer (
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
             state<=IDLE; memory_request<=0; memory_addr<=0;
-            tag0_valid<=0; tag1_valid<=0; next_bank<=0; mode_signature<=9'h1ff;
+            tag0_valid<=0; tag1_valid<=0; next_bank<=0; mode_signature<=12'hfff;
             last_screen_base<=19'h7ffff; last_horizontal_offset<=8'hff;
+            last_output_width<=10'd0;
             configuration_changed<=1'b1;
         end else begin
             configuration_changed <= configuration_diff;
@@ -223,6 +284,7 @@ module gime_scanline_buffer (
                 mode_signature <= live_signature;
                 last_screen_base <= screen_base;
                 last_horizontal_offset <= horizontal_offset;
+                last_output_width <= output_width;
                 tag0_valid <= 1'b0; tag1_valid <= 1'b0;
                 state <= IDLE; memory_request <= 1'b0; word_valid <= 1'b0;
             end else case (state)
@@ -236,7 +298,12 @@ module gime_scanline_buffer (
                     fill_attributes<=live_attributes; fill_lpr<=lines_per_row(lines_per_row_code);
                     fill_stride<=live_stride; fill_width<=live_width;
                     fill_base<=screen_base; fill_hoff<=horizontal_offset[6:0];
-                    fill_palettes<=palettes; row_remainder<=requested_y_pipe; source_row<=0;
+                    fill_palettes<=palettes;
+                    fill_compatibility<=compatibility_mode;
+                    fill_compatibility_css<=compatibility_css;
+                    fill_compatibility_int_ext<=compatibility_int_ext;
+                    fill_output_width<=output_width;
+                    row_remainder<=requested_y_pipe; source_row<=0;
                     word_valid<=0; state<=DIVIDE_ROW;
                 end
                 DIVIDE_ROW: begin
@@ -289,17 +356,21 @@ module gime_scanline_buffer (
                 FONT_WAIT: state<=COLOR_INDEX;
                 COLOR_INDEX: begin pixel_color_index<=color_index; state<=WRITE_PIXEL; end
                 WRITE_PIXEL: begin
-                    if (fill_bank) line1[out_x] <= palette_rgb(pixel_palette);
-                    else line0[out_x] <= palette_rgb(pixel_palette);
-                    if (out_x == 10'd639) begin
+                    if (fill_bank)
+                        line1[out_x] <= fill_compatibility ? compatibility_rgb :
+                                        palette_rgb(pixel_palette);
+                    else
+                        line0[out_x] <= fill_compatibility ? compatibility_rgb :
+                                        palette_rgb(pixel_palette);
+                    if (out_x == fill_output_width-1'b1) begin
                         if (fill_bank) begin tag1<=fill_y; tag1_valid<=1; end
                         else begin tag0<=fill_y; tag0_valid<=1; end
                         next_bank<=!fill_bank; state<=IDLE;
                     end else begin
                         out_x<=out_x+1'b1;
                         phase_sum = scale_phase + fill_width;
-                        if (phase_sum >= 11'd640) begin
-                            scale_phase<=phase_sum-11'd640; source_x<=source_x+1'b1;
+                        if (phase_sum >= fill_output_width) begin
+                            scale_phase<=phase_sum-fill_output_width; source_x<=source_x+1'b1;
                         end else scale_phase<=phase_sum;
                         state<=PIXEL_ADDRESS;
                     end
