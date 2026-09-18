@@ -25,9 +25,11 @@ module cpu_sdram_arbiter #(
     output reg [31:0] video_rdata,
 
     input loader_req,
+    input loader_wr,
     input [22:0] loader_addr,
     input [7:0] loader_wdata,
     output reg loader_ack,
+    output reg [7:0] loader_rdata,
 
     output reg rd,
     output reg wr,
@@ -104,6 +106,7 @@ module cpu_sdram_arbiter #(
             cpu_ack <= 1'b0;
             video_ack <= 1'b0;
             loader_ack <= 1'b0;
+            loader_rdata <= 8'hff;
             cpu_rdata <= 8'hff;
             video_rdata <= 32'd0;
         end else begin
@@ -127,7 +130,7 @@ module cpu_sdram_arbiter #(
                     else if (video_req && video_background_slot)
                         launch(OWNER_VIDEO,1'b0,video_addr,8'd0);
                     else if (loader_req)
-                        launch(OWNER_LOADER,1'b1,loader_addr,loader_wdata);
+                        launch(OWNER_LOADER,loader_wr,loader_addr,loader_wdata);
                     else if (enabled && refresh_background_slot &&
                              refresh_count == REFRESH_CYCLES) begin
                         refresh <= 1'b1;
@@ -141,9 +144,12 @@ module cpu_sdram_arbiter #(
                         if (owner == OWNER_CPU) begin
                             cpu_rdata <= byte_lane ? dout[15:8] : dout[7:0];
                             cpu_ack <= 1'b1;
-                        end else begin
+                        end else if (owner == OWNER_VIDEO) begin
                             video_rdata <= dout32;
                             video_ack <= 1'b1;
+                        end else begin
+                            loader_rdata <= byte_lane ? dout[15:8] : dout[7:0];
+                            loader_ack <= 1'b1;
                         end
                         recovery_count <= 8'd0;
                         state <= WAIT_DROP;

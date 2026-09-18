@@ -77,8 +77,13 @@ assign SDRAM_DQ = dq_oen ? 32'bzzzz_zzzz_zzzz_zzzz_zzzz_zzzz_zzzz_zzzz : dq_out;
 wire [DATA_WIDTH-1:0] dq_in = SDRAM_DQ;     // DQ input
 
 reg off;          // byte offset
-assign dout = off == 0 ? dq_in[15:0] : dq_in[31:16];
-assign dout32 = dq_in;
+// The SDRAM is clocked 180 degrees from the controller.  Its DQ output
+// advances on clk's falling edge, so capture on the following rising edge in
+// the center of the valid window.  Capturing on the falling edge returns the
+// preceding transaction (0002 read back as 01 during the startup test).
+reg [DATA_WIDTH-1:0] read_data;
+assign dout = off == 0 ? read_data[15:0] : read_data[31:16];
+assign dout32 = read_data;
 assign SDRAM_CLK = clk_sdram;
 assign SDRAM_CKE = 1'b1;
 assign SDRAM_nCS = 1'b0;
@@ -135,6 +140,7 @@ always @(posedge clk or negedge resetn) begin
         ff_data_ready <= 1'b0;
         dq_oen <= 1'b1;         // turn off DQ output
         dq_out <= {DATA_WIDTH{1'b0}};
+        read_data <= {DATA_WIDTH{1'b0}};
         off <= 1'b0;
         FF_SDRAM_DQM <= 4'b0;
         FF_SDRAM_A <= {ROW_WIDTH{1'b0}};
@@ -214,10 +220,11 @@ always @(posedge clk or negedge resetn) begin
                 FF_SDRAM_DQM <= 4'b0;
                 off <= addr[0];
             end
-            {READ, T_RCD+CAS}: begin
+            {READ, T_RCD+CAS+5'd1}: begin
+                read_data <= dq_in;
                 ff_data_ready <= 1'b1;
             end
-            {READ, T_RCD+CAS+5'd1}: begin
+            {READ, T_RCD+CAS+5'd2}: begin
                 ff_data_ready <= 1'b0;
                 ff_busy <= 0;
                 state <= IDLE;
@@ -293,4 +300,3 @@ always @(posedge clk or negedge resetn) begin
 end
 
 endmodule
-

@@ -13,6 +13,7 @@
         <File path="src/bus/coco_bus_mux.v" type="file.verilog" enable="1"/>
         <File path="src/memory/spi_flash_reader.v" type="file.verilog" enable="1"/>
         <File path="src/memory/coco_flash_loader.v" type="file.verilog" enable="1"/>
+        <File path="src/memory/coco_sdram_startup_test.v" type="file.verilog" enable="1"/>
         <File path="src/memory/sdram.v" type="file.verilog" enable="1"/>
         <File path="src/memory/cpu_sdram_arbiter.v" type="file.verilog" enable="1"/>
         <File path="src/memory/coco3_memory.v" type="file.verilog" enable="1"/>

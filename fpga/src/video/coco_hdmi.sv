@@ -135,7 +135,14 @@ module coco_hdmi #(
                 .debug_clk(debug_clk), .log_we(log_we),
                 .log_addr(log_addr), .log_data(log_data),
                 .log_count(log_count), .log_page(log_page),
-                .debug_status(debug_status), .rgb_in(stream_rgb),
+                .debug_status(debug_status),
+                .interrupt_status(4'b0000),
+                .rom_verify_done(1'b0), .rom_verify_pass(1'b0),
+                .rom_verify_vector(16'hffff),
+                .sdram_test_done(1'b0),.sdram_test_pass(1'b0),
+                .sdram_test_error_addr(16'h0000),
+                .sdram_test_expected(8'h00),.sdram_test_actual(8'h00),
+                .rgb_in(stream_rgb),
                 .rgb_out(rgb)
             );
         end else begin : debug_overlay_disabled

@@ -12,6 +12,7 @@
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/bus/coco_bus_mux.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/spi_flash_reader.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_flash_loader.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_sdram_startup_test.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/sdram.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/cpu_sdram_arbiter.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco3_memory.v" type="verilog"/>

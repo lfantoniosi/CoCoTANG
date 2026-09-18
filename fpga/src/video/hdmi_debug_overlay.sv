@@ -20,6 +20,15 @@ module hdmi_debug_overlay #(
     input  logic [LOG_COUNT_WIDTH-1:0] log_count,
     input  logic [LOG_PAGE_WIDTH-1:0] log_page,
     input  logic [4:0]   debug_status,
+    input  logic [3:0]   interrupt_status,
+    input  logic         rom_verify_done,
+    input  logic         rom_verify_pass,
+    input  logic [15:0]  rom_verify_vector,
+    input  logic         sdram_test_done,
+    input  logic         sdram_test_pass,
+    input  logic [15:0]  sdram_test_error_addr,
+    input  logic [7:0]   sdram_test_expected,
+    input  logic [7:0]   sdram_test_actual,
     input  logic [23:0]  rgb_in,
     output logic [23:0]  rgb_out
 );
@@ -101,6 +110,7 @@ module hdmi_debug_overlay #(
                 "H": glyph={5'b10001,5'b10001,5'b10001,5'b11111,5'b10001,5'b10001,5'b10001};
                 "I": glyph={5'b01110,5'b00100,5'b00100,5'b00100,5'b00100,5'b00100,5'b01110};
                 "L": glyph={5'b10000,5'b10000,5'b10000,5'b10000,5'b10000,5'b10000,5'b11111};
+                "M": glyph={5'b10001,5'b11011,5'b10101,5'b10101,5'b10001,5'b10001,5'b10001};
                 "O": glyph={5'b01110,5'b10001,5'b10001,5'b10001,5'b10001,5'b10001,5'b01110};
                 "P": glyph={5'b11110,5'b10001,5'b10001,5'b11110,5'b10000,5'b10000,5'b10000};
                 "Q": glyph={5'b01110,5'b10001,5'b10001,5'b10001,5'b10101,5'b10010,5'b01101};
@@ -164,14 +174,44 @@ module hdmi_debug_overlay #(
                 22:character="P"; 23:character=":";
                 24:character=hex_char(log_page_8[7:4]);
                 25:character=hex_char(log_page_8[3:0]);
-                28:character="R"; 29:character=":";
-                30:character=bit_char(debug_status[3]);
-                32:character="H"; 33:character=":";
-                34:character=bit_char(debug_status[2]);
+                28:character=(EXTENDED_HEADER==2) ? "K" : "R";
+                29:character=":";
+                30:character=bit_char((EXTENDED_HEADER==2) ?
+                                      interrupt_status[3] : debug_status[3]);
+                32:character=(EXTENDED_HEADER==2) ? "S" : "H";
+                33:character=":";
+                34:character=bit_char((EXTENDED_HEADER==2) ?
+                                      interrupt_status[2] : debug_status[2]);
                 36:character="I"; 37:character=":";
-                38:character=bit_char(debug_status[1]);
-                40:character="S"; 41:character=":";
-                42:character=bit_char(debug_status[0]);
+                38:character=bit_char((EXTENDED_HEADER==2) ?
+                                      interrupt_status[1] : debug_status[1]);
+                40:character=(EXTENDED_HEADER==2) ? "F" : "S";
+                41:character=":";
+                42:character=bit_char((EXTENDED_HEADER==2) ?
+                                      interrupt_status[0] : debug_status[0]);
+                44:character="F"; 45:character="L"; 46:character="A";
+                47:character="S"; 48:character="H"; 49:character=":";
+                50:character=rom_verify_done ? hex_char(rom_verify_vector[15:12]) : "-";
+                51:character=rom_verify_done ? hex_char(rom_verify_vector[11:8]) : "-";
+                52:character=rom_verify_done ? hex_char(rom_verify_vector[7:4]) : "-";
+                53:character=rom_verify_done ? hex_char(rom_verify_vector[3:0]) : "-";
+                55:character="P"; 56:character=":";
+                57:character=rom_verify_done ? bit_char(rom_verify_pass) : "-";
+                60:character="R"; 61:character="A"; 62:character="M";
+                63:character=":";
+                64:character=!sdram_test_done ? "-" :
+                             (sdram_test_pass ? "P" : "F");
+                66:character="@";
+                67:character=sdram_test_done ? hex_char(sdram_test_error_addr[15:12]) : "-";
+                68:character=sdram_test_done ? hex_char(sdram_test_error_addr[11:8]) : "-";
+                69:character=sdram_test_done ? hex_char(sdram_test_error_addr[7:4]) : "-";
+                70:character=sdram_test_done ? hex_char(sdram_test_error_addr[3:0]) : "-";
+                72:character="E"; 73:character=":";
+                74:character=sdram_test_done ? hex_char(sdram_test_expected[7:4]) : "-";
+                75:character=sdram_test_done ? hex_char(sdram_test_expected[3:0]) : "-";
+                77:character="A"; 78:character=":";
+                79:character=sdram_test_done ? hex_char(sdram_test_actual[7:4]) : "-";
+                80:character=sdram_test_done ? hex_char(sdram_test_actual[3:0]) : "-";
                 default: ;
             endcase
         end else if (character_row == 0) begin
@@ -282,7 +322,12 @@ module hdmi_debug_overlay #(
         if (!in_panel)
             rgb_comb=rgb_in;
         else if (text_pixel)
-            rgb_comb=(character_row == 0) ? 24'h40ffff :
+            rgb_comb=(character_row == 0 && character_column >= 7'd44 &&
+                      character_column <= 7'd57 &&
+                      rom_verify_done && !rom_verify_pass) ? 24'hff4040 :
+                     (character_row == 0 && character_column >= 7'd60 &&
+                      sdram_test_done && !sdram_test_pass) ? 24'hff4040 :
+                     (character_row == 0) ? 24'h40ffff :
                      (EXTENDED_HEADER != 0 && valid_entry &&
                       entry[1:0] == 2'b01) ? 24'hff4040 :
                      (EXTENDED_HEADER != 0 && valid_entry && entry[38] &&

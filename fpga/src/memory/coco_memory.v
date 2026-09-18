@@ -466,8 +466,8 @@ module coco_memory #(
         .video_slot_open(video_slot_open),
         .refresh_slot_open(refresh_slot_open),
         .video_ack(video_ack), .video_rdata(video_read_value),
-        .loader_req(loader_req), .loader_addr(loader_addr),
-        .loader_wdata(loader_wdata), .loader_ack(loader_ack),
+        .loader_req(loader_req), .loader_wr(1'b1), .loader_addr(loader_addr),
+        .loader_wdata(loader_wdata), .loader_ack(loader_ack), .loader_rdata(),
         .rd(sd_rd), .wr(sd_wr), .refresh(sd_refresh), .addr(sd_addr),
         .din(sd_din), .wdm(sd_wdm), .dout(sd_dout), .dout32(sd_dout32),
         .data_ready(sd_data_ready), .busy(sd_busy), .enabled(sdram_enabled)

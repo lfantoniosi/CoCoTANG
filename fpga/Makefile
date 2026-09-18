@@ -45,6 +45,8 @@ test:
 	vvp /private/tmp/cocotang_tb_cvbs
 	iverilog -g2012 -o /private/tmp/cocotang_tb_fill tests/tb_sdram_test_fill.v src/memory/sdram_test_fill.v
 	vvp /private/tmp/cocotang_tb_fill
+	iverilog -g2012 -o /private/tmp/cocotang_tb_startup_test tests/tb_coco_sdram_startup_test.v src/memory/coco_sdram_startup_test.v
+	vvp /private/tmp/cocotang_tb_startup_test
 	iverilog -g2012 -o /private/tmp/cocotang_tb_cpu_arbiter tests/tb_cpu_sdram_arbiter.v src/memory/cpu_sdram_arbiter.v
 	vvp /private/tmp/cocotang_tb_cpu_arbiter
 	iverilog -g2012 -o /private/tmp/cocotang_tb_video_mode tests/tb_video_mode_debug.v src/video/video_mode_debug.v

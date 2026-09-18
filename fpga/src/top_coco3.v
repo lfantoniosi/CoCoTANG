@@ -4,9 +4,10 @@
 module top_coco3 #(
     parameter integer RESET_HOLD_CYCLES=10800000,
     parameter integer LOG_DEPTH=4096,
-    parameter [15:0] LOG_START_ADDRESS=16'h4057,
+    parameter [15:0] LOG_START_ADDRESS=16'hA093,
     parameter [15:0] LOG_WRITE_START_ADDRESS=16'h0000,
     parameter [15:0] LOG_WRITE_END_ADDRESS=16'h0000,
+    parameter integer LOG_REBASE_EVERY_MATCH=1,
     parameter integer ENABLE_BUS_LOGGER=1,
     parameter integer DEBUG_OVERLAY=1,
     parameter integer ANALOG_VIDEO_MODE=1
@@ -38,6 +39,20 @@ module top_coco3 #(
     wire mux_reset_n,mux_slenb_n,mux_sernt_n,mux_cart_n,mux_keyint_n;
     wire mux_halt_n,mux_nmi_n,bus_address_ready_async,bus_snapshot_ready_async;
 
+    // Capture the asynchronous motherboard mux inputs in the physical input
+    // IOLOGIC.  Keeping this pin-to-register path inside each I/O cell prevents
+    // unrelated placement changes (such as a logger trigger constant) from
+    // changing the scanner's sampling margin.  Q0 is the rising-edge sample;
+    // the unused falling-edge output is retained inside the IDDR primitive.
+    wire [7:0] mp_iob,mp_iob_falling;
+    genvar mp_bit;
+    generate for(mp_bit=0;mp_bit<8;mp_bit=mp_bit+1) begin:mp_input_iologic
+      IDDR mp_input_register(.Q0(mp_iob[mp_bit]),
+          .Q1(mp_iob_falling[mp_bit]),.D(mp[mp_bit]),.CLK(clk270));
+      defparam mp_input_register.Q0_INIT=1'b1;
+      defparam mp_input_register.Q1_INIT=1'b1;
+    end endgenerate
+
     // At 1.79 MHz the Q-to-E quadrant is about 140 ns. Scan the three mux
     // banks at 270 MHz so the complete atomic snapshot is ready before E.
     reg q_scan_meta=0,q_scan_sync=0,q_scan_delay=0,bus_scan_start=0;
@@ -54,7 +69,7 @@ module top_coco3 #(
         end
     end
     coco_bus_mux #(.SETTLE_CYCLES(12)) bus_mux(.clk(clk270),.reset_n(board_reset_n),
-        .scan_start(bus_scan_start),.mp(mp),.msel(msel),.addr(address),
+        .scan_start(bus_scan_start),.mp(mp_iob),.msel(msel),.addr(address),
         .rw_n(rw_n),.cpu_reset_n(mux_reset_n),.slenb_n(mux_slenb_n),
         .sernt_n(mux_sernt_n),.cart_n(mux_cart_n),
         .keyint_n(mux_keyint_n),.halt_n(mux_halt_n),.nmi_n(mux_nmi_n),
@@ -105,15 +120,16 @@ module top_coco3 #(
     reg [7:0] cpu_write_data=8'hff;
     wire [7:0] cpu_data_in;
 
-    // KEYINT is inverted by the motherboard interface before it reaches the
-    // multiplexed FPGA input.  Normalize it here so the GIME block sees the
-    // documented active-low interrupt sense, like SERINT and CART.
+    // KEYINT and SERNT are inverted by the motherboard interface before they
+    // reach the multiplexed FPGA inputs. Normalize both here so the GIME
+    // block sees their documented active-low interrupt sense.
     wire gime_keyint_n=!mux_keyint_n;
+    wire gime_serint_n=!mux_sernt_n;
 
     coco3 machine(.clk(clk108),.reset_n(board_reset_n),
         .cpu_reset_n(cpu_release),.s2(1'b0),.cpu_addr(address),
         .cpu_rw_n(rw_n),.cpu_data(cpu_write_data),
-        .serint_n(mux_sernt_n),.keyint_n(gime_keyint_n),.cart_n(mux_cart_n),
+        .serint_n(gime_serint_n),.keyint_n(gime_keyint_n),.cart_n(mux_cart_n),
         .irq_assert(gime_irq),.firq_assert(gime_firq),.sam_s(sam_s),
         .e(e_out),.q(q_out),.e_rise(e_rise),.e_fall(e_fall),
         .cpu_mem_read(cpu_mem_read),.cpu_mem_write(cpu_mem_write),
@@ -146,6 +162,13 @@ module top_coco3 #(
     assign firq_n_in=gime_firq;
 
     wire sdram_reset_n,loader_start,system_ready,sdram_enabled,loader_done;
+    wire sdram_test_done,sdram_test_pass;
+    wire [15:0] sdram_test_error_addr;
+    wire [7:0] sdram_test_expected,sdram_test_actual;
+    wire rom_verify_done,rom_verify_pass;
+    wire [15:0] rom_verify_vector;
+    wire flash_vector_done,flash_vector_pass;
+    wire [15:0] flash_vector;
     coco_startup startup(.clk(clk108),.board_reset_n(board_reset_n),
         .sdram_enabled(sdram_enabled),.loader_done(loader_done),
         .sdram_reset_n(sdram_reset_n),.loader_start(loader_start),
@@ -204,7 +227,16 @@ module top_coco3 #(
         .cpu_data_oe(memory_data_oe),.cpu_wait(cpu_memory_wait),
         .video_req(video_memory_request),.video_addr(video_memory_addr),
         .video_ack(video_memory_valid),.video_rdata(video_memory_data32),
-        .loader_done(loader_done),.mspi_cs(mspi_cs),.mspi_sclk(mspi_sclk),
+        .loader_done(loader_done),
+        .flash_vector_done(flash_vector_done),
+        .flash_vector_pass(flash_vector_pass),.flash_vector(flash_vector),
+        .sdram_test_done(sdram_test_done),.sdram_test_pass(sdram_test_pass),
+        .sdram_test_error_addr(sdram_test_error_addr),
+        .sdram_test_expected(sdram_test_expected),
+        .sdram_test_actual(sdram_test_actual),
+        .rom_verify_done(rom_verify_done),
+        .rom_verify_pass(rom_verify_pass),.rom_verify_vector(rom_verify_vector),
+        .mspi_cs(mspi_cs),.mspi_sclk(mspi_sclk),
         .mspi_miso(mspi_miso),.mspi_mosi(mspi_mosi),
         .sdram_enabled(sdram_enabled),.sd_rd(sd_rd),.sd_wr(sd_wr),
         .sd_refresh(sd_refresh),.sd_addr(sd_addr),.sd_din(sd_din),
@@ -245,7 +277,8 @@ module top_coco3 #(
         .LOG_COUNT_WIDTH(LOG_COUNT_WIDTH),.LOG_DEPTH(LOG_DEPTH),
         .LOG_START_ADDRESS(LOG_START_ADDRESS),
         .LOG_WRITE_START_ADDRESS(LOG_WRITE_START_ADDRESS),
-        .LOG_WRITE_END_ADDRESS(LOG_WRITE_END_ADDRESS)) logger(
+        .LOG_WRITE_END_ADDRESS(LOG_WRITE_END_ADDRESS),
+        .LOG_REBASE_EVERY_MATCH(LOG_REBASE_EVERY_MATCH)) logger(
         .clk(clk108),.reset_n(board_reset_n),.capture_enable(cpu_release),
         .bus_reset_n(filtered_mux_reset_n),.e_fall(e_fall),.q(q_out),
         .rw_n(rw_n),.address(address),.cpu_data(cpu_data_in),
@@ -286,7 +319,7 @@ module top_coco3 #(
       end
     end
 
-    wire interrupt_inputs_idle=mux_sernt_n && gime_keyint_n && mux_halt_n;
+    wire interrupt_inputs_idle=gime_serint_n && gime_keyint_n && mux_halt_n;
     coco3_hdmi #(.LOG_ADDR_WIDTH(LOG_ADDR_WIDTH),
         .LOG_COUNT_WIDTH(LOG_COUNT_WIDTH),.LOG_PAGE_WIDTH(LOG_PAGE_WIDTH),
         .LOG_DEPTH(LOG_DEPTH),.ENABLE_DEBUG_OVERLAY(ENABLE_BUS_LOGGER)) hdmi_output(
@@ -295,6 +328,15 @@ module top_coco3 #(
         .log_data(log_data),.log_count(log_count),.log_page(log_page),
         .debug_status({clocks_locked,filtered_mux_reset_n,mux_halt_n,
                        interrupt_inputs_idle,bus_ready_sync}),
+        // Display asserted levels: KEYINT and SERNT are active-low inputs;
+        // IRQ and FIRQ are active-high requests to the output transistors.
+        .interrupt_status({!gime_keyint_n,!gime_serint_n,gime_irq,gime_firq}),
+        .rom_verify_done(flash_vector_done),.rom_verify_pass(flash_vector_pass),
+        .rom_verify_vector(flash_vector),
+        .sdram_test_done(sdram_test_done),.sdram_test_pass(sdram_test_pass),
+        .sdram_test_error_addr(sdram_test_error_addr),
+        .sdram_test_expected(sdram_test_expected),
+        .sdram_test_actual(sdram_test_actual),
         .overlay_enable(overlay_visible),.active_height(active_height),
         .border_rgb(border_rgb),.pixel_data(hdmi_pixel_data),
         .source_x(hdmi_source_x),.source_y(hdmi_source_y),

@@ -8,6 +8,7 @@ module top #(
     parameter [15:0] LOG_START_ADDRESS = 16'h8002, //16'hA056,
     parameter [15:0] LOG_WRITE_START_ADDRESS = 16'h0000,
     parameter [15:0] LOG_WRITE_END_ADDRESS = 16'h0000,
+    parameter integer LOG_REBASE_EVERY_MATCH = 0,
     // Set to 1 to synthesize the CPU bus logger and HDMI overlay.  At 0 the
     // overlay instance is not elaborated and synthesis removes the complete
     // unobserved logger cone, keeping it out of CPU/SDRAM placement entirely.
@@ -504,7 +505,8 @@ module top #(
                 observation_valid<=1'b0;
                 log_rebased<=1'b0;
                 log_write_rebased<=1'b0;
-            end else if (!log_rebased && e_fall && log_trigger_match) begin
+            end else if ((LOG_REBASE_EVERY_MATCH != 0 || !log_rebased) &&
+                         e_fall && log_trigger_match) begin
                 // Include the trigger cycle itself as the first new entry.
                 log_we<=1'b1;
                 log_addr<=0;

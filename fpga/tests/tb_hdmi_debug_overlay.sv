@@ -17,6 +17,12 @@ module tb_hdmi_debug_overlay;
         .log_addr(log_addr),.log_data(log_data),.log_count(log_count),
         .log_page(log_page),
         .debug_status(5'b11111),
+        .interrupt_status(4'b0000),
+        .rom_verify_done(1'b1),.rom_verify_pass(1'b1),
+        .rom_verify_vector(16'h8c1b),
+        .sdram_test_done(1'b1),.sdram_test_pass(1'b1),
+        .sdram_test_error_addr(16'h0000),
+        .sdram_test_expected(8'h00),.sdram_test_actual(8'h00),
         .rgb_in(rgb_in),.rgb_out(rgb_out));
 
     always #5 debug_clk=~debug_clk;

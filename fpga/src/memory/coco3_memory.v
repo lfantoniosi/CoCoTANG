@@ -15,6 +15,13 @@ module coco3_memory #(
     input video_req, input [22:0] video_addr,
     output video_ack, output [31:0] video_rdata,
     output loader_done,
+    output flash_vector_done, output flash_vector_pass,
+    output [15:0] flash_vector,
+    output sdram_test_done, output sdram_test_pass,
+    output [15:0] sdram_test_error_addr,
+    output [7:0] sdram_test_expected, output [7:0] sdram_test_actual,
+    output reg rom_verify_done, output reg rom_verify_pass,
+    output reg [15:0] rom_verify_vector,
 
     output mspi_cs, output mspi_sclk, input mspi_miso, output mspi_mosi,
     input sdram_enabled,
@@ -160,14 +167,96 @@ module coco3_memory #(
         end
     end
 
-    wire loader_req,loader_ack;
-    wire [22:0] loader_addr;
-    wire [7:0] loader_wdata;
+    wire test_req,test_wr,test_ack,test_failed;
+    wire [22:0] test_addr;
+    wire [7:0] test_wdata;
+    wire loader_ack;
+    wire [7:0] loader_rdata;
+    coco_sdram_startup_test startup_test(
+        .clk(clk),.reset_n(reset_n),.start(loader_start),
+        .mem_req(test_req),.mem_wr(test_wr),.mem_addr(test_addr),
+        .mem_wdata(test_wdata),.mem_rdata(loader_rdata),.mem_ack(test_ack),
+        .done(sdram_test_done),.passed(sdram_test_pass),.failed(test_failed),
+        .error_addr(sdram_test_error_addr),
+        .error_expected(sdram_test_expected),.error_actual(sdram_test_actual));
+
+    wire flash_loader_req,flash_loader_ack,raw_loader_done;
+    wire flash_tail_valid;
+    wire [15:0] flash_tail_vector;
+    wire [22:0] flash_loader_addr;
+    wire [7:0] flash_loader_wdata;
     coco_flash_loader #(.SDRAM_ADDRESS(ROM_BASE),.BYTE_COUNT(ROM_BYTES)) loader(
-        .clk(clk),.reset_n(reset_n),.start(loader_start),.done(loader_done),
-        .mem_req(loader_req),.mem_addr(loader_addr),.mem_wdata(loader_wdata),
-        .mem_ack(loader_ack),.mspi_cs(mspi_cs),.mspi_sclk(mspi_sclk),
+        .clk(clk),.reset_n(reset_n),.start(sdram_test_pass),.done(raw_loader_done),
+        .tail_vector_valid(flash_tail_valid),.tail_vector(flash_tail_vector),
+        .mem_req(flash_loader_req),.mem_addr(flash_loader_addr),
+        .mem_wdata(flash_loader_wdata),.mem_ack(flash_loader_ack),
+        .mspi_cs(mspi_cs),.mspi_sclk(mspi_sclk),
         .mspi_miso(mspi_miso),.mspi_mosi(mspi_mosi));
+    assign flash_vector_done=flash_tail_valid;
+    assign flash_vector=flash_tail_vector;
+    assign flash_vector_pass=flash_tail_valid && flash_tail_vector==16'h8c1b;
+
+    // Before releasing the CPU, read the reset vector back through the same
+    // SDRAM path used by normal CPU cycles.  This distinguishes a bad flash
+    // copy/SDRAM read from corruption later on the physical CPU data bus.
+    localparam VERIFY_WAIT=3'd0,VERIFY_GAP=3'd1,VERIFY_HIGH_REQ=3'd2,
+               VERIFY_HIGH_WAIT=3'd3,VERIFY_HIGH_DROP=3'd4,
+               VERIFY_LOW_WAIT=3'd5,VERIFY_DONE=3'd6;
+    reg [2:0] verify_state=VERIFY_WAIT;
+    reg verify_req=1'b0;
+    reg [22:0] verify_addr=23'd0;
+    reg verify_high_pass=1'b0;
+    wire loader_req=!sdram_test_done ? test_req :
+                    !sdram_test_pass ? 1'b0 :
+                    raw_loader_done ? verify_req : flash_loader_req;
+    wire loader_wr=!sdram_test_done ? test_wr :
+                   !sdram_test_pass ? 1'b0 : !raw_loader_done;
+    wire [22:0] loader_addr=!sdram_test_done ? test_addr :
+                            raw_loader_done ? verify_addr : flash_loader_addr;
+    wire [7:0] loader_wdata=!sdram_test_done ? test_wdata : flash_loader_wdata;
+    assign test_ack=!sdram_test_done && loader_ack;
+    assign flash_loader_ack=sdram_test_pass && !raw_loader_done && loader_ack;
+    assign loader_done=rom_verify_done;
+
+    always @(posedge clk or negedge reset_n) begin
+        if (!reset_n) begin
+            verify_state<=VERIFY_WAIT; verify_req<=1'b0;
+            verify_addr<=23'd0; verify_high_pass<=1'b0;
+            rom_verify_done<=1'b0; rom_verify_pass<=1'b0;
+            rom_verify_vector<=16'hffff;
+        end else begin
+            case (verify_state)
+                VERIFY_WAIT: if (raw_loader_done) begin
+                    // Give the arbiter one request-low cycle after the final
+                    // flash write before changing that client into a reader.
+                    verify_req<=1'b0; verify_state<=VERIFY_GAP;
+                end
+                VERIFY_GAP: begin
+                    verify_addr<=ROM_BASE+ROM_BYTES-2;
+                    verify_state<=VERIFY_HIGH_REQ;
+                end
+                VERIFY_HIGH_REQ: begin
+                    verify_req<=1'b1; verify_state<=VERIFY_HIGH_WAIT;
+                end
+                VERIFY_HIGH_WAIT: if (loader_ack) begin
+                    rom_verify_vector[15:8]<=loader_rdata;
+                    verify_high_pass<=loader_rdata==8'h8c;
+                    verify_req<=1'b0; verify_state<=VERIFY_HIGH_DROP;
+                end
+                VERIFY_HIGH_DROP: begin
+                    verify_addr<=ROM_BASE+ROM_BYTES-1;
+                    verify_req<=1'b1; verify_state<=VERIFY_LOW_WAIT;
+                end
+                VERIFY_LOW_WAIT: if (loader_ack) begin
+                    rom_verify_vector[7:0]<=loader_rdata;
+                    rom_verify_pass<=verify_high_pass && loader_rdata==8'h1b;
+                    rom_verify_done<=1'b1; verify_req<=1'b0;
+                    verify_state<=VERIFY_DONE;
+                end
+                default: verify_req<=1'b0;
+            endcase
+        end
+    end
 
     cpu_sdram_arbiter arbiter(
         .clk(clk),.reset_n(reset_n),.e(e),.q(q),
@@ -177,8 +266,9 @@ module coco3_memory #(
         .video_slot_open(video_slot_count!=0),
         .refresh_slot_open(refresh_slot_count!=0),
         .video_ack(video_ack),.video_rdata(video_rdata),
-        .loader_req(loader_req),.loader_addr(loader_addr),
+        .loader_req(loader_req),.loader_wr(loader_wr),.loader_addr(loader_addr),
         .loader_wdata(loader_wdata),.loader_ack(loader_ack),
+        .loader_rdata(loader_rdata),
         .rd(sd_rd),.wr(sd_wr),.refresh(sd_refresh),.addr(sd_addr),
         .din(sd_din),.wdm(sd_wdm),.dout(sd_dout),.dout32(sd_dout32),
         .data_ready(sd_data_ready),.busy(sd_busy),.enabled(sdram_enabled));

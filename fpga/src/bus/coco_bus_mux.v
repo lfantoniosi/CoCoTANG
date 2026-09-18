@@ -34,6 +34,11 @@ module coco_bus_mux #(
     reg [23:0] snapshot = 24'hffffff;
     reg address_ready_reg = 1'b0;
     reg snapshot_valid_reg = 1'b0;
+    // Pipeline the terminal-count decode before it drives every capture CE.
+    // The selected mux bank is already held for SETTLE_CYCLES clocks, so this
+    // preserves the sampling instant while removing a high-fanout 270 MHz
+    // counter-to-CE path.
+    (* syn_preserve = 1 *) reg capture_bank = 1'b0;
 
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
@@ -46,6 +51,7 @@ module coco_bus_mux #(
             snapshot <= 24'hffffff;
             address_ready_reg <= 1'b0;
             snapshot_valid_reg <= 1'b0;
+            capture_bank <= 1'b0;
         end else begin
             if (scan_start) begin
                 // Q rising begins acquisition of the active CPU cycle. Bank
@@ -60,14 +66,14 @@ module coco_bus_mux #(
                 bank <= 2'd1;
                 settle_count <= {SETTLE_WIDTH{1'b0}};
                 scanning <= 1'b1;
+                capture_bank <= 1'b0;
                 address_ready_reg <= 1'b0;
                 snapshot_valid_reg <= 1'b0;
             end else if (scanning) begin
                 // Use a bounded settling interval so input noise cannot
                 // prevent the scanner from ever completing.
-                if (settle_count != SETTLE_CYCLES)
-                    settle_count <= settle_count + 1'b1;
-                else begin
+                if (capture_bank) begin
+                    capture_bank <= 1'b0;
                     settle_count <= {SETTLE_WIDTH{1'b0}};
                     case (bank)
                         2'd0: begin
@@ -91,7 +97,10 @@ module coco_bus_mux #(
                             scanning <= 1'b0;
                         end
                     endcase
-                end
+                end else if (settle_count == SETTLE_CYCLES-1)
+                    capture_bank <= 1'b1;
+                else
+                    settle_count <= settle_count + 1'b1;
             end
         end
     end

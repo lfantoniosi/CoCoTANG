@@ -13,6 +13,12 @@ module coco3_hdmi #(
     input logic [LOG_COUNT_WIDTH-1:0] log_count,
     input logic [LOG_PAGE_WIDTH-1:0] log_page,
     input logic [4:0] debug_status,input logic overlay_enable,
+    input logic [3:0] interrupt_status,
+    input logic rom_verify_done,input logic rom_verify_pass,
+    input logic [15:0] rom_verify_vector,
+    input logic sdram_test_done,input logic sdram_test_pass,
+    input logic [15:0] sdram_test_error_addr,
+    input logic [7:0] sdram_test_expected,input logic [7:0] sdram_test_actual,
     input logic [7:0] active_height,input logic [5:0] border_rgb,
     input logic [5:0] pixel_data,
     output logic [9:0] source_x,output logic [7:0] source_y,
@@ -23,10 +29,26 @@ module coco3_hdmi #(
 );
     logic [9:0] x,y;
     logic [7:0] height_m=8'd192,height_s=8'd192;
+    logic rom_done_m=0,rom_done_s=0,rom_pass_m=0,rom_pass_s=0;
+    logic [15:0] rom_vector_m=16'hffff,rom_vector_s=16'hffff;
+    logic ram_done_m=0,ram_done_s=0,ram_pass_m=0,ram_pass_s=0;
+    logic [15:0] ram_addr_m=0,ram_addr_s=0;
+    logic [7:0] ram_expected_m=0,ram_expected_s=0;
+    logic [7:0] ram_actual_m=0,ram_actual_s=0;
+    logic [3:0] interrupt_m=0,interrupt_s=0;
     logic [8:0] top;
     always_ff @(posedge pixel_clk) begin
         height_m<=active_height;
         height_s<=height_m;
+        rom_done_m<=rom_verify_done; rom_done_s<=rom_done_m;
+        rom_pass_m<=rom_verify_pass; rom_pass_s<=rom_pass_m;
+        rom_vector_m<=rom_verify_vector; rom_vector_s<=rom_vector_m;
+        ram_done_m<=sdram_test_done; ram_done_s<=ram_done_m;
+        ram_pass_m<=sdram_test_pass; ram_pass_s<=ram_pass_m;
+        ram_addr_m<=sdram_test_error_addr; ram_addr_s<=ram_addr_m;
+        ram_expected_m<=sdram_test_expected; ram_expected_s<=ram_expected_m;
+        ram_actual_m<=sdram_test_actual; ram_actual_s<=ram_actual_m;
+        interrupt_m<=interrupt_status; interrupt_s<=interrupt_m;
     end
     always_comb top=(9'd480-{1'b0,height_s})>>1;
 
@@ -55,11 +77,18 @@ module coco3_hdmi #(
         hdmi_debug_overlay #(
             .LOG_ADDR_WIDTH(LOG_ADDR_WIDTH),.LOG_COUNT_WIDTH(LOG_COUNT_WIDTH),
             .LOG_PAGE_WIDTH(LOG_PAGE_WIDTH),.LOG_DEPTH(LOG_DEPTH),
-            .EXTENDED_HEADER(1)) overlay(
+            .EXTENDED_HEADER(2)) overlay(
             .pixel_clk(pixel_clk),.x(x),.y(y),.enable(overlay_enable),
             .debug_data(320'd0),.debug_clk(debug_clk),.log_we(log_we),
             .log_addr(log_addr),.log_data(log_data),.log_count(log_count),
             .log_page(log_page),.debug_status(debug_status),
+            .interrupt_status(interrupt_s),
+            .rom_verify_done(rom_done_s),.rom_verify_pass(rom_pass_s),
+            .rom_verify_vector(rom_vector_s),
+            .sdram_test_done(ram_done_s),.sdram_test_pass(ram_pass_s),
+            .sdram_test_error_addr(ram_addr_s),
+            .sdram_test_expected(ram_expected_s),
+            .sdram_test_actual(ram_actual_s),
             .rgb_in(stream_rgb),.rgb_out(rgb));
     end else begin:overlay_disabled
         assign rgb=stream_rgb;

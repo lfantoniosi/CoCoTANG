@@ -11,10 +11,11 @@ module tb_cpu_sdram_arbiter;
     reg [22:0] video_addr=0;
     wire video_ack;
     wire [31:0] video_rdata;
-    reg loader_req=0;
+    reg loader_req=0, loader_wr=1;
     reg [22:0] loader_addr=0;
     reg [7:0] loader_wdata=0;
     wire loader_ack;
+    wire [7:0] loader_rdata;
     wire rd,wr,refresh;
     wire [22:0] addr;
     wire [15:0] din;
@@ -22,12 +23,13 @@ module tb_cpu_sdram_arbiter;
     reg [15:0] dout=16'h5aa5;
     reg [31:0] dout32=32'h44332211;
     reg data_ready=0, busy=0, enabled=1;
-    reg saw_video_ack=0, saw_cpu_ack=0;
+    reg saw_video_ack=0, saw_cpu_ack=0, saw_loader_ack=0;
 
     always #5 clk=~clk;
     always @(posedge clk) begin
         if (video_ack) saw_video_ack <= 1'b1;
         if (cpu_ack) saw_cpu_ack <= 1'b1;
+        if (loader_ack) saw_loader_ack <= 1'b1;
     end
 
     cpu_sdram_arbiter dut (
@@ -37,9 +39,10 @@ module tb_cpu_sdram_arbiter;
         .video_req(video_req),.video_addr(video_addr),
         .video_slot_open(video_slot_open),.video_ack(video_ack),
         .refresh_slot_open(refresh_slot_open),
-        .video_rdata(video_rdata),.loader_req(loader_req),
+        .video_rdata(video_rdata),.loader_req(loader_req),.loader_wr(loader_wr),
         .loader_addr(loader_addr),.loader_wdata(loader_wdata),
-        .loader_ack(loader_ack),.rd(rd),.wr(wr),.refresh(refresh),
+        .loader_ack(loader_ack),.loader_rdata(loader_rdata),
+        .rd(rd),.wr(wr),.refresh(refresh),
         .addr(addr),.din(din),.wdm(wdm),.dout(dout),.dout32(dout32),
         .data_ready(data_ready),.busy(busy),.enabled(enabled)
     );
@@ -104,6 +107,18 @@ module tb_cpu_sdram_arbiter;
         if (!saw_cpu_ack || cpu_rdata !== 8'h5a)
             $fatal(1,"CPU response/lane was wrong: %h",cpu_rdata);
         @(negedge clk); cpu_req=0; video_req=0;
+
+        // The loader client can read the just-loaded ROM back for boot
+        // verification, including correct byte-lane selection.
+        repeat (2) @(negedge clk);
+        loader_wr=0; loader_addr=23'h087fff; loader_req=1;
+        @(posedge clk); #1;
+        if (!rd || wr) $fatal(1,"loader verification read did not launch");
+        finish_read();
+        @(posedge clk); #1;
+        if (!saw_loader_ack || loader_rdata !== 8'h5a)
+            $fatal(1,"loader verification response was wrong: %h",loader_rdata);
+        @(negedge clk); loader_req=0;
 
         $display("tb_cpu_sdram_arbiter PASS");
         $finish;

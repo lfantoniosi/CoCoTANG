@@ -10,6 +10,8 @@ module coco_flash_loader #(
 ) (
     input clk, input reset_n, input start,
     output reg done,
+    output reg tail_vector_valid,
+    output reg [15:0] tail_vector,
     output reg mem_req, output [22:0] mem_addr, output [7:0] mem_wdata,
     input mem_ack,
     output mspi_cs, output mspi_sclk, input mspi_miso, output mspi_mosi
@@ -39,6 +41,8 @@ module coco_flash_loader #(
         if (!reset_n) begin
             state <= WAIT_START;
             done <= 1'b0;
+            tail_vector_valid <= 1'b0;
+            tail_vector <= 16'hffff;
             mem_req <= 1'b0;
             flash_start <= 1'b0;
             flash_stop <= 1'b0;
@@ -58,6 +62,15 @@ module coco_flash_loader #(
                     state <= WRITE_BYTE;
                 end
                 WRITE_BYTE: if (mem_ack) begin
+                    // For a 16/32 KiB ROM image these are the bytes mapped at
+                    // logical FFFE/FFFF.  Latch the SPI payload itself so the
+                    // diagnostic is independent of the SDRAM read path.
+                    if (offset == BYTE_COUNT-2)
+                        tail_vector[15:8] <= flash_byte;
+                    if (offset == BYTE_COUNT-1) begin
+                        tail_vector[7:0] <= flash_byte;
+                        tail_vector_valid <= 1'b1;
+                    end
                     mem_req <= 1'b0;
                     byte_ready <= 1'b1;
                     if (offset == BYTE_COUNT-1) begin
