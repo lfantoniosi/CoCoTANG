@@ -166,6 +166,34 @@ module tb_gime_registers;
         end
         cpu_rw_n=1;
 
+        // ROM is selected by an MMU page value, not by a fixed logical
+        // $8000-$FEFF window. Expansion RAM mapped into logical block 4 must
+        // therefore remain readable and writable in RAM/ROM mode.
+        write_reg(16'hff91,8'h00);
+        write_reg(16'hff90,8'h4a);
+        write_reg(16'hffde,8'h00);
+        write_reg(16'hffa4,8'h00);
+        cpu_addr=16'h8123;cpu_rw_n=1;#1;
+        if(!cpu_mem_read||cpu_mem_is_rom||cpu_mem_addr!=23'h000123)begin
+            $display("RAM page at logical ROM window decoded incorrectly: %h",
+                     cpu_mem_addr);errors=errors+1;end
+        cpu_rw_n=0;#1;
+        if(!cpu_mem_write||cpu_mem_is_rom||cpu_mem_addr!=23'h000123)
+            errors=errors+1;
+
+        // Any $3C-$3F MMU value denotes ROM in RAM/ROM mode. Its low two
+        // bits come from the destination logical block; writes still target
+        // the translated physical RAM page underneath the read overlay.
+        write_reg(16'hffa0,8'h3f);
+        cpu_addr=16'h0123;cpu_rw_n=1;#1;
+        if(!cpu_mem_read||!cpu_mem_is_rom||cpu_mem_addr!=23'h000123)
+            errors=errors+1;
+        cpu_rw_n=0;#1;
+        if(!cpu_mem_write||cpu_mem_is_rom||cpu_mem_addr!=23'h07e123)
+            errors=errors+1;
+        cpu_rw_n=1;
+        write_reg(16'hffdf,8'h00);
+
         // Map page $3f into logical block zero so the last physical byte is
         // reachable without the GIME register/vector overlay at logical FFxx.
         write_reg(16'hffa8,8'h3f);
@@ -175,9 +203,10 @@ module tb_gime_registers;
         write_reg(16'hffde,8'h00);
         write_reg(16'hff91,8'h00);
 
-        // CoCo-compatible mode disables MMU translation, retains the SAM
-        // display offset, and supports the legacy ROM/all-RAM toggle.
-        write_reg(16'hff90,8'hc0);
+        // COCO selects compatibility video but is independent of MMUEN.
+        // With MMUEN clear, compatibility mode retains the fixed upper-64K
+        // mapping, the SAM display offset, and the ROM/all-RAM toggle.
+        write_reg(16'hff90,8'h80);
         cpu_addr=16'h0123; #1;
         if (!compatibility_mode || cpu_mem_addr != 23'h070123) errors=errors+1;
         // Legacy SAM P1 is not implemented by the CoCo 3 GIME.  Extended
@@ -208,6 +237,23 @@ module tb_gime_registers;
         write_reg(16'hffde,8'h00);
         cpu_addr=16'h8000; cpu_rw_n=1; #1;
         if (!cpu_mem_is_rom) errors=errors+1;
+
+        // The 512K memory checker runs with compatibility video selected and
+        // MMU translation enabled.  Page $25 must remain independently
+        // addressable in that state; gating MMUEN with COCO used to turn this
+        // access into physical $70000 and report 64K/128K duplication.
+        write_reg(16'hffa4,8'h25);
+        write_reg(16'hff90,8'hc0);
+        cpu_addr=16'h8123; cpu_rw_n=1; #1;
+        if (!compatibility_mode || !cpu_mem_read || cpu_mem_is_rom ||
+            cpu_mem_addr != 23'h04a123) begin
+            $display("compatibility-video MMU page 25 got %h",cpu_mem_addr);
+            errors=errors+1;
+        end
+        cpu_rw_n=0; #1;
+        if (!cpu_mem_write || cpu_mem_addr != 23'h04a123)
+            errors=errors+1;
+        cpu_rw_n=1;
 
         // Native CoCo 3 starts fast and retains the standard speed POKEs.
         if (!fast_mode) errors=errors+1;

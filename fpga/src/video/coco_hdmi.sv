@@ -140,7 +140,7 @@ module coco_hdmi #(
                 .rom_verify_done(1'b0), .rom_verify_pass(1'b0),
                 .rom_verify_vector(16'hffff),
                 .sdram_test_done(1'b0),.sdram_test_pass(1'b0),
-                .sdram_test_error_addr(16'h0000),
+                .sdram_test_error_addr(19'h00000),
                 .sdram_test_expected(8'h00),.sdram_test_actual(8'h00),
                 .rgb_in(stream_rgb),
                 .rgb_out(rgb)

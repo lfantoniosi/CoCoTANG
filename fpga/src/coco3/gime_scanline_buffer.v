@@ -214,7 +214,10 @@ module gime_scanline_buffer (
      if(attribute[7]&&fill_blink)decoded_pixel=0;
      if(attribute[6]&&glyph_line==fill_lpr-1'b1)
       decoded_pixel=(source_x[2:0]!=0&&source_x[2:0]!=7);
-     decoded_index=decoded_pixel?{1'b0,attribute[5:3]}:{1'b1,attribute[2:0]};
+     // Native text uses the upper palette bank (8-15) for foreground and
+     // the lower bank (0-7) for background.  The attribute itself keeps the
+     // documented FFFBBB layout; only the palette-bank select differs.
+     decoded_index=decoded_pixel?{1'b1,attribute[5:3]}:{1'b0,attribute[2:0]};
     end else decoded_index=decoded_pixel?1:0;
    end
   end else if(fill_bit_plane) begin

@@ -17,7 +17,7 @@ module coco3_hdmi #(
     input logic rom_verify_done,input logic rom_verify_pass,
     input logic [15:0] rom_verify_vector,
     input logic sdram_test_done,input logic sdram_test_pass,
-    input logic [15:0] sdram_test_error_addr,
+    input logic [18:0] sdram_test_error_addr,
     input logic [7:0] sdram_test_expected,input logic [7:0] sdram_test_actual,
     input logic [7:0] active_height,input logic compatibility_mode,
     input logic [5:0] border_rgb,
@@ -34,7 +34,7 @@ module coco3_hdmi #(
     logic rom_done_m=0,rom_done_s=0,rom_pass_m=0,rom_pass_s=0;
     logic [15:0] rom_vector_m=16'hffff,rom_vector_s=16'hffff;
     logic ram_done_m=0,ram_done_s=0,ram_pass_m=0,ram_pass_s=0;
-    logic [15:0] ram_addr_m=0,ram_addr_s=0;
+    logic [18:0] ram_addr_m=0,ram_addr_s=0;
     logic [7:0] ram_expected_m=0,ram_expected_s=0;
     logic [7:0] ram_actual_m=0,ram_actual_s=0;
     logic [3:0] interrupt_m=0,interrupt_s=0;

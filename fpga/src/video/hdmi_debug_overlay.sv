@@ -26,7 +26,7 @@ module hdmi_debug_overlay #(
     input  logic [15:0]  rom_verify_vector,
     input  logic         sdram_test_done,
     input  logic         sdram_test_pass,
-    input  logic [15:0]  sdram_test_error_addr,
+    input  logic [18:0]  sdram_test_error_addr,
     input  logic [7:0]   sdram_test_expected,
     input  logic [7:0]   sdram_test_actual,
     input  logic [23:0]  rgb_in,
@@ -213,16 +213,17 @@ module hdmi_debug_overlay #(
                 64:character=!sdram_test_done ? "-" :
                              (sdram_test_pass ? "P" : "F");
                 66:character="@";
-                67:character=sdram_test_done ? hex_char(sdram_test_error_addr[15:12]) : "-";
-                68:character=sdram_test_done ? hex_char(sdram_test_error_addr[11:8]) : "-";
-                69:character=sdram_test_done ? hex_char(sdram_test_error_addr[7:4]) : "-";
-                70:character=sdram_test_done ? hex_char(sdram_test_error_addr[3:0]) : "-";
-                72:character="E"; 73:character=":";
-                74:character=sdram_test_done ? hex_char(sdram_test_expected[7:4]) : "-";
-                75:character=sdram_test_done ? hex_char(sdram_test_expected[3:0]) : "-";
-                77:character="A"; 78:character=":";
-                79:character=sdram_test_done ? hex_char(sdram_test_actual[7:4]) : "-";
-                80:character=sdram_test_done ? hex_char(sdram_test_actual[3:0]) : "-";
+                67:character=sdram_test_done ? hex_char({1'b0,sdram_test_error_addr[18:16]}) : "-";
+                68:character=sdram_test_done ? hex_char(sdram_test_error_addr[15:12]) : "-";
+                69:character=sdram_test_done ? hex_char(sdram_test_error_addr[11:8]) : "-";
+                70:character=sdram_test_done ? hex_char(sdram_test_error_addr[7:4]) : "-";
+                71:character=sdram_test_done ? hex_char(sdram_test_error_addr[3:0]) : "-";
+                73:character="E"; 74:character=":";
+                75:character=sdram_test_done ? hex_char(sdram_test_expected[7:4]) : "-";
+                76:character=sdram_test_done ? hex_char(sdram_test_expected[3:0]) : "-";
+                78:character="A"; 79:character=":";
+                80:character=sdram_test_done ? hex_char(sdram_test_actual[7:4]) : "-";
+                81:character=sdram_test_done ? hex_char(sdram_test_actual[3:0]) : "-";
                 default: ;
             endcase
         end else if (character_row == 0) begin

@@ -5,9 +5,9 @@ module tb_coco_sdram_startup_test;
     wire mem_req,mem_wr,done,passed,failed;
     wire [22:0] mem_addr;
     wire [7:0] mem_wdata;
-    wire [15:0] error_addr;
+    wire [18:0] error_addr;
     wire [7:0] error_expected,error_actual;
-    reg [7:0] memory [0:65534];
+    reg [7:0] memory [0:524287];
     integer errors=0,transactions=0;
 
     coco_sdram_startup_test dut(
@@ -22,8 +22,8 @@ module tb_coco_sdram_startup_test;
         mem_ack <= mem_req && !mem_ack;
         if (mem_req && !mem_ack) begin
             transactions <= transactions+1;
-            if (mem_wr) memory[mem_addr[15:0]] <= mem_wdata;
-            else mem_rdata <= memory[mem_addr[15:0]];
+            if (mem_wr) memory[mem_addr[18:0]] <= mem_wdata;
+            else mem_rdata <= memory[mem_addr[18:0]];
         end
     end
 
@@ -31,7 +31,7 @@ module tb_coco_sdram_startup_test;
         repeat(3) @(negedge clk);
         reset_n=1; start=1;
         wait(done); @(negedge clk);
-        if (!passed || failed || transactions != 131070) errors=errors+1;
+        if (!passed || failed || transactions != 1048576) errors=errors+1;
         if (errors==0) $display("tb_coco_sdram_startup_test PASS");
         else $display("tb_coco_sdram_startup_test FAIL errors=%0d tx=%0d",errors,transactions);
         $finish;

@@ -18,7 +18,7 @@ module coco3_memory #(
     output flash_vector_done, output flash_vector_pass,
     output [15:0] flash_vector,
     output sdram_test_done, output sdram_test_pass,
-    output [15:0] sdram_test_error_addr,
+    output [18:0] sdram_test_error_addr,
     output [7:0] sdram_test_expected, output [7:0] sdram_test_actual,
     output reg rom_verify_done, output reg rom_verify_pass,
     output reg [15:0] rom_verify_vector,
@@ -227,7 +227,7 @@ module coco3_memory #(
     reg [14:0] verify_rom_addr=15'd0;
     wire [14:0] rom_read_addr =
         (raw_loader_done && !rom_verify_done) ? verify_rom_addr :
-                                               cpu_mem_addr[14:0];
+                                               selected_addr_pipe[14:0];
     wire rom_loader_write = sdram_test_pass && !raw_loader_done &&
                             flash_loader_req;
     always @(posedge clk) begin

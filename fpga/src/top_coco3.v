@@ -174,7 +174,7 @@ module top_coco3 #(
 
     wire sdram_reset_n,loader_start,system_ready,sdram_enabled,loader_done;
     wire sdram_test_done,sdram_test_pass;
-    wire [15:0] sdram_test_error_addr;
+    wire [18:0] sdram_test_error_addr;
     wire [7:0] sdram_test_expected,sdram_test_actual;
     wire rom_verify_done,rom_verify_pass;
     wire [15:0] rom_verify_vector;

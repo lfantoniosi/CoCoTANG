@@ -32,23 +32,41 @@ module gime_registers (
     wire gime_selected = cpu_addr >= 16'hff90 && cpu_addr <= 16'hffbf;
     wire io_selected = cpu_addr >= 16'hff00 && cpu_addr < 16'hffe0;
     wire vector_selected = cpu_addr >= 16'hffe0;
+    wire [2:0] cpu_block = cpu_addr[15:13];
+    wire [3:0] mmu_index = {init1[0],cpu_block};
+    // COCO (bit 7) selects the compatibility video/register personality;
+    // it does not disable address translation.  Software such as the CoCo 3
+    // memory checker deliberately leaves compatibility video selected while
+    // enabling the MMU with bit 6.  Coupling the two bits aliases every MMU
+    // page back into the fixed upper 64K and makes a 512K machine appear to
+    // contain only 64K/128K.
+    wire mmu_enabled = init0[6];
+    wire [5:0] selected_mmu_page = mmu[mmu_index];
+    // In MMU RAM/ROM mode, $3C-$3F in any MMU slot select ROM.  The two
+    // low page bits are supplied by the destination slot, not by the value
+    // written to the MMU register.  Consequently a RAM page such as $00
+    // mapped at CPU $8000 must remain RAM; ROM is not a fixed CPU window.
+    wire mmu_rom_page = &selected_mmu_page[5:2];
+    wire legacy_rom_window = !mmu_enabled && cpu_addr >= 16'h8000;
+    wire mapped_rom_window = mmu_enabled && mmu_rom_page;
     // The hardware-vector page is always supplied by the internal ROM,
     // including while TY selects all-RAM mode.  Keeping vector_selected
     // outside the ram_mode qualification is essential: IRQ entry commonly
     // occurs after Extended BASIC has enabled all-RAM, and otherwise FFF8/9
     // are incorrectly translated through the RAM/MMU path.
-    wire rom_window = vector_selected ||
-                      (!ram_mode && cpu_addr >= 16'h8000 && !io_selected);
+    wire rom_window = vector_selected || (!ram_mode && !io_selected &&
+                      (legacy_rom_window || mapped_rom_window));
+    wire [14:0] rom_byte_addr = vector_selected ? cpu_addr[14:0] :
+                                mmu_enabled ? {cpu_block[1:0],cpu_addr[12:0]} :
+                                              cpu_addr[14:0];
     wire [1:0] rom_map = init0[1:0];
     // INIT0.MC1:MC0: 0x is 16K internal plus 16K external, 10 is
     // 32K internal, and 11 is 32K external except for vectors.  The FPGA
     // contains the complete internal 32K image; external portions must
     // release the data bus for the cartridge/motherboard path.
     wire external_rom_selected = rom_window && !vector_selected &&
-        ((!rom_map[1] && cpu_addr >= 16'hc000) || rom_map == 2'b11);
+        ((!rom_map[1] && rom_byte_addr[14]) || rom_map == 2'b11);
     wire rom_selected = rom_window && !external_rom_selected;
-    wire [3:0] mmu_index = {init1[0],cpu_addr[15:13]};
-    wire mmu_enabled = !init0[7] && init0[6];
     wire [18:0] compatibility_ram_address =
         19'h70000 + {3'd0,cpu_addr};
     wire [18:0] ram_address = mmu_enabled ?
@@ -58,10 +76,12 @@ module gime_registers (
     assign cpu_mem_read = cpu_rw_n && !gime_selected &&
                           (!io_selected || vector_selected) &&
                           !external_rom_selected;
-    assign cpu_mem_write = !cpu_rw_n && !io_selected && !rom_window;
-    assign cpu_mem_is_rom = rom_selected;
-    assign cpu_mem_addr = rom_selected ?
-                          {8'd0,cpu_addr[14:0]} : {4'd0,ram_address};
+    // ROM is a read overlay. Writes still reach the translated RAM beneath
+    // it, which is required by MMU memory probes and shadow-RAM software.
+    assign cpu_mem_write = !cpu_rw_n && !io_selected;
+    assign cpu_mem_is_rom = cpu_rw_n && rom_selected;
+    assign cpu_mem_addr = (cpu_rw_n && rom_selected) ?
+                          {8'd0,rom_byte_addr} : {4'd0,ram_address};
     assign core_data_oe = e && cpu_rw_n && gime_selected;
     assign irq_assert = init0[5] && |irq_pending;
     assign firq_assert = init0[4] && |firq_pending;
@@ -79,20 +99,26 @@ module gime_registers (
         // FPGA-owned RAM, internal CoCo 3 ROM, vectors and GIME registers use
         // S0 so those legacy ROMs cannot contend with the FPGA data driver.
         // Only an external-ROM mapping is released to the cartridge select.
-        if (gime_selected || cpu_mem_read || cpu_mem_write || rom_selected)
-            sam_s = 3'd0;
-        else if (external_rom_selected)
+        // S is purely an address-region decode.  Do not feed the RAM/ROM
+        // request qualifiers back into this pad path: those qualifiers add
+        // the MMU, R/W and I/O decode to an output which only needs to know
+        // whether the selected ROM window is external.  Everything below
+        // FF00 is FPGA RAM/internal ROM unless that one external-ROM case
+        // applies; vectors and GIME registers are FPGA-owned as well.
+        if (external_rom_selected)
             sam_s = 3'd3;
-        else if (cpu_addr < 16'hff20)
-            sam_s = 3'd4;
-        else if (cpu_addr < 16'hff40)
-            sam_s = 3'd5;
-        else if (cpu_addr < 16'hff60)
-            sam_s = 3'd6;
-        else if (cpu_addr < 16'hffe0)
-            sam_s = 3'd7;
-        else
-            sam_s = 3'd2;
+        else if (cpu_addr[15:8] != 8'hff)
+            sam_s = 3'd0;
+        else case (cpu_addr[7:4])
+            4'h0,4'h1: sam_s = 3'd4; // PIA0
+            4'h2,4'h3: sam_s = 3'd5; // PIA1
+            4'h4,4'h5: sam_s = 3'd6; // cartridge control
+            4'h6,4'h7,4'h8,
+            4'hc,4'hd: sam_s = 3'd7; // spare/cart I/O and SAM strobes
+            // $FF90-$FFBF are GIME registers and $FFE0-$FFFF are internal
+            // vectors; both are FPGA-owned and therefore use S0.
+            default: sam_s = 3'd0;
+        endcase
 
         core_rdata = 8'hff;
         case (cpu_addr)

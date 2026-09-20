@@ -21,7 +21,7 @@ module tb_hdmi_debug_overlay;
         .rom_verify_done(1'b1),.rom_verify_pass(1'b1),
         .rom_verify_vector(16'h8c1b),
         .sdram_test_done(1'b1),.sdram_test_pass(1'b1),
-        .sdram_test_error_addr(16'h0000),
+        .sdram_test_error_addr(19'h00000),
         .sdram_test_expected(8'h00),.sdram_test_actual(8'h00),
         .rgb_in(rgb_in),.rgb_out(rgb_out));
 

@@ -141,9 +141,9 @@ module tb_gime_scanline_buffer;
   // Native GIME rows keep their normal MSB-first order in the unfiltered
   // canonical/CVBS copy. Row zero of 'A' is $08, so pixel 3 is background
   // and pixel 4 is foreground.
-  if((dut.c_valid0&&dut.c_tag0==0 ? dut.cvbs_line0[3] : dut.cvbs_line1[3])!==mapped(6'd8))begin
+  if((dut.c_valid0&&dut.c_tag0==0 ? dut.cvbs_line0[3] : dut.cvbs_line1[3])!==mapped(6'd0))begin
    $display("native font bit order wrong: A pixel 3 is not background");errors=errors+1;end
-  if((dut.c_valid0&&dut.c_tag0==0 ? dut.cvbs_line0[4] : dut.cvbs_line1[4])!==mapped(6'd7))begin
+  if((dut.c_valid0&&dut.c_tag0==0 ? dut.cvbs_line0[4] : dut.cvbs_line1[4])!==mapped(6'd15))begin
    $display("native font bit order wrong: A pixel 4 is not foreground");errors=errors+1;end
   slow_memory=0;
 
