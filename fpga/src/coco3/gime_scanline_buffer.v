@@ -297,6 +297,8 @@ module gime_scanline_buffer (
  // its two immutable scanline buffers.
  wire [16:0] live_signature={compatibility_mode,compatibility_an_g,compatibility_gm,
   compatibility_css,bit_plane,hres,cres,3'b000,1'b0};
+ wire [7:0] completion_lpr=fill_compatibility?fill_lpr:
+  native_lines_per_row(lines_per_row_code);
  wire configuration_diff=live_signature!=mode_signature||
   frame_screen_base!=last_screen_base||vertical_scroll!=last_vertical_scroll;
  reg configuration_diff_q=1'b1;
@@ -536,9 +538,13 @@ module gime_scanline_buffer (
        // Native graphics LPR=111 is an infinite-height row.  Its internal
        // line counter remains zero, so changing back to LPR=000 advances by
        // exactly one row instead of first dividing a wrapped 4-bit count.
-       if(fill_bit_plane&&fill_lpr==8'hff)begin
+       // The timed FF98 write can occur after prefetch has selected this
+       // raster's pixels but before its trailing border.  Use the live LPR
+       // here so that write controls advancement to the following DMA row;
+       // fill_lpr remains the immutable value used to render this raster.
+       if(fill_bit_plane&&completion_lpr==8'hff)begin
         dma_next_address<=fill_base;dma_line_in_row<=0;
-       end else if(glyph_line+1'b1>=fill_lpr)begin
+       end else if(glyph_line+1'b1>=completion_lpr)begin
         dma_next_address<=fill_base+fill_stride;dma_line_in_row<=0;
        end else begin
         dma_next_address<=fill_base;dma_line_in_row<=glyph_line+1'b1;
