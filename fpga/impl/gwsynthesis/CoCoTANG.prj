@@ -17,6 +17,7 @@
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/cpu_sdram_arbiter.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco3_memory.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847_char_rom.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/coco3_char_rom.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_timing.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_registers.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_mode_debug.v" type="verilog"/>

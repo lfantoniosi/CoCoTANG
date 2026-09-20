@@ -39,7 +39,8 @@ module coco3_hdmi #(
     logic [7:0] ram_actual_m=0,ram_actual_s=0;
     logic [3:0] interrupt_m=0,interrupt_s=0;
     logic [9:0] top,doubled_height,picture_width,picture_lead;
-    logic [9:0] source_line,next_source_line;
+    logic [9:0] source_line,picture_x;
+    logic [12:0] canonical_x;
     always_ff @(posedge pixel_clk) begin
         height_m<=active_height;
         height_s<=height_m;
@@ -62,19 +63,32 @@ module coco3_hdmi #(
         // its 256-dot modes. Resample every mode into 512x(2*LPF) rather than
         // exposing the CRT's non-square 640-dot sampling as square HDMI pixels.
         picture_width=10'd512;
-        picture_lead=((10'd720-picture_width)>>1)-1'b1;
+        // Two clocks of scanline-RAM addressing/output latency.
+        picture_lead=((10'd720-picture_width)>>1)-2'd2;
+        picture_x=(x>=picture_lead)?x-picture_lead:10'd0;
+        // The shared cache is the GIME's canonical 640-dot aperture. HDMI
+        // displays that aperture in 512 square pixels, so sample at 5/4.
+        canonical_x={picture_x,2'b00}+picture_x;
         source_line=(y>=top) ? ((y-top)>>1) : 10'd0;
-        next_source_line=(y+1'b1>=top) ? ((y+1'b1-top)>>1) : 10'd0;
     end
 
     // Lead the visible window by one clock for the synchronous line RAM.
     always_comb begin
         source_valid=(x>=picture_lead && x<picture_lead+picture_width &&
                       y>=top && y<top+doubled_height);
-        source_x=source_valid ? x-picture_lead : 10'd0;
+        source_x=source_valid ? canonical_x[11:2] : 10'd0;
         source_y=source_line[7:0];
-        prefetch_y=next_source_line[7:0];
-        prefetch_valid=(y+1'b1>=top && y+1'b1<top+doubled_height);
+        // CoCo2's ping-pong scan doubler starts producing the next source
+        // line while the current one is first displayed.  Do the same here:
+        // requesting source_line+1 on the first of the two HDMI copies gives
+        // the GIME renderer a full source-line period (~63.5 us), rather than
+        // only the second 480p line (~31.7 us).  Extended 80-column/640-dot
+        // modes need that margin once SDRAM arbitration is included.
+        // Prime source line zero throughout the upper border so the first
+        // visible line is also complete before scanout reaches it.
+        prefetch_y=(y<top) ? 8'd0 : source_line[7:0]+1'b1;
+        prefetch_valid=(y<top) ? 1'b1 :
+                       (y<top+doubled_height && source_line+1'b1<height_s);
     end
 
     logic picture_d=0;

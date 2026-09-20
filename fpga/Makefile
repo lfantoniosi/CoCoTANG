@@ -59,9 +59,9 @@ test:
 	vvp /private/tmp/cocotang_tb_gime_registers
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_video tests/tb_gime_video.v src/coco3/gime_video.v src/coco2/mc6847_char_rom.v
 	vvp /private/tmp/cocotang_tb_gime_video
-	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_scanline tests/tb_gime_scanline_buffer.v src/coco3/gime_scanline_buffer.v src/coco2/mc6847_char_rom.v
+	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_scanline tests/tb_gime_scanline_buffer.v src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v
 	vvp /private/tmp/cocotang_tb_gime_scanline
-	iverilog -g2012 -o /private/tmp/cocotang_tb_coco3_video_mux tests/tb_coco3_video_mux.v src/coco3/coco3.v src/coco3/gime_timing.v src/coco3/gime_registers.v src/coco3/gime_mode_debug.v src/coco3/gime_scanline_buffer.v src/coco3/gime_native_video.v src/coco2/mc6847_char_rom.v
+	iverilog -g2012 -o /private/tmp/cocotang_tb_coco3_video_mux tests/tb_coco3_video_mux.v src/coco3/coco3.v src/coco3/gime_timing.v src/coco3/gime_registers.v src/coco3/gime_mode_debug.v src/coco3/gime_scanline_buffer.v src/coco3/gime_native_video.v src/coco3/coco3_char_rom.v
 	vvp /private/tmp/cocotang_tb_coco3_video_mux
 	iverilog -g2012 -o /private/tmp/cocotang_tb_framebuffer tests/tb_coco_framebuffer.v src/video/coco_framebuffer.v
 	vvp /private/tmp/cocotang_tb_framebuffer

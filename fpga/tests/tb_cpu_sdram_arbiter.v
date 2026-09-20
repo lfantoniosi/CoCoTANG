@@ -92,21 +92,30 @@ module tb_cpu_sdram_arbiter;
         @(negedge clk); video_req=0;
         repeat (2) @(negedge clk);
 
-        // If both clients are ready at the slot boundary, CPU wins.
+        // The early E-low slot is the GIME's interleaved video access.  It
+        // must win even if a speculative CPU request is already queued;
+        // outside this bounded slot CPU retains priority.
         video_req=1;
         video_slot_open=1;
         cpu_req=1;
         cpu_addr=23'h000021;
         @(posedge clk); #1;
         if (!rd) $fatal(1,"CPU read did not launch");
-        if (addr !== 23'h000010)
-            $fatal(1,"CPU did not win arbitration: %h",addr);
+        if (addr !== 23'h00091a)
+            $fatal(1,"video did not win its interleaved slot: %h",addr);
         @(negedge clk); video_slot_open=0;
+        finish_read();
+        @(negedge clk); video_req=0;
+        @(posedge clk); #1;
+        // The queued CPU request launches immediately after the video word.
+        @(posedge clk); #1;
+        if (!rd || addr !== 23'h000010)
+            $fatal(1,"CPU did not resume after video slot: %h",addr);
         finish_read();
         @(posedge clk); #1;
         if (!saw_cpu_ack || cpu_rdata !== 8'h5a)
             $fatal(1,"CPU response/lane was wrong: %h",cpu_rdata);
-        @(negedge clk); cpu_req=0; video_req=0;
+        @(negedge clk); cpu_req=0;
 
         // The loader client can read the just-loaded ROM back for boot
         // verification, including correct byte-lane selection.

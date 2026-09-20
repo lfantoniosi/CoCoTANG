@@ -67,19 +67,19 @@ module tb_coco_cvbs_ntsc;
         seek(10'd158,9'd17);
         if (!dut.in_vdg_window || dut.in_picture) begin $display("top-left border window"); errors = errors + 1; end
 
-        seek(10'd222,9'd44);
+        seek(10'd222,9'd24);
         if (framebuffer_addr != 16'd0) begin $display("framebuffer first pixel"); errors = errors + 1; end
-        seek(10'd224,9'd44);
+        seek(10'd224,9'd24);
         if (framebuffer_addr != 16'd1) begin $display("framebuffer horizontal scale"); errors = errors + 1; end
-        seek(10'd732,9'd235);
+        seek(10'd732,9'd215);
         if (framebuffer_addr != {8'd191,8'd255}) begin $display("framebuffer last pixel: %h",framebuffer_addr); errors = errors + 1; end
 
         high_resolution = 1'b1;
-        seek(10'd158,9'd44);
+        seek(10'd158,9'd24);
         if (!source_valid || source_x != 10'd0 || source_y != 8'd0) begin
             $display("640-wide first pixel: %0d,%0d",source_x,source_y); errors=errors+1;
         end
-        seek(10'd797,9'd44);
+        seek(10'd797,9'd24);
         if (!source_valid || !dut.in_vdg_window || source_x != 10'd639) begin
             $display("640-wide last pixel: %0d",source_x); errors=errors+1;
         end
@@ -103,6 +103,17 @@ module tb_coco_cvbs_ntsc;
 
         seek(10'd795,9'd261);
         if (!dut.in_vdg_window || dut.in_picture) begin $display("bottom-right border window"); errors = errors + 1; end
+
+        // The final field line is exactly half length.  This makes the CVBS
+        // frame equal to 525 HDMI lines and prevents their shared scanline
+        // requests from walking through one another on successive frames.
+        seek(10'd428,9'd262);
+        repeat (10) @(posedge clk135); #1;
+        if (dut.h_sample != 0 || dut.v_line != 0 || dut.sample_phase != 0) begin
+            $display("262.5-line frame wrap: h=%0d v=%0d p=%0d",
+                     dut.h_sample,dut.v_line,dut.sample_phase);
+            errors = errors + 1;
+        end
 
         if (errors == 0) $display("tb_coco_cvbs_ntsc PASS");
         else $display("tb_coco_cvbs_ntsc FAIL: %0d",errors);

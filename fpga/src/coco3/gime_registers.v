@@ -144,8 +144,10 @@ module gime_registers (
             sam_video_offset <= 7'd0;
             ram_mode <= 1'b0;
             for (i=0;i<16;i=i+1) mmu[i] <= 6'h38 + i[5:0];
-            palette[0]<=6'd18; palette[1]<=6'd36; palette[2]<=6'd11; palette[3]<=6'd7;
-            palette[4]<=6'd63; palette[5]<=6'd31; palette[6]<=6'd9;  palette[7]<=6'd38;
+            // CoCo3FPGA RGB defaults.  The former values were its composite
+            // approximations and produced visibly wrong HDMI/derived-CVBS.
+            palette[0]<=6'd18; palette[1]<=6'd54; palette[2]<=6'd9;  palette[3]<=6'd36;
+            palette[4]<=6'd63; palette[5]<=6'd27; palette[6]<=6'd45; palette[7]<=6'd38;
             palette[8]<=6'd0;  palette[9]<=6'd18; palette[10]<=6'd0; palette[11]<=6'd63;
             palette[12]<=6'd0; palette[13]<=6'd18; palette[14]<=6'd0; palette[15]<=6'd38;
         end else begin

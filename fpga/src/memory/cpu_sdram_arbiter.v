@@ -1,7 +1,7 @@
 // SDRAM arbiter for the standalone physical-HD6309E test top. There are only
 // three clients: the live CPU, VDG video fetches, and the one-shot SPI-flash
-// ROM loader. CPU always has highest priority so adding video cannot delay a
-// request that is ready at the start of an SDRAM transaction.
+// ROM loader.  The short early-E-low window is reserved for one interleaved
+// video word; CPU has priority everywhere else in the cycle.
 module cpu_sdram_arbiter #(
     parameter CLK_HZ = 108000000
 ) (
@@ -125,10 +125,15 @@ module cpu_sdram_arbiter #(
 
             case (state)
                 IDLE: if (!busy) begin
-                    if (cpu_req)
-                        launch(OWNER_CPU,cpu_wr,cpu_addr,cpu_wdata);
-                    else if (video_req && video_background_slot)
+                    // At E-fall the previous CPU transfer is complete and
+                    // the next physical address is not required until the
+                    // following Q/E phases.  Giving this bounded slot to
+                    // video guarantees GIME's forty 32-bit words per 80-col
+                    // row even while speculative CPU reads remain queued.
+                    if (video_req && video_background_slot)
                         launch(OWNER_VIDEO,1'b0,video_addr,8'd0);
+                    else if (cpu_req)
+                        launch(OWNER_CPU,cpu_wr,cpu_addr,cpu_wdata);
                     else if (loader_req)
                         launch(OWNER_LOADER,loader_wr,loader_addr,loader_wdata);
                     else if (enabled && refresh_background_slot &&

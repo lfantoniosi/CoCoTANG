@@ -157,7 +157,7 @@ module coco3 #(
     endfunction
 
     reg effective_bit_plane = 1'b0;
-    reg [2:0] effective_hres = 3'd0;
+    reg [3:0] effective_hres = 4'd0;
     reg [1:0] effective_cres = 2'd0;
     reg [1:0] effective_lpf = 2'd0;
     reg [2:0] effective_lines_per_row_code = 3'd3;
@@ -167,7 +167,7 @@ module coco3 #(
     always @(posedge clk or negedge core_reset_n) begin
         if (!core_reset_n) begin
             effective_bit_plane <= 1'b0;
-            effective_hres <= 3'd0;
+            effective_hres <= 4'd0;
             effective_cres <= 2'd0;
             effective_lpf <= 2'd0;
             effective_lines_per_row_code <= 3'd3;
@@ -175,9 +175,12 @@ module coco3 #(
         end else begin
             effective_bit_plane <= DEBUG_S2_VIDEO_MODE ? debug_bit_plane :
                                    compatibility_mode ? compatibility_an_g : vmode[7];
-            effective_hres <= DEBUG_S2_VIDEO_MODE ? debug_hres :
-                              compatibility_mode ? compatibility_hres(compatibility_gm) :
-                                                   vres[4:2];
+            // FF98 bit 6 is HRES[3] in the MiSTer/CoCo3FPGA extended
+            // decoder; FF99 bits 4:2 are the standard GIME HRES field.
+            effective_hres <= DEBUG_S2_VIDEO_MODE ? {1'b0,debug_hres} :
+                              compatibility_mode ?
+                                  {1'b0,compatibility_hres(compatibility_gm)} :
+                                  {vmode[6],vres[4:2]};
             effective_cres <= DEBUG_S2_VIDEO_MODE ? debug_cres :
                               compatibility_mode ?
                                   (compatibility_an_g ?
@@ -211,78 +214,54 @@ module coco3 #(
     assign framebuffer_write_addr=16'd0;
     assign framebuffer_write_data=6'd0;
 
-    wire hdmi_req,cvbs_req;
-    wire [22:0] hdmi_addr,cvbs_addr;
-    reg hdmi_valid=0,cvbs_valid=0;
-    gime_scanline_buffer hdmi_lines (
+    reg [25:0] blink_divider=0;
+    always @(posedge clk or negedge core_reset_n) begin
+        if(!core_reset_n) blink_divider<=0;
+        else blink_divider<=blink_divider+1'b1;
+    end
+    // Register the translated physical write address before it fans out into
+    // two sets of line-tag range comparators.  Besides making the snoop a
+    // clean one-clock event, this avoids a long MMU-decode-to-cache-tag path.
+    reg video_cpu_write_strobe = 1'b0;
+    reg [18:0] video_cpu_write_addr = 19'd0;
+    always @(posedge clk or negedge core_reset_n) begin
+        if (!core_reset_n) begin
+            video_cpu_write_strobe <= 1'b0;
+            video_cpu_write_addr <= 19'd0;
+        end else begin
+            video_cpu_write_strobe <= e_fall && cpu_mem_write;
+            if (e_fall && cpu_mem_write)
+                video_cpu_write_addr <= cpu_mem_addr[18:0];
+        end
+    end
+    // One MiSTer-compatible renderer services both scanline consumers.  The
+    // module mirrors only its two-line output RAM for the unrelated HDMI and
+    // CVBS read clocks; SDRAM fetch, tags and mode/address logic are shared.
+    gime_scanline_buffer scanlines (
         .clk(clk),.reset_n(core_reset_n),
         .bit_plane(effective_bit_plane), .hres(effective_hres),
         .cres(effective_cres), .lines_per_row_code(effective_lines_per_row_code),
+        .vertical_scroll(vertical_scroll),
         .screen_base(effective_screen_base),
         .horizontal_offset(horizontal_offset), .palettes(palettes),
         .compatibility_mode(compatibility_mode),
         .compatibility_an_g(compatibility_an_g),
+        .compatibility_gm(compatibility_gm),
         .compatibility_css(pia1_effective[3]),
-        .compatibility_int_ext(pia1_effective[4]),
-        .output_width(10'd512),
-        .read_clk(hdmi_read_clk),.read_x(hdmi_source_x),
-        .display_y(hdmi_source_y),.display_valid(hdmi_source_valid),
-        .prefetch_y(hdmi_prefetch_y),.prefetch_valid(hdmi_prefetch_valid),
-        .pixel_data(hdmi_pixel_data),.memory_request(hdmi_req),.memory_addr(hdmi_addr),
-        .memory_data(video_memory_data32),.memory_valid(hdmi_valid)
+        .blink(blink_divider[25]),
+        .cpu_write_strobe(video_cpu_write_strobe),
+        .cpu_write_addr(video_cpu_write_addr),
+        .hdmi_read_clk(hdmi_read_clk),.hdmi_read_x(hdmi_source_x),
+        .hdmi_display_y(hdmi_source_y),.hdmi_display_valid(hdmi_source_valid),
+        .hdmi_prefetch_y(hdmi_prefetch_y),.hdmi_prefetch_valid(hdmi_prefetch_valid),
+        .hdmi_pixel_data(hdmi_pixel_data),
+        .cvbs_read_clk(cvbs_read_clk),.cvbs_read_x(cvbs_source_x),
+        .cvbs_display_y(cvbs_source_y),.cvbs_display_valid(cvbs_source_valid),
+        .cvbs_prefetch_y(cvbs_prefetch_y),.cvbs_prefetch_valid(cvbs_prefetch_valid),
+        .cvbs_pixel_data(cvbs_pixel_data),
+        .memory_request(video_memory_request),.memory_addr(video_memory_addr),
+        .memory_data(video_memory_data32),.memory_valid(video_memory_valid)
     );
-    gime_scanline_buffer cvbs_lines (
-        .clk(clk),.reset_n(core_reset_n),
-        .bit_plane(effective_bit_plane),.hres(effective_hres),.cres(effective_cres),
-        .lines_per_row_code(effective_lines_per_row_code),.screen_base(effective_screen_base),
-        .horizontal_offset(horizontal_offset),.palettes(palettes),
-        .compatibility_mode(compatibility_mode),
-        .compatibility_an_g(compatibility_an_g),
-        .compatibility_css(pia1_effective[3]),
-        .compatibility_int_ext(pia1_effective[4]),
-        .output_width(10'd640),
-        .read_clk(cvbs_read_clk),.read_x(cvbs_source_x),
-        .display_y(cvbs_source_y),.display_valid(cvbs_source_valid),
-        .prefetch_y(cvbs_prefetch_y),.prefetch_valid(cvbs_prefetch_valid),
-        .pixel_data(cvbs_pixel_data),.memory_request(cvbs_req),.memory_addr(cvbs_addr),
-        .memory_data(video_memory_data32),.memory_valid(cvbs_valid)
-    );
-
-    // Lock ownership from request through response; wait for the selected
-    // renderer to drop its request before accepting another transaction.
-    // The request must remain asserted until memory acknowledges it: SDRAM
-    // accepts video traffic only in an interleaved E-low slot, so a one-clock
-    // pulse can miss that window and leave the renderer waiting forever.
-    localparam M_IDLE=2'd0,M_WAIT=2'd1,M_DROP=2'd2;
-    reg [1:0] mux_state=0;
-    reg mux_owner=0;
-    reg round_robin=0;
-    reg video_request_reg=0;
-    reg [22:0] video_addr_reg=0;
-    assign video_memory_request=video_request_reg;
-    assign video_memory_addr=video_addr_reg;
-    always @(posedge clk or negedge core_reset_n) begin
-        if (!core_reset_n) begin
-            mux_state<=M_IDLE; mux_owner<=0; round_robin<=0;
-            video_request_reg<=0; video_addr_reg<=0; hdmi_valid<=0; cvbs_valid<=0;
-        end else begin
-            hdmi_valid<=0; cvbs_valid<=0;
-            case (mux_state)
-                M_IDLE: if (hdmi_req || cvbs_req) begin
-                    mux_owner <= hdmi_req && cvbs_req ? round_robin : cvbs_req;
-                    video_addr_reg <= (hdmi_req && (!cvbs_req || !round_robin)) ? hdmi_addr : cvbs_addr;
-                    video_request_reg<=1;
-                    mux_state<=M_WAIT;
-                end
-                M_WAIT: if (video_memory_valid) begin
-                    video_request_reg<=0;
-                    if (mux_owner) cvbs_valid<=1; else hdmi_valid<=1;
-                    round_robin<=!mux_owner; mux_state<=M_DROP;
-                end
-                M_DROP: if (mux_owner ? !cvbs_req : !hdmi_req) mux_state<=M_IDLE;
-            endcase
-        end
-    end
 
     function [7:0] line_count;
         input [1:0] value;
@@ -295,6 +274,5 @@ module coco3 #(
         .pixel_rgb(hdmi_pixel_data),.hs_n(hs_n),.fs_n(fs_n),
         .hblank(hblank),.vblank(vblank),.red(red),.green(green),.blue(blue));
 
-    wire unused_vertical_scroll = ^vertical_scroll;
     wire unused_video_byte = ^video_memory_data;
 endmodule

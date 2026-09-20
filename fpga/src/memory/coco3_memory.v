@@ -169,17 +169,19 @@ module coco3_memory #(
                        (current_read_ready || read_hold!=0);
     assign cpu_wait=cpu_access_enable && cycle_read && !current_read_ready;
 
-    // A fast CoCo 3 cycle still has a complete E-low/Q-low quadrant.  Open a
-    // bounded eight-clock window at its leading edge for one 32-bit scanline
-    // fetch or refresh, matching the real GIME's interleaved DMA behavior.
+    // A fast CoCo 3 cycle still has a complete E-low/Q-low quadrant.  Keep
+    // the grant eligible for that full quadrant.  The arbiter also qualifies
+    // it with !E&&!Q, so the count can never permit a launch after Q begins
+    // the next CPU-address phase.  The former eight-clock half-window could
+    // be entirely consumed by completion/drop of the preceding CPU access.
     reg [3:0] video_slot_count=0,refresh_slot_count=0;
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
             video_slot_count<=0; refresh_slot_count<=0;
         end else begin
             if (e_fall) begin
-                video_slot_count<=4'd8;
-                refresh_slot_count<=4'd8;
+                video_slot_count<=4'd15;
+                refresh_slot_count<=4'd15;
             end else begin
                 if (video_slot_count!=0) video_slot_count<=video_slot_count-1'b1;
                 if (refresh_slot_count!=0) refresh_slot_count<=refresh_slot_count-1'b1;

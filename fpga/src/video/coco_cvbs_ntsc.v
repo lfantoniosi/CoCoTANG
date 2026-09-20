@@ -38,11 +38,19 @@ module coco_cvbs_ntsc (
                                STREAMING_INPUT ? 10'd754 : 10'd734;
     wire [9:0] border_left   = 10'd158;
     wire [9:0] border_right  = high_resolution ? 10'd798 : 10'd796;
-    localparam [8:0] V_TOTAL        = 9'd262;
+    // 480p contains 525 lines, so one doubled source period is two HDMI
+    // lines and a frame is 262.5 source periods.  Keep CVBS at precisely the
+    // same frame duration: 262 complete 858-sample lines followed by one
+    // 429-sample half-line.  A former 262-line frame made the two scanline
+    // consumers slip by half a row on every frame.
+    localparam [8:0] V_TOTAL        = 9'd263;
     reg [7:0] height_meta = 8'd192;
     reg [8:0] picture_top = 9'd44;
     reg [8:0] picture_bottom = 9'd236;
-    wire [8:0] next_picture_top = (9'd280 - {1'b0,height_meta}) >> 1;
+    // Match the HDMI scan doubler's source-line phase: HDMI begins after 48
+    // 480p lines, which is 24 doubled source-line periods.  Starting CVBS at
+    // source line 24 lets one GIME render/fetch feed both output line caches.
+    wire [8:0] next_picture_top = (9'd240 - {1'b0,height_meta}) >> 1;
     wire [8:0] border_top = picture_top >= 9'd27 ? picture_top - 9'd27 : 9'd0;
 
     localparam [5:0] LEVEL_SYNC     = 6'd0;
@@ -53,6 +61,8 @@ module coco_cvbs_ntsc (
     reg [3:0] sample_phase = 4'd0;
     reg [9:0] h_sample = 10'd0;
     reg [8:0] v_line = 9'd0;
+    wire [9:0] line_last_sample = (v_line == V_TOTAL-1'b1) ?
+                                  10'd428 : H_TOTAL-1'b1;
 
     wire in_picture = (h_sample >= picture_left) &&
                       (h_sample < picture_right) &&
@@ -70,10 +80,10 @@ module coco_cvbs_ntsc (
     assign source_x = picture_x;
     assign source_y = picture_y;
     assign source_valid = in_picture;
-    assign prefetch_y = (v_line + 1'b1 >= picture_top) ?
-                        (v_line + 1'b1 - picture_top) : 8'd0;
-    assign prefetch_valid = (v_line + 1'b1 >= picture_top) &&
-                            (v_line + 1'b1 < picture_bottom);
+    assign prefetch_y = (v_line < picture_top) ? 8'd0 : picture_y+1'b1;
+    assign prefetch_valid = (v_line < picture_top) ? 1'b1 :
+                            ((v_line < picture_bottom) &&
+                             (picture_y+1'b1 < height_meta));
 
     // Six pre-equalizing half-lines, six broad-sync half-lines and six
     // post-equalizing half-lines, followed by conventional horizontal sync.
@@ -339,7 +349,7 @@ module coco_cvbs_ntsc (
 
             if (sample_phase == 4'd9) begin
                 sample_phase <= 4'd0;
-                if (h_sample == H_TOTAL - 1'b1) begin
+                if (h_sample == line_last_sample) begin
                     h_sample <= 10'd0;
                     if (v_line == V_TOTAL - 1'b1)
                         v_line <= 9'd0;

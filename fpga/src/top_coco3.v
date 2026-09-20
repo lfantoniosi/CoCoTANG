@@ -115,11 +115,17 @@ module top_coco3 #(
     wire video_memory_request,video_memory_valid;
     wire [22:0] video_memory_addr;
     wire [31:0] video_memory_data32;
-    wire [9:0] hdmi_source_x,cvbs_source_x;
-    wire [7:0] hdmi_source_y,cvbs_source_y;
-    wire hdmi_source_valid,cvbs_source_valid;
-    wire [7:0] hdmi_prefetch_y,cvbs_prefetch_y;
-    wire hdmi_prefetch_valid,cvbs_prefetch_valid;
+    wire [9:0] hdmi_source_x;
+    wire [7:0] hdmi_source_y;
+    wire hdmi_source_valid;
+    wire [7:0] hdmi_prefetch_y;
+    wire hdmi_prefetch_valid;
+    wire [9:0] cvbs_source_x_raw;
+    wire [7:0] cvbs_source_y_raw,cvbs_prefetch_y_raw;
+    wire cvbs_source_valid_raw,cvbs_prefetch_valid_raw;
+    reg [9:0] cvbs_source_x=0;
+    reg [7:0] cvbs_source_y=0,cvbs_prefetch_y=0;
+    reg cvbs_source_valid=0,cvbs_prefetch_valid=0;
     reg [7:0] cpu_write_data=8'hff;
     wire [7:0] cpu_data_in;
 
@@ -353,14 +359,30 @@ module top_coco3 #(
 
     wire analog_luma,analog_chroma,analog_cvbs;
     wire [15:0] unused_cvbs_framebuffer_addr;
+    // Cut the encoder-counter -> line-buffer BSRAM-address path at the
+    // clk135 boundary.  There are ten clk135 clocks per CVBS sample, so this
+    // one-clock staging still leaves the scanline RAM response comfortably
+    // ahead of the sample which consumes it.
+    always @(posedge clk135 or negedge cpu_release) begin
+        if(!cpu_release) begin
+            cvbs_source_x<=0;cvbs_source_y<=0;cvbs_source_valid<=0;
+            cvbs_prefetch_y<=0;cvbs_prefetch_valid<=0;
+        end else begin
+            cvbs_source_x<=cvbs_source_x_raw;
+            cvbs_source_y<=cvbs_source_y_raw;
+            cvbs_source_valid<=cvbs_source_valid_raw;
+            cvbs_prefetch_y<=cvbs_prefetch_y_raw;
+            cvbs_prefetch_valid<=cvbs_prefetch_valid_raw;
+        end
+    end
     coco_cvbs_ntsc #(.STREAMING_INPUT(0)) analog_encoder(
         .clk135(clk135),.clk270(clk270),.reset_n(cpu_release),
         .high_resolution(1'b1),.framebuffer_data(cvbs_pixel_data),
         .border_rgb(border_rgb),.active_height(active_height),
         .framebuffer_addr(unused_cvbs_framebuffer_addr),
-        .source_x(cvbs_source_x),.source_y(cvbs_source_y),
-        .source_valid(cvbs_source_valid),.prefetch_y(cvbs_prefetch_y),
-        .prefetch_valid(cvbs_prefetch_valid),.luma_out(analog_luma),
+        .source_x(cvbs_source_x_raw),.source_y(cvbs_source_y_raw),
+        .source_valid(cvbs_source_valid_raw),.prefetch_y(cvbs_prefetch_y_raw),
+        .prefetch_valid(cvbs_prefetch_valid_raw),.luma_out(analog_luma),
         .chroma_out(analog_chroma),.cvbs_out(analog_cvbs));
     assign y_out=analog_luma;
     assign pb_out=(ANALOG_VIDEO_MODE==0)?analog_chroma:analog_cvbs;
