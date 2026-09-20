@@ -13,7 +13,9 @@ module gime_scanline_buffer (
  input cvbs_display_valid,input [7:0] cvbs_prefetch_y,input cvbs_prefetch_valid,
  output reg [5:0] cvbs_pixel_data,
  output reg memory_request,output reg [22:0] memory_addr,
- input [31:0] memory_data,input memory_valid
+ input [31:0] memory_data,input memory_valid,
+ output [7:0] debug_dma_next_y,output [7:0] debug_fill_y,
+ output [3:0] debug_state
 );
  localparam [9:0] CANONICAL_WIDTH=10'd640;
 
@@ -297,11 +299,12 @@ module gime_scanline_buffer (
  // its two immutable scanline buffers.
  wire [16:0] live_signature={compatibility_mode,compatibility_an_g,compatibility_gm,
   compatibility_css,bit_plane,hres,cres,3'b000,1'b0};
- wire [7:0] completion_lpr=fill_compatibility?fill_lpr:
-  native_lines_per_row(lines_per_row_code);
  wire configuration_diff=live_signature!=mode_signature||
   frame_screen_base!=last_screen_base||vertical_scroll!=last_vertical_scroll;
  reg configuration_diff_q=1'b1;
+ assign debug_dma_next_y=dma_next_y;
+ assign debug_fill_y=fill_y;
+ assign debug_state=state;
 
  always @(posedge clk or negedge reset_n) begin
   if(!reset_n) begin
@@ -538,13 +541,13 @@ module gime_scanline_buffer (
        // Native graphics LPR=111 is an infinite-height row.  Its internal
        // line counter remains zero, so changing back to LPR=000 advances by
        // exactly one row instead of first dividing a wrapped 4-bit count.
-       // The timed FF98 write can occur after prefetch has selected this
-       // raster's pixels but before its trailing border.  Use the live LPR
-       // here so that write controls advancement to the following DMA row;
-       // fill_lpr remains the immutable value used to render this raster.
-       if(fill_bit_plane&&completion_lpr==8'hff)begin
+       // LPR is captured with the rest of the immutable row state.  HDMI is
+       // deliberately one native raster behind HBORD, so a timed FF98 write
+       // is visible when the following prefetch starts and cannot retarget a
+       // row which is already being rendered.
+       if(fill_bit_plane&&fill_lpr==8'hff)begin
         dma_next_address<=fill_base;dma_line_in_row<=0;
-       end else if(glyph_line+1'b1>=completion_lpr)begin
+       end else if(glyph_line+1'b1>=fill_lpr)begin
         dma_next_address<=fill_base+fill_stride;dma_line_in_row<=0;
        end else begin
         dma_next_address<=fill_base;dma_line_in_row<=glyph_line+1'b1;

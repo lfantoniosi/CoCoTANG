@@ -267,24 +267,25 @@ module tb_gime_scanline_buffer;
    force dut.state=4'd14;force dut.out_x=10'd639;
    force dut.fill_hdmi=1'b0;force dut.fill_cvbs=1'b0;
    force dut.fill_sequential=1'b1;force dut.fill_y=8'd10;
-   // Prefetch began with the old one-line LPR, then BOINK's timed write
-   // selected infinite LPR before the raster completed.
+   // A timed write after prefetch began must not retarget the immutable row.
+   // The HDMI phase places the following prefetch after HBORD, where it will
+   // capture the new LPR normally.
    force dut.fill_compatibility=1'b0;
    force dut.fill_bit_plane=1'b1;force dut.fill_lpr=8'd1;
    force dut.glyph_line=4'd0;force dut.fill_base=19'h01000;
    force dut.fill_stride=11'd160;
    @(posedge clk);#1;
-   if(dut.dma_next_y!=8'd11||dut.dma_next_address!=19'h01000||
+   if(dut.dma_next_y!=8'd11||dut.dma_next_address!=19'h010a0||
       dut.dma_line_in_row!=0)begin
-    $display("infinite LPR did not hold DMA row: y=%0d addr=%h line=%0d",
+    $display("in-progress row incorrectly used live infinite LPR: y=%0d addr=%h line=%0d",
       dut.dma_next_y,dut.dma_next_address,dut.dma_line_in_row);errors=errors+1;end
-   // The inverse transition must likewise use the new live LPR even though
-   // the immutable pixels were selected while infinite LPR was active.
+   // The inverse transition likewise takes effect on the next prefetched
+   // row, not the infinite-LPR row already in progress.
    lpr=3'b000;force dut.fill_y=8'd11;force dut.fill_lpr=8'hff;
    @(posedge clk);#1;
-   if(dut.dma_next_y!=8'd12||dut.dma_next_address!=19'h010a0||
+   if(dut.dma_next_y!=8'd12||dut.dma_next_address!=19'h01000||
       dut.dma_line_in_row!=0)begin
-    $display("single-line LPR did not advance DMA row: y=%0d addr=%h line=%0d",
+    $display("in-progress row incorrectly used live single-line LPR: y=%0d addr=%h line=%0d",
       dut.dma_next_y,dut.dma_next_address,dut.dma_line_in_row);errors=errors+1;end
    release dut.fill_stride;release dut.fill_base;release dut.glyph_line;
    release dut.fill_lpr;release dut.fill_bit_plane;release dut.fill_compatibility;

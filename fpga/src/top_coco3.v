@@ -7,7 +7,7 @@ module top_coco3 #(
     //parameter [15:0] LOG_START_ADDRESS=16'hC0D1,
     parameter [15:0] LOG_START_ADDRESS=16'hFFFE,
     parameter [15:0] LOG_WRITE_START_ADDRESS=16'hFF98,
-    parameter [15:0] LOG_WRITE_END_ADDRESS=16'hFF99,
+    parameter [15:0] LOG_WRITE_END_ADDRESS=16'hFF9F,
     parameter integer LOG_REBASE_EVERY_MATCH=1,
     parameter integer ENABLE_BUS_LOGGER=1,
     parameter integer DEBUG_OVERLAY=0,
@@ -128,6 +128,7 @@ module top_coco3 #(
     reg cvbs_source_valid=0,cvbs_prefetch_valid=0;
     reg [7:0] cpu_write_data=8'hff;
     wire [7:0] cpu_data_in;
+    wire [31:0] raster_debug;
 
     // KEYINT and SERNT are inverted by the motherboard interface before they
     // reach the multiplexed FPGA inputs. Normalize both here so the GIME
@@ -165,7 +166,7 @@ module top_coco3 #(
         .cvbs_source_valid(cvbs_source_valid),
         .cvbs_prefetch_y(cvbs_prefetch_y),
         .cvbs_prefetch_valid(cvbs_prefetch_valid),
-        .cvbs_pixel_data(cvbs_pixel_data));
+        .cvbs_pixel_data(cvbs_pixel_data),.raster_debug(raster_debug));
 
     // The board pins drive NPN transistor bases: high asserts the active-low
     // motherboard IRQ/FIRQ nets, low releases them.
@@ -342,6 +343,7 @@ module top_coco3 #(
         // Display asserted levels: KEYINT and SERNT are active-low inputs;
         // IRQ and FIRQ are active-high requests to the output transistors.
         .interrupt_status({!gime_keyint_n,!gime_serint_n,gime_irq,gime_firq}),
+        .raster_debug(raster_debug),
         .rom_verify_done(rom_verify_done),.rom_verify_pass(rom_verify_pass),
         .rom_verify_vector(rom_verify_vector),
         .sdram_test_done(sdram_test_done),.sdram_test_pass(sdram_test_pass),

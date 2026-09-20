@@ -14,6 +14,7 @@ module coco3_hdmi #(
     input logic [LOG_PAGE_WIDTH-1:0] log_page,
     input logic [4:0] debug_status,input logic overlay_enable,
     input logic [3:0] interrupt_status,
+    input logic [31:0] raster_debug,
     input logic rom_verify_done,input logic rom_verify_pass,
     input logic [15:0] rom_verify_vector,
     input logic sdram_test_done,input logic sdram_test_pass,
@@ -38,6 +39,7 @@ module coco3_hdmi #(
     logic [7:0] ram_expected_m=0,ram_expected_s=0;
     logic [7:0] ram_actual_m=0,ram_actual_s=0;
     logic [3:0] interrupt_m=0,interrupt_s=0;
+    logic [31:0] raster_debug_m=0,raster_debug_s=0;
     logic [9:0] top,doubled_height,picture_width,picture_lead;
     logic [9:0] source_line,picture_x;
     always_ff @(posedge pixel_clk) begin
@@ -54,10 +56,19 @@ module coco3_hdmi #(
         ram_expected_m<=sdram_test_expected; ram_expected_s<=ram_expected_m;
         ram_actual_m<=sdram_test_actual; ram_actual_s<=ram_actual_m;
         interrupt_m<=interrupt_status; interrupt_s<=interrupt_m;
+        raster_debug_m<=raster_debug;raster_debug_s<=raster_debug_m;
     end
     always_comb begin
         doubled_height={1'b0,height_s,1'b0};
-        top=(10'd480-doubled_height)>>1;
+        // Align HDMI's logical picture rows with the native GIME body.  In
+        // 225-line mode the centered margin is odd, so ordinary centering
+        // would put scanout half a native raster ahead of GIME timing.
+        // Keep scanout one native raster behind the interrupt generator.
+        // The line renderer prefetches N+1 while displaying N; this delay
+        // places that prefetch after BOINK's HBORD handler for line N, so
+        // FF98.LPR is sampled before the affected row begins rendering.
+        top=height_s==8'd225 ? 10'd18 :
+            height_s==8'd199 ? 10'd48 : 10'd52;
         // The GIME's 640-dot modes describe the same 4:3 display aperture as
         // its 256-dot modes. Resample every mode into 512x(2*LPF) rather than
         // exposing the CRT's non-square 640-dot sampling as square HDMI pixels.
@@ -107,7 +118,7 @@ module coco3_hdmi #(
             .LOG_PAGE_WIDTH(LOG_PAGE_WIDTH),.LOG_DEPTH(LOG_DEPTH),
             .EXTENDED_HEADER(2)) overlay(
             .pixel_clk(pixel_clk),.x(x),.y(y),.enable(overlay_enable),
-            .debug_data(320'd0),.debug_clk(debug_clk),.log_we(log_we),
+                .debug_data({288'd0,raster_debug_s}),.debug_clk(debug_clk),.log_we(log_we),
             .log_addr(log_addr),.log_data(log_data),.log_count(log_count),
             .log_page(log_page),.debug_status(debug_status),
             .interrupt_status(interrupt_s),

@@ -200,30 +200,19 @@ module hdmi_debug_overlay #(
                 41:character=":";
                 42:character=bit_char((EXTENDED_HEADER==2) ?
                                       interrupt_status[0] : debug_status[0]);
-                44:character="B"; 45:character="R"; 46:character="O";
-                47:character="M"; 49:character=":";
-                50:character=rom_verify_done ? hex_char(rom_verify_vector[15:12]) : "-";
-                51:character=rom_verify_done ? hex_char(rom_verify_vector[11:8]) : "-";
-                52:character=rom_verify_done ? hex_char(rom_verify_vector[7:4]) : "-";
-                53:character=rom_verify_done ? hex_char(rom_verify_vector[3:0]) : "-";
-                55:character="P"; 56:character=":";
-                57:character=rom_verify_done ? bit_char(rom_verify_pass) : "-";
-                60:character="R"; 61:character="A"; 62:character="M";
-                63:character=":";
-                64:character=!sdram_test_done ? "-" :
-                             (sdram_test_pass ? "P" : "F");
-                66:character="@";
-                67:character=sdram_test_done ? hex_char({1'b0,sdram_test_error_addr[18:16]}) : "-";
-                68:character=sdram_test_done ? hex_char(sdram_test_error_addr[15:12]) : "-";
-                69:character=sdram_test_done ? hex_char(sdram_test_error_addr[11:8]) : "-";
-                70:character=sdram_test_done ? hex_char(sdram_test_error_addr[7:4]) : "-";
-                71:character=sdram_test_done ? hex_char(sdram_test_error_addr[3:0]) : "-";
-                73:character="E"; 74:character=":";
-                75:character=sdram_test_done ? hex_char(sdram_test_expected[7:4]) : "-";
-                76:character=sdram_test_done ? hex_char(sdram_test_expected[3:0]) : "-";
-                78:character="A"; 79:character=":";
-                80:character=sdram_test_done ? hex_char(sdram_test_actual[7:4]) : "-";
-                81:character=sdram_test_done ? hex_char(sdram_test_actual[3:0]) : "-";
+                44:character="R";45:character="G";46:character=":";
+                47:character=hex_char(debug_data[31:28]);
+                49:character="S";50:character="T";51:character=":";
+                52:character=hex_char(debug_data[27:24]);
+                54:character="N";55:character="Y";56:character=":";
+                57:character=hex_char(debug_data[23:20]);
+                58:character=hex_char(debug_data[19:16]);
+                60:character="D";61:character="Y";62:character=":";
+                63:character=hex_char(debug_data[15:12]);
+                64:character=hex_char(debug_data[11:8]);
+                66:character="F";67:character="Y";68:character=":";
+                69:character=hex_char(debug_data[7:4]);
+                70:character=hex_char(debug_data[3:0]);
                 default: ;
             endcase
         end else if (character_row == 0) begin

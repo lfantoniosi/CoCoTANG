@@ -62,7 +62,8 @@ module coco3 #(
     input             cvbs_source_valid,
     input       [7:0] cvbs_prefetch_y,
     input             cvbs_prefetch_valid,
-    output      [5:0] cvbs_pixel_data
+    output      [5:0] cvbs_pixel_data,
+    output reg [31:0] raster_debug
 );
     wire core_reset_n = reset_n && cpu_reset_n;
 
@@ -238,6 +239,8 @@ module coco3 #(
     // One MiSTer-compatible renderer services both scanline consumers.  The
     // module mirrors only its two-line output RAM for the unrelated HDMI and
     // CVBS read clocks; SDRAM fetch, tags and mode/address logic are shared.
+    wire [7:0] debug_dma_next_y,debug_fill_y;
+    wire [3:0] debug_scanline_state;
     gime_scanline_buffer scanlines (
         .clk(clk),.reset_n(core_reset_n),
         .bit_plane(effective_bit_plane), .hres(effective_hres),
@@ -261,7 +264,9 @@ module coco3 #(
         .cvbs_prefetch_y(cvbs_prefetch_y),.cvbs_prefetch_valid(cvbs_prefetch_valid),
         .cvbs_pixel_data(cvbs_pixel_data),
         .memory_request(video_memory_request),.memory_addr(video_memory_addr),
-        .memory_data(video_memory_data32),.memory_valid(video_memory_valid)
+        .memory_data(video_memory_data32),.memory_valid(video_memory_valid),
+        .debug_dma_next_y(debug_dma_next_y),.debug_fill_y(debug_fill_y),
+        .debug_state(debug_scanline_state)
     );
 
     function [7:0] line_count;
@@ -270,11 +275,22 @@ module coco3 #(
               2'b11:line_count=225; default:line_count=0; endcase end
     endfunction
     assign active_height=line_count(effective_lpf);
+    wire [8:0] debug_native_y;
     gime_native_video native_video(
         .clk(clk),.reset_n(core_reset_n),.active_height(active_height),
         .pixel_rgb(hdmi_pixel_data),.hs_n(hs_n),.fs_n(fs_n),
         .hborder_irq_n(hborder_irq_n),
-        .hblank(hblank),.vblank(vblank),.red(red),.green(green),.blue(blue));
+        .hblank(hblank),.vblank(vblank),.debug_raster_y(debug_native_y),
+        .red(red),.green(green),.blue(blue));
+
+    // Snapshot renderer/raster phase on each video-register write.  This is
+    // diagnostic-only and does not feed any video or interrupt decision.
+    always @(posedge clk or negedge core_reset_n) begin
+        if(!core_reset_n) raster_debug<=0;
+        else if(e_fall&&!cpu_rw_n&&cpu_addr>=16'hff98&&cpu_addr<=16'hff9f)
+            raster_debug<={cpu_addr[3:0],debug_scanline_state,
+                           debug_native_y[7:0],debug_dma_next_y,debug_fill_y};
+    end
 
     wire unused_video_byte = ^video_memory_data;
 endmodule

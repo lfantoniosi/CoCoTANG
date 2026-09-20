@@ -93,7 +93,8 @@ module cpu_bus_logger #(
                 log_we<=1; log_addr<=0; log_data<=entry; log_count<=1;
                 last_observation<=observation; observation_valid<=1;
                 rebased<=1; rebase_pulse<=1;
-            end else if (rebased && !write_rebased && e_fall &&
+            end else if (rebased &&
+                         (LOG_REBASE_EVERY_MATCH!=0 || !write_rebased) && e_fall &&
                          write_trigger_match) begin
                 log_we<=1; log_addr<=0; log_data<=entry; log_count<=1;
                 last_observation<=observation; observation_valid<=1;

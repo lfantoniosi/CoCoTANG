@@ -3,6 +3,7 @@ module gime_native_video (
     input [5:0] pixel_rgb,
     output reg hs_n, output reg fs_n, output reg hborder_irq_n,
     output reg hblank, output reg vblank,
+    output [8:0] debug_raster_y,
     output [7:0] red, output [7:0] green, output [7:0] blue
 );
     // 910 GIME dots occupy exactly two 858-dot 27 MHz HDMI lines.  With the
@@ -54,4 +55,5 @@ module gime_native_video (
     assign red={4{pixel_rgb[5:4]}};
     assign green={4{pixel_rgb[3:2]}};
     assign blue={4{pixel_rgb[1:0]}};
+    assign debug_raster_y=y;
 endmodule
