@@ -1,7 +1,8 @@
 module gime_native_video (
     input clk, input reset_n, input [7:0] active_height,
     input [5:0] pixel_rgb,
-    output reg hs_n, output reg fs_n, output reg hblank, output reg vblank,
+    output reg hs_n, output reg fs_n, output reg hborder_irq_n,
+    output reg hblank, output reg vblank,
     output [7:0] red, output [7:0] green, output [7:0] blue
 );
     // 910 GIME dots occupy exactly two 858-dot 27 MHz HDMI lines.  With the
@@ -18,7 +19,8 @@ module gime_native_video (
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
             accumulator<=0; raster_tick<=0; x<=0; y<=0;
-            hs_n<=1; fs_n<=1; hblank<=1; vblank<=1;
+            hs_n<=1; fs_n<=1;hborder_irq_n<=1;
+            hblank<=1; vblank<=1;
         end else begin
             accumulator<=sum[31:0];
             raster_tick<=sum[32];
@@ -26,6 +28,11 @@ module gime_native_video (
                 hs_n<=x>=10'd64; fs_n<=y>=9'd3;
                 hblank<=x<10'd200 || x>=10'd840;
                 vblank<=y<top || y>=top+active_height;
+                // GIME interrupt bits 4/3 are border events, not the raw
+                // HSYNC/FSYNC pins. HBORD asserts one 1.79 MHz CPU cycle
+                // before the 640-dot body ends and releases at body start.
+                if(x==10'd830)hborder_irq_n<=1'b0;
+                else if(x==10'd200)hborder_irq_n<=1'b1;
                 // A 480p frame is 525 HDMI lines, or 262.5 native line
                 // periods.  End the final native row after a half-line so
                 // FS/HBORD timing has the same frame cadence as scanout.

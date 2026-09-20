@@ -197,7 +197,13 @@ module gime_scanline_buffer (
  wire [18:0] pixel_byte_index=fill_bit_plane?{7'd0,source_byte_index}:
   fill_attributes?{10'd0,source_character_column,1'b0}:
                   {11'd0,source_character_column};
- wire [18:0] calculated_byte_address=line_address+pixel_byte_index;
+ // FF9F selects a byte within a 256-byte virtual row and the fetch wraps at
+ // that boundary even when HVEN is clear.  BOINK depends on this: allowing
+ // the sum to carry into the next page tears the bouncing image into bands.
+ wire [8:0] horizontal_byte_sum={1'b0,fill_hoff,1'b0}+pixel_byte_index[8:0];
+ wire [18:0] calculated_byte_address=fill_compatibility?
+  line_address+pixel_byte_index:
+  line_address+{11'd0,horizontal_byte_sum[7:0]};
  wire [18:0] aligned_address={byte_address[18:2],2'b0};
  wire [7:0] cached_byte=byte_address[1:0]==0?word_cache[7:0]:
   byte_address[1:0]==1?word_cache[15:8]:byte_address[1:0]==2?word_cache[23:16]:word_cache[31:24];
@@ -275,12 +281,11 @@ module gime_scanline_buffer (
                       cpu_write_addr<line_address+fill_row_bytes;
  reg [16:0] mode_signature=17'h1ffff;reg [18:0] last_screen_base=19'h7ffff;
  reg [18:0] frame_screen_base=0;
- reg [7:0] last_horizontal_offset=8'hff;reg [3:0] last_vertical_scroll=4'hf;
+ reg [3:0] last_vertical_scroll=4'hf;
  wire [16:0] live_signature={compatibility_mode,compatibility_an_g,compatibility_gm,
   compatibility_css,bit_plane,hres,cres,lines_per_row_code,1'b0};
  wire configuration_diff=live_signature!=mode_signature||
-  frame_screen_base!=last_screen_base||
-  horizontal_offset!=last_horizontal_offset||vertical_scroll!=last_vertical_scroll;
+  frame_screen_base!=last_screen_base||vertical_scroll!=last_vertical_scroll;
  reg configuration_diff_q=1'b1;
 
  always @(posedge clk or negedge reset_n) begin
@@ -288,8 +293,7 @@ module gime_scanline_buffer (
    state<=IDLE;memory_request<=0;memory_addr<=0;h_valid0<=0;h_valid1<=0;
    c_valid0<=0;c_valid1<=0;h_dirty0<=0;h_dirty1<=0;c_dirty0<=0;c_dirty1<=0;
    mode_signature<=17'h1ffff;last_screen_base<=19'h7ffff;
-   frame_screen_base<=0;
-   last_horizontal_offset<=8'hff;last_vertical_scroll<=4'hf;
+   frame_screen_base<=0;last_vertical_scroll<=4'hf;
    h_next_bank<=0;c_next_bank<=0;fill_dirty<=0;configuration_diff_q<=1'b1;
    h_pending<=0;c_pending<=0;coalesce_count<=0;
   end else begin
@@ -323,13 +327,11 @@ module gime_scanline_buffer (
    end
    if(configuration_diff_q) begin
     mode_signature<=live_signature;last_screen_base<=frame_screen_base;
-    last_horizontal_offset<=horizontal_offset;last_vertical_scroll<=vertical_scroll;
-    // Raster effects update VSC/VOFF/HOFF while a line may already be
-    // crossing the HDMI/CVBS read port.  Preserve that immutable displayed
-    // row through both scan-doubled copies, but discard any prefetched row
-    // whose address was calculated from the old register values.  Clearing
-    // both banks here used to turn mid-frame scrolling into black seams and
-    // horizontally split objects.
+    last_vertical_scroll<=vertical_scroll;
+    // Mode and frame-latched base changes invalidate stale prefetches. FF9F
+    // is deliberately absent from this path: it is sampled when each row
+    // fill begins, and a mid-fill write applies to the following row without
+    // aborting the immutable row already being produced.
     h_valid0<=hd_v_s&&h_valid0&&h_tag0==hd_y_s;
     h_valid1<=hd_v_s&&h_valid1&&h_tag1==hd_y_s;
     c_valid0<=cv_v_s&&c_valid0&&c_tag0==cv_y_s;
@@ -393,7 +395,7 @@ module gime_scanline_buffer (
      source_byte_index<=0;source_character_column<=0;
      scale_phase<=0;hdmi_out_x<=0;hdmi_filter_phase<=0;
      hdmi_filter_previous<=0;state<=LINE_ADDRESS;end
-    LINE_ADDRESS:begin line_address<=fill_base+row_address+{11'd0,fill_hoff,1'b0};
+    LINE_ADDRESS:begin line_address<=fill_base+row_address;
      state<=PIXEL_ADDRESS;end
     PIXEL_ADDRESS:begin
      if(fill_bit_plane&&graphics_cache_valid&&graphics_cache_index==source_byte_index)

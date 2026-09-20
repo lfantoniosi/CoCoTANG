@@ -85,11 +85,12 @@ module coco3 #(
     assign compatibility_video = compatibility_mode;
     wire [6:0] sam_video_offset;
     wire [95:0] palettes;
+    wire hborder_irq_n;
     gime_registers registers (
         .clk(clk), .reset_n(core_reset_n), .e(e), .e_fall(e_fall),
         .cpu_addr(cpu_addr), .cpu_rw_n(cpu_rw_n), .cpu_data(cpu_data),
         .serint_n(serint_n), .keyint_n(keyint_n), .cart_n(cart_n),
-        .hs_n(hs_n), .fs_n(fs_n),
+        .hs_n(hborder_irq_n), .fs_n(fs_n),
         .irq_assert(irq_assert), .firq_assert(firq_assert),
         .fast_mode(fast_mode),
         .core_rdata(core_rdata), .core_data_oe(core_data_oe), .sam_s(sam_s),
@@ -272,6 +273,7 @@ module coco3 #(
     gime_native_video native_video(
         .clk(clk),.reset_n(core_reset_n),.active_height(active_height),
         .pixel_rgb(hdmi_pixel_data),.hs_n(hs_n),.fs_n(fs_n),
+        .hborder_irq_n(hborder_irq_n),
         .hblank(hblank),.vblank(vblank),.red(red),.green(green),.blue(blue));
 
     wire unused_video_byte = ^video_memory_data;

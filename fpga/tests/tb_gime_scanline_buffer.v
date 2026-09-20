@@ -232,6 +232,29 @@ module tb_gime_scanline_buffer;
   end
   hdmi_prefetch_valid=0;vertical_scroll=0;repeat(5)@(posedge clk);
 
+  // FF9F is sampled per row and must not invalidate a row which is already
+  // displayed or prefetched.  The address addition wraps inside the current
+  // 256-byte virtual row even when HVEN (bit 7) is clear.
+  begin : horizontal_raster_effect
+   reg valid0_before,valid1_before;
+   valid0_before=dut.h_valid0;valid1_before=dut.h_valid1;
+   horizontal_offset=8'h01;repeat(5)@(posedge clk);#1;
+   if(dut.h_valid0!=valid0_before||dut.h_valid1!=valid1_before)begin
+    $display("FF9F write invalidated an immutable cached row");errors=errors+1;end
+   force dut.line_address=19'h12300;
+   force dut.fill_compatibility=1'b0;force dut.fill_bit_plane=1'b1;
+   force dut.fill_hoff=7'h7f;force dut.source_byte_index=12'd3;#1;
+   if(dut.calculated_byte_address!=19'h12301)begin
+    $display("FF9F virtual-row wrap address=%h",dut.calculated_byte_address);
+    errors=errors+1;end
+   force dut.fill_compatibility=1'b1;#1;
+   if(dut.calculated_byte_address!=19'h12303)begin
+    $display("compatibility mode incorrectly applied FF9F offset");errors=errors+1;end
+   release dut.source_byte_index;release dut.fill_hoff;
+   release dut.fill_bit_plane;release dut.fill_compatibility;release dut.line_address;
+   horizontal_offset=0;
+  end
+
   // Compatibility alpha ROM dots are active-low.  A stored row of $c0 must
   // therefore decode as $3f, without changing native text or bitmap packing.
   force dut.glyph_cache=8'hc0;force dut.fill_compatibility=1'b1;
