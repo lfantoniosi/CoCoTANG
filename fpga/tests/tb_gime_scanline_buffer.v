@@ -11,6 +11,7 @@ module tb_gime_scanline_buffer;
  reg [7:0] horizontal_offset=0;reg cpu_write_strobe=0;reg [18:0] cpu_write_addr=0;
  reg hdmi_prefetch_valid=1,cvbs_prefetch_valid=0;
  reg [7:0] hdmi_prefetch_y=0,cvbs_prefetch_y=0;
+ reg hdmi_display_valid=0;reg [7:0] hdmi_display_y=0;
 
  gime_scanline_buffer dut(
   .clk(clk),.reset_n(reset_n),.bit_plane(bit_plane),.hres(hres),.cres(cres),
@@ -19,8 +20,8 @@ module tb_gime_scanline_buffer;
   .compatibility_mode(compatibility_mode),.compatibility_an_g(compatibility_an_g),
   .compatibility_gm(compatibility_gm),.compatibility_css(1'b0),.blink(1'b0),
   .cpu_write_strobe(cpu_write_strobe),.cpu_write_addr(cpu_write_addr),
-  .hdmi_read_clk(hdmi_clk),.hdmi_read_x(10'd0),.hdmi_display_y(8'd0),
-  .hdmi_display_valid(1'b0),.hdmi_prefetch_y(hdmi_prefetch_y),
+  .hdmi_read_clk(hdmi_clk),.hdmi_read_x(10'd0),.hdmi_display_y(hdmi_display_y),
+  .hdmi_display_valid(hdmi_display_valid),.hdmi_prefetch_y(hdmi_prefetch_y),
   .hdmi_prefetch_valid(hdmi_prefetch_valid),.hdmi_pixel_data(hdmi_pixel),
   .cvbs_read_clk(cvbs_clk),.cvbs_read_x(10'd0),.cvbs_display_y(8'd0),
   .cvbs_display_valid(1'b0),.cvbs_prefetch_y(cvbs_prefetch_y),
@@ -161,6 +162,35 @@ module tb_gime_scanline_buffer;
   if(transactions!=40)begin
    $display("phase-separated request caused %0d transactions",transactions);errors=errors+1;end
   else $display("master row mirrored in %0d clocks",timeout);
+
+  // Scrolling writes commonly dirty the row which has already been
+  // prefetched while the preceding row is being shown twice by HDMI.  Keep
+  // that immutable row for this raster pass instead of immediately
+  // rewriting a dual-clock line RAM which scanout may begin consuming.
+  hdmi_prefetch_valid=0;cvbs_prefetch_valid=0;hdmi_display_valid=0;
+  hres=6;repeat(5)@(posedge clk);hres=7;repeat(5)@(posedge clk);
+  hdmi_prefetch_y=0;hdmi_prefetch_valid=1;
+  timeout=0;while(!((dut.h_valid0&&dut.h_tag0==0)||(dut.h_valid1&&dut.h_tag1==0))&&timeout<200000)
+   begin @(posedge clk);timeout=timeout+1;end
+  hdmi_prefetch_y=1;
+  timeout=0;while(!((dut.h_valid0&&dut.h_tag0==1)||(dut.h_valid1&&dut.h_tag1==1))&&timeout<200000)
+   begin @(posedge clk);timeout=timeout+1;end
+  begin : dirty_prefetch_defer
+   reg row0_bank,row1_bank;
+   row0_bank=(dut.h_valid1&&dut.h_tag1==0);
+   row1_bank=(dut.h_valid1&&dut.h_tag1==1);
+   cpu_write_addr=row1_bank?dut.h_start1:dut.h_start0;
+   cpu_write_strobe=1;@(posedge clk);#1;cpu_write_strobe=0;
+   hdmi_display_y=0;hdmi_display_valid=1;
+   repeat(100)@(posedge clk);
+   if(dut.state!=0||dut.h_pending)begin
+    $display("dirty prefetched row was rewritten during active raster");errors=errors+1;
+   end
+   if(row0_bank==row1_bank)begin
+    $display("two source rows did not occupy separate banks");errors=errors+1;
+   end
+  end
+  hdmi_display_valid=0;
 
   // Compatibility alpha ROM dots are active-low.  A stored row of $c0 must
   // therefore decode as $3f, without changing native text or bitmap packing.

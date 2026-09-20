@@ -149,11 +149,17 @@ module gime_scanline_buffer (
   cv_v_m<=cvbs_display_valid;cv_v_s<=cv_v_m;cv_pv_m<=cvbs_prefetch_valid;cv_pv_s<=cv_pv_m;
  end
  wire h_display_cached=(h_valid0&&h_tag0==hd_y_s)||(h_valid1&&h_tag1==hd_y_s);
- wire h_prefetch_cached=(h_valid0&&!h_dirty0&&h_tag0==hd_p_s)||
-                         (h_valid1&&!h_dirty1&&h_tag1==hd_p_s);
+ // A cached row remains immutable until normal two-line replacement.  CPU
+ // writes are remembered as dirty for diagnostics, but must not trigger an
+ // immediate same-tag refill: in 80-column attribute mode that refill can
+ // run into scanout and write the dual-clock line RAM while HDMI reads it.
+ // The row is naturally fetched again after the two-entry cache rolls over,
+ // giving raster-safe (at most one-frame-late) CPU/video coherence.
+ wire h_prefetch_cached=(h_valid0&&h_tag0==hd_p_s)||
+                         (h_valid1&&h_tag1==hd_p_s);
  wire c_display_cached=(c_valid0&&c_tag0==cv_y_s)||(c_valid1&&c_tag1==cv_y_s);
- wire c_prefetch_cached=(c_valid0&&!c_dirty0&&c_tag0==cv_p_s)||
-                         (c_valid1&&!c_dirty1&&c_tag1==cv_p_s);
+ wire c_prefetch_cached=(c_valid0&&c_tag0==cv_p_s)||
+                         (c_valid1&&c_tag1==cv_p_s);
  wire h_need=(hd_v_s&&!h_display_cached)||(hd_pv_s&&!h_prefetch_cached);
  wire c_need=(cv_v_s&&!c_display_cached)||(cv_pv_s&&!c_prefetch_cached);
  wire [7:0] h_need_y=(hd_v_s&&!h_display_cached)?hd_y_s:hd_p_s;
@@ -315,10 +321,17 @@ module gime_scanline_buffer (
      fill_hdmi<=1;fill_cvbs<=1;
      h_pending<=0;c_pending<=0;
      coalesce_count<=0;
-     fill_h_bank<=(h_valid0&&h_tag0==h_pending_y)?1:
-                  (h_valid1&&h_tag1==h_pending_y)?0:h_next_bank;
-     fill_c_bank<=(c_valid0&&c_tag0==h_pending_y)?1:
-                  (c_valid1&&c_tag1==h_pending_y)?0:c_next_bank;
+     // Refresh a dirty prefetched row in its existing bank.  Choosing the
+     // opposite bank here consumed the only other entry--the row currently
+     // being displayed.  If that refill completed between the two doubled
+     // HDMI scanlines, the second copy had no matching tag and went black.
+     // Dirty displayed rows are intentionally still accepted by
+     // h_display_cached above, so a same-tag refill request is the upcoming
+     // prefetch row and is safe to update in place.
+     fill_h_bank<=(h_valid0&&h_tag0==h_pending_y)?0:
+                  (h_valid1&&h_tag1==h_pending_y)?1:h_next_bank;
+     fill_c_bank<=(c_valid0&&c_tag0==h_pending_y)?0:
+                  (c_valid1&&c_tag1==h_pending_y)?1:c_next_bank;
      fill_bit_plane<=bit_plane;
      fill_cres<=compatibility_mode&&compatibility_an_g?
       ((compatibility_gm==0||compatibility_gm==2||compatibility_gm==4||compatibility_gm==6)?1:0):cres;
