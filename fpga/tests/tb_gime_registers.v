@@ -16,6 +16,8 @@ module tb_gime_registers;
     wire compatibility_mode;
     wire [6:0] sam_video_offset;
     integer errors=0;
+    integer block;
+    reg [22:0] expected_address;
 
     gime_registers dut(
         .clk(clk),.reset_n(reset_n),.e(e),.e_fall(e_fall),
@@ -43,6 +45,36 @@ module tb_gime_registers;
 
     initial begin
         repeat(3) @(posedge clk); reset_n=1; @(posedge clk); #1;
+        // MMUEN resets clear: native logical RAM initially uses the same
+        // fixed upper-64K compatibility window.
+        cpu_addr=16'h1234;cpu_rw_n=1;#1;
+        if(cpu_mem_addr!=23'h071234)begin
+            $display("MMU-disabled reset mapping got %h",cpu_mem_addr);errors=errors+1;end
+        // Both tasks reset to the CoCo-compatible upper 64K mapping.  Verify
+        // every 8K block, including the final byte at physical $7ffff.
+        write_reg(16'hff90,8'h40);
+        write_reg(16'hffdf,8'h00);
+        for (block=0;block<8;block=block+1) begin
+            cpu_addr={block[2:0],13'h0123};cpu_rw_n=1;#1;
+            expected_address=23'h070000+block*23'h002000+23'h000123;
+            if(cpu_mem_addr!=expected_address)begin
+                $display("task 0 reset block %0d got %h expected %h",
+                         block,cpu_mem_addr,expected_address);errors=errors+1;end
+        end
+        write_reg(16'hff91,8'h01);
+        for (block=0;block<8;block=block+1) begin
+            cpu_addr={block[2:0],13'h0123};cpu_rw_n=1;#1;
+            expected_address=23'h070000+block*23'h002000+23'h000123;
+            if(cpu_mem_addr!=expected_address)begin
+                $display("task 1 reset block %0d got %h expected %h",
+                         block,cpu_mem_addr,expected_address);errors=errors+1;end
+        end
+        cpu_addr=16'hdfff;cpu_rw_n=1;#1;
+        if(cpu_mem_addr!=23'h07dfff)begin
+            $display("task 1 upper RAM boundary got %h",cpu_mem_addr);errors=errors+1;end
+        write_reg(16'hffde,8'h00);
+        write_reg(16'hff91,8'h00);
+
         cpu_addr=16'h1234; cpu_rw_n=1; #1;
         if (!cpu_mem_read || cpu_mem_is_rom || cpu_mem_addr != 23'h071234) errors=errors+1;
         cpu_addr=16'h8000; #1;
@@ -92,6 +124,56 @@ module tb_gime_registers;
         write_reg(16'hff90,8'h40);
         cpu_addr=16'h0123; cpu_rw_n=1; #1;
         if (cpu_mem_addr != 23'h00a123) errors=errors+1;
+
+        // Exercise all task registers with distinct pages and confirm that
+        // reads and writes use the same translated physical address.
+        for(block=0;block<8;block=block+1)begin
+            write_reg(16'hffa0+block,8'h08+block);
+            write_reg(16'hffa8+block,8'h20+block);
+            cpu_addr=16'hffa0+block;cpu_rw_n=1;e=1;#1;
+            if(core_rdata!={2'b00,6'h08+block})begin
+                $display("task 0 register %0d read back %h",block,core_rdata);
+                errors=errors+1;end
+            cpu_addr=16'hffa8+block;#1;
+            if(core_rdata!={2'b00,6'h20+block})begin
+                $display("task 1 register %0d read back %h",block,core_rdata);
+                errors=errors+1;end
+            e=0;
+        end
+        write_reg(16'hffdf,8'h00);
+        for(block=0;block<8;block=block+1)begin
+            cpu_addr={block[2:0],13'h0555};cpu_rw_n=1;#1;
+            expected_address=(23'h08+block)*23'h2000+23'h555;
+            if(!cpu_mem_read||cpu_mem_addr!=expected_address)begin
+                $display("task 0 read block %0d got %h expected %h",
+                         block,cpu_mem_addr,expected_address);errors=errors+1;end
+            cpu_rw_n=0;#1;
+            if(!cpu_mem_write||cpu_mem_addr!=expected_address)begin
+                $display("task 0 write block %0d got %h expected %h",
+                         block,cpu_mem_addr,expected_address);errors=errors+1;end
+        end
+        write_reg(16'hff91,8'h01);
+        for(block=0;block<8;block=block+1)begin
+            cpu_addr={block[2:0],13'h0555};cpu_rw_n=1;#1;
+            expected_address=(23'h20+block)*23'h2000+23'h555;
+            if(!cpu_mem_read||cpu_mem_addr!=expected_address)begin
+                $display("task 1 read block %0d got %h expected %h",
+                         block,cpu_mem_addr,expected_address);errors=errors+1;end
+            cpu_rw_n=0;#1;
+            if(!cpu_mem_write||cpu_mem_addr!=expected_address)begin
+                $display("task 1 write block %0d got %h expected %h",
+                         block,cpu_mem_addr,expected_address);errors=errors+1;end
+        end
+        cpu_rw_n=1;
+
+        // Map page $3f into logical block zero so the last physical byte is
+        // reachable without the GIME register/vector overlay at logical FFxx.
+        write_reg(16'hffa8,8'h3f);
+        cpu_addr=16'h1fff;cpu_rw_n=1;#1;
+        if(cpu_mem_addr!=23'h07ffff)begin
+            $display("512K top boundary got %h",cpu_mem_addr);errors=errors+1;end
+        write_reg(16'hffde,8'h00);
+        write_reg(16'hff91,8'h00);
 
         // CoCo-compatible mode disables MMU translation, retains the SAM
         // display offset, and supports the legacy ROM/all-RAM toggle.

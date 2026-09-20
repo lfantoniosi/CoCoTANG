@@ -143,7 +143,10 @@ module gime_registers (
             horizontal_offset <= 8'd0;
             sam_video_offset <= 7'd0;
             ram_mode <= 1'b0;
-            for (i=0;i<16;i=i+1) mmu[i] <= 6'h38 + i[5:0];
+            // Both MMU tasks power up with the logical 64K window on the
+            // uppermost 64K of 512K RAM.  Each task owns eight 8K blocks;
+            // using i directly here formerly wrapped task 1 to pages 00-07.
+            for (i=0;i<16;i=i+1) mmu[i] <= 6'h38 + {3'b000,i[2:0]};
             // CoCo3FPGA RGB defaults.  The former values were its composite
             // approximations and produced visibly wrong HDMI/derived-CVBS.
             palette[0]<=6'd18; palette[1]<=6'd54; palette[2]<=6'd9;  palette[3]<=6'd36;

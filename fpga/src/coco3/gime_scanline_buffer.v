@@ -92,6 +92,20 @@ module gime_scanline_buffer (
    default:compatibility_inverse=0;
   endcase end
  endfunction
+ function [5:0] blend_quarters;
+  input [5:0] left;
+  input [5:0] right;
+  input [1:0] right_weight;
+  reg [3:0] r_sum,g_sum,b_sum;
+  begin
+   // Rounded linear interpolation on each two-bit GIME colour component.
+   // right_weight is 1, 2, or 3 quarters.
+   r_sum=left[5:4]*(4-right_weight)+right[5:4]*right_weight+2;
+   g_sum=left[3:2]*(4-right_weight)+right[3:2]*right_weight+2;
+   b_sum=left[1:0]*(4-right_weight)+right[1:0]*right_weight+2;
+   blend_quarters={r_sum[3:2],g_sum[3:2],b_sum[3:2]};
+  end
+ endfunction
 
  wire [9:0] native_graphics_bytes=graphics_row_bytes(hres);
  wire [7:0] native_columns=text_columns(hres);
@@ -156,6 +170,8 @@ module gime_scanline_buffer (
  reg [18:0] fill_base=0;reg [6:0] fill_hoff=0;reg [95:0] fill_palettes=0;
  reg [8:0] row_remainder=0;reg [7:0] source_row=0;reg [3:0] glyph_line=0;
  reg [9:0] out_x=0;reg [12:0] source_x=0;reg [13:0] scale_phase=0;
+ reg [9:0] hdmi_out_x=0;reg [2:0] hdmi_filter_phase=0;
+ reg [5:0] hdmi_filter_previous=0;
  reg [18:0] row_address=0,line_address=0,byte_address=0;
  reg [31:0] word_cache=0;reg [18:0] word_tag=0;reg word_valid=0;
  reg [7:0] character=0,attribute=0,glyph_cache=0;reg fill_dirty=0;
@@ -324,7 +340,8 @@ module gime_scanline_buffer (
      else begin glyph_line<=row_remainder[3:0];state<=ROW_ADDRESS;end
     end
     ROW_ADDRESS:begin row_address<=source_row*fill_stride;out_x<=0;source_x<=0;
-     scale_phase<=0;state<=LINE_ADDRESS;end
+     scale_phase<=0;hdmi_out_x<=0;hdmi_filter_phase<=0;
+     hdmi_filter_previous<=0;state<=LINE_ADDRESS;end
     LINE_ADDRESS:begin line_address<=fill_base+row_address+{11'd0,fill_hoff,1'b0};
      state<=PIXEL_ADDRESS;end
     PIXEL_ADDRESS:begin
@@ -377,10 +394,39 @@ module gime_scanline_buffer (
      state<=WRITE_PIXEL;
     end
     WRITE_PIXEL:begin
-     if(fill_hdmi)begin if(fill_h_bank)hdmi_line1[out_x]<=pixel_latched;
-                      else hdmi_line0[out_x]<=pixel_latched;end
+     // Area-preserving 640 -> 512 horizontal filter for HDMI.  For every
+     // five canonical pixels emit four samples at phases 0, 1.25, 2.5 and
+     // 3.75.  CVBS retains the original 640-dot row.  This is a streaming
+     // operation performed while the row is rendered, not a framebuffer.
+     if(fill_hdmi)begin
+      if(hdmi_filter_phase==0)begin
+       if(fill_h_bank)hdmi_line1[hdmi_out_x]<=pixel_latched;
+       else hdmi_line0[hdmi_out_x]<=pixel_latched;
+       hdmi_out_x<=hdmi_out_x+1'b1;
+      end else if(hdmi_filter_phase==2)begin
+       if(fill_h_bank)hdmi_line1[hdmi_out_x]<=
+        blend_quarters(hdmi_filter_previous,pixel_latched,2'd1);
+       else hdmi_line0[hdmi_out_x]<=
+        blend_quarters(hdmi_filter_previous,pixel_latched,2'd1);
+       hdmi_out_x<=hdmi_out_x+1'b1;
+      end else if(hdmi_filter_phase==3)begin
+       if(fill_h_bank)hdmi_line1[hdmi_out_x]<=
+        blend_quarters(hdmi_filter_previous,pixel_latched,2'd2);
+       else hdmi_line0[hdmi_out_x]<=
+        blend_quarters(hdmi_filter_previous,pixel_latched,2'd2);
+       hdmi_out_x<=hdmi_out_x+1'b1;
+      end else if(hdmi_filter_phase==4)begin
+       if(fill_h_bank)hdmi_line1[hdmi_out_x]<=
+        blend_quarters(hdmi_filter_previous,pixel_latched,2'd3);
+       else hdmi_line0[hdmi_out_x]<=
+        blend_quarters(hdmi_filter_previous,pixel_latched,2'd3);
+       hdmi_out_x<=hdmi_out_x+1'b1;
+      end
+     end
      if(fill_cvbs)begin if(fill_c_bank)cvbs_line1[out_x]<=pixel_latched;
                       else cvbs_line0[out_x]<=pixel_latched;end
+     hdmi_filter_previous<=pixel_latched;
+     hdmi_filter_phase<=(hdmi_filter_phase==4)?0:hdmi_filter_phase+1'b1;
      if(out_x==CANONICAL_WIDTH-1'b1)begin
       if(fill_hdmi)begin
        if(fill_h_bank)begin h_tag1<=fill_y;h_start1<=line_address;h_bytes1<=fill_row_bytes;

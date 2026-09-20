@@ -59,9 +59,16 @@ module tb_gime_scanline_buffer;
   wait_hdmi_line();
   if(transactions!=40)begin $display("160-byte line used %0d transactions",transactions);errors=errors+1;end
   for(i=0;i<640;i=i+1)
-   if(dut.h_valid0 ? dut.hdmi_line0[i]!==mapped(i[1:0]) :
-                     dut.hdmi_line1[i]!==mapped(i[1:0]))begin
+   if(dut.c_valid0 ? dut.cvbs_line0[i]!==mapped(i[1:0]) :
+                     dut.cvbs_line1[i]!==mapped(i[1:0]))begin
     $display("native pixel %0d wrong",i);errors=errors+1;i=640;end
+  // The HDMI copy is a rounded 5:4 linear reduction of the canonical row.
+  // For the repeating 0,1,2,3 palette pattern its first group is 0,1,5,0.
+  if((dut.h_valid0?dut.hdmi_line0[0]:dut.hdmi_line1[0])!==6'h00||
+     (dut.h_valid0?dut.hdmi_line0[1]:dut.hdmi_line1[1])!==6'h01||
+     (dut.h_valid0?dut.hdmi_line0[2]:dut.hdmi_line1[2])!==6'h05||
+     (dut.h_valid0?dut.hdmi_line0[3]:dut.hdmi_line1[3])!==6'h00)begin
+   $display("HDMI 5:4 filter coefficients are wrong");errors=errors+1;end
 
   invalidate_all();
   if(!(dut.h_dirty0||dut.h_dirty1))begin
@@ -84,13 +91,13 @@ module tb_gime_scanline_buffer;
   compatibility_gm=0;memory_data=32'h98989898;transactions=0;
   repeat(5)@(posedge clk);hdmi_prefetch_valid=1;wait_hdmi_line();
   for(i=0;i<10;i=i+1)
-   if(dut.h_valid0 ? dut.hdmi_line0[i]!==mapped(6'd54):
-                     dut.hdmi_line1[i]!==mapped(6'd54))begin
+   if(dut.c_valid0 ? dut.cvbs_line0[i]!==mapped(6'd54):
+                     dut.cvbs_line1[i]!==mapped(6'd54))begin
     $display("SG4 foreground pixel %0d wrong got %02h expected %02h",i,
-     dut.h_valid0?dut.hdmi_line0[i]:dut.hdmi_line1[i],mapped(6'd54));
+     dut.c_valid0?dut.cvbs_line0[i]:dut.cvbs_line1[i],mapped(6'd54));
     errors=errors+1;i=10;end
-  if(dut.h_valid0 ? dut.hdmi_line0[10]!==mapped(6'd2):
-                    dut.hdmi_line1[10]!==mapped(6'd2))begin
+  if(dut.c_valid0 ? dut.cvbs_line0[10]!==mapped(6'd2):
+                    dut.cvbs_line1[10]!==mapped(6'd2))begin
    $display("SG4 top-right quadrant should be background");errors=errors+1;end
 
   // Both consumers requesting the same line share the one render/fetch pass.
@@ -131,11 +138,12 @@ module tb_gime_scanline_buffer;
   if(timeout==6800)begin $display("80-column line missed scanline deadline");errors=errors+1;end
   if(transactions!=40)begin $display("80-column line used %0d transactions",transactions);errors=errors+1;end
   else $display("80-column shared line completed in %0d clocks",timeout);
-  // Native GIME rows keep their normal MSB-first order.  Row zero of 'A' is
-  // $08, so canonical pixel 3 is background and pixel 4 is foreground.
-  if((dut.h_valid0&&dut.h_tag0==0 ? dut.hdmi_line0[3] : dut.hdmi_line1[3])!==mapped(6'd8))begin
+  // Native GIME rows keep their normal MSB-first order in the unfiltered
+  // canonical/CVBS copy. Row zero of 'A' is $08, so pixel 3 is background
+  // and pixel 4 is foreground.
+  if((dut.c_valid0&&dut.c_tag0==0 ? dut.cvbs_line0[3] : dut.cvbs_line1[3])!==mapped(6'd8))begin
    $display("native font bit order wrong: A pixel 3 is not background");errors=errors+1;end
-  if((dut.h_valid0&&dut.h_tag0==0 ? dut.hdmi_line0[4] : dut.hdmi_line1[4])!==mapped(6'd7))begin
+  if((dut.c_valid0&&dut.c_tag0==0 ? dut.cvbs_line0[4] : dut.cvbs_line1[4])!==mapped(6'd7))begin
    $display("native font bit order wrong: A pixel 4 is not foreground");errors=errors+1;end
   slow_memory=0;
 

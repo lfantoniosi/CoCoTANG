@@ -40,7 +40,6 @@ module coco3_hdmi #(
     logic [3:0] interrupt_m=0,interrupt_s=0;
     logic [9:0] top,doubled_height,picture_width,picture_lead;
     logic [9:0] source_line,picture_x;
-    logic [12:0] canonical_x;
     always_ff @(posedge pixel_clk) begin
         height_m<=active_height;
         height_s<=height_m;
@@ -66,9 +65,6 @@ module coco3_hdmi #(
         // Two clocks of scanline-RAM addressing/output latency.
         picture_lead=((10'd720-picture_width)>>1)-2'd2;
         picture_x=(x>=picture_lead)?x-picture_lead:10'd0;
-        // The shared cache is the GIME's canonical 640-dot aperture. HDMI
-        // displays that aperture in 512 square pixels, so sample at 5/4.
-        canonical_x={picture_x,2'b00}+picture_x;
         source_line=(y>=top) ? ((y-top)>>1) : 10'd0;
     end
 
@@ -76,7 +72,10 @@ module coco3_hdmi #(
     always_comb begin
         source_valid=(x>=picture_lead && x<picture_lead+picture_width &&
                       y>=top && y<top+doubled_height);
-        source_x=source_valid ? canonical_x[11:2] : 10'd0;
+        // The renderer filters its canonical 640-dot row into 512 square
+        // HDMI pixels as it fills this cache.  Read those pixels directly;
+        // CVBS keeps the separate unfiltered 640-dot copy.
+        source_x=source_valid ? picture_x : 10'd0;
         source_y=source_line[7:0];
         // CoCo2's ping-pong scan doubler starts producing the next source
         // line while the current one is first displayed.  Do the same here:
