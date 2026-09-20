@@ -4,8 +4,8 @@
 module top_coco3 #(
     parameter integer RESET_HOLD_CYCLES=10800000,
     parameter integer LOG_DEPTH=4096,
-    parameter [15:0] LOG_START_ADDRESS=16'hC0D1,
-    //parameter [15:0] LOG_START_ADDRESS=16'hA0CB,
+    //parameter [15:0] LOG_START_ADDRESS=16'hC0D1,
+    parameter [15:0] LOG_START_ADDRESS=16'hFABB,
     parameter [15:0] LOG_WRITE_START_ADDRESS=16'h0000,
     parameter [15:0] LOG_WRITE_END_ADDRESS=16'h000,
     parameter integer LOG_REBASE_EVERY_MATCH=1,

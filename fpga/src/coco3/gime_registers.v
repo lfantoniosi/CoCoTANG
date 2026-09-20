@@ -60,6 +60,11 @@ module gime_registers (
                                 mmu_enabled ? {cpu_block[1:0],cpu_addr[12:0]} :
                                               cpu_addr[14:0];
     wire [1:0] rom_map = init0[1:0];
+    // TINS=0 selects the horizontal-sync clock, not an unrelated nominal
+    // 63.5 us divider.  Sharing the actual HS edge keeps timer-driven raster
+    // effects phase-locked to HBORD and to the displayed scan lines.
+    wire timer_clock = init1[5] ? (timer_divider == 13'd29) :
+                                  (prior_hs_n && !hs_n);
     // INIT0.MC1:MC0: 0x is 16K internal plus 16K external, 10 is
     // 32K internal, and 11 is 32K external except for vectors.  The FPGA
     // contains the complete internal 32K image; external portions must
@@ -210,17 +215,19 @@ module gime_registers (
                 firq_pending[3] <= firq_enable[3];
             end
 
-            // INIT1.TINS selects approximately 279 ns or 63.5 us timer ticks.
+            // INIT1.TINS selects approximately 279 ns or the HS line clock.
             if (timer_reload != 0) begin
-                if ((init1[5] && timer_divider == 13'd29) ||
-                    (!init1[5] && timer_divider == 13'd6857)) begin
-                    timer_divider <= 13'd0;
+                if (init1[5]) begin
+                    if (timer_clock) timer_divider <= 13'd0;
+                    else timer_divider <= timer_divider + 1'b1;
+                end else timer_divider <= 13'd0;
+                if (timer_clock) begin
                     if (timer_count <= 12'd1) begin
                         timer_count <= timer_reload;
                         irq_pending[5] <= irq_enable[5];
                         firq_pending[5] <= firq_enable[5];
                     end else timer_count <= timer_count - 1'b1;
-                end else timer_divider <= timer_divider + 1'b1;
+                end
             end else begin
                 timer_divider <= 13'd0;
                 timer_count <= 12'd0;

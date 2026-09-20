@@ -176,6 +176,11 @@ module gime_scanline_buffer (
  reg [18:0] fill_base=0;reg [6:0] fill_hoff=0;reg [95:0] fill_palettes=0;
  reg [8:0] row_remainder=0;reg [7:0] source_row=0;reg [3:0] glyph_line=0;
  reg [9:0] out_x=0;reg [12:0] source_x=0;reg [13:0] scale_phase=0;
+ // Cache the byte/character indices alongside source_x.  Deriving them
+ // through the colour-resolution mux in PIXEL_ADDRESS put that mux, the
+ // row-address adder and the cache-tag comparison on one 108 MHz path.
+ reg [11:0] source_byte_index=0;
+ reg [7:0] source_character_column=0;
  reg [9:0] hdmi_out_x=0;reg [2:0] hdmi_filter_phase=0;
  reg [5:0] hdmi_filter_previous=0;
  reg [18:0] row_address=0,line_address=0,byte_address=0;
@@ -184,11 +189,14 @@ module gime_scanline_buffer (
  reg text_cache_valid=0,graphics_cache_valid=0;
  reg [7:0] text_cache_column=0;reg [11:0] graphics_cache_index=0;
 
- wire [11:0] graphics_byte_index=fill_cres==0?source_x[12:3]:
-  fill_cres==1?source_x[12:2]:source_x[12:1];
- wire [7:0] character_column=source_x[10:3];
- wire [18:0] pixel_byte_index=fill_bit_plane?{7'd0,graphics_byte_index}:
-  fill_attributes?{10'd0,character_column,1'b0}:{11'd0,character_column};
+ wire [13:0] next_scale_phase_sum=scale_phase+fill_scale_remainder;
+ wire [12:0] next_source_x=source_x+fill_scale_integer+
+     (next_scale_phase_sum>=14'd640);
+ wire [11:0] next_source_byte_index=fill_cres==0?next_source_x[12:3]:
+  fill_cres==1?next_source_x[12:2]:next_source_x[12:1];
+ wire [18:0] pixel_byte_index=fill_bit_plane?{7'd0,source_byte_index}:
+  fill_attributes?{10'd0,source_character_column,1'b0}:
+                  {11'd0,source_character_column};
  wire [18:0] calculated_byte_address=line_address+pixel_byte_index;
  wire [18:0] aligned_address={byte_address[18:2],2'b0};
  wire [7:0] cached_byte=byte_address[1:0]==0?word_cache[7:0]:
@@ -257,7 +265,7 @@ module gime_scanline_buffer (
  localparam IDLE=0,DIVIDE_ROW=1,ROW_ADDRESS=2,LINE_ADDRESS=3,PIXEL_ADDRESS=4,
   CHECK_WORD=5,WAIT_WORD=6,GOT_CHARACTER=7,CHECK_ATTRIBUTE=8,WAIT_ATTRIBUTE=9,
   FONT_WAIT1=10,FONT_WAIT2=11,DECODE_PIXEL=12,COLOR_LOOKUP=13,WRITE_PIXEL=14;
- reg [3:0] state=IDLE;reg [13:0] phase_sum;reg [5:0] pixel_latched;
+ reg [3:0] state=IDLE;reg [5:0] pixel_latched;
  reg [3:0] color_index_latched=0;reg [5:0] color_code_latched=0;
  wire write_hits_h0=h_valid0&&cpu_write_addr>=h_start0&&cpu_write_addr<h_start0+h_bytes0;
  wire write_hits_h1=h_valid1&&cpu_write_addr>=h_start1&&cpu_write_addr<h_start1+h_bytes1;
@@ -356,14 +364,16 @@ module gime_scanline_buffer (
      else begin glyph_line<=row_remainder[3:0];state<=ROW_ADDRESS;end
     end
     ROW_ADDRESS:begin row_address<=source_row*fill_stride;out_x<=0;source_x<=0;
+     source_byte_index<=0;source_character_column<=0;
      scale_phase<=0;hdmi_out_x<=0;hdmi_filter_phase<=0;
      hdmi_filter_previous<=0;state<=LINE_ADDRESS;end
     LINE_ADDRESS:begin line_address<=fill_base+row_address+{11'd0,fill_hoff,1'b0};
      state<=PIXEL_ADDRESS;end
     PIXEL_ADDRESS:begin
-     if(fill_bit_plane&&graphics_cache_valid&&graphics_cache_index==graphics_byte_index)
+     if(fill_bit_plane&&graphics_cache_valid&&graphics_cache_index==source_byte_index)
       state<=DECODE_PIXEL;
-     else if(!fill_bit_plane&&text_cache_valid&&text_cache_column==character_column)
+     else if(!fill_bit_plane&&text_cache_valid&&
+             text_cache_column==source_character_column)
       state<=DECODE_PIXEL;
      else begin byte_address<=calculated_byte_address;state<=CHECK_WORD;end
     end
@@ -374,7 +384,8 @@ module gime_scanline_buffer (
       character<=cached_byte;
       if(fill_attributes)begin byte_address<=byte_address+1'b1;state<=CHECK_ATTRIBUTE;end
       else if(fill_compatibility&&cached_byte[7])begin
-       text_cache_column<=character_column;text_cache_valid<=1;state<=DECODE_PIXEL;
+       text_cache_column<=source_character_column;text_cache_valid<=1;
+       state<=DECODE_PIXEL;
       end
       else begin
        if(fill_compatibility)begin
@@ -384,7 +395,7 @@ module gime_scanline_buffer (
        end else font_addr<={1'b0,cached_byte[6:0],glyph_line};
        state<=FONT_WAIT1;
       end
-     end else begin graphics_cache_index<=graphics_byte_index;
+     end else begin graphics_cache_index<=source_byte_index;
       graphics_cache_valid<=1;state<=DECODE_PIXEL;end
     end
     WAIT_WORD:if(memory_valid)begin word_cache<=memory_data;word_tag<=aligned_address;
@@ -398,7 +409,8 @@ module gime_scanline_buffer (
     WAIT_ATTRIBUTE:if(memory_valid)begin word_cache<=memory_data;word_tag<=aligned_address;
      word_valid<=1;memory_request<=0;state<=CHECK_ATTRIBUTE;end
     FONT_WAIT1:state<=FONT_WAIT2;
-    FONT_WAIT2:begin glyph_cache<=font_data;text_cache_column<=character_column;
+    FONT_WAIT2:begin glyph_cache<=font_data;
+     text_cache_column<=source_character_column;
      text_cache_valid<=1;state<=DECODE_PIXEL;end
     DECODE_PIXEL:begin
      color_index_latched<=decoded_index;color_code_latched<=decoded_code;
@@ -464,9 +476,11 @@ module gime_scanline_buffer (
       end
      state<=IDLE;
      end else begin
-      out_x<=out_x+1'b1;phase_sum=scale_phase+fill_scale_remainder;
-      source_x<=source_x+fill_scale_integer+(phase_sum>=14'd640);
-      scale_phase<=(phase_sum>=14'd640)?(phase_sum-14'd640):phase_sum;
+      out_x<=out_x+1'b1;source_x<=next_source_x;
+      source_byte_index<=next_source_byte_index;
+      source_character_column<=next_source_x[10:3];
+      scale_phase<=(next_scale_phase_sum>=14'd640)?
+                   (next_scale_phase_sum-14'd640):next_scale_phase_sum;
       state<=PIXEL_ADDRESS;
      end
     end

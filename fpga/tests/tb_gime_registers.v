@@ -271,6 +271,31 @@ module tb_gime_registers;
         e_fall=1; @(posedge clk); #1; e_fall=0;
         if (irq_assert) errors=errors+1;
 
+        // In slow mode the programmable timer is clocked by HS itself.  It
+        // must not drift against the HBORD source through a free-running
+        // approximation of the line period.
+        write_reg(16'hff95,8'h02);
+        write_reg(16'hff94,8'h00);
+        write_reg(16'hff92,8'h20);
+        repeat(100) @(posedge clk);
+        if (dut.timer_count!=12'd2 || dut.timer_divider!=13'd0 || irq_assert) begin
+            $display("idle slow timer count=%0d divider=%0d irq=%b",
+                     dut.timer_count,dut.timer_divider,irq_assert);
+            errors=errors+1;
+        end
+        @(negedge clk); hs_n=0; @(posedge clk); #1;
+        hs_n=1; @(posedge clk); #1;
+        if (dut.timer_count!=12'd1 || irq_assert) begin
+            $display("first HS timer count=%0d irq=%b",dut.timer_count,irq_assert);
+            errors=errors+1;
+        end
+        @(negedge clk); hs_n=0; @(posedge clk); #1;
+        hs_n=1; @(posedge clk); #1;
+        if (dut.timer_count!=12'd2 || !irq_assert) begin
+            $display("second HS timer count=%0d irq=%b",dut.timer_count,irq_assert);
+            errors=errors+1;
+        end
+
         if (errors==0) $display("tb_gime_registers PASS");
         else $display("tb_gime_registers FAIL: %0d",errors);
         $finish;

@@ -4,7 +4,11 @@ module gime_native_video (
     output reg hs_n, output reg fs_n, output reg hblank, output reg vblank,
     output [7:0] red, output [7:0] green, output [7:0] blue
 );
-    localparam [31:0] RASTER_STEP = 32'd569408471;
+    // 910 GIME dots occupy exactly two 858-dot 27 MHz HDMI lines.  With the
+    // 108 MHz system clock the native dot-rate ratio is therefore 35/264.
+    // Keeping that exact relationship prevents the CPU-visible raster IRQs
+    // from walking horizontally through the independently scanned picture.
+    localparam [31:0] RASTER_STEP = 32'd569408543;
     reg [31:0] accumulator=0;
     wire [32:0] sum={1'b0,accumulator}+{1'b0,RASTER_STEP};
     reg raster_tick=0;
@@ -22,8 +26,15 @@ module gime_native_video (
                 hs_n<=x>=10'd64; fs_n<=y>=9'd3;
                 hblank<=x<10'd200 || x>=10'd840;
                 vblank<=y<top || y>=top+active_height;
-                if (x==10'd909) begin x<=0; y<=y==9'd261 ? 0 : y+1'b1; end
-                else x<=x+1'b1;
+                // A 480p frame is 525 HDMI lines, or 262.5 native line
+                // periods.  End the final native row after a half-line so
+                // FS/HBORD timing has the same frame cadence as scanout.
+                // Wrapping at 262 complete lines made the interrupt raster
+                // gain half a line on the displayed image every frame.
+                if ((y==9'd262 && x==10'd454) || x==10'd909) begin
+                    x<=0;
+                    y<=y==9'd262 ? 0 : y+1'b1;
+                end else x<=x+1'b1;
             end
         end
     end
