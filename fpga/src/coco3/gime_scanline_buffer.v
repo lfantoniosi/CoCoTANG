@@ -168,6 +168,7 @@ module gime_scanline_buffer (
  reg [2:0] coalesce_count=0;
 
  reg fill_hdmi=0,fill_cvbs=0,fill_h_bank=0,fill_c_bank=0;
+ reg fill_sequential=0;
  reg [7:0] fill_y=0; reg fill_bit_plane=0; reg [1:0] fill_cres=0;
  reg fill_attributes=0;reg [2:0] fill_gm=0;reg fill_css=0;
  reg fill_compatibility=0,fill_blink=0;reg [7:0] fill_lpr=1;
@@ -282,8 +283,20 @@ module gime_scanline_buffer (
  reg [16:0] mode_signature=17'h1ffff;reg [18:0] last_screen_base=19'h7ffff;
  reg [18:0] frame_screen_base=0;
  reg [3:0] last_vertical_scroll=4'hf;
+ // Running GIME DMA state.  This cannot be reconstructed as y*stride when
+ // FF98.LPR or FF9F.HVEN changes during the picture: each raster advances
+ // from the address left by the preceding raster.
+ reg [7:0] dma_next_y=0;
+ reg [18:0] dma_next_address=0;
+ reg [3:0] dma_line_in_row=0;
+ reg upper_border_q=0;
+ wire upper_border=hd_pv_s&&hd_p_s==0&&!hd_v_s;
+ // LPR is a raster control.  BOINK switches it to 111 to hold the current
+ // DMA row and back to 000 to advance it.  It must be sampled for the next
+ // fill, not treated as a mode change which aborts the renderer and flushes
+ // its two immutable scanline buffers.
  wire [16:0] live_signature={compatibility_mode,compatibility_an_g,compatibility_gm,
-  compatibility_css,bit_plane,hres,cres,lines_per_row_code,1'b0};
+  compatibility_css,bit_plane,hres,cres,3'b000,1'b0};
  wire configuration_diff=live_signature!=mode_signature||
   frame_screen_base!=last_screen_base||vertical_scroll!=last_vertical_scroll;
  reg configuration_diff_q=1'b1;
@@ -296,6 +309,8 @@ module gime_scanline_buffer (
    frame_screen_base<=0;last_vertical_scroll<=4'hf;
    h_next_bank<=0;c_next_bank<=0;fill_dirty<=0;configuration_diff_q<=1'b1;
    h_pending<=0;c_pending<=0;coalesce_count<=0;
+   fill_sequential<=0;dma_next_y<=0;dma_next_address<=0;
+   dma_line_in_row<=0;upper_border_q<=0;
   end else begin
    // Register the wide mode comparison before it controls the renderer.  A
    // one-cycle-later flush is harmless and avoids making that comparison the
@@ -305,7 +320,15 @@ module gime_scanline_buffer (
    // blank.  HDMI's upper border continuously requests logical row zero, so
    // it provides a safe equivalent latch window without adding those border
    // lines to the logical row number.
-   if(hd_pv_s&&hd_p_s==0&&!hd_v_s)frame_screen_base<=screen_base;
+   upper_border_q<=upper_border;
+   if(upper_border)frame_screen_base<=screen_base;
+   if(upper_border&&(!upper_border_q||screen_base!=frame_screen_base))begin
+    dma_next_y<=0;dma_next_address<=screen_base;
+    dma_line_in_row<=compatibility_mode||
+      native_lines_per_row(lines_per_row_code)==8'd1||
+      vertical_scroll>=native_lines_per_row(lines_per_row_code)?
+      4'd0:vertical_scroll;
+   end
    // Capture output-domain line requests before doing row/mode setup.  This
    // is a request pipeline only; pixels remain exclusively in the two line
    // buffers below.  Sampling only while idle prevents a completed fill from
@@ -349,6 +372,7 @@ module gime_scanline_buffer (
      // second render or changing either cache's replacement order.
      fill_y<=h_pending_y;
      fill_hdmi<=1;fill_cvbs<=1;
+     fill_sequential<=h_pending_y==dma_next_y;
      h_pending<=0;c_pending<=0;
      coalesce_count<=0;
      // Refresh a dirty prefetched row in its existing bank.  Choosing the
@@ -379,10 +403,15 @@ module gime_scanline_buffer (
      // forces its fine-scroll counter to zero in this mode; FF9C must not
      // skip whole bitmap rows.  HDMI border lines never enter h_pending_y,
      // which starts at zero on the first logical picture line.
-     row_remainder<={1'b0,h_pending_y}+
+     if(h_pending_y==dma_next_y)begin
+      row_remainder<={5'd0,dma_line_in_row};
+      fill_base<=dma_next_address;
+     end else begin
+      row_remainder<={1'b0,h_pending_y}+
        ((compatibility_mode||native_lines_per_row(lines_per_row_code)==8'd1)?
         9'd0:{5'd0,vertical_scroll});
-     fill_base<=frame_screen_base;
+      fill_base<=frame_screen_base;
+     end
      source_row<=0;word_valid<=0;fill_dirty<=0;text_cache_valid<=0;
      graphics_cache_valid<=0;state<=DIVIDE_ROW;
     end
@@ -502,7 +531,20 @@ module gime_scanline_buffer (
         if(c_valid1&&c_tag1==fill_y)begin c_valid1<=0;c_dirty1<=0;end end
        c_next_bank<=!fill_c_bank;
       end
-     state<=IDLE;
+      if(fill_sequential)begin
+       dma_next_y<=fill_y+1'b1;
+       // Native graphics LPR=111 is an infinite-height row.  Its internal
+       // line counter remains zero, so changing back to LPR=000 advances by
+       // exactly one row instead of first dividing a wrapped 4-bit count.
+       if(fill_bit_plane&&fill_lpr==8'hff)begin
+        dma_next_address<=fill_base;dma_line_in_row<=0;
+       end else if(glyph_line+1'b1>=fill_lpr)begin
+        dma_next_address<=fill_base+fill_stride;dma_line_in_row<=0;
+       end else begin
+        dma_next_address<=fill_base;dma_line_in_row<=glyph_line+1'b1;
+       end
+      end
+      state<=IDLE;
      end else begin
       out_x<=out_x+1'b1;source_x<=next_source_x;
       source_byte_index<=next_source_byte_index;

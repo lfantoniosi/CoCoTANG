@@ -255,6 +255,39 @@ module tb_gime_scanline_buffer;
    horizontal_offset=0;
   end
 
+  // FF98.LPR is sampled at raster boundaries.  In graphics mode 111 holds
+  // the current DMA row indefinitely; returning to 000 advances exactly one
+  // row.  Changing LPR must not discard an already rendered scanline.
+  begin : vertical_raster_effect
+   reg valid0_before,valid1_before;
+   valid0_before=dut.h_valid0;valid1_before=dut.h_valid1;
+   lpr=3'b111;repeat(5)@(posedge clk);#1;
+   if(dut.h_valid0!=valid0_before||dut.h_valid1!=valid1_before)begin
+    $display("FF98.LPR write invalidated an immutable cached row");errors=errors+1;end
+   force dut.state=4'd14;force dut.out_x=10'd639;
+   force dut.fill_hdmi=1'b0;force dut.fill_cvbs=1'b0;
+   force dut.fill_sequential=1'b1;force dut.fill_y=8'd10;
+   force dut.fill_bit_plane=1'b1;force dut.fill_lpr=8'hff;
+   force dut.glyph_line=4'd0;force dut.fill_base=19'h01000;
+   force dut.fill_stride=11'd160;
+   @(posedge clk);#1;
+   if(dut.dma_next_y!=8'd11||dut.dma_next_address!=19'h01000||
+      dut.dma_line_in_row!=0)begin
+    $display("infinite LPR did not hold DMA row: y=%0d addr=%h line=%0d",
+      dut.dma_next_y,dut.dma_next_address,dut.dma_line_in_row);errors=errors+1;end
+   force dut.fill_y=8'd11;force dut.fill_lpr=8'd1;
+   @(posedge clk);#1;
+   if(dut.dma_next_y!=8'd12||dut.dma_next_address!=19'h010a0||
+      dut.dma_line_in_row!=0)begin
+    $display("single-line LPR did not advance DMA row: y=%0d addr=%h line=%0d",
+      dut.dma_next_y,dut.dma_next_address,dut.dma_line_in_row);errors=errors+1;end
+   release dut.fill_stride;release dut.fill_base;release dut.glyph_line;
+   release dut.fill_lpr;release dut.fill_bit_plane;release dut.fill_y;
+   release dut.fill_sequential;release dut.fill_cvbs;release dut.fill_hdmi;
+   release dut.out_x;release dut.state;
+   lpr=0;
+  end
+
   // Compatibility alpha ROM dots are active-low.  A stored row of $c0 must
   // therefore decode as $3f, without changing native text or bitmap packing.
   force dut.glyph_cache=8'hc0;force dut.fill_compatibility=1'b1;

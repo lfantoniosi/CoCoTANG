@@ -15,7 +15,13 @@ module gime_native_video (
     reg raster_tick=0;
     reg [9:0] x=0;
     reg [8:0] y=0;
-    wire [8:0] top=(9'd262-{1'b0,active_height})>>1;
+    // The body is positioned inside the 240 visible raster lines, not the
+    // complete 262.5-line field.  The omitted vertical-blank interval is
+    // where HDMI is also outside its 480-line visible area.  Centering in
+    // all 262 lines delayed HBORD-relative raster effects by 10-11 native
+    // lines (most visibly BOINK in the non-standard 225-line mode).
+    wire [8:0] top=active_height==8'd225 ? 9'd8 :
+                   active_height==8'd199 ? 9'd23 : 9'd25;
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
             accumulator<=0; raster_tick<=0; x<=0; y<=0;

@@ -49,6 +49,17 @@ module tb_gime_native_video;
     initial begin
         repeat(3) @(posedge clk);
         reset_n=1;
+        #1;
+        if (dut.top!=9'd25) begin
+            $display("192-line body top was %0d, expected 25",dut.top);
+            errors=errors+1;
+        end
+        force dut.active_height=8'd225; #1;
+        if (dut.top!=9'd8) begin
+            $display("225-line body top was %0d, expected 8",dut.top);
+            errors=errors+1;
+        end
+        release dut.active_height;
         // Two 262.5-line frames take about 3.61 million 108 MHz clocks.
         repeat(3700000) @(posedge clk);
         $display("tb_gime_native_video timeout");
