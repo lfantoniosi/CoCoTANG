@@ -274,10 +274,12 @@ module gime_scanline_buffer (
  wire write_hits_fill=state!=IDLE&&cpu_write_addr>=line_address&&
                       cpu_write_addr<line_address+fill_row_bytes;
  reg [16:0] mode_signature=17'h1ffff;reg [18:0] last_screen_base=19'h7ffff;
+ reg [18:0] frame_screen_base=0;
  reg [7:0] last_horizontal_offset=8'hff;reg [3:0] last_vertical_scroll=4'hf;
  wire [16:0] live_signature={compatibility_mode,compatibility_an_g,compatibility_gm,
   compatibility_css,bit_plane,hres,cres,lines_per_row_code,1'b0};
- wire configuration_diff=live_signature!=mode_signature||screen_base!=last_screen_base||
+ wire configuration_diff=live_signature!=mode_signature||
+  frame_screen_base!=last_screen_base||
   horizontal_offset!=last_horizontal_offset||vertical_scroll!=last_vertical_scroll;
  reg configuration_diff_q=1'b1;
 
@@ -286,6 +288,7 @@ module gime_scanline_buffer (
    state<=IDLE;memory_request<=0;memory_addr<=0;h_valid0<=0;h_valid1<=0;
    c_valid0<=0;c_valid1<=0;h_dirty0<=0;h_dirty1<=0;c_dirty0<=0;c_dirty1<=0;
    mode_signature<=17'h1ffff;last_screen_base<=19'h7ffff;
+   frame_screen_base<=0;
    last_horizontal_offset<=8'hff;last_vertical_scroll<=4'hf;
    h_next_bank<=0;c_next_bank<=0;fill_dirty<=0;configuration_diff_q<=1'b1;
    h_pending<=0;c_pending<=0;coalesce_count<=0;
@@ -294,6 +297,11 @@ module gime_scanline_buffer (
    // one-cycle-later flush is harmless and avoids making that comparison the
    // select input for nearly every state register in this 108 MHz block.
    configuration_diff_q<=configuration_diff;
+   // The GIME transfers VOFF into its running video address during vertical
+   // blank.  HDMI's upper border continuously requests logical row zero, so
+   // it provides a safe equivalent latch window without adding those border
+   // lines to the logical row number.
+   if(hd_pv_s&&hd_p_s==0&&!hd_v_s)frame_screen_base<=screen_base;
    // Capture output-domain line requests before doing row/mode setup.  This
    // is a request pipeline only; pixels remain exclusively in the two line
    // buffers below.  Sampling only while idle prevents a completed fill from
@@ -314,10 +322,22 @@ module gime_scanline_buffer (
     if(write_hits_fill)fill_dirty<=1;
    end
    if(configuration_diff_q) begin
-    mode_signature<=live_signature;last_screen_base<=screen_base;
+    mode_signature<=live_signature;last_screen_base<=frame_screen_base;
     last_horizontal_offset<=horizontal_offset;last_vertical_scroll<=vertical_scroll;
-    h_valid0<=0;h_valid1<=0;c_valid0<=0;c_valid1<=0;
-    h_dirty0<=0;h_dirty1<=0;c_dirty0<=0;c_dirty1<=0;
+    // Raster effects update VSC/VOFF/HOFF while a line may already be
+    // crossing the HDMI/CVBS read port.  Preserve that immutable displayed
+    // row through both scan-doubled copies, but discard any prefetched row
+    // whose address was calculated from the old register values.  Clearing
+    // both banks here used to turn mid-frame scrolling into black seams and
+    // horizontally split objects.
+    h_valid0<=hd_v_s&&h_valid0&&h_tag0==hd_y_s;
+    h_valid1<=hd_v_s&&h_valid1&&h_tag1==hd_y_s;
+    c_valid0<=cv_v_s&&c_valid0&&c_tag0==cv_y_s;
+    c_valid1<=cv_v_s&&c_valid1&&c_tag1==cv_y_s;
+    h_dirty0<=hd_v_s&&h_valid0&&h_tag0==hd_y_s&&h_dirty0;
+    h_dirty1<=hd_v_s&&h_valid1&&h_tag1==hd_y_s&&h_dirty1;
+    c_dirty0<=cv_v_s&&c_valid0&&c_tag0==cv_y_s&&c_dirty0;
+    c_dirty1<=cv_v_s&&c_valid1&&c_tag1==cv_y_s&&c_dirty1;
     state<=IDLE;memory_request<=0;word_valid<=0;h_pending<=0;c_pending<=0;
     coalesce_count<=0;
    end else case(state)
@@ -349,12 +369,18 @@ module gime_scanline_buffer (
      fill_lpr<=compatibility_mode?(!compatibility_an_g?12:
       compatibility_lines_per_row(compatibility_gm)):native_lines_per_row(lines_per_row_code);
      fill_stride<=live_stride;fill_row_bytes<=live_row_bytes;
-     fill_source_width<=live_source_width;fill_base<=screen_base;
+     fill_source_width<=live_source_width;
      fill_scale_integer<=scale_integer(live_source_width);
      fill_scale_remainder<=scale_remainder(live_source_width);
      fill_hoff<=horizontal_offset[6:0];fill_palettes<=palettes;
+     // Native LPR=0/1 is one raster line per memory row.  The real GIME
+     // forces its fine-scroll counter to zero in this mode; FF9C must not
+     // skip whole bitmap rows.  HDMI border lines never enter h_pending_y,
+     // which starts at zero on the first logical picture line.
      row_remainder<={1'b0,h_pending_y}+
-                    (compatibility_mode?9'd0:{5'd0,vertical_scroll});
+       ((compatibility_mode||native_lines_per_row(lines_per_row_code)==8'd1)?
+        9'd0:{5'd0,vertical_scroll});
+     fill_base<=frame_screen_base;
      source_row<=0;word_valid<=0;fill_dirty<=0;text_cache_valid<=0;
      graphics_cache_valid<=0;state<=DIVIDE_ROW;
     end

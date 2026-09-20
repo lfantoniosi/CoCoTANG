@@ -8,6 +8,7 @@ module tb_gime_scanline_buffer;
  reg [1:0] responder_state=0;reg compatibility_mode=0,compatibility_an_g=1;
  reg [2:0] compatibility_gm=0;reg [3:0] hres=7;reg [1:0] cres=1;
  reg bit_plane=1;reg [2:0] lpr=0;reg [3:0] vertical_scroll=0;
+ reg [18:0] screen_base=0;
  reg [7:0] horizontal_offset=0;reg cpu_write_strobe=0;reg [18:0] cpu_write_addr=0;
  reg hdmi_prefetch_valid=1,cvbs_prefetch_valid=0;
  reg [7:0] hdmi_prefetch_y=0,cvbs_prefetch_y=0;
@@ -15,7 +16,7 @@ module tb_gime_scanline_buffer;
 
  gime_scanline_buffer dut(
   .clk(clk),.reset_n(reset_n),.bit_plane(bit_plane),.hres(hres),.cres(cres),
-  .lines_per_row_code(lpr),.vertical_scroll(vertical_scroll),.screen_base(19'd0),
+  .lines_per_row_code(lpr),.vertical_scroll(vertical_scroll),.screen_base(screen_base),
   .horizontal_offset(horizontal_offset),.palettes(palettes),
   .compatibility_mode(compatibility_mode),.compatibility_an_g(compatibility_an_g),
   .compatibility_gm(compatibility_gm),.compatibility_css(1'b0),.blink(1'b0),
@@ -191,6 +192,45 @@ module tb_gime_scanline_buffer;
    end
   end
   hdmi_display_valid=0;
+
+  // VOFF is transferred into the running video address at vertical blank.
+  // A write during the picture must not disturb either cached raster; the
+  // upper-border row-zero prefetch is the frame-boundary latch in this core.
+  hdmi_prefetch_valid=0;hdmi_display_y=0;hdmi_display_valid=1;
+  repeat(5)@(posedge clk);
+  begin : raster_offset_change
+   reg valid0_before,valid1_before;
+   valid0_before=dut.h_valid0;valid1_before=dut.h_valid1;
+   screen_base=19'h04000;
+   repeat(5)@(posedge clk);#1;
+   if(dut.frame_screen_base!=0||dut.h_valid0!=valid0_before||
+      dut.h_valid1!=valid1_before)begin
+    $display("VOFF changed the active frame before vertical blank");errors=errors+1;
+   end
+   hdmi_display_valid=0;hdmi_prefetch_y=0;hdmi_prefetch_valid=1;
+   repeat(8)@(posedge clk);#1;
+   if(dut.frame_screen_base!=19'h04000)begin
+    $display("VOFF was not latched in upper border");errors=errors+1;end
+   if(dut.last_screen_base!=19'h04000)begin
+    $display("latched VOFF did not reach renderer configuration");errors=errors+1;end
+  end
+  hdmi_prefetch_valid=0;screen_base=0;repeat(5)@(posedge clk);
+
+  // FF9C fine scroll is ignored when native LPR selects one raster per row.
+  // HDMI/CVBS border height is outside the logical source-y coordinate and
+  // must not be folded into this address calculation either.
+  hdmi_prefetch_y=0;vertical_scroll=4'hf;lpr=0;bit_plane=1;
+  hres=7;cres=2;horizontal_offset=0;hdmi_prefetch_valid=1;
+  timeout=0;
+  while(!((dut.h_valid0&&dut.h_tag0==0)||(dut.h_valid1&&dut.h_tag1==0))&&
+        timeout<200000)begin @(posedge clk);timeout=timeout+1;end
+  if(timeout==200000)begin
+   $display("single-line VSC fill timeout");errors=errors+1;
+  end else if(dut.h_valid0&&dut.h_tag0==0 ? dut.h_start0!=0 : dut.h_start1!=0)begin
+   $display("single-line LPR incorrectly applied VSC=%0d",vertical_scroll);
+   errors=errors+1;
+  end
+  hdmi_prefetch_valid=0;vertical_scroll=0;repeat(5)@(posedge clk);
 
   // Compatibility alpha ROM dots are active-low.  A stored row of $c0 must
   // therefore decode as $3f, without changing native text or bitmap packing.
