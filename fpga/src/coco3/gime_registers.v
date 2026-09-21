@@ -15,7 +15,13 @@ module gime_registers (
     output reg [7:0] horizontal_offset,
     output compatibility_mode,
     output reg [6:0] sam_video_offset,
-    output [95:0] palettes
+    output [95:0] palettes,
+    output [5:0] mmu_task0_page_debug,
+    output [5:0] mmu_task1_page_debug,
+    output mmu_task_debug,
+    output mmu_enabled_debug,
+    output [79:0] gime_register_debug,
+    output [95:0] mmu_register_debug
 );
     reg [7:0] init0, init1;
     reg [5:0] irq_enable, firq_enable;
@@ -91,11 +97,22 @@ module gime_registers (
     assign irq_assert = init0[5] && |irq_pending;
     assign firq_assert = init0[4] && |firq_pending;
     assign compatibility_mode = init0[7];
+    assign mmu_task0_page_debug=mmu[{1'b0,cpu_block}];
+    assign mmu_task1_page_debug=mmu[{1'b1,cpu_block}];
+    assign mmu_task_debug=init1[0];
+    assign mmu_enabled_debug=mmu_enabled;
+    // Complete live state for the fixed HDMI debugger status row.  Keep the
+    // bus byte-oriented so the display side can print the same values a CPU
+    // read would see without reconstructing partial registers.
+    assign gime_register_debug={init0,init1,vmode,vres,
+        {2'b00,border_color},{4'b0000,vertical_scroll},video_offset,
+        horizontal_offset,{1'b0,sam_video_offset}};
 
     genvar p;
     generate
         for (p=0;p<16;p=p+1) begin : flatten_palette
             assign palettes[p*6 +: 6] = palette[p];
+            assign mmu_register_debug[p*6 +: 6] = mmu[p];
         end
     endgenerate
 

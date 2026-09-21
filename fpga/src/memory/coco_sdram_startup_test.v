@@ -27,10 +27,34 @@ module coco_sdram_startup_test (
     reg [18:0] address = 19'd0;
 
     assign mem_addr = {4'd0,address};
-    // A change in any tested address bit changes the expected byte.  This is
-    // deliberately not periodic at 64 KiB, unlike the former low-byte data.
-    wire [7:0] address_pattern = address[7:0] ^ address[15:8] ^
-                                 {address[18:16],5'b10101};
+    function [7:0] hex_ascii;
+        input [3:0] nibble;
+        begin
+            hex_ascii = nibble < 10 ? 8'h30+nibble : 8'h41+nibble-10;
+        end
+    endfunction
+
+    // Leave every aligned 16-byte block as eight native GIME text cells:
+    // "Axxxxx- ", where xxxxx is that block's physical 19-bit address.
+    // Odd bytes are a white-on-black FFFBBB attribute.  If bad MMU state
+    // maps untouched test RAM onto the screen, the physical source address
+    // is therefore readable directly instead of appearing as random glyphs.
+    // The address-dependent ASCII data still exercises every SDRAM address
+    // line and is verified with exactly the same function on the read pass.
+    reg [7:0] address_character;
+    always @(*) begin
+        case (address[3:1])
+            3'd0: address_character = "A";
+            3'd1: address_character = hex_ascii({1'b0,address[18:16]});
+            3'd2: address_character = hex_ascii(address[15:12]);
+            3'd3: address_character = hex_ascii(address[11:8]);
+            3'd4: address_character = hex_ascii(address[7:4]);
+            3'd5: address_character = "0";
+            3'd6: address_character = "-";
+            default: address_character = " ";
+        endcase
+    end
+    wire [7:0] address_pattern = address[0] ? 8'h38 : address_character;
     assign mem_wdata = address_pattern;
 
     always @(posedge clk or negedge reset_n) begin

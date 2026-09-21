@@ -9,12 +9,15 @@ module coco3_hdmi #(
 ) (
     input logic pixel_clk,input logic serial_clk,input logic reset,
     input logic debug_clk,input logic log_we,
-    input logic [LOG_ADDR_WIDTH-1:0] log_addr,input logic [39:0] log_data,
+    input logic [LOG_ADDR_WIDTH-1:0] log_addr,input logic [47:0] log_data,
+    input logic [LOG_ADDR_WIDTH-1:0] log_base,
     input logic [LOG_COUNT_WIDTH-1:0] log_count,
     input logic [LOG_PAGE_WIDTH-1:0] log_page,
     input logic [4:0] debug_status,input logic overlay_enable,
     input logic [3:0] interrupt_status,
     input logic [31:0] raster_debug,
+    input logic [79:0] gime_register_debug,
+    input logic [95:0] mmu_register_debug,
     input logic rom_verify_done,input logic rom_verify_pass,
     input logic [15:0] rom_verify_vector,
     input logic sdram_test_done,input logic sdram_test_pass,
@@ -40,6 +43,8 @@ module coco3_hdmi #(
     logic [7:0] ram_actual_m=0,ram_actual_s=0;
     logic [3:0] interrupt_m=0,interrupt_s=0;
     logic [31:0] raster_debug_m=0,raster_debug_s=0;
+    logic [79:0] gime_register_m=0,gime_register_s=0;
+    logic [95:0] mmu_register_m=0,mmu_register_s=0;
     logic [9:0] top,doubled_height,picture_width,picture_lead;
     logic [9:0] source_line,picture_x;
     always_ff @(posedge pixel_clk) begin
@@ -57,6 +62,10 @@ module coco3_hdmi #(
         ram_actual_m<=sdram_test_actual; ram_actual_s<=ram_actual_m;
         interrupt_m<=interrupt_status; interrupt_s<=interrupt_m;
         raster_debug_m<=raster_debug;raster_debug_s<=raster_debug_m;
+        gime_register_m<=gime_register_debug;
+        gime_register_s<=gime_register_m;
+        mmu_register_m<=mmu_register_debug;
+        mmu_register_s<=mmu_register_m;
     end
     always_comb begin
         doubled_height={1'b0,height_s,1'b0};
@@ -134,8 +143,11 @@ module coco3_hdmi #(
             .pixel_clk(pixel_clk),.x(x),.y(y),.enable(overlay_enable),
                 .debug_data({288'd0,raster_debug_s}),.debug_clk(debug_clk),.log_we(log_we),
             .log_addr(log_addr),.log_data(log_data),.log_count(log_count),
+            .log_base(log_base),
             .log_page(log_page),.debug_status(debug_status),
             .interrupt_status(interrupt_s),
+            .gime_register_debug(gime_register_s),
+            .mmu_register_debug(mmu_register_s),
             .rom_verify_done(rom_done_s),.rom_verify_pass(rom_pass_s),
             .rom_verify_vector(rom_vector_s),
             .sdram_test_done(ram_done_s),.sdram_test_pass(ram_pass_s),

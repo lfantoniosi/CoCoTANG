@@ -63,6 +63,12 @@ module coco3 #(
     input       [7:0] cvbs_prefetch_y,
     input             cvbs_prefetch_valid,
     output      [5:0] cvbs_pixel_data,
+    output      [5:0] mmu_task0_page_debug,
+    output      [5:0] mmu_task1_page_debug,
+    output            mmu_task_debug,
+    output            mmu_enabled_debug,
+    output     [79:0] gime_register_debug,
+    output     [95:0] mmu_register_debug,
     output reg [31:0] raster_debug
 );
     wire core_reset_n = reset_n && cpu_reset_n;
@@ -101,7 +107,13 @@ module coco3 #(
         .vertical_scroll(vertical_scroll), .video_offset(video_offset),
         .horizontal_offset(horizontal_offset),
         .compatibility_mode(compatibility_mode),
-        .sam_video_offset(sam_video_offset), .palettes(palettes)
+        .sam_video_offset(sam_video_offset), .palettes(palettes),
+        .mmu_task0_page_debug(mmu_task0_page_debug),
+        .mmu_task1_page_debug(mmu_task1_page_debug),
+        .mmu_task_debug(mmu_task_debug),
+        .mmu_enabled_debug(mmu_enabled_debug),
+        .gime_register_debug(gime_register_debug),
+        .mmu_register_debug(mmu_register_debug)
     );
 
     wire debug_bit_plane;
@@ -163,8 +175,12 @@ module coco3 #(
     reg [1:0] effective_cres = 2'd0;
     reg [1:0] effective_lpf = 2'd0;
     reg [2:0] effective_lines_per_row_code = 3'd3;
-    // Debug modes always view physical RAM from zero. Normal operation uses
-    // the GIME's 19-bit screen-base register (FF9D:FF9E multiplied by eight).
+    // Debug modes always view physical RAM from zero.  Native GIME video uses
+    // FF9D:FF9E multiplied by eight.  In compatibility mode the SAM F bits
+    // supply the legacy display offset, while the GIME still contributes the
+    // implemented high FF9D bits and low FF9E bits.  In particular, do not
+    // assume the legacy screen is in the power-up $70000 compatibility bank:
+    // CoVDG can allocate it in any physical 8K block.
     reg [18:0] effective_screen_base = 19'd0;
     always @(posedge clk or negedge core_reset_n) begin
         if (!core_reset_n) begin
@@ -199,7 +215,9 @@ module coco3 #(
                 vmode[2:0];
             effective_screen_base <= DEBUG_S2_VIDEO_MODE ? 19'd0 :
                 compatibility_mode ?
-                    19'h70000 + {sam_video_offset,9'b0} :
+                    ({video_offset[15:13],16'b0} +
+                     {10'd0,video_offset[5:0],3'b0} +
+                     {3'd0,sam_video_offset,9'b0}) :
                     {video_offset,3'b000};
         end
     end

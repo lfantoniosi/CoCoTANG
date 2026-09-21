@@ -1,6 +1,6 @@
 // Full-screen 6809 bus logger for board bring-up. The 720x480 HDMI active
-// area is divided into 90x60 8-pixel character cells. Two columns show the
-// 116 bus cycles per page.
+// area is divided into 90x60 8-pixel character cells.  The CoCo 3 layout has
+// two fixed status rows plus headings, so its two columns show 114 cycles.
 module hdmi_debug_overlay #(
     parameter integer LOG_ADDR_WIDTH = 9,
     parameter integer LOG_COUNT_WIDTH = 9,
@@ -16,11 +16,14 @@ module hdmi_debug_overlay #(
     input  logic         debug_clk,
     input  logic         log_we,
     input  logic [LOG_ADDR_WIDTH-1:0] log_addr,
-    input  logic [39:0]  log_data,
+    input  logic [47:0]  log_data,
     input  logic [LOG_COUNT_WIDTH-1:0] log_count,
+    input  logic [LOG_ADDR_WIDTH-1:0] log_base,
     input  logic [LOG_PAGE_WIDTH-1:0] log_page,
     input  logic [4:0]   debug_status,
     input  logic [3:0]   interrupt_status,
+    input  logic [79:0]  gime_register_debug,
+    input  logic [95:0]  mmu_register_debug,
     input  logic         rom_verify_done,
     input  logic         rom_verify_pass,
     input  logic [15:0]  rom_verify_vector,
@@ -36,14 +39,14 @@ module hdmi_debug_overlay #(
     // while the renderer reads an independent port on pixel_clk.  A one-bit
     // event toggle cannot be used here because consecutive 108 MHz log writes
     // can occur before the 27 MHz pixel domain observes either edge.
-    logic [39:0] display_memory [0:LOG_DEPTH-1];
-    // Bridge on the opposite 108 MHz edge before writing embedded RAM.  This
-    // gives address/data/WE a half-cycle path and avoids a fragile same-edge
-    // hold path from the logger flops directly into the BSRAM write port.
+    logic [47:0] display_memory [0:LOG_DEPTH-1];
+    // Pipeline the logger output for a full 108 MHz cycle before writing the
+    // embedded RAM.  Consecutive CPU cycles are far slower than this clock,
+    // and the full-cycle path gives the large 8192-entry RAM safe margin.
     logic log_we_half = 1'b0;
     logic [LOG_ADDR_WIDTH-1:0] log_addr_half = '0;
-    logic [39:0] log_data_half = '0;
-    always_ff @(negedge debug_clk) begin
+    logic [47:0] log_data_half = '0;
+    always_ff @(posedge debug_clk) begin
         log_we_half <= log_we;
         log_addr_half <= log_addr;
         log_data_half <= log_data;
@@ -61,10 +64,14 @@ module hdmi_debug_overlay #(
     logic [LOG_COUNT_WIDTH-1:0] count_gray_meta = '0;
     logic [LOG_COUNT_WIDTH-1:0] count_gray_pixel = '0;
     logic [LOG_COUNT_WIDTH-1:0] display_count = '0;
+    wire [LOG_ADDR_WIDTH-1:0] log_base_gray = log_base ^ (log_base >> 1);
+    logic [LOG_ADDR_WIDTH-1:0] base_gray_meta = '0;
+    logic [LOG_ADDR_WIDTH-1:0] base_gray_pixel = '0;
+    logic [LOG_ADDR_WIDTH-1:0] display_base = '0;
     logic [LOG_ADDR_WIDTH-1:0] entry_index;
     logic [LOG_ADDR_WIDTH:0] entry_index_full;
     logic [6:0] page_entry_index;
-    logic [39:0] entry = 40'd0;
+    logic [47:0] entry = 48'd0;
 
     function automatic [LOG_COUNT_WIDTH-1:0] gray_to_binary(
         input logic [LOG_COUNT_WIDTH-1:0] gray
@@ -79,10 +86,26 @@ module hdmi_debug_overlay #(
         end
     endfunction
 
+    function automatic [LOG_ADDR_WIDTH-1:0] base_gray_to_binary(
+        input logic [LOG_ADDR_WIDTH-1:0] gray
+    );
+        integer bit_index;
+        begin
+            base_gray_to_binary[LOG_ADDR_WIDTH-1]=gray[LOG_ADDR_WIDTH-1];
+            for (bit_index=LOG_ADDR_WIDTH-2; bit_index>=0;
+                 bit_index=bit_index-1)
+                base_gray_to_binary[bit_index]=
+                    base_gray_to_binary[bit_index+1]^gray[bit_index];
+        end
+    endfunction
+
     always_ff @(posedge pixel_clk) begin
         count_gray_meta <= log_count_gray;
         count_gray_pixel <= count_gray_meta;
         display_count <= gray_to_binary(count_gray_pixel);
+        base_gray_meta <= log_base_gray;
+        base_gray_pixel <= base_gray_meta;
+        display_base <= base_gray_to_binary(base_gray_pixel);
         // Gowin implements display_memory as synchronous embedded RAM.  Read
         // the selected row explicitly on pixel_clk rather than relying on an
         // asynchronous array access whose hardware behavior does not match
@@ -149,6 +172,14 @@ module hdmi_debug_overlay #(
     logic [15:0] entry_index_16;
     logic [15:0] display_count_16;
     logic [7:0] log_page_8;
+    logic [3:0] status_mmu_index;
+    logic [5:0] status_mmu_page;
+
+    localparam integer TRACE_FIRST_ROW = (EXTENDED_HEADER==2) ? 3 : 2;
+    localparam integer TRACE_ROWS_PER_COLUMN =
+        (EXTENDED_HEADER==2) ? 57 : 58;
+    localparam integer TRACE_ENTRIES_PER_PAGE =
+        TRACE_ROWS_PER_COLUMN * 2;
 
     always_comb begin
         character_column=x[9:3];
@@ -158,18 +189,21 @@ module hdmi_debug_overlay #(
         in_panel=enable && x < 10'd720 && y < 10'd480;
         local_column=(character_column >= 7'd45) ?
                      character_column-7'd45 : character_column;
-        page_entry_index={1'b0,character_row}-7'd2;
+        page_entry_index={1'b0,character_row}-TRACE_FIRST_ROW;
         if (character_column >= 7'd45)
-            page_entry_index=page_entry_index+7'd58;
-        entry_index_full=(log_page * 116) + page_entry_index;
-        entry_index=entry_index_full[LOG_ADDR_WIDTH-1:0];
-        entry_index_16={{(16-LOG_ADDR_WIDTH){1'b0}},entry_index};
+            page_entry_index=page_entry_index+TRACE_ROWS_PER_COLUMN;
+        entry_index_full=(log_page * TRACE_ENTRIES_PER_PAGE)+page_entry_index;
+        entry_index=display_base+entry_index_full[LOG_ADDR_WIDTH-1:0];
+        entry_index_16={{(15-LOG_ADDR_WIDTH){1'b0}},entry_index_full};
         display_count_16={{(16-LOG_COUNT_WIDTH){1'b0}},display_count};
         log_page_8={{(8-LOG_PAGE_WIDTH){1'b0}},log_page};
-        valid_entry=(character_row >= 6'd2) &&
+        valid_entry=(character_row >= TRACE_FIRST_ROW) &&
                     (entry_index_full < LOG_DEPTH) &&
-                    (entry_index_full < display_count) && entry[39];
+                    (entry_index_full < display_count) &&
+                    ((EXTENDED_HEADER==2) ? entry[47] : entry[39]);
         character=" ";
+        status_mmu_index=0;
+        status_mmu_page=0;
 
         if (character_row == 0 && EXTENDED_HEADER != 0) begin
             case (character_column)
@@ -240,7 +274,61 @@ module hdmi_debug_overlay #(
                 53:character=bit_char(debug_status[0]);
                 default: ;
             endcase
-        end else if (character_row == 1 && EXTENDED_HEADER != 0) begin
+        end else if (character_row == 1 && EXTENDED_HEADER == 2) begin
+            // Complete live GIME state. Labels are register low bytes:
+            // 90/91/98/99, A=FF9A, C=FF9C, D=FF9D:E, F=FF9F,
+            // S=legacy SAM display offset, then all task-0/task-1 MMU pages.
+            case (character_column)
+                0:character="9"; 1:character="0"; 2:character=":";
+                3:character=hex_char(gime_register_debug[79:76]);
+                4:character=hex_char(gime_register_debug[75:72]);
+                6:character="9"; 7:character="1"; 8:character=":";
+                9:character=hex_char(gime_register_debug[71:68]);
+                10:character=hex_char(gime_register_debug[67:64]);
+                12:character="9"; 13:character="8"; 14:character=":";
+                15:character=hex_char(gime_register_debug[63:60]);
+                16:character=hex_char(gime_register_debug[59:56]);
+                18:character="9"; 19:character="9"; 20:character=":";
+                21:character=hex_char(gime_register_debug[55:52]);
+                22:character=hex_char(gime_register_debug[51:48]);
+                24:character="A"; 25:character=":";
+                26:character=hex_char(gime_register_debug[47:44]);
+                27:character=hex_char(gime_register_debug[43:40]);
+                29:character="C"; 30:character=":";
+                31:character=hex_char(gime_register_debug[35:32]);
+                33:character="D"; 34:character=":";
+                35:character=hex_char(gime_register_debug[31:28]);
+                36:character=hex_char(gime_register_debug[27:24]);
+                37:character=hex_char(gime_register_debug[23:20]);
+                38:character=hex_char(gime_register_debug[19:16]);
+                40:character="F"; 41:character=":";
+                42:character=hex_char(gime_register_debug[15:12]);
+                43:character=hex_char(gime_register_debug[11:8]);
+                45:character="S"; 46:character=":";
+                47:character=hex_char(gime_register_debug[7:4]);
+                48:character=hex_char(gime_register_debug[3:0]);
+                50:character="0"; 51:character=":";
+                69:character="1"; 70:character=":";
+                default: begin
+                    if (character_column>=52 && character_column<=67) begin
+                        status_mmu_index=(character_column-52)>>1;
+                        status_mmu_page=
+                            mmu_register_debug[status_mmu_index*6 +: 6];
+                        character=character_column[0] ?
+                            hex_char(status_mmu_page[3:0]) :
+                            hex_char({2'b00,status_mmu_page[5:4]});
+                    end else if (character_column>=71 &&
+                                 character_column<=86) begin
+                        status_mmu_index=8+((character_column-71)>>1);
+                        status_mmu_page=
+                            mmu_register_debug[status_mmu_index*6 +: 6];
+                        character=character_column[0] ?
+                            hex_char({2'b00,status_mmu_page[5:4]}) :
+                            hex_char(status_mmu_page[3:0]);
+                    end
+                end
+            endcase
+        end else if (character_row == 1 && EXTENDED_HEADER == 1) begin
             case (local_column)
                 0:character="I"; 1:character="D"; 5:character="R";
                 7:character="A"; 8:character=":"; 9:character="A";
@@ -250,47 +338,57 @@ module hdmi_debug_overlay #(
                 31:character="S"; 35:character="T";
                 default: ;
             endcase
-        end else if (character_row == 1) begin
-            case (local_column)
-                0:character="I"; 1:character="D"; 3:character="R";
-                5:character="A"; 6:character=":"; 7:character="A";
-                8:character="D"; 9:character="D"; 10:character="R";
-                12:character="D"; 13:character="I"; 15:character="D";
-                16:character="O"; 18:character="O"; 19:character="E";
-                21:character="S";
-                default: ;
-            endcase
+        end else if (character_row == ((EXTENDED_HEADER==2) ? 2 : 1)) begin
+            if (EXTENDED_HEADER == 2) begin
+                case (local_column)
+                    0:character="I"; 1:character="D"; 5:character="R";
+                    7:character="A"; 8:character=":"; 9:character="A";
+                    10:character="D";11:character="D";12:character="R";
+                    14:character="D";15:character=":";16:character="I";
+                    17:character="O";22:character="M";23:character=":";
+                    24:character="0";27:character="1";
+                    30:character="T";34:character="E";
+                    default: ;
+                endcase
+            end else begin
+                case (local_column)
+                    0:character="I"; 1:character="D"; 3:character="R";
+                    5:character="A"; 6:character=":"; 7:character="A";
+                    8:character="D"; 9:character="D"; 10:character="R";
+                    12:character="D"; 13:character="I"; 15:character="D";
+                    16:character="O"; 18:character="O"; 19:character="E";
+                    21:character="S";
+                    default: ;
+                endcase
+            end
         end else if (valid_entry && EXTENDED_HEADER != 0) begin
             case (local_column)
                 0:character=hex_char(entry_index_16[15:12]);
                 1:character=hex_char(entry_index_16[11:8]);
                 2:character=hex_char(entry_index_16[7:4]);
                 3:character=hex_char(entry_index_16[3:0]);
-                5:character=entry[38] ? "R" : "W";
+                5:character=entry[46] ? "R" : "W";
                 7:character="A"; 8:character=":";
-                9:character=hex_char(entry[33:30]);
-                10:character=hex_char(entry[29:26]);
-                11:character=hex_char(entry[25:22]);
-                12:character=hex_char(entry[21:18]);
-                14:character="D"; 15:character="I"; 16:character=":";
-                17:character=hex_char(entry[17:14]);
-                18:character=hex_char(entry[13:10]);
-                20:character="D"; 21:character="O"; 22:character=":";
-                23:character=entry[34] ? hex_char(entry[9:6]) : "-";
-                24:character=entry[34] ? hex_char(entry[5:2]) : "-";
-                26:character="O"; 27:character="E"; 28:character=":";
-                29:character=bit_char(entry[34]);
-                31:character="S"; 32:character=":";
-                33:character=hex_char({1'b0,entry[37:35]});
-                35:character="T"; 36:character=":";
-                37:begin
-                    case (entry[1:0])
-                        2'b01: character="0";
-                        2'b10: character="E";
-                        2'b11: character="Q";
-                        default: character="-";
-                    endcase
-                end
+                9:character=hex_char(entry[45:42]);
+                10:character=hex_char(entry[41:38]);
+                11:character=hex_char(entry[37:34]);
+                12:character=hex_char(entry[33:30]);
+                14:character="D";15:character=":";
+                16:character=hex_char(entry[29:26]);
+                17:character=hex_char(entry[25:22]);
+                18:character=":";
+                19:character=hex_char(entry[21:18]);
+                20:character=hex_char(entry[17:14]);
+                22:character="M";23:character=":";
+                24:character=hex_char({2'b00,entry[11:10]});
+                25:character=hex_char(entry[9:6]);
+                26:character=":";
+                27:character=hex_char({2'b00,entry[5:4]});
+                28:character=hex_char(entry[3:0]);
+                30:character="T";31:character=":";
+                32:character=bit_char(entry[12]);
+                34:character="E";35:character=":";
+                36:character=bit_char(entry[13]);
                 default: ;
             endcase
         end else if (valid_entry) begin
@@ -328,12 +426,12 @@ module hdmi_debug_overlay #(
                       rom_verify_done && !rom_verify_pass) ? 24'hff4040 :
                      (character_row == 0 && character_column >= 7'd60 &&
                       sdram_test_done && !sdram_test_pass) ? 24'hff4040 :
-                     (character_row == 0) ? 24'h40ffff :
-                     (EXTENDED_HEADER != 0 && valid_entry &&
-                      entry[1:0] == 2'b01) ? 24'hff4040 :
-                     (EXTENDED_HEADER != 0 && valid_entry && entry[38] &&
-                      entry[1:0] == 2'b10) ? 24'hffb040 :
-                     (valid_entry && !entry[38]) ? 24'hffff40 : 24'hffffff;
+                     (character_row == 0 ||
+                      (EXTENDED_HEADER==2 && character_row==1)) ? 24'h40ffff :
+                     (EXTENDED_HEADER==2 && valid_entry && !entry[46]) ?
+                         24'hffff40 :
+                     (EXTENDED_HEADER!=2 && valid_entry && !entry[38]) ?
+                         24'hffff40 : 24'hffffff;
         else
             rgb_comb=24'h001020;
     end

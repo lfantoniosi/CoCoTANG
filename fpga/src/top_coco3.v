@@ -3,12 +3,18 @@
 // double-buffered scanlines, never a full framebuffer.
 module top_coco3 #(
     parameter integer RESET_HOLD_CYCLES=10800000,
-    parameter integer LOG_DEPTH=4096,
-    //parameter [15:0] LOG_START_ADDRESS=16'hC0D1,
-    parameter [15:0] LOG_START_ADDRESS=16'hFFFE,
-    parameter [15:0] LOG_WRITE_START_ADDRESS=16'hFF98,
-    parameter [15:0] LOG_WRITE_END_ADDRESS=16'hFF99,
-    parameter integer LOG_REBASE_EVERY_MATCH=1,
+    parameter integer LOG_DEPTH=8192,
+    parameter [15:0] LOG_START_ADDRESS=16'h0000,
+    parameter [15:0] LOG_WRITE_START_ADDRESS=16'h0000,
+    parameter [15:0] LOG_WRITE_END_ADDRESS=16'h0000,
+    parameter [7:0] LOG_WRITE_DATA_MASK=8'h00,
+    parameter [7:0] LOG_WRITE_DATA_VALUE=8'h00,
+    parameter [15:0] LOG_CAPTURE_START_ADDRESS=16'h0000,
+    parameter [15:0] LOG_CAPTURE_END_ADDRESS=16'hffff,
+    parameter [15:0] LOG_CAPTURE_EXTRA_ADDRESS=16'hffff,
+    parameter [15:0] LOG_MARKER_ADDRESS=16'hff9b,
+    parameter [7:0] LOG_MARKER_DATA=8'hc7,
+    parameter integer LOG_REBASE_EVERY_MATCH=0,
     parameter integer ENABLE_BUS_LOGGER=1,
     parameter integer DEBUG_OVERLAY=0,
     parameter integer ANALOG_VIDEO_MODE=1
@@ -25,8 +31,10 @@ module top_coco3 #(
     inout [31:0] IO_sdram_dq,output [10:0] O_sdram_addr,
     output [1:0] O_sdram_ba,output [3:0] O_sdram_dqm
 );
-    localparam integer LOG_ADDR_WIDTH=12,LOG_COUNT_WIDTH=13,LOG_PAGE_WIDTH=6;
-    localparam integer ENTRIES_PER_PAGE=116;
+    localparam integer LOG_ADDR_WIDTH=13,LOG_COUNT_WIDTH=14,LOG_PAGE_WIDTH=7;
+    // Two fixed status rows plus one column-heading row leave 57 trace rows
+    // in each half of the 60-row HDMI debugger.
+    localparam integer ENTRIES_PER_PAGE=114;
     localparam [LOG_PAGE_WIDTH-1:0] LAST_PAGE=(LOG_DEPTH-1)/ENTRIES_PER_PAGE;
 
     wire clk108,clk108p,clk270,clk135,clk27,board_reset_n,clocks_locked;
@@ -129,6 +137,10 @@ module top_coco3 #(
     reg [7:0] cpu_write_data=8'hff;
     wire [7:0] cpu_data_in;
     wire [31:0] raster_debug;
+    wire [5:0] mmu_task0_page_debug,mmu_task1_page_debug;
+    wire mmu_task_debug,mmu_enabled_debug;
+    wire [79:0] gime_register_debug;
+    wire [95:0] mmu_register_debug;
 
     // KEYINT and SERNT are inverted by the motherboard interface before they
     // reach the multiplexed FPGA inputs. Normalize both here so the GIME
@@ -166,7 +178,14 @@ module top_coco3 #(
         .cvbs_source_valid(cvbs_source_valid),
         .cvbs_prefetch_y(cvbs_prefetch_y),
         .cvbs_prefetch_valid(cvbs_prefetch_valid),
-        .cvbs_pixel_data(cvbs_pixel_data),.raster_debug(raster_debug));
+        .cvbs_pixel_data(cvbs_pixel_data),
+        .mmu_task0_page_debug(mmu_task0_page_debug),
+        .mmu_task1_page_debug(mmu_task1_page_debug),
+        .mmu_task_debug(mmu_task_debug),
+        .mmu_enabled_debug(mmu_enabled_debug),
+        .gime_register_debug(gime_register_debug),
+        .mmu_register_debug(mmu_register_debug),
+        .raster_debug(raster_debug));
 
     // The board pins drive NPN transistor bases: high asserts the active-low
     // motherboard IRQ/FIRQ nets, low releases them.
@@ -279,27 +298,43 @@ module top_coco3 #(
             .OEN(cpu_pin_oen[cpu_data_bit]));
       end endgenerate
 
-    // Same 40-bit memory logger and page/overlay controls as the CoCo 2 top.
-    wire log_we,rebase_pulse;
-    wire [LOG_ADDR_WIDTH-1:0] log_addr;
-    wire [39:0] log_data;
+    // Manual 48-bit bus/MMU logger and page/overlay controls.
+    wire log_we,rebase_pulse,log_marker_pulse;
+    wire [LOG_ADDR_WIDTH-1:0] log_addr,log_base;
+    wire [47:0] log_data;
     wire [LOG_COUNT_WIDTH-1:0] log_count;
+    reg log_capture_active=0,log_capture_clear=0;
     generate if (ENABLE_BUS_LOGGER!=0) begin:logger_enabled
       cpu_bus_logger #(.LOG_ADDR_WIDTH(LOG_ADDR_WIDTH),
         .LOG_COUNT_WIDTH(LOG_COUNT_WIDTH),.LOG_DEPTH(LOG_DEPTH),
         .LOG_START_ADDRESS(LOG_START_ADDRESS),
         .LOG_WRITE_START_ADDRESS(LOG_WRITE_START_ADDRESS),
         .LOG_WRITE_END_ADDRESS(LOG_WRITE_END_ADDRESS),
+        .LOG_WRITE_DATA_MASK(LOG_WRITE_DATA_MASK),
+        .LOG_WRITE_DATA_VALUE(LOG_WRITE_DATA_VALUE),
+        .LOG_CAPTURE_START_ADDRESS(LOG_CAPTURE_START_ADDRESS),
+        .LOG_CAPTURE_END_ADDRESS(LOG_CAPTURE_END_ADDRESS),
+        .LOG_CAPTURE_EXTRA_ADDRESS(LOG_CAPTURE_EXTRA_ADDRESS),
+        .LOG_MARKER_ADDRESS(LOG_MARKER_ADDRESS),
+        .LOG_MARKER_DATA(LOG_MARKER_DATA),
         .LOG_REBASE_EVERY_MATCH(LOG_REBASE_EVERY_MATCH)) logger(
-        .clk(clk108),.reset_n(board_reset_n),.capture_enable(cpu_release),
+        .clk(clk108),.reset_n(board_reset_n),
+        .capture_enable(cpu_release && log_capture_active),
+        .capture_clear(log_capture_clear),
         .bus_reset_n(filtered_mux_reset_n),.e_fall(e_fall),.q(q_core),
         .rw_n(rw_n),.address(address),.cpu_data(cpu_data_in),
         .expected_data(fpga_read_data),.s(sam_s),.data_oe(fpga_data_oe),
-        .memory_wait(cpu_memory_wait),.log_we(log_we),.log_addr(log_addr),
-        .log_data(log_data),.log_count(log_count),.rebase_pulse(rebase_pulse));
+        .memory_wait(cpu_memory_wait),
+        .mmu_task0_page(mmu_task0_page_debug),
+        .mmu_task1_page(mmu_task1_page_debug),
+        .mmu_task(mmu_task_debug),.mmu_enabled(mmu_enabled_debug),
+        .log_we(log_we),.log_addr(log_addr),
+        .log_data(log_data),.log_count(log_count),.log_base(log_base),
+        .rebase_pulse(rebase_pulse),.marker_pulse(log_marker_pulse));
     end else begin:logger_disabled
       assign log_we=0; assign log_addr=0; assign log_data=0;
-      assign log_count=0; assign rebase_pulse=0;
+      assign log_count=0; assign log_base=0; assign rebase_pulse=0;
+      assign log_marker_pulse=0;
     end endgenerate
 
     reg s2_meta=0,s2_sync=0,s2_state=0;
@@ -311,21 +346,37 @@ module top_coco3 #(
         s2_meta<=0;s2_sync<=0;s2_state<=0;s2_stable_count<=0;
         s2_hold_count<=0;s2_long_handled<=0;
         overlay_visible<=(DEBUG_OVERLAY!=0);log_page<=0;
+        log_capture_active<=0;log_capture_clear<=0;
       end else begin
+        log_capture_clear<=0;
+        if(log_marker_pulse) begin
+          // Entry zero is already the marker; retain it and capture the 8191
+          // bus observations that follow.
+          log_capture_active<=1'b1;
+          log_page<=0;
+        end else if(log_count>=LOG_DEPTH) log_capture_active<=0;
         s2_meta<=s2;s2_sync<=s2_meta;
-        if(rebase_pulse) log_page<=0;
         if(s2_sync==s2_state) begin
           s2_stable_count<=0;
           if(s2_state && !s2_long_handled) begin
             if(s2_hold_count==27'd107999999) begin
-              overlay_visible<=!overlay_visible;s2_long_handled<=1;
+              overlay_visible<=!overlay_visible;log_page<=0;
+              s2_long_handled<=1;
             end else s2_hold_count<=s2_hold_count+1'b1;
           end
         end else if(s2_stable_count==21'd1079999) begin
           s2_state<=s2_sync;s2_stable_count<=0;
           if(s2_sync) begin s2_hold_count<=0;s2_long_handled<=0; end
           else begin s2_hold_count<=0;
-            if(!s2_long_handled) log_page<=(log_page==LAST_PAGE)?0:log_page+1'b1;
+            if(!s2_long_handled) begin
+              if(overlay_visible)
+                log_page<=(log_page==LAST_PAGE)?0:log_page+1'b1;
+              else begin
+                log_capture_clear<=1'b1;
+                log_capture_active<=1'b1;
+                log_page<=0;
+              end
+            end
           end
         end else s2_stable_count<=s2_stable_count+1'b1;
       end
@@ -337,6 +388,7 @@ module top_coco3 #(
         .LOG_DEPTH(LOG_DEPTH),.ENABLE_DEBUG_OVERLAY(ENABLE_BUS_LOGGER)) hdmi_output(
         .pixel_clk(clk27),.serial_clk(clk135),.reset(!board_reset_n),
         .debug_clk(clk108),.log_we(log_we),.log_addr(log_addr),
+        .log_base(log_base),
         .log_data(log_data),.log_count(log_count),.log_page(log_page),
         .debug_status({clocks_locked,filtered_mux_reset_n,mux_halt_n,
                        interrupt_inputs_idle,bus_ready_sync}),
@@ -344,6 +396,8 @@ module top_coco3 #(
         // IRQ and FIRQ are active-high requests to the output transistors.
         .interrupt_status({!gime_keyint_n,!gime_serint_n,gime_irq,gime_firq}),
         .raster_debug(raster_debug),
+        .gime_register_debug(gime_register_debug),
+        .mmu_register_debug(mmu_register_debug),
         .rom_verify_done(rom_verify_done),.rom_verify_pass(rom_verify_pass),
         .rom_verify_vector(rom_verify_vector),
         .sdram_test_done(sdram_test_done),.sdram_test_pass(sdram_test_pass),

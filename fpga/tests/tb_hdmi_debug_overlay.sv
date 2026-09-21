@@ -6,18 +6,21 @@ module tb_hdmi_debug_overlay;
     logic pixel_clk=0,debug_clk=0,log_we=0;
     logic [8:0] log_addr=0,log_count=0;
     logic [1:0] log_page=0;
-    logic [39:0] log_data=0;
+    logic [47:0] log_data=0;
     logic [23:0] rgb_in=24'h123456;
     logic [23:0] rgb_out;
     integer errors=0;
 
-    hdmi_debug_overlay #(.EXTENDED_HEADER(1)) dut(
+    hdmi_debug_overlay #(.EXTENDED_HEADER(2)) dut(
         .pixel_clk(pixel_clk),.x(x),.y(y),.enable(enable),
         .debug_data(debug_data),.debug_clk(debug_clk),.log_we(log_we),
         .log_addr(log_addr),.log_data(log_data),.log_count(log_count),
+        .log_base(9'd0),
         .log_page(log_page),
         .debug_status(5'b11111),
         .interrupt_status(4'b0000),
+        .gime_register_debug(80'hc0011808300000000000),
+        .mmu_register_debug(96'h3f3e3d3c3b3a39383f3e3d3c),
         .rom_verify_done(1'b1),.rom_verify_pass(1'b1),
         .rom_verify_vector(16'h8c1b),
         .sdram_test_done(1'b1),.sdram_test_pass(1'b1),
@@ -46,31 +49,36 @@ module tb_hdmi_debug_overlay;
         check(720,479,24'h123456);   // Immediately right of the active screen.
         check(2,0,24'h40ffff);       // Lit title pixel is cyan.
         log_addr=0;
-        log_data={1'b1,1'b1,3'd2,1'b1,16'hfffe,8'ha0,8'ha0,2'b11};
+        log_data={1'b1,1'b1,16'hfffe,8'ha0,8'ha0,
+                  1'b1,1'b0,6'h12,6'h2a};
         log_we=1; @(negedge debug_clk); @(posedge debug_clk); #1;
         log_we=0; log_count=1;
         repeat (4) @(posedge pixel_clk);
-        check(2,16,24'hffffff);      // Entry zero index is rendered.
-        check(58,16,24'hffffff);     // First address digit is rendered.
-        check(298,16,24'hffffff);    // T:Q: valid by Q fall and E fall.
+        check(2,8,24'h40ffff);       // Fixed GIME row is rendered in cyan.
+        check(2,24,24'hffffff);      // Entry zero index is rendered.
+        check(74,24,24'hffffff);     // First address digit is rendered.
+        check(194,24,24'hffffff);    // First MMU-page digit is rendered.
         log_addr=0;
-        log_data={1'b1,1'b1,3'd1,1'b1,16'h8000,8'h45,8'h45,2'b10};
+        log_data={1'b1,1'b0,16'h8000,8'h45,8'h45,
+                  1'b1,1'b1,6'h01,6'h02};
         log_we=1; @(negedge debug_clk); @(posedge debug_clk); #1; log_we=0;
         repeat (4) @(posedge pixel_clk);
-        check(2,16,24'hffb040);      // T:E: late after Q but valid by E.
+        check(2,24,24'hffff40);      // Writes are highlighted yellow.
         log_addr=0;
-        log_data={1'b1,1'b1,3'd1,1'b0,16'h8000,8'hff,8'h45,2'b01};
+        log_data={1'b1,1'b1,16'h8000,8'hff,8'h45,
+                  1'b0,1'b0,6'h03,6'h04};
         log_we=1; @(negedge debug_clk); @(posedge debug_clk); #1; log_we=0;
         repeat (4) @(posedge pixel_clk);
-        check(2,16,24'hff4040);      // A T:0 read failure makes the row red.
-        log_addr=9'd116;
-        log_data={1'b1,1'b1,3'd2,1'b1,16'ha05a,8'h1f,8'h1f,2'b00};
+        check(2,24,24'hffffff);      // Reads remain white.
+        log_addr=9'd114;
+        log_data={1'b1,1'b1,16'ha05a,8'h1f,8'h1f,
+                  1'b1,1'b1,6'h05,6'h06};
         log_we=1; @(negedge debug_clk); @(posedge debug_clk); #1;
-        log_we=0; log_count=9'd117;
+        log_we=0; log_count=9'd115;
         repeat (4) @(posedge pixel_clk);
         log_page=2'd1;
         repeat (4) @(posedge pixel_clk);
-        check(2,16,24'hffffff);      // Page one starts with local entry 00.
+        check(2,24,24'hffffff);      // Page one starts with local entry 00.
         enable=0;
         check(58,16,24'h123456);     // S2/debug disable path.
         if (errors==0) $display("tb_hdmi_debug_overlay PASS");
