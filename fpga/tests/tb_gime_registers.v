@@ -166,6 +166,36 @@ module tb_gime_registers;
         end
         cpu_rw_n=1;
 
+        // INIT0.MC3 fixes $FE00-$FEFF at physical $7FE00-$7FEFF.  With MC3
+        // clear the same logical address follows block 7 of the active task;
+        // with it set, task selection must no longer affect reads or writes.
+        write_reg(16'hff91,8'h00);
+        write_reg(16'hff90,8'h40);
+        cpu_addr=16'hfea5;cpu_rw_n=1;#1;
+        if(!cpu_mem_read||cpu_mem_is_rom||cpu_mem_addr!=23'h01fea5)begin
+            $display("task 0 ordinary FE mapping got %h",cpu_mem_addr);
+            errors=errors+1;end
+        write_reg(16'hff91,8'h01);
+        cpu_addr=16'hfea5;cpu_rw_n=1;#1;
+        if(!cpu_mem_read||cpu_mem_is_rom||cpu_mem_addr!=23'h04fea5)begin
+            $display("task 1 ordinary FE mapping got %h",cpu_mem_addr);
+            errors=errors+1;end
+        write_reg(16'hff90,8'h48);
+        cpu_addr=16'hfea5;cpu_rw_n=1;#1;
+        if(!cpu_mem_read||cpu_mem_is_rom||cpu_mem_addr!=23'h07fea5)begin
+            $display("MC3 task 1 FE read got %h",cpu_mem_addr);
+            errors=errors+1;end
+        cpu_rw_n=0;#1;
+        if(!cpu_mem_write||cpu_mem_is_rom||cpu_mem_addr!=23'h07fea5)begin
+            $display("MC3 task 1 FE write got %h",cpu_mem_addr);
+            errors=errors+1;end
+        cpu_rw_n=1;
+        write_reg(16'hff91,8'h00);
+        cpu_addr=16'hfea5;cpu_rw_n=1;#1;
+        if(!cpu_mem_read||cpu_mem_is_rom||cpu_mem_addr!=23'h07fea5)begin
+            $display("MC3 task 0 FE read got %h",cpu_mem_addr);
+            errors=errors+1;end
+
         // ROM is selected by an MMU page value, not by a fixed logical
         // $8000-$FEFF window. Expansion RAM mapped into logical block 4 must
         // therefore remain readable and writable in RAM/ROM mode.

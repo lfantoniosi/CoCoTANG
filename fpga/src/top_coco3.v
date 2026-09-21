@@ -3,7 +3,7 @@
 // double-buffered scanlines, never a full framebuffer.
 module top_coco3 #(
     parameter integer RESET_HOLD_CYCLES=10800000,
-    parameter integer LOG_DEPTH=8192,
+    parameter integer LOG_DEPTH=4092,
     parameter [15:0] LOG_START_ADDRESS=16'h0000,
     parameter [15:0] LOG_WRITE_START_ADDRESS=16'h0000,
     parameter [15:0] LOG_WRITE_END_ADDRESS=16'h0000,

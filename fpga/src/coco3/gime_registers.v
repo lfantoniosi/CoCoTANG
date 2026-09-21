@@ -48,6 +48,11 @@ module gime_registers (
     // contain only 64K/128K.
     wire mmu_enabled = init0[6];
     wire [5:0] selected_mmu_page = mmu[mmu_index];
+    // INIT0.MC3 makes $FE00-$FEFF the GIME's constant system page.  It is
+    // always physical block $3F, independent of the selected MMU task and
+    // block-7 register.  NitrOS-9 relies on this for its direct-page kernel
+    // globals while switching tasks.
+    wire constant_fe_page = init0[3] && cpu_addr[15:8] == 8'hfe;
     // In MMU RAM/ROM mode, $3C-$3F in any MMU slot select ROM.  The two
     // low page bits are supplied by the destination slot, not by the value
     // written to the MMU register.  Consequently a RAM page such as $00
@@ -61,6 +66,7 @@ module gime_registers (
     // occurs after Extended BASIC has enabled all-RAM, and otherwise FFF8/9
     // are incorrectly translated through the RAM/MMU path.
     wire rom_window = vector_selected || (!ram_mode && !io_selected &&
+                      !constant_fe_page &&
                       (legacy_rom_window || mapped_rom_window));
     wire [14:0] rom_byte_addr = vector_selected ? cpu_addr[14:0] :
                                 mmu_enabled ? {cpu_block[1:0],cpu_addr[12:0]} :
@@ -80,7 +86,9 @@ module gime_registers (
     wire rom_selected = rom_window && !external_rom_selected;
     wire [18:0] compatibility_ram_address =
         19'h70000 + {3'd0,cpu_addr};
-    wire [18:0] ram_address = mmu_enabled ?
+    wire [18:0] ram_address = constant_fe_page ?
+                              (19'h7fe00 + {11'd0,cpu_addr[7:0]}) :
+                              mmu_enabled ?
                               {mmu[mmu_index],cpu_addr[12:0]} :
                               compatibility_ram_address;
 
