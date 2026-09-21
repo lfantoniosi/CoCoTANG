@@ -32,12 +32,10 @@ module tb_coco_sdram_startup_test;
         reset_n=1; start=1;
         wait(done); @(negedge clk);
         if (!passed || failed || transactions != 1048576) errors=errors+1;
-        // Native attribute text at physical $12340 must spell A12340- .
-        if (memory[19'h12340]!="A" || memory[19'h12341]!=8'h38 ||
-            memory[19'h12342]!="1" || memory[19'h12344]!="2" ||
-            memory[19'h12346]!="3" || memory[19'h12348]!="4" ||
-            memory[19'h1234a]!="0" || memory[19'h1234c]!="-" ||
-            memory[19'h1234e]!=" ") errors=errors+1;
+        // The complete video-visible RAM range must be left cleared.
+        if (memory[19'h00000]!=8'h00 || memory[19'h12340]!=8'h00 ||
+            memory[19'h40000]!=8'h00 || memory[19'h7ffff]!=8'h00)
+            errors=errors+1;
         if (errors==0) $display("tb_coco_sdram_startup_test PASS");
         else $display("tb_coco_sdram_startup_test FAIL errors=%0d tx=%0d",errors,transactions);
         $finish;

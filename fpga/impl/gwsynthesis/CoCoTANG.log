@@ -71,7 +71,7 @@ Compiling module 'sdram'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/sdram.
 WARN  (EX3791) : Expression size 16 truncated to fit in target size 15("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/sdram.v":301)
 Compiling module 'coco3_memory'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco3_memory.v":5)
 Extracting RAM for identifier 'rom_memory'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco3_memory.v":224)
-Compiling module 'coco_sdram_startup_test'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_sdram_startup_test.v":5)
+Compiling module 'coco_sdram_startup_test'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_sdram_startup_test.v":4)
 Compiling module 'coco_flash_loader(SDRAM_ADDRESS=23'd0,BYTE_COUNT=32768)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_flash_loader.v":1)
 Compiling module 'spi_flash_reader(CLK_DIV=4)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/spi_flash_reader.v":1)
 Compiling module 'cpu_sdram_arbiter'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/cpu_sdram_arbiter.v":5)

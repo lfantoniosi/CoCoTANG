@@ -403,6 +403,23 @@ module top_coco3 #(
     end
 
     wire interrupt_inputs_idle=gime_serint_n && gime_keyint_n && mux_halt_n;
+    // While the released CPU has not yet programmed a video mode, reproduce
+    // the CoCo 3 reset display as one uniform green field.  Without this mask
+    // the cleared SDRAM is decoded as repeated native character-zero glyphs.
+    // The ROM's first video action enters compatibility mode.  Latch that
+    // existing transition here so reset presentation adds no decode or fanout
+    // to the timing-critical GIME/scanline-renderer block.
+    reg startup_video_blank=1'b1;
+    always @(posedge clk108 or negedge cpu_release) begin
+        if(!cpu_release) startup_video_blank<=1'b1;
+        else if(compatibility_video) startup_video_blank<=1'b0;
+    end
+    wire [23:0] visible_hdmi_pixel = startup_video_blank ?
+        24'h00ff00 : hdmi_pixel_data;
+    wire [5:0] visible_cvbs_pixel = startup_video_blank ?
+        6'b001100 : cvbs_pixel_data;
+    wire [5:0] visible_border_rgb = startup_video_blank ?
+        6'b001100 : border_rgb;
     coco3_hdmi #(.LOG_ADDR_WIDTH(LOG_ADDR_WIDTH),
         .LOG_COUNT_WIDTH(LOG_COUNT_WIDTH),.LOG_PAGE_WIDTH(LOG_PAGE_WIDTH),
         .LOG_DEPTH(LOG_DEPTH),.ENABLE_DEBUG_OVERLAY(ENABLE_BUS_LOGGER),
@@ -430,7 +447,7 @@ module top_coco3 #(
         .artifact_css(artifact_css),
         .overlay_enable(overlay_visible),.active_height(active_height),
         .compatibility_mode(compatibility_video),
-        .border_rgb(border_rgb),.pixel_data(hdmi_pixel_data),
+        .border_rgb(visible_border_rgb),.pixel_data(visible_hdmi_pixel),
         .source_x(hdmi_source_x),.source_y(hdmi_source_y),
         .source_valid(hdmi_source_valid),
         .source_picture_active(hdmi_source_picture_active),
@@ -459,8 +476,8 @@ module top_coco3 #(
     end
     coco_cvbs_ntsc #(.STREAMING_INPUT(0)) analog_encoder(
         .clk135(clk135),.clk270(clk270),.reset_n(cpu_release),
-        .high_resolution(1'b1),.framebuffer_data(cvbs_pixel_data),
-        .border_rgb(border_rgb),.active_height(active_height),
+        .high_resolution(1'b1),.framebuffer_data(visible_cvbs_pixel),
+        .border_rgb(visible_border_rgb),.active_height(active_height),
         .framebuffer_addr(unused_cvbs_framebuffer_addr),
         .source_x(cvbs_source_x_raw),.source_y(cvbs_source_y_raw),
         .source_valid(cvbs_source_valid_raw),.prefetch_y(cvbs_prefetch_y_raw),
