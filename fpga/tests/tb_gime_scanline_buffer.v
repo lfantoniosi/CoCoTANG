@@ -3,7 +3,8 @@ module tb_gime_scanline_buffer;
  reg clk=0,hdmi_clk=0,cvbs_clk=0,reset_n=0;
  reg [95:0] palettes=0;reg [31:0] memory_data=32'h1b1b1b1b;
  reg memory_valid=0;wire memory_request;wire [22:0] memory_addr;
- wire [5:0] hdmi_pixel,cvbs_pixel;integer transactions=0,errors=0,i,timeout;
+ wire [23:0] hdmi_pixel;wire [5:0] cvbs_pixel;
+ integer transactions=0,errors=0,i,timeout;
  integer responder_delay=0;reg slow_memory=0;
  reg [1:0] responder_state=0;reg compatibility_mode=0,compatibility_an_g=1;
  reg [2:0] compatibility_gm=0;reg [3:0] hres=7;reg [1:0] cres=1;
@@ -66,13 +67,17 @@ module tb_gime_scanline_buffer;
    if(dut.c_valid0 ? dut.cvbs_line0[i]!==mapped(i[1:0]) :
                      dut.cvbs_line1[i]!==mapped(i[1:0]))begin
     $display("native pixel %0d wrong",i);errors=errors+1;i=640;end
-  // The HDMI copy is a rounded 5:4 linear reduction of the canonical row.
-  // For the repeating 0,1,2,3 palette pattern its first group is 0,1,5,0.
-  if((dut.h_valid0?dut.hdmi_line0[0]:dut.hdmi_line1[0])!==6'h00||
-     (dut.h_valid0?dut.hdmi_line0[1]:dut.hdmi_line1[1])!==6'h01||
-     (dut.h_valid0?dut.hdmi_line0[2]:dut.hdmi_line1[2])!==6'h05||
-     (dut.h_valid0?dut.hdmi_line0[3]:dut.hdmi_line1[3])!==6'h00)begin
-   $display("HDMI 5:4 filter coefficients are wrong");errors=errors+1;end
+  // Default native GIME output preserves all 640 canonical dots at RGB888.
+  if((dut.h_valid0?dut.hdmi_line0[0]:dut.hdmi_line1[0])!==24'h000000||
+     (dut.h_valid0?dut.hdmi_line0[1]:dut.hdmi_line1[1])!==24'h000055||
+     (dut.h_valid0?dut.hdmi_line0[2]:dut.hdmi_line1[2])!==24'h005500||
+     (dut.h_valid0?dut.hdmi_line0[3]:dut.hdmi_line1[3])!==24'h005555)begin
+   $display("HDMI native 640-dot RGB888 path is wrong");errors=errors+1;end
+  // Aspect-correct builds use the same cache with full-precision coverage.
+  // A 25% black contribution over RGB222 grey must become $808080 rather
+  // than rounding back to grey as the old RGB222 filter did.
+  if(dut.blend_quarters(24'haaaaaa,24'h000000,2'd1)!==24'h808080)begin
+   $display("HDMI RGB888 filter lost fractional coverage");errors=errors+1;end
 
   invalidate_all();
   if(!(dut.h_dirty0||dut.h_dirty1))begin

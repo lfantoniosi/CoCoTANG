@@ -2,7 +2,8 @@
 // and native video rendering live here; SDRAM and output scan conversion are
 // deliberately shared by the board top level with the CoCo 2 implementation.
 module coco3 #(
-    parameter integer DEBUG_S2_VIDEO_MODE = 0
+    parameter integer DEBUG_S2_VIDEO_MODE = 0,
+    parameter integer NATIVE_HDMI_640 = 1
 ) (
     input             clk,
     input             reset_n,
@@ -59,7 +60,7 @@ module coco3 #(
     input             hdmi_source_picture_active,
     input       [7:0] hdmi_prefetch_y,
     input             hdmi_prefetch_valid,
-    output      [5:0] hdmi_pixel_data,
+    output     [23:0] hdmi_pixel_data,
     input             cvbs_read_clk,
     input       [9:0] cvbs_source_x,
     input       [7:0] cvbs_source_y,
@@ -270,7 +271,7 @@ module coco3 #(
     // CVBS read clocks; SDRAM fetch, tags and mode/address logic are shared.
     wire [7:0] debug_dma_next_y,debug_fill_y;
     wire [3:0] debug_scanline_state;
-    gime_scanline_buffer scanlines (
+    gime_scanline_buffer #(.NATIVE_HDMI_640(NATIVE_HDMI_640)) scanlines (
         .clk(clk),.reset_n(core_reset_n),
         .bit_plane(effective_bit_plane), .hres(effective_hres),
         .cres(effective_cres), .lines_per_row_code(effective_lines_per_row_code),
@@ -309,7 +310,8 @@ module coco3 #(
     wire [8:0] debug_native_y;
     gime_native_video native_video(
         .clk(clk),.reset_n(core_reset_n),.active_height(active_height),
-        .pixel_rgb(hdmi_pixel_data),.hs_n(hs_n),.fs_n(fs_n),
+        .pixel_rgb({hdmi_pixel_data[23:22],hdmi_pixel_data[15:14],
+                    hdmi_pixel_data[7:6]}),.hs_n(hs_n),.fs_n(fs_n),
         .hborder_irq_n(hborder_irq_n),
         .hblank(hblank),.vblank(vblank),.debug_raster_y(debug_native_y),
         .red(red),.green(green),.blue(blue));

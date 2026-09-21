@@ -1,11 +1,12 @@
-// 720x480 DVI scanout for the CoCo 3 line cache.  Native GIME lines are 640
-// pixels wide and are centered without a framebuffer or horizontal scaling.
+// 720x480 DVI scanout for the CoCo 3 line cache. Native GIME lines may retain
+// all 640 dots or use an aspect-correct 512-dot RGB888 reduction.
 module coco3_hdmi #(
     parameter integer LOG_ADDR_WIDTH=12,
     parameter integer LOG_COUNT_WIDTH=13,
     parameter integer LOG_PAGE_WIDTH=6,
     parameter integer LOG_DEPTH=4096,
-    parameter integer ENABLE_DEBUG_OVERLAY=0
+    parameter integer ENABLE_DEBUG_OVERLAY=0,
+    parameter integer NATIVE_HDMI_640=1
 ) (
     input logic pixel_clk,input logic serial_clk,input logic reset,
     input logic debug_clk,input logic log_we,
@@ -27,7 +28,7 @@ module coco3_hdmi #(
     input logic artifact_video_active,input logic artifact_css,
     input logic [7:0] active_height,input logic compatibility_mode,
     input logic [5:0] border_rgb,
-    input logic [5:0] pixel_data,
+    input logic [23:0] pixel_data,
     output logic [9:0] source_x,output logic [7:0] source_y,
     output logic source_valid,output logic source_picture_active,
     output logic [7:0] prefetch_y,
@@ -84,7 +85,7 @@ module coco3_hdmi #(
         // The GIME's 640-dot modes describe the same 4:3 display aperture as
         // its 256-dot modes. Resample every mode into 512x(2*LPF) rather than
         // exposing the CRT's non-square 640-dot sampling as square HDMI pixels.
-        picture_width=10'd512;
+        picture_width=(NATIVE_HDMI_640!=0&&!compatibility_s)?10'd640:10'd512;
         // Two clocks of scanline-RAM addressing/output latency.
         picture_lead=((10'd720-picture_width)>>1)-2'd2;
         picture_x=(x>=picture_lead)?x-picture_lead:10'd0;
@@ -99,9 +100,9 @@ module coco3_hdmi #(
         // borders.  Raster-time GIME writes happen there, and the scanline
         // cache must distinguish them from vertical-border frame setup.
         source_picture_active=(y>=top && y<top+doubled_height);
-        // The renderer filters its canonical 640-dot row into 512 square
-        // HDMI pixels as it fills this cache.  Read those pixels directly;
-        // CVBS keeps the separate unfiltered 640-dot copy.
+        // Native GIME can either retain all 640 dots for sharp 80-column
+        // text, or use the aspect-correct RGB888 5:4 reduction. VDG and
+        // artifact modes always use the 512-dot aperture.
         source_x=source_valid ? picture_x : 10'd0;
         source_y=source_line[7:0];
         // CoCo2's ping-pong scan doubler starts producing the next source
@@ -148,10 +149,10 @@ module coco3_hdmi #(
         end
         border_d<=border_row_delayed;
     end
-    wire [5:0] selected_rgb=picture_d ? pixel_data : border_d;
-    wire [23:0] expanded_rgb={{4{selected_rgb[5:4]}},
-                              {4{selected_rgb[3:2]}},
-                              {4{selected_rgb[1:0]}}};
+    wire [23:0] expanded_border={{4{border_d[5:4]}},
+                                 {4{border_d[3:2]}},
+                                 {4{border_d[1:0]}}};
+    wire [23:0] selected_rgb=picture_d ? pixel_data : expanded_border;
 
     // Full-precision MAME-compatible palettes. Tokenized artifact pixels are
     // expanded here so normal GIME video keeps its original RGB222 path.
@@ -201,10 +202,10 @@ module coco3_hdmi #(
         end
     endfunction
     assign stream_rgb=artifact_active_s ?
-        (picture_d && selected_rgb[5] ?
-            artifact_rgb888(selected_rgb[4],selected_rgb[3:0]) :
-         !picture_d ? artifact_rgb888(artifact_css_s,4'hf) : expanded_rgb) :
-        expanded_rgb;
+        (picture_d && selected_rgb[23:4]==20'ha5c3e ?
+            artifact_rgb888(artifact_css_s,selected_rgb[3:0]) :
+         !picture_d ? artifact_rgb888(artifact_css_s,4'hf) : selected_rgb) :
+        selected_rgb;
 
     generate if (ENABLE_DEBUG_OVERLAY!=0) begin:overlay_enabled
         hdmi_debug_overlay #(

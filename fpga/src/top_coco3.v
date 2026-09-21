@@ -20,7 +20,10 @@ module top_coco3 #(
     // synthesis then removes the unused S2 capture-control cone as well.
     parameter integer ENABLE_BUS_LOGGER=0,
     parameter integer DEBUG_OVERLAY=0,
-    parameter integer ANALOG_VIDEO_MODE=1
+    parameter integer ANALOG_VIDEO_MODE=1,
+    // 1: native GIME HDMI is a sharp 640-dot 1:1 image (wider than 4:3).
+    // 0: native GIME HDMI is aspect-correct 512-dot RGB888-filtered output.
+    parameter integer NATIVE_HDMI_640=1
 ) (
     input clkin,input s1,input s2,input [7:0] mp,output [1:0] msel,
     inout [7:0] cpu_data,output irq_n_in,output firq_n_in,input audio_in,
@@ -128,7 +131,8 @@ module top_coco3 #(
     wire [7:0] active_height;
     wire compatibility_video;
     wire artifact_video_active,artifact_css;
-    wire [5:0] border_rgb,hdmi_pixel_data,cvbs_pixel_data;
+    wire [5:0] border_rgb,cvbs_pixel_data;
+    wire [23:0] hdmi_pixel_data;
     wire [7:0] native_red,native_green,native_blue;
     wire native_hblank,native_vblank;
     wire video_memory_request,video_memory_valid;
@@ -159,7 +163,8 @@ module top_coco3 #(
     wire gime_keyint_n=!mux_keyint_n;
     wire gime_serint_n=!mux_sernt_n;
 
-    coco3 machine(.clk(clk108),.reset_n(board_reset_n),
+    coco3 #(.NATIVE_HDMI_640(NATIVE_HDMI_640)) machine(
+        .clk(clk108),.reset_n(board_reset_n),
         .cpu_reset_n(cpu_release),.s2(1'b0),.artifact_mode(artifact_mode_video),
         .cpu_addr(address),
         .cpu_rw_n(rw_n),.cpu_data(cpu_write_data),
@@ -400,7 +405,8 @@ module top_coco3 #(
     wire interrupt_inputs_idle=gime_serint_n && gime_keyint_n && mux_halt_n;
     coco3_hdmi #(.LOG_ADDR_WIDTH(LOG_ADDR_WIDTH),
         .LOG_COUNT_WIDTH(LOG_COUNT_WIDTH),.LOG_PAGE_WIDTH(LOG_PAGE_WIDTH),
-        .LOG_DEPTH(LOG_DEPTH),.ENABLE_DEBUG_OVERLAY(ENABLE_BUS_LOGGER)) hdmi_output(
+        .LOG_DEPTH(LOG_DEPTH),.ENABLE_DEBUG_OVERLAY(ENABLE_BUS_LOGGER),
+        .NATIVE_HDMI_640(NATIVE_HDMI_640)) hdmi_output(
         .pixel_clk(clk27),.serial_clk(clk135),.reset(!board_reset_n),
         .debug_clk(clk108),.log_we(log_we),.log_addr(log_addr),
         .log_base(log_base),

@@ -12,7 +12,7 @@ module tb_coco3_video_mux;
     reg [9:0] hdmi_source_x=0;
     reg [7:0] hdmi_source_y=0;
     reg hdmi_source_valid=0;
-    wire [5:0] hdmi_pixel_data;
+    wire [23:0] hdmi_pixel_data;
     integer errors=0;
     integer delay_count;
     reg [22:0] held_addr;
