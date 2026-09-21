@@ -370,14 +370,25 @@ module gime_scanline_buffer (
    // fill is immutable as well; subsequent fills see the new live settings.
    if(configuration_diff_q&&configuration_diff&&state==IDLE)begin
     mode_signature<=live_signature;last_screen_base<=frame_screen_base;
-    h_valid0<=h_valid0&&((hd_v_s&&h_tag0==hd_y_s)||(hd_pv_s&&h_tag0==hd_p_s));
-    h_valid1<=h_valid1&&((hd_v_s&&h_tag1==hd_y_s)||(hd_pv_s&&h_tag1==hd_p_s));
-    c_valid0<=c_valid0&&((cv_v_s&&c_tag0==cv_y_s)||(cv_pv_s&&c_tag0==cv_p_s));
-    c_valid1<=c_valid1&&((cv_v_s&&c_tag1==cv_y_s)||(cv_pv_s&&c_tag1==cv_p_s));
-    h_dirty0<=h_dirty0&&((hd_v_s&&h_tag0==hd_y_s)||(hd_pv_s&&h_tag0==hd_p_s));
-    h_dirty1<=h_dirty1&&((hd_v_s&&h_tag1==hd_y_s)||(hd_pv_s&&h_tag1==hd_p_s));
-    c_dirty0<=c_dirty0&&((cv_v_s&&c_tag0==cv_y_s)||(cv_pv_s&&c_tag0==cv_p_s));
-    c_dirty1<=c_dirty1&&((cv_v_s&&c_tag1==cv_y_s)||(cv_pv_s&&c_tag1==cv_p_s));
+    // During upper border row zero is only speculative.  Do not preserve it
+    // across a late frame-setup write; discard and regenerate it.  The next
+    // row is protected only while an actual picture row is being displayed.
+    h_valid0<=h_valid0&&hd_v_s&&
+              ((h_tag0==hd_y_s)||(hd_pv_s&&h_tag0==hd_p_s));
+    h_valid1<=h_valid1&&hd_v_s&&
+              ((h_tag1==hd_y_s)||(hd_pv_s&&h_tag1==hd_p_s));
+    c_valid0<=c_valid0&&cv_v_s&&
+              ((c_tag0==cv_y_s)||(cv_pv_s&&c_tag0==cv_p_s));
+    c_valid1<=c_valid1&&cv_v_s&&
+              ((c_tag1==cv_y_s)||(cv_pv_s&&c_tag1==cv_p_s));
+    h_dirty0<=h_dirty0&&hd_v_s&&
+              ((h_tag0==hd_y_s)||(hd_pv_s&&h_tag0==hd_p_s));
+    h_dirty1<=h_dirty1&&hd_v_s&&
+              ((h_tag1==hd_y_s)||(hd_pv_s&&h_tag1==hd_p_s));
+    c_dirty0<=c_dirty0&&cv_v_s&&
+              ((c_tag0==cv_y_s)||(cv_pv_s&&c_tag0==cv_p_s));
+    c_dirty1<=c_dirty1&&cv_v_s&&
+              ((c_tag1==cv_y_s)||(cv_pv_s&&c_tag1==cv_p_s));
     memory_request<=0;word_valid<=0;h_pending<=0;c_pending<=0;
     coalesce_count<=0;
    end else begin

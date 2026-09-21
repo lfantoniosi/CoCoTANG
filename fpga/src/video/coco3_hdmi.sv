@@ -103,10 +103,14 @@ module coco3_hdmi #(
         // the GIME renderer a full source-line period (~63.5 us), rather than
         // only the second 480p line (~31.7 us).  Extended 80-column/640-dot
         // modes need that margin once SDRAM arbitration is included.
-        // Prime source line zero throughout the upper border so the first
-        // visible line is also complete before scanout reaches it.
+        // Prime source line zero only during the final native raster before
+        // the picture.  Priming it at HDMI line zero captured the previous
+        // frame's GIME state before vertical-blank handlers had installed the
+        // new VOFF/mode/raster settings.  Two 480p rows are one complete GIME
+        // line (about 63.5 us), which is enough for the renderer while making
+        // the first visible row use the finalized frame state.
         prefetch_y=(y<top) ? 8'd0 : source_line[7:0]+1'b1;
-        prefetch_valid=(y<top) ? 1'b1 :
+        prefetch_valid=(y<top) ? (y+2'd2>=top) :
                        (y<top+doubled_height && source_line+1'b1<height_s);
     end
 
