@@ -49,6 +49,8 @@ test:
 	vvp /private/tmp/cocotang_tb_startup_test
 	iverilog -g2012 -o /private/tmp/cocotang_tb_cpu_arbiter tests/tb_cpu_sdram_arbiter.v src/memory/cpu_sdram_arbiter.v
 	vvp /private/tmp/cocotang_tb_cpu_arbiter
+	iverilog -g2012 -o /private/tmp/cocotang_tb_cpu_bus_logger tests/tb_cpu_bus_logger.v src/debug/cpu_bus_logger.v
+	vvp /private/tmp/cocotang_tb_cpu_bus_logger
 	iverilog -g2012 -o /private/tmp/cocotang_tb_video_mode tests/tb_video_mode_debug.v src/video/video_mode_debug.v
 	vvp /private/tmp/cocotang_tb_video_mode
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_mode tests/tb_gime_mode_debug.v src/coco3/gime_mode_debug.v

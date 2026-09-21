@@ -7,7 +7,7 @@ module top_coco3 #(
     //parameter [15:0] LOG_START_ADDRESS=16'hC0D1,
     parameter [15:0] LOG_START_ADDRESS=16'hFFFE,
     parameter [15:0] LOG_WRITE_START_ADDRESS=16'hFF98,
-    parameter [15:0] LOG_WRITE_END_ADDRESS=16'hFF9F,
+    parameter [15:0] LOG_WRITE_END_ADDRESS=16'hFF99,
     parameter integer LOG_REBASE_EVERY_MATCH=1,
     parameter integer ENABLE_BUS_LOGGER=1,
     parameter integer DEBUG_OVERLAY=0,

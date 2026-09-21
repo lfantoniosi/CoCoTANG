@@ -178,7 +178,7 @@ module gime_scanline_buffer (
  reg [3:0] fill_scale_integer=0;reg [9:0] fill_scale_remainder=0;
  reg [18:0] fill_base=0;reg [6:0] fill_hoff=0;reg [95:0] fill_palettes=0;
  reg [8:0] row_remainder=0;reg [7:0] source_row=0;reg [3:0] glyph_line=0;
- reg [9:0] out_x=0;reg [12:0] source_x=0;reg [13:0] scale_phase=0;
+ reg [9:0] out_x=0;reg [12:0] source_x=0;reg [9:0] scale_phase=0;
  // Cache the byte/character indices alongside source_x.  Deriving them
  // through the colour-resolution mux in PIXEL_ADDRESS put that mux, the
  // row-address adder and the cache-tag comparison on one 108 MHz path.
@@ -192,9 +192,13 @@ module gime_scanline_buffer (
  reg text_cache_valid=0,graphics_cache_valid=0;
  reg [7:0] text_cache_column=0;reg [11:0] graphics_cache_index=0;
 
- wire [13:0] next_scale_phase_sum=scale_phase+fill_scale_remainder;
+ // Both terms are strictly below 640, so eleven bits cover the complete
+ // 0..1278 sum.  Keeping this at fourteen bits needlessly lengthened the
+ // source-index update carry chain on the 108 MHz renderer clock.
+ wire [10:0] next_scale_phase_sum={1'b0,scale_phase}+
+                                  {1'b0,fill_scale_remainder};
  wire [12:0] next_source_x=source_x+fill_scale_integer+
-     (next_scale_phase_sum>=14'd640);
+     (next_scale_phase_sum>=11'd640);
  wire [11:0] next_source_byte_index=fill_cres==0?next_source_x[12:3]:
   fill_cres==1?next_source_x[12:2]:next_source_x[12:1];
  wire [18:0] pixel_byte_index=fill_bit_plane?{7'd0,source_byte_index}:
@@ -570,8 +574,8 @@ module gime_scanline_buffer (
       out_x<=out_x+1'b1;source_x<=next_source_x;
       source_byte_index<=next_source_byte_index;
       source_character_column<=next_source_x[10:3];
-      scale_phase<=(next_scale_phase_sum>=14'd640)?
-                   (next_scale_phase_sum-14'd640):next_scale_phase_sum;
+      scale_phase<=(next_scale_phase_sum>=11'd640)?
+                   (next_scale_phase_sum-11'd640):next_scale_phase_sum[9:0];
       state<=PIXEL_ADDRESS;
      end
     end

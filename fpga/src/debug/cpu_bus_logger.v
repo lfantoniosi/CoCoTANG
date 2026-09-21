@@ -7,8 +7,8 @@ module cpu_bus_logger #(
     parameter [15:0] LOG_START_ADDRESS=16'h8002,
     parameter [15:0] LOG_WRITE_START_ADDRESS=16'h0000,
     parameter [15:0] LOG_WRITE_END_ADDRESS=16'h0000,
-    // When set, every read from LOG_START_ADDRESS starts a fresh capture.
-    // When clear, only the first matching read after reset rebases the log.
+    // When set, every matching read or write starts a fresh capture.  When
+    // clear, only the first read and first write match after reset rebase it.
     parameter integer LOG_REBASE_EVERY_MATCH=0
 ) (
     input clk,input reset_n,input capture_enable,input bus_reset_n,
@@ -93,12 +93,14 @@ module cpu_bus_logger #(
                 log_we<=1; log_addr<=0; log_data<=entry; log_count<=1;
                 last_observation<=observation; observation_valid<=1;
                 rebased<=1; rebase_pulse<=1;
-            end else if (rebased &&
-                         (LOG_REBASE_EVERY_MATCH!=0 || !write_rebased) && e_fall &&
+            end else if ((LOG_REBASE_EVERY_MATCH!=0 || !write_rebased) && e_fall &&
                          write_trigger_match) begin
                 log_we<=1; log_addr<=0; log_data<=entry; log_count<=1;
                 last_observation<=observation; observation_valid<=1;
-                write_rebased<=1; rebase_pulse<=1;
+                // A write trigger is independent of LOG_START_ADDRESS.  This
+                // permits a write-only logger and also arms normal capture
+                // if the reset-vector/read trigger was never observed.
+                rebased<=1; write_rebased<=1; rebase_pulse<=1;
             end else if (e_fall &&
                          ((observation_valid && observation==last_observation) ||
                           log_count<LOG_DEPTH)) begin
