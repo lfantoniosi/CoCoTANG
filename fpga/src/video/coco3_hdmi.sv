@@ -27,7 +27,8 @@ module coco3_hdmi #(
     input logic [5:0] border_rgb,
     input logic [5:0] pixel_data,
     output logic [9:0] source_x,output logic [7:0] source_y,
-    output logic source_valid,output logic [7:0] prefetch_y,
+    output logic source_valid,output logic source_picture_active,
+    output logic [7:0] prefetch_y,
     output logic prefetch_valid,
     output logic tmds_clk_p,output logic tmds_clk_n,
     output logic [2:0] tmds_data_p,output logic [2:0] tmds_data_n
@@ -92,6 +93,10 @@ module coco3_hdmi #(
     always_comb begin
         source_valid=(x>=picture_lead && x<picture_lead+picture_width &&
                       y>=top && y<top+doubled_height);
+        // Unlike source_valid, this stays asserted through the horizontal
+        // borders.  Raster-time GIME writes happen there, and the scanline
+        // cache must distinguish them from vertical-border frame setup.
+        source_picture_active=(y>=top && y<top+doubled_height);
         // The renderer filters its canonical 640-dot row into 512 square
         // HDMI pixels as it fills this cache.  Read those pixels directly;
         // CVBS keeps the separate unfiltered 640-dot copy.

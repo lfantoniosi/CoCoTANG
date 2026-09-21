@@ -12,7 +12,7 @@ module tb_gime_scanline_buffer;
  reg [7:0] horizontal_offset=0;reg cpu_write_strobe=0;reg [18:0] cpu_write_addr=0;
  reg hdmi_prefetch_valid=1,cvbs_prefetch_valid=0;
  reg [7:0] hdmi_prefetch_y=0,cvbs_prefetch_y=0;
- reg hdmi_display_valid=0;reg [7:0] hdmi_display_y=0;
+ reg hdmi_display_valid=0,hdmi_picture_active=0;reg [7:0] hdmi_display_y=0;
 
  gime_scanline_buffer dut(
   .clk(clk),.reset_n(reset_n),.bit_plane(bit_plane),.hres(hres),.cres(cres),
@@ -23,6 +23,7 @@ module tb_gime_scanline_buffer;
   .cpu_write_strobe(cpu_write_strobe),.cpu_write_addr(cpu_write_addr),
   .hdmi_read_clk(hdmi_clk),.hdmi_read_x(10'd0),.hdmi_display_y(hdmi_display_y),
   .hdmi_display_valid(hdmi_display_valid),.hdmi_prefetch_y(hdmi_prefetch_y),
+  .hdmi_picture_active(hdmi_picture_active),
   .hdmi_prefetch_valid(hdmi_prefetch_valid),.hdmi_pixel_data(hdmi_pixel),
   .cvbs_read_clk(cvbs_clk),.cvbs_read_x(10'd0),.cvbs_display_y(8'd0),
   .cvbs_display_valid(1'b0),.cvbs_prefetch_y(cvbs_prefetch_y),
@@ -184,13 +185,18 @@ module tb_gime_scanline_buffer;
   timeout=0;
   while(!((dut.h_valid0&&dut.h_tag0==19)||(dut.h_valid1&&dut.h_tag1==19))&&
         timeout<200000)begin @(posedge clk);timeout=timeout+1;end
-  hdmi_display_y=8'd18;hdmi_display_valid=1;repeat(8)@(posedge clk);
+  hdmi_display_y=8'd18;hdmi_display_valid=1;hdmi_picture_active=1;
+  repeat(8)@(posedge clk);
+  // The mode write occurs in horizontal border, where pixel-valid is low
+  // but the logical picture row remains active.
+  hdmi_display_valid=0;repeat(8)@(posedge clk);
   hres=6;repeat(8)@(posedge clk);#1;
   if(!((dut.h_valid0&&dut.h_tag0==18)||(dut.h_valid1&&dut.h_tag1==18))||
      !((dut.h_valid0&&dut.h_tag0==19)||(dut.h_valid1&&dut.h_tag1==19)))begin
    $display("raster mode write discarded current/prefetched row");errors=errors+1;
   end
-  hdmi_display_valid=0;hdmi_prefetch_valid=0;hres=7;repeat(8)@(posedge clk);
+  hdmi_display_valid=0;hdmi_picture_active=0;hdmi_prefetch_valid=0;
+  hres=7;repeat(8)@(posedge clk);
 
   // A phase-separated CVBS request must not displace the HDMI master row.
   // The one render is mirrored into both RAM copies; otherwise two nearby

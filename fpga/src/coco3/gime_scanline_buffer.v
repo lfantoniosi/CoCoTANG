@@ -7,7 +7,8 @@ module gime_scanline_buffer (
  input compatibility_mode,input compatibility_an_g,input [2:0] compatibility_gm,
  input compatibility_css,input blink,input cpu_write_strobe,input [18:0] cpu_write_addr,
  input hdmi_read_clk,input [9:0] hdmi_read_x,input [7:0] hdmi_display_y,
- input hdmi_display_valid,input [7:0] hdmi_prefetch_y,input hdmi_prefetch_valid,
+ input hdmi_display_valid,input hdmi_picture_active,
+ input [7:0] hdmi_prefetch_y,input hdmi_prefetch_valid,
  output reg [5:0] hdmi_pixel_data,
  input cvbs_read_clk,input [9:0] cvbs_read_x,input [7:0] cvbs_display_y,
  input cvbs_display_valid,input [7:0] cvbs_prefetch_y,input cvbs_prefetch_valid,
@@ -141,12 +142,13 @@ module gime_scanline_buffer (
  reg h_next_bank=0,c_next_bank=0;
 
  reg [7:0] hd_y_m=0,hd_y_s=0,hd_p_m=0,hd_p_s=0;
- reg hd_v_m=0,hd_v_s=0,hd_pv_m=0,hd_pv_s=0;
+ reg hd_v_m=0,hd_v_s=0,hd_pa_m=0,hd_pa_s=0,hd_pv_m=0,hd_pv_s=0;
  reg [7:0] cv_y_m=0,cv_y_s=0,cv_p_m=0,cv_p_s=0;
  reg cv_v_m=0,cv_v_s=0,cv_pv_m=0,cv_pv_s=0;
  always @(posedge clk) begin
   hd_y_m<=hdmi_display_y;hd_y_s<=hd_y_m;hd_p_m<=hdmi_prefetch_y;hd_p_s<=hd_p_m;
   hd_v_m<=hdmi_display_valid;hd_v_s<=hd_v_m;hd_pv_m<=hdmi_prefetch_valid;hd_pv_s<=hd_pv_m;
+  hd_pa_m<=hdmi_picture_active;hd_pa_s<=hd_pa_m;
   cv_y_m<=cvbs_display_y;cv_y_s<=cv_y_m;cv_p_m<=cvbs_prefetch_y;cv_p_s<=cv_p_m;
   cv_v_m<=cvbs_display_valid;cv_v_s<=cv_v_m;cv_pv_m<=cvbs_prefetch_valid;cv_pv_s<=cv_pv_m;
  end
@@ -373,17 +375,17 @@ module gime_scanline_buffer (
     // During upper border row zero is only speculative.  Do not preserve it
     // across a late frame-setup write; discard and regenerate it.  The next
     // row is protected only while an actual picture row is being displayed.
-    h_valid0<=h_valid0&&hd_v_s&&
+    h_valid0<=h_valid0&&hd_pa_s&&
               ((h_tag0==hd_y_s)||(hd_pv_s&&h_tag0==hd_p_s));
-    h_valid1<=h_valid1&&hd_v_s&&
+    h_valid1<=h_valid1&&hd_pa_s&&
               ((h_tag1==hd_y_s)||(hd_pv_s&&h_tag1==hd_p_s));
     c_valid0<=c_valid0&&cv_v_s&&
               ((c_tag0==cv_y_s)||(cv_pv_s&&c_tag0==cv_p_s));
     c_valid1<=c_valid1&&cv_v_s&&
               ((c_tag1==cv_y_s)||(cv_pv_s&&c_tag1==cv_p_s));
-    h_dirty0<=h_dirty0&&hd_v_s&&
+    h_dirty0<=h_dirty0&&hd_pa_s&&
               ((h_tag0==hd_y_s)||(hd_pv_s&&h_tag0==hd_p_s));
-    h_dirty1<=h_dirty1&&hd_v_s&&
+    h_dirty1<=h_dirty1&&hd_pa_s&&
               ((h_tag1==hd_y_s)||(hd_pv_s&&h_tag1==hd_p_s));
     c_dirty0<=c_dirty0&&cv_v_s&&
               ((c_tag0==cv_y_s)||(cv_pv_s&&c_tag0==cv_p_s));

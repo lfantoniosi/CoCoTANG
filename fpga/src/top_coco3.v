@@ -128,7 +128,7 @@ module top_coco3 #(
     wire [31:0] video_memory_data32;
     wire [9:0] hdmi_source_x;
     wire [7:0] hdmi_source_y;
-    wire hdmi_source_valid;
+    wire hdmi_source_valid,hdmi_source_picture_active;
     wire [7:0] hdmi_prefetch_y;
     wire hdmi_prefetch_valid;
     wire [9:0] cvbs_source_x_raw;
@@ -174,6 +174,7 @@ module top_coco3 #(
         .framebuffer_write_data(),
         .hdmi_read_clk(clk27),.hdmi_source_x(hdmi_source_x),
         .hdmi_source_y(hdmi_source_y),.hdmi_source_valid(hdmi_source_valid),
+        .hdmi_source_picture_active(hdmi_source_picture_active),
         .hdmi_prefetch_y(hdmi_prefetch_y),
         .hdmi_prefetch_valid(hdmi_prefetch_valid),
         .hdmi_pixel_data(hdmi_pixel_data),.cvbs_read_clk(clk135),
@@ -411,7 +412,9 @@ module top_coco3 #(
         .compatibility_mode(compatibility_video),
         .border_rgb(border_rgb),.pixel_data(hdmi_pixel_data),
         .source_x(hdmi_source_x),.source_y(hdmi_source_y),
-        .source_valid(hdmi_source_valid),.prefetch_y(hdmi_prefetch_y),
+        .source_valid(hdmi_source_valid),
+        .source_picture_active(hdmi_source_picture_active),
+        .prefetch_y(hdmi_prefetch_y),
         .prefetch_valid(hdmi_prefetch_valid),.tmds_clk_p(tmds_clk_p),
         .tmds_clk_n(tmds_clk_n),.tmds_data_p(tmds_data_p),
         .tmds_data_n(tmds_data_n));
