@@ -310,6 +310,8 @@ module tb_gime_scanline_buffer;
   begin : vertical_raster_effect
    reg valid0_before,valid1_before;
    valid0_before=dut.h_valid0;valid1_before=dut.h_valid1;
+   dut.dma_next_y=8'd10;dut.dma_next_address=19'h01000;
+   dut.dma_line_in_row=0;dut.dma_advance_pending=0;
    lpr=3'b111;repeat(5)@(posedge clk);#1;
    if(dut.h_valid0!=valid0_before||dut.h_valid1!=valid1_before)begin
     $display("FF98.LPR write invalidated an immutable cached row");errors=errors+1;end
@@ -324,24 +326,50 @@ module tb_gime_scanline_buffer;
    force dut.glyph_line=4'd0;force dut.fill_base=19'h01000;
    force dut.fill_stride=11'd160;
    @(posedge clk);#1;
-   if(dut.dma_next_y!=8'd11||dut.dma_next_address!=19'h010a0||
-      dut.dma_line_in_row!=0)begin
-    $display("in-progress row incorrectly used live infinite LPR: y=%0d addr=%h line=%0d",
-      dut.dma_next_y,dut.dma_next_address,dut.dma_line_in_row);errors=errors+1;end
+   release dut.fill_stride;release dut.fill_base;release dut.glyph_line;
+   release dut.fill_lpr;release dut.fill_bit_plane;release dut.fill_compatibility;
+   release dut.fill_y;release dut.fill_sequential;
+   release dut.fill_cvbs;release dut.fill_hdmi;release dut.out_x;release dut.state;
+   if(dut.dma_next_y!=8'd11||!dut.dma_advance_pending)begin
+    $display("completed raster did not queue DMA handoff");errors=errors+1;end
+   // Consume row 11 after the timed write.  Live infinite LPR must hold the
+   // previous address even though that raster captured one-line LPR.
+   force dut.configuration_diff=1'b0;force dut.state=4'd0;
+   force dut.h_pending=1'b1;force dut.h_pending_y=8'd11;
+   force dut.coalesce_count=3'd7;
+   @(posedge clk);#1;
+   release dut.coalesce_count;release dut.h_pending_y;release dut.h_pending;
+   release dut.state;release dut.configuration_diff;
+   if(dut.fill_base!=19'h01000||dut.row_remainder!=0||
+      dut.dma_advance_pending)begin
+    $display("live infinite LPR did not hold next DMA row: base=%h line=%0d pending=%b",
+      dut.fill_base,dut.row_remainder,dut.dma_advance_pending);errors=errors+1;end
    // The inverse transition likewise takes effect on the next prefetched
    // row, not the infinite-LPR row already in progress.
-   lpr=3'b000;force dut.fill_y=8'd11;force dut.fill_lpr=8'hff;
+   force dut.state=4'd14;force dut.out_x=10'd639;
+   force dut.fill_hdmi=1'b0;force dut.fill_cvbs=1'b0;
+   force dut.fill_sequential=1'b1;force dut.fill_y=8'd11;
+   force dut.fill_compatibility=1'b0;
+   force dut.fill_bit_plane=1'b1;force dut.fill_lpr=8'hff;
+   force dut.glyph_line=4'd0;force dut.fill_base=19'h01000;
+   force dut.fill_stride=11'd160;
    @(posedge clk);#1;
-   if(dut.dma_next_y!=8'd12||dut.dma_next_address!=19'h01000||
-      dut.dma_line_in_row!=0)begin
-    $display("in-progress row incorrectly used live single-line LPR: y=%0d addr=%h line=%0d",
-      dut.dma_next_y,dut.dma_next_address,dut.dma_line_in_row);errors=errors+1;end
    release dut.fill_stride;release dut.fill_base;release dut.glyph_line;
    release dut.fill_lpr;release dut.fill_bit_plane;release dut.fill_compatibility;
    release dut.fill_y;
    release dut.fill_sequential;release dut.fill_cvbs;release dut.fill_hdmi;
    release dut.out_x;release dut.state;
-   lpr=0;
+   lpr=3'b000;
+   force dut.configuration_diff=1'b0;force dut.state=4'd0;
+   force dut.h_pending=1'b1;force dut.h_pending_y=8'd12;
+   force dut.coalesce_count=3'd7;
+   @(posedge clk);#1;
+   release dut.coalesce_count;release dut.h_pending_y;release dut.h_pending;
+   release dut.state;release dut.configuration_diff;
+   if(dut.fill_base!=19'h010a0||dut.row_remainder!=0||
+      dut.dma_advance_pending)begin
+    $display("live one-line LPR did not advance next DMA row: base=%h line=%0d pending=%b",
+      dut.fill_base,dut.row_remainder,dut.dma_advance_pending);errors=errors+1;end
   end
 
   // Compatibility alpha ROM dots are active-low.  A stored row of $c0 must

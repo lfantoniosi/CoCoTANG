@@ -296,6 +296,26 @@ module gime_scanline_buffer (
  reg [7:0] dma_next_y=0;
  reg [18:0] dma_next_address=0;
  reg [3:0] dma_line_in_row=0;
+ // A rendered raster captures its pixels and mode at fill start, but the
+ // physical GIME tests the live LPR value when advancing to the following
+ // raster.  Keep the completed descriptor until that following sequential
+ // row is actually requested.  Anchoring the handoff to consumption avoids
+ // losing it when speculative rendering finishes after an HDMI row edge.
+ reg dma_advance_pending=0;
+ reg [18:0] dma_advance_base=0;
+ reg [10:0] dma_advance_stride=0;
+ reg [3:0] dma_advance_glyph=0;
+ reg dma_advance_bit_plane=0,dma_advance_compatibility=0;
+ reg [7:0] dma_advance_lpr=1;
+ wire [7:0] completion_lpr=dma_advance_compatibility?dma_advance_lpr:
+  native_lines_per_row(lines_per_row_code);
+ wire dma_advance_row=dma_advance_glyph+1'b1>=completion_lpr;
+ wire [18:0] advanced_dma_address=
+  (dma_advance_bit_plane&&completion_lpr==8'hff)?dma_advance_base:
+  dma_advance_row?(dma_advance_base+dma_advance_stride):dma_advance_base;
+ wire [3:0] advanced_dma_line=
+  (dma_advance_bit_plane&&completion_lpr==8'hff)||dma_advance_row?
+  4'd0:dma_advance_glyph+1'b1;
  reg upper_border_q=0;
  wire upper_border=hd_pv_s&&hd_p_s==0&&!hd_v_s;
  // LPR is a raster control.  BOINK switches it to 111 to hold the current
@@ -325,7 +345,7 @@ module gime_scanline_buffer (
    h_next_bank<=0;c_next_bank<=0;fill_dirty<=0;configuration_diff_q<=1'b1;
    h_pending<=0;c_pending<=0;coalesce_count<=0;
    fill_sequential<=0;dma_next_y<=0;dma_next_address<=0;
-   dma_line_in_row<=0;upper_border_q<=0;
+   dma_line_in_row<=0;dma_advance_pending<=0;upper_border_q<=0;
   end else begin
    // Register the wide mode comparison before it controls the renderer.  A
    // one-cycle-later flush is harmless and avoids making that comparison the
@@ -339,6 +359,7 @@ module gime_scanline_buffer (
    if(upper_border)frame_screen_base<=screen_base;
    if(upper_border&&(!upper_border_q||screen_base!=frame_screen_base))begin
     dma_next_y<=0;dma_next_address<=screen_base;
+    dma_advance_pending<=0;
     dma_line_in_row<=compatibility_mode||
       native_lines_per_row(lines_per_row_code)==8'd1||
       vertical_scroll>=native_lines_per_row(lines_per_row_code)?
@@ -445,8 +466,15 @@ module gime_scanline_buffer (
      // skip whole bitmap rows.  HDMI border lines never enter h_pending_y,
      // which starts at zero on the first logical picture line.
      if(h_pending_y==dma_next_y)begin
-      row_remainder<={5'd0,dma_line_in_row};
-      fill_base<=dma_next_address;
+      row_remainder<={5'd0,dma_advance_pending?
+                            advanced_dma_line:dma_line_in_row};
+      fill_base<=dma_advance_pending?
+                 advanced_dma_address:dma_next_address;
+      if(dma_advance_pending)begin
+       dma_next_address<=advanced_dma_address;
+       dma_line_in_row<=advanced_dma_line;
+       dma_advance_pending<=0;
+      end
      end else begin
       row_remainder<={1'b0,h_pending_y}+
        ((compatibility_mode||native_lines_per_row(lines_per_row_code)==8'd1)?
@@ -574,20 +602,12 @@ module gime_scanline_buffer (
       end
       if(fill_sequential)begin
        dma_next_y<=fill_y+1'b1;
-       // Native graphics LPR=111 is an infinite-height row.  Its internal
-       // line counter remains zero, so changing back to LPR=000 advances by
-       // exactly one row instead of first dividing a wrapped 4-bit count.
-       // LPR is captured with the rest of the immutable row state.  HDMI is
-       // deliberately one native raster behind HBORD, so a timed FF98 write
-       // is visible when the following prefetch starts and cannot retarget a
-       // row which is already being rendered.
-       if(fill_bit_plane&&fill_lpr==8'hff)begin
-        dma_next_address<=fill_base;dma_line_in_row<=0;
-       end else if(glyph_line+1'b1>=fill_lpr)begin
-        dma_next_address<=fill_base+fill_stride;dma_line_in_row<=0;
-       end else begin
-        dma_next_address<=fill_base;dma_line_in_row<=glyph_line+1'b1;
-       end
+       dma_advance_pending<=1;
+       dma_advance_base<=fill_base;dma_advance_stride<=fill_stride;
+       dma_advance_glyph<=glyph_line;
+       dma_advance_bit_plane<=fill_bit_plane;
+       dma_advance_compatibility<=fill_compatibility;
+       dma_advance_lpr<=fill_lpr;
       end
       state<=IDLE;
      end else begin
