@@ -19,6 +19,7 @@ module tb_coco3_video_mux;
 
     coco3 dut(
         .clk(clk),.reset_n(reset_n),.cpu_reset_n(cpu_reset_n),.s2(1'b0),
+        .artifact_mode(2'd0),
         .cpu_addr(cpu_addr),.cpu_rw_n(cpu_rw_n),.cpu_data(cpu_data),
         .serint_n(1'b1),.keyint_n(1'b1),.cart_n(1'b1),
         .irq_assert(),.firq_assert(),.sam_s(),.e(),.q(),.e_rise(),.e_fall(),

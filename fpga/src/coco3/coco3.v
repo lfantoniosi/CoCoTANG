@@ -8,6 +8,7 @@ module coco3 #(
     input             reset_n,
     input             cpu_reset_n,
     input             s2,
+    input       [1:0] artifact_mode,
     input      [15:0] cpu_addr,
     input             cpu_rw_n,
     input       [7:0] cpu_data,
@@ -43,6 +44,8 @@ module coco3 #(
     output      [7:0] green,
     output      [7:0] blue,
     output      [5:0] border_rgb,
+    output            artifact_video_active,
+    output            artifact_css,
     output            hblank,
     output            vblank,
     output            framebuffer_write,
@@ -227,7 +230,14 @@ module coco3 #(
         input [5:0] color;
         begin palette_rgb={color[5],color[2],color[4],color[1],color[3],color[0]}; end
     endfunction
-    assign border_rgb=compatibility_mode ?
+    wire artifact_pmode4=compatibility_mode && compatibility_an_g &&
+                         compatibility_gm==3'd7 && artifact_mode!=0;
+    assign artifact_video_active=artifact_pmode4;
+    assign artifact_css=pia1_effective[3];
+    // Artifacting applies only to the picture. The border remains the PMODE
+    // source endpoint, matching MAME and avoiding a false edge-transition.
+    assign border_rgb=artifact_pmode4 ?
+        (pia1_effective[3] ? 6'h3e : 6'h18) : compatibility_mode ?
         (compatibility_an_g ?
             (pia1_effective[3] ? 6'b111111 : 6'b001100) : 6'b000000) :
         palette_rgb(border_color);
@@ -271,6 +281,7 @@ module coco3 #(
         .compatibility_an_g(compatibility_an_g),
         .compatibility_gm(compatibility_gm),
         .compatibility_css(pia1_effective[3]),
+        .artifact_mode(artifact_mode),
         .blink(blink_divider[25]),
         .cpu_write_strobe(video_cpu_write_strobe),
         .cpu_write_addr(video_cpu_write_addr),

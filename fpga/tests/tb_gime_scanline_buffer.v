@@ -19,7 +19,8 @@ module tb_gime_scanline_buffer;
   .lines_per_row_code(lpr),.vertical_scroll(vertical_scroll),.screen_base(screen_base),
   .horizontal_offset(horizontal_offset),.palettes(palettes),
   .compatibility_mode(compatibility_mode),.compatibility_an_g(compatibility_an_g),
-  .compatibility_gm(compatibility_gm),.compatibility_css(1'b0),.blink(1'b0),
+  .compatibility_gm(compatibility_gm),.compatibility_css(1'b0),
+  .artifact_mode(2'd0),.blink(1'b0),
   .cpu_write_strobe(cpu_write_strobe),.cpu_write_addr(cpu_write_addr),
   .hdmi_read_clk(hdmi_clk),.hdmi_read_x(10'd0),.hdmi_display_y(hdmi_display_y),
   .hdmi_display_valid(hdmi_display_valid),.hdmi_prefetch_y(hdmi_prefetch_y),
@@ -315,7 +316,7 @@ module tb_gime_scanline_buffer;
    lpr=3'b111;repeat(5)@(posedge clk);#1;
    if(dut.h_valid0!=valid0_before||dut.h_valid1!=valid1_before)begin
     $display("FF98.LPR write invalidated an immutable cached row");errors=errors+1;end
-   force dut.state=4'd14;force dut.out_x=10'd639;
+   force dut.state=5'd7;force dut.out_x=10'd639;
    force dut.fill_hdmi=1'b0;force dut.fill_cvbs=1'b0;
    force dut.fill_sequential=1'b1;force dut.fill_y=8'd10;
    // A timed write after prefetch began must not retarget the immutable row.
@@ -346,7 +347,7 @@ module tb_gime_scanline_buffer;
       dut.fill_base,dut.row_remainder,dut.dma_advance_pending);errors=errors+1;end
    // The inverse transition likewise takes effect on the next prefetched
    // row, not the infinite-LPR row already in progress.
-   force dut.state=4'd14;force dut.out_x=10'd639;
+   force dut.state=5'd7;force dut.out_x=10'd639;
    force dut.fill_hdmi=1'b0;force dut.fill_cvbs=1'b0;
    force dut.fill_sequential=1'b1;force dut.fill_y=8'd11;
    force dut.fill_compatibility=1'b0;

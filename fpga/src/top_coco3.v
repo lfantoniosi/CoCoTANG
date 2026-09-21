@@ -41,6 +41,7 @@ module top_coco3 #(
     localparam [LOG_PAGE_WIDTH-1:0] LAST_PAGE=(LOG_DEPTH-1)/ENTRIES_PER_PAGE;
 
     wire clk108,clk108p,clk270,clk135,clk27,board_reset_n,clocks_locked;
+    wire [1:0] artifact_mode;
     coco_clocks clocks(.clkin(clkin),.button_reset(s1),.clk108(clk108),
         .clk108p(clk108p),.clk270(clk270),.clk135(clk135),.clk27(clk27),
         .board_reset_n(board_reset_n),.clocks_locked(clocks_locked));
@@ -113,6 +114,12 @@ module top_coco3 #(
     wire filtered_mux_reset_n;
     input_filter #(.WIDTH(1)) mux_reset_filter(.clk(clk108),
         .reset_n(board_reset_n),.in(mux_reset_n),.out(filtered_mux_reset_n));
+    artifact_mode_control artifact_control(.clk(clk108),
+        .enable(cpu_release),.reset_n(filtered_mux_reset_n),
+        .mode(artifact_mode));
+    reg [1:0] artifact_mode_video=0;
+    always @(posedge clk108)
+        artifact_mode_video<=artifact_mode;
 
     wire cpu_mem_read,cpu_mem_write,cpu_mem_is_rom;
     wire [22:0] cpu_mem_addr;
@@ -120,6 +127,7 @@ module top_coco3 #(
     wire core_data_oe,gime_irq,gime_firq;
     wire [7:0] active_height;
     wire compatibility_video;
+    wire artifact_video_active,artifact_css;
     wire [5:0] border_rgb,hdmi_pixel_data,cvbs_pixel_data;
     wire [7:0] native_red,native_green,native_blue;
     wire native_hblank,native_vblank;
@@ -152,7 +160,8 @@ module top_coco3 #(
     wire gime_serint_n=!mux_sernt_n;
 
     coco3 machine(.clk(clk108),.reset_n(board_reset_n),
-        .cpu_reset_n(cpu_release),.s2(1'b0),.cpu_addr(address),
+        .cpu_reset_n(cpu_release),.s2(1'b0),.artifact_mode(artifact_mode_video),
+        .cpu_addr(address),
         .cpu_rw_n(rw_n),.cpu_data(cpu_write_data),
         .serint_n(gime_serint_n),.keyint_n(gime_keyint_n),.cart_n(mux_cart_n),
         .irq_assert(gime_irq),.firq_assert(gime_firq),.sam_s(sam_s),
@@ -167,6 +176,8 @@ module top_coco3 #(
         .video_memory_request(video_memory_request),
         .video_memory_addr(video_memory_addr),.active_height(active_height),
         .compatibility_video(compatibility_video),
+        .artifact_video_active(artifact_video_active),
+        .artifact_css(artifact_css),
         .hs_n(hs_n),.fs_n(fs_n),.red(native_red),.green(native_green),
         .blue(native_blue),.border_rgb(border_rgb),
         .hblank(native_hblank),.vblank(native_vblank),
@@ -408,6 +419,9 @@ module top_coco3 #(
         .sdram_test_error_addr(sdram_test_error_addr),
         .sdram_test_expected(sdram_test_expected),
         .sdram_test_actual(sdram_test_actual),
+        .artifact_mode(artifact_mode),
+        .artifact_video_active(artifact_video_active),
+        .artifact_css(artifact_css),
         .overlay_enable(overlay_visible),.active_height(active_height),
         .compatibility_mode(compatibility_video),
         .border_rgb(border_rgb),.pixel_data(hdmi_pixel_data),

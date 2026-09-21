@@ -5,7 +5,8 @@ module gime_scanline_buffer (
  input [2:0] lines_per_row_code,input [3:0] vertical_scroll,
  input [18:0] screen_base,input [7:0] horizontal_offset,input [95:0] palettes,
  input compatibility_mode,input compatibility_an_g,input [2:0] compatibility_gm,
- input compatibility_css,input blink,input cpu_write_strobe,input [18:0] cpu_write_addr,
+ input compatibility_css,input [1:0] artifact_mode,input blink,
+ input cpu_write_strobe,input [18:0] cpu_write_addr,
  input hdmi_read_clk,input [9:0] hdmi_read_x,input [7:0] hdmi_display_y,
  input hdmi_display_valid,input hdmi_picture_active,
  input [7:0] hdmi_prefetch_y,input hdmi_prefetch_valid,
@@ -175,7 +176,8 @@ module gime_scanline_buffer (
  reg fill_sequential=0;
  reg [7:0] fill_y=0; reg fill_bit_plane=0; reg [1:0] fill_cres=0;
  reg fill_attributes=0;reg [2:0] fill_gm=0;reg fill_css=0;
- reg fill_compatibility=0,fill_blink=0;reg [7:0] fill_lpr=1;
+ reg fill_compatibility=0,fill_blink=0;reg [1:0] fill_artifact_mode=0;
+ reg [7:0] fill_lpr=1;
  reg [10:0] fill_stride=0,fill_row_bytes=0;reg [12:0] fill_source_width=0;
  reg [3:0] fill_scale_integer=0;reg [9:0] fill_scale_remainder=0;
  reg [18:0] fill_base=0;reg [6:0] fill_hoff=0;reg [95:0] fill_palettes=0;
@@ -188,6 +190,8 @@ module gime_scanline_buffer (
  reg [7:0] source_character_column=0;
  reg [9:0] hdmi_out_x=0;reg [2:0] hdmi_filter_phase=0;
  reg [5:0] hdmi_filter_previous=0;
+ reg [255:0] artifact_bits=0;
+ reg [260:0] artifact_shift=0;
  reg [18:0] row_address=0,line_address=0,byte_address=0;
  reg [31:0] word_cache=0;reg [18:0] word_tag=0;reg word_valid=0;
  reg [7:0] character=0,attribute=0,glyph_cache=0;reg fill_dirty=0;
@@ -218,6 +222,18 @@ module gime_scanline_buffer (
   byte_address[1:0]==1?word_cache[15:8]:byte_address[1:0]==2?word_cache[23:16]:word_cache[31:24];
  reg [11:0] font_addr=0;wire [7:0] font_data;
  coco3_char_rom font(.clk(clk),.addr(font_addr),.data(font_data));
+
+ wire artifact_active=fill_compatibility&&fill_bit_plane&&fill_gm==3'd7&&
+                      fill_artifact_mode!=0;
+ wire [5:0] artifact_neighborhood={
+  artifact_shift[0],artifact_shift[1],artifact_shift[2],
+  artifact_shift[3],artifact_shift[4],artifact_shift[5]};
+ wire [5:0] artifact_rgb;
+ wire [3:0] artifact_color_index;
+ ntsc_artifact_decode artifact_decoder(
+  .neighborhood(artifact_neighborhood),.odd_pixel(source_x[0]),
+  .reverse_phase(fill_artifact_mode==2),.css(fill_css),
+  .color_index(artifact_color_index),.rgb(artifact_rgb));
 
  reg [3:0] decoded_index;reg decoded_pixel;reg [5:0] decoded_code;
  reg semigraphics_pixel;reg inverse_character;reg [2:0] semigraphics_color;
@@ -278,9 +294,12 @@ module gime_scanline_buffer (
  end
 
  localparam IDLE=0,DIVIDE_ROW=1,ROW_ADDRESS=2,LINE_ADDRESS=3,PIXEL_ADDRESS=4,
-  CHECK_WORD=5,WAIT_WORD=6,GOT_CHARACTER=7,CHECK_ATTRIBUTE=8,WAIT_ATTRIBUTE=9,
-  FONT_WAIT1=10,FONT_WAIT2=11,DECODE_PIXEL=12,COLOR_LOOKUP=13,WRITE_PIXEL=14;
- reg [3:0] state=IDLE;reg [5:0] pixel_latched;
+  CHECK_WORD=5,WAIT_WORD=6,FINALIZE_LINE=7,CHECK_ATTRIBUTE=8,WAIT_ATTRIBUTE=9,
+  FONT_WAIT1=10,FONT_WAIT2=11,DECODE_PIXEL=12,COLOR_LOOKUP=13,WRITE_PIXEL=14,
+  ARTIFACT_WRITE=15,ARTIFACT_DECODE=16;
+ reg [4:0] state=IDLE;reg [5:0] pixel_latched;
+ reg [5:0] artifact_pixel_latched=0;
+ reg [3:0] artifact_color_latched=0;
  reg [3:0] color_index_latched=0;reg [5:0] color_code_latched=0;
  wire write_hits_h0=h_valid0&&cpu_write_addr>=h_start0&&cpu_write_addr<h_start0+h_bytes0;
  wire write_hits_h1=h_valid1&&cpu_write_addr>=h_start1&&cpu_write_addr<h_start1+h_bytes1;
@@ -288,7 +307,7 @@ module gime_scanline_buffer (
  wire write_hits_c1=c_valid1&&cpu_write_addr>=c_start1&&cpu_write_addr<c_start1+c_bytes1;
  wire write_hits_fill=state!=IDLE&&cpu_write_addr>=line_address&&
                       cpu_write_addr<line_address+fill_row_bytes;
- reg [16:0] mode_signature=17'h1ffff;reg [18:0] last_screen_base=19'h7ffff;
+ reg [18:0] mode_signature=19'h7ffff;reg [18:0] last_screen_base=19'h7ffff;
  reg [18:0] frame_screen_base=0;
  // Running GIME DMA state.  This cannot be reconstructed as y*stride when
  // FF98.LPR or FF9F.HVEN changes during the picture: each raster advances
@@ -322,8 +341,8 @@ module gime_scanline_buffer (
  // DMA row and back to 000 to advance it.  It must be sampled for the next
  // fill, not treated as a mode change which aborts the renderer and flushes
  // its two immutable scanline buffers.
- wire [16:0] live_signature={compatibility_mode,compatibility_an_g,compatibility_gm,
-  compatibility_css,bit_plane,hres,cres,3'b000,1'b0};
+ wire [18:0] live_signature={artifact_mode,compatibility_mode,compatibility_an_g,
+  compatibility_gm,compatibility_css,bit_plane,hres,cres,3'b000,1'b0};
  // FF9C vertical fine scroll is a raster control, just like FF98.LPR.  It is
  // sampled when a row fill begins; changing it must not abort that fill or
  // invalidate the row currently being scanned.  Doing so can blank only the
@@ -334,13 +353,53 @@ module gime_scanline_buffer (
  reg configuration_diff_q=1'b1;
  assign debug_dma_next_y=dma_next_y;
  assign debug_fill_y=fill_y;
- assign debug_state=state;
+ assign debug_state=state[3:0];
+
+ // Keep the dual-clock line RAM write port independent of the renderer's
+ // asynchronously-reset control process. Artifact pixels retain their MAME
+ // palette index in HDMI RAM, while CVBS continues to consume RGB222.
+ wire renderer_write=state==WRITE_PIXEL||state==ARTIFACT_WRITE;
+ wire renderer_artifact=state==ARTIFACT_WRITE;
+ wire [5:0] renderer_hdmi_pixel=renderer_artifact?
+  {1'b1,fill_css,artifact_color_latched}:pixel_latched;
+ wire [5:0] renderer_cvbs_pixel=renderer_artifact?
+  artifact_pixel_latched:pixel_latched;
+ always @(posedge clk) begin
+  if(renderer_write)begin
+   if(fill_hdmi)begin
+    if(hdmi_filter_phase==0||
+       (renderer_artifact&&hdmi_filter_phase!=1))begin
+     if(fill_h_bank)hdmi_line1[hdmi_out_x]<=renderer_hdmi_pixel;
+     else hdmi_line0[hdmi_out_x]<=renderer_hdmi_pixel;
+    end else if(hdmi_filter_phase==2)begin
+     if(fill_h_bank)hdmi_line1[hdmi_out_x]<=
+      blend_quarters(hdmi_filter_previous,renderer_hdmi_pixel,2'd1);
+     else hdmi_line0[hdmi_out_x]<=
+      blend_quarters(hdmi_filter_previous,renderer_hdmi_pixel,2'd1);
+    end else if(hdmi_filter_phase==3)begin
+     if(fill_h_bank)hdmi_line1[hdmi_out_x]<=
+      blend_quarters(hdmi_filter_previous,renderer_hdmi_pixel,2'd2);
+     else hdmi_line0[hdmi_out_x]<=
+      blend_quarters(hdmi_filter_previous,renderer_hdmi_pixel,2'd2);
+    end else if(hdmi_filter_phase==4)begin
+     if(fill_h_bank)hdmi_line1[hdmi_out_x]<=
+      blend_quarters(hdmi_filter_previous,renderer_hdmi_pixel,2'd3);
+     else hdmi_line0[hdmi_out_x]<=
+      blend_quarters(hdmi_filter_previous,renderer_hdmi_pixel,2'd3);
+    end
+   end
+   if(fill_cvbs)begin
+    if(fill_c_bank)cvbs_line1[out_x]<=renderer_cvbs_pixel;
+    else cvbs_line0[out_x]<=renderer_cvbs_pixel;
+   end
+  end
+ end
 
  always @(posedge clk or negedge reset_n) begin
   if(!reset_n) begin
    state<=IDLE;memory_request<=0;memory_addr<=0;h_valid0<=0;h_valid1<=0;
    c_valid0<=0;c_valid1<=0;h_dirty0<=0;h_dirty1<=0;c_dirty0<=0;c_dirty1<=0;
-   mode_signature<=17'h1ffff;last_screen_base<=19'h7ffff;
+   mode_signature<=19'h7ffff;last_screen_base<=19'h7ffff;
    frame_screen_base<=0;
    h_next_bank<=0;c_next_bank<=0;fill_dirty<=0;configuration_diff_q<=1'b1;
    h_pending<=0;c_pending<=0;coalesce_count<=0;
@@ -454,6 +513,7 @@ module gime_scanline_buffer (
      fill_attributes<=!compatibility_mode&&native_attributes;
      fill_gm<=compatibility_gm;fill_css<=compatibility_css;
      fill_compatibility<=compatibility_mode;fill_blink<=blink;
+     fill_artifact_mode<=artifact_mode;
      fill_lpr<=compatibility_mode?(!compatibility_an_g?12:
       compatibility_lines_per_row(compatibility_gm)):native_lines_per_row(lines_per_row_code);
      fill_stride<=live_stride;fill_row_bytes<=live_row_bytes;
@@ -548,40 +608,55 @@ module gime_scanline_buffer (
      state<=WRITE_PIXEL;
     end
     WRITE_PIXEL:begin
+     if(artifact_active)artifact_bits[source_x[7:0]]<=color_index_latched[0];
      // Area-preserving 640 -> 512 horizontal filter for HDMI.  For every
      // five canonical pixels emit four samples at phases 0, 1.25, 2.5 and
      // 3.75.  CVBS retains the original 640-dot row.  This is a streaming
      // operation performed while the row is rendered, not a framebuffer.
-     if(fill_hdmi)begin
-      if(hdmi_filter_phase==0)begin
-       if(fill_h_bank)hdmi_line1[hdmi_out_x]<=pixel_latched;
-       else hdmi_line0[hdmi_out_x]<=pixel_latched;
-       hdmi_out_x<=hdmi_out_x+1'b1;
-      end else if(hdmi_filter_phase==2)begin
-       if(fill_h_bank)hdmi_line1[hdmi_out_x]<=
-        blend_quarters(hdmi_filter_previous,pixel_latched,2'd1);
-       else hdmi_line0[hdmi_out_x]<=
-        blend_quarters(hdmi_filter_previous,pixel_latched,2'd1);
-       hdmi_out_x<=hdmi_out_x+1'b1;
-      end else if(hdmi_filter_phase==3)begin
-       if(fill_h_bank)hdmi_line1[hdmi_out_x]<=
-        blend_quarters(hdmi_filter_previous,pixel_latched,2'd2);
-       else hdmi_line0[hdmi_out_x]<=
-        blend_quarters(hdmi_filter_previous,pixel_latched,2'd2);
-       hdmi_out_x<=hdmi_out_x+1'b1;
-      end else if(hdmi_filter_phase==4)begin
-       if(fill_h_bank)hdmi_line1[hdmi_out_x]<=
-        blend_quarters(hdmi_filter_previous,pixel_latched,2'd3);
-       else hdmi_line0[hdmi_out_x]<=
-        blend_quarters(hdmi_filter_previous,pixel_latched,2'd3);
-       hdmi_out_x<=hdmi_out_x+1'b1;
-      end
-     end
-     if(fill_cvbs)begin if(fill_c_bank)cvbs_line1[out_x]<=pixel_latched;
-                      else cvbs_line0[out_x]<=pixel_latched;end
+     if(fill_hdmi&&hdmi_filter_phase!=1)
+      hdmi_out_x<=hdmi_out_x+1'b1;
      hdmi_filter_previous<=pixel_latched;
      hdmi_filter_phase<=(hdmi_filter_phase==4)?0:hdmi_filter_phase+1'b1;
      if(out_x==CANONICAL_WIDTH-1'b1)begin
+      if(artifact_active)begin
+       // MAME evaluates the six-dot window through PMODE 4's set-level
+       // border. Set-bit padding avoids artificial cyan/green edge lines.
+       artifact_shift<={3'b111,color_index_latched[0],
+                        artifact_bits[254:0],2'b11};
+       out_x<=0;source_x<=0;scale_phase<=0;hdmi_out_x<=0;
+       hdmi_filter_phase<=0;hdmi_filter_previous<=0;
+       state<=ARTIFACT_DECODE;
+      end else state<=FINALIZE_LINE;
+     end else begin
+      out_x<=out_x+1'b1;source_x<=next_source_x;
+      source_byte_index<=next_source_byte_index;
+      source_character_column<=next_source_x[10:3];
+      scale_phase<=(next_scale_phase_sum>=11'd640)?
+                   (next_scale_phase_sum-11'd640):next_scale_phase_sum[9:0];
+      state<=PIXEL_ADDRESS;
+     end
+    end
+    ARTIFACT_DECODE:begin
+     artifact_pixel_latched<=artifact_rgb;
+     artifact_color_latched<=artifact_color_index;
+     state<=ARTIFACT_WRITE;
+    end
+    ARTIFACT_WRITE:begin
+     if(fill_hdmi&&hdmi_filter_phase!=1)
+      hdmi_out_x<=hdmi_out_x+1'b1;
+     hdmi_filter_previous<=artifact_pixel_latched;
+     hdmi_filter_phase<=(hdmi_filter_phase==4)?0:hdmi_filter_phase+1'b1;
+     if(out_x==CANONICAL_WIDTH-1'b1)state<=FINALIZE_LINE;
+     else begin
+      if(hdmi_filter_phase==4)
+       artifact_shift<=artifact_shift>>2;
+      out_x<=out_x+1'b1;source_x<=next_source_x;
+      scale_phase<=(next_scale_phase_sum>=11'd640)?
+                   (next_scale_phase_sum-11'd640):next_scale_phase_sum[9:0];
+      state<=ARTIFACT_DECODE;
+     end
+    end
+    FINALIZE_LINE:begin
       if(fill_hdmi)begin
        if(fill_h_bank)begin h_tag1<=fill_y;h_start1<=line_address;h_bytes1<=fill_row_bytes;
         h_valid1<=1;h_dirty1<=fill_dirty;
@@ -610,14 +685,6 @@ module gime_scanline_buffer (
        dma_advance_lpr<=fill_lpr;
       end
       state<=IDLE;
-     end else begin
-      out_x<=out_x+1'b1;source_x<=next_source_x;
-      source_byte_index<=next_source_byte_index;
-      source_character_column<=next_source_x[10:3];
-      scale_phase<=(next_scale_phase_sum>=11'd640)?
-                   (next_scale_phase_sum-11'd640):next_scale_phase_sum[9:0];
-      state<=PIXEL_ADDRESS;
-     end
     end
      default:state<=IDLE;
     endcase

@@ -23,6 +23,8 @@ module coco3_hdmi #(
     input logic sdram_test_done,input logic sdram_test_pass,
     input logic [18:0] sdram_test_error_addr,
     input logic [7:0] sdram_test_expected,input logic [7:0] sdram_test_actual,
+    input logic [1:0] artifact_mode,
+    input logic artifact_video_active,input logic artifact_css,
     input logic [7:0] active_height,input logic compatibility_mode,
     input logic [5:0] border_rgb,
     input logic [5:0] pixel_data,
@@ -131,9 +133,15 @@ module coco3_hdmi #(
     logic [5:0] border_row_current=0;
     logic [5:0] border_row_delayed=0;
     logic [5:0] border_d=0;
-    logic [23:0] stream_rgb,rgb;
+    logic artifact_active_m=0,artifact_active_s=0;
+    logic artifact_css_m=0,artifact_css_s=0;
+    logic [23:0] stream_rgb,debug_rgb,rgb;
     always_ff @(posedge pixel_clk) begin
         picture_d<=source_valid;
+        artifact_active_m<=artifact_video_active;
+        artifact_active_s<=artifact_active_m;
+        artifact_css_m<=artifact_css;
+        artifact_css_s<=artifact_css_m;
         if(x==0 && !y[0]) begin
             border_row_delayed<=border_row_current;
             border_row_current<=border_rgb;
@@ -141,8 +149,62 @@ module coco3_hdmi #(
         border_d<=border_row_delayed;
     end
     wire [5:0] selected_rgb=picture_d ? pixel_data : border_d;
-    assign stream_rgb={{4{selected_rgb[5:4]}},{4{selected_rgb[3:2]}},
-                       {4{selected_rgb[1:0]}}};
+    wire [23:0] expanded_rgb={{4{selected_rgb[5:4]}},
+                              {4{selected_rgb[3:2]}},
+                              {4{selected_rgb[1:0]}}};
+
+    // Full-precision MAME-compatible palettes. Tokenized artifact pixels are
+    // expanded here so normal GIME video keeps its original RGB222 path.
+    function automatic [23:0] artifact_rgb888;
+        input css;
+        input [3:0] index;
+        begin
+            if(css) begin
+                case(index)
+                    4'h0:artifact_rgb888=24'h000000;
+                    4'h1:artifact_rgb888=24'h3e302e;
+                    4'h2:artifact_rgb888=24'h264816;
+                    4'h3:artifact_rgb888=24'hbfadad;
+                    4'h4:artifact_rgb888=24'ha4c892;
+                    4'h5:artifact_rgb888=24'h925428;
+                    4'h6:artifact_rgb888=24'h264e5d;
+                    4'h7:artifact_rgb888=24'hbf8451;
+                    4'h8:artifact_rgb888=24'h50a7ad;
+                    4'h9:artifact_rgb888=24'h267cad;
+                    4'ha:artifact_rgb888=24'hbf7c16;
+                    4'hb:artifact_rgb888=24'hbfbf8d;
+                    4'hc:artifact_rgb888=24'h62bfad;
+                    4'hd:artifact_rgb888=24'h4a3016;
+                    4'he:artifact_rgb888=24'h26303a;
+                    default:artifact_rgb888=24'hffffaa;
+                endcase
+            end else begin
+                case(index)
+                    4'h0:artifact_rgb888=24'h000000;
+                    4'h1:artifact_rgb888=24'h283013;
+                    4'h2:artifact_rgb888=24'h264916;
+                    4'h3:artifact_rgb888=24'h30b500;
+                    4'h4:artifact_rgb888=24'h2ed204;
+                    4'h5:artifact_rgb888=24'h2d5613;
+                    4'h6:artifact_rgb888=24'h26500c;
+                    4'h7:artifact_rgb888=24'h30890d;
+                    4'h8:artifact_rgb888=24'h29af00;
+                    4'h9:artifact_rgb888=24'h268100;
+                    4'ha:artifact_rgb888=24'h308116;
+                    4'hb:artifact_rgb888=24'h30c905;
+                    4'hc:artifact_rgb888=24'h2ac900;
+                    4'hd:artifact_rgb888=24'h283016;
+                    4'he:artifact_rgb888=24'h263011;
+                    default:artifact_rgb888=24'h30d200;
+                endcase
+            end
+        end
+    endfunction
+    assign stream_rgb=artifact_active_s ?
+        (picture_d && selected_rgb[5] ?
+            artifact_rgb888(selected_rgb[4],selected_rgb[3:0]) :
+         !picture_d ? artifact_rgb888(artifact_css_s,4'hf) : expanded_rgb) :
+        expanded_rgb;
 
     generate if (ENABLE_DEBUG_OVERLAY!=0) begin:overlay_enabled
         hdmi_debug_overlay #(
@@ -163,10 +225,14 @@ module coco3_hdmi #(
             .sdram_test_error_addr(ram_addr_s),
             .sdram_test_expected(ram_expected_s),
             .sdram_test_actual(ram_actual_s),
-            .rgb_in(stream_rgb),.rgb_out(rgb));
+            .rgb_in(stream_rgb),.rgb_out(debug_rgb));
     end else begin:overlay_disabled
-        assign rgb=stream_rgb;
+        assign debug_rgb=stream_rgb;
     end endgenerate
+
+    artifact_mode_osd artifact_osd(
+        .pixel_clk(pixel_clk),.reset(reset),.mode(artifact_mode),.x(x),.y(y),
+        .rgb_in(debug_rgb),.rgb_out(rgb));
 
     logic [15:0] audio_samples[1:0];
     assign audio_samples[0]=0; assign audio_samples[1]=0;
