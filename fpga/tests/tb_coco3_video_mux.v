@@ -17,7 +17,7 @@ module tb_coco3_video_mux;
     integer delay_count;
     reg [22:0] held_addr;
 
-    coco3 dut(
+    coco3 #(.DISTO_2MB(1)) dut(
         .clk(clk),.reset_n(reset_n),.cpu_reset_n(cpu_reset_n),.s2(1'b0),
         .cpu_addr(cpu_addr),.cpu_rw_n(cpu_rw_n),.cpu_data(cpu_data),
         .serint_n(1'b1),.keyint_n(1'b1),.cart_n(1'b1),
@@ -84,6 +84,16 @@ module tb_coco3_video_mux;
         if(dut.effective_bit_plane!=1'b1 || dut.effective_hres!=3'd2 ||
            dut.effective_cres!=2'd1 || dut.effective_lines_per_row_code!=3'd0)
             errors=errors+1;
+
+        // DISTO FF9B selects the 512 KiB bank used for every video cycle.
+        cpu_addr=16'hff9b;cpu_data=8'h02;cpu_rw_n=0;
+        repeat(100)@(posedge clk);
+        cpu_rw_n=1;repeat(3)@(posedge clk);#1;
+        if(dut.video_bank!=2'b10||dut.effective_screen_base[20:19]!=2'b10)begin
+            $display("DISTO video bank was not applied: latch=%b base=%h",
+                     dut.video_bank,dut.effective_screen_base);
+            errors=errors+1;
+        end
         if(errors==0) $display("tb_coco3_video_mux PASS");
         else $display("tb_coco3_video_mux FAIL: %0d",errors);
         $finish;

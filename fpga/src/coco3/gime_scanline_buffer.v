@@ -3,9 +3,9 @@
 module gime_scanline_buffer (
  input clk,input reset_n,input bit_plane,input [3:0] hres,input [1:0] cres,
  input [2:0] lines_per_row_code,input [3:0] vertical_scroll,
- input [18:0] screen_base,input [7:0] horizontal_offset,input [95:0] palettes,
+ input [20:0] screen_base,input [7:0] horizontal_offset,input [95:0] palettes,
  input compatibility_mode,input compatibility_an_g,input [2:0] compatibility_gm,
- input compatibility_css,input blink,input cpu_write_strobe,input [18:0] cpu_write_addr,
+ input compatibility_css,input blink,input cpu_write_strobe,input [20:0] cpu_write_addr,
  input hdmi_read_clk,input [9:0] hdmi_read_x,input [7:0] hdmi_display_y,
  input hdmi_display_valid,input hdmi_picture_active,
  input [7:0] hdmi_prefetch_y,input hdmi_prefetch_valid,
@@ -137,7 +137,7 @@ module gime_scanline_buffer (
  reg h_valid0=0,h_valid1=0,c_valid0=0,c_valid1=0;
  reg h_dirty0=0,h_dirty1=0,c_dirty0=0,c_dirty1=0;
  reg [7:0] h_tag0=0,h_tag1=0,c_tag0=0,c_tag1=0;
- reg [18:0] h_start0=0,h_start1=0,c_start0=0,c_start1=0;
+ reg [20:0] h_start0=0,h_start1=0,c_start0=0,c_start1=0;
  reg [10:0] h_bytes0=0,h_bytes1=0,c_bytes0=0,c_bytes1=0;
  reg h_next_bank=0,c_next_bank=0;
 
@@ -178,7 +178,7 @@ module gime_scanline_buffer (
  reg fill_compatibility=0,fill_blink=0;reg [7:0] fill_lpr=1;
  reg [10:0] fill_stride=0,fill_row_bytes=0;reg [12:0] fill_source_width=0;
  reg [3:0] fill_scale_integer=0;reg [9:0] fill_scale_remainder=0;
- reg [18:0] fill_base=0;reg [6:0] fill_hoff=0;reg [95:0] fill_palettes=0;
+ reg [20:0] fill_base=0;reg [6:0] fill_hoff=0;reg [95:0] fill_palettes=0;
  reg [8:0] row_remainder=0;reg [7:0] source_row=0;reg [3:0] glyph_line=0;
  reg [9:0] out_x=0;reg [12:0] source_x=0;reg [9:0] scale_phase=0;
  // Cache the byte/character indices alongside source_x.  Deriving them
@@ -188,8 +188,9 @@ module gime_scanline_buffer (
  reg [7:0] source_character_column=0;
  reg [9:0] hdmi_out_x=0;reg [2:0] hdmi_filter_phase=0;
  reg [5:0] hdmi_filter_previous=0;
- reg [18:0] row_address=0,line_address=0,byte_address=0;
- reg [31:0] word_cache=0;reg [18:0] word_tag=0;reg word_valid=0;
+ reg [18:0] row_address=0;
+ reg [20:0] line_address=0,byte_address=0;
+ reg [31:0] word_cache=0;reg [20:0] word_tag=0;reg word_valid=0;
  reg [7:0] character=0,attribute=0,glyph_cache=0;reg fill_dirty=0;
  reg text_cache_valid=0,graphics_cache_valid=0;
  reg [7:0] text_cache_column=0;reg [11:0] graphics_cache_index=0;
@@ -210,10 +211,14 @@ module gime_scanline_buffer (
  // that boundary even when HVEN is clear.  BOINK depends on this: allowing
  // the sum to carry into the next page tears the bouncing image into bands.
  wire [8:0] horizontal_byte_sum={1'b0,fill_hoff,1'b0}+pixel_byte_index[8:0];
- wire [18:0] calculated_byte_address=fill_compatibility?
-  line_address+pixel_byte_index:
-  line_address+{11'd0,horizontal_byte_sum[7:0]};
- wire [18:0] aligned_address={byte_address[18:2],2'b0};
+ // The external DISTO bank bits do not participate in the GIME's 19-bit
+ // video counter.  Address arithmetic wraps inside the selected 512 KiB
+ // bank rather than carrying into the following bank.
+ wire [18:0] calculated_low_address=fill_compatibility?
+  line_address[18:0]+pixel_byte_index:
+  line_address[18:0]+{11'd0,horizontal_byte_sum[7:0]};
+ wire [20:0] calculated_byte_address={line_address[20:19],calculated_low_address};
+ wire [20:0] aligned_address={byte_address[20:2],2'b0};
  wire [7:0] cached_byte=byte_address[1:0]==0?word_cache[7:0]:
   byte_address[1:0]==1?word_cache[15:8]:byte_address[1:0]==2?word_cache[23:16]:word_cache[31:24];
  reg [11:0] font_addr=0;wire [7:0] font_data;
@@ -288,14 +293,21 @@ module gime_scanline_buffer (
  wire write_hits_c1=c_valid1&&cpu_write_addr>=c_start1&&cpu_write_addr<c_start1+c_bytes1;
  wire write_hits_fill=state!=IDLE&&cpu_write_addr>=line_address&&
                       cpu_write_addr<line_address+fill_row_bytes;
- reg [16:0] mode_signature=17'h1ffff;reg [18:0] last_screen_base=19'h7ffff;
- reg [18:0] frame_screen_base=0;
+ reg [16:0] mode_signature=17'h1ffff;reg [20:0] last_screen_base=21'h1fffff;
+ reg [20:0] frame_screen_base=0;
  // Running GIME DMA state.  This cannot be reconstructed as y*stride when
  // FF98.LPR or FF9F.HVEN changes during the picture: each raster advances
  // from the address left by the preceding raster.
  reg [7:0] dma_next_y=0;
- reg [18:0] dma_next_address=0;
+ reg [20:0] dma_next_address=0;
  reg [3:0] dma_line_in_row=0;
+ reg dma_advance_pending=0;
+ reg [7:0] dma_advance_y=0,dma_prefetch_y_q=0;
+ reg [20:0] dma_advance_base=0;
+ reg [10:0] dma_advance_stride=0;
+ reg [3:0] dma_advance_glyph=0;
+ reg dma_advance_bit_plane=0,dma_advance_compatibility=0;
+ reg [7:0] dma_advance_lpr=1;
  reg upper_border_q=0;
  wire upper_border=hd_pv_s&&hd_p_s==0&&!hd_v_s;
  // LPR is a raster control.  BOINK switches it to 111 to hold the current
@@ -311,6 +323,13 @@ module gime_scanline_buffer (
  // horizontal gap in raster demos.
  wire configuration_diff=live_signature!=mode_signature||
   frame_screen_base!=last_screen_base;
+ // The GIME uses the LPR captured at the start of a raster to select that
+ // raster's pixels, but tests the live FF98.LPR value when advancing its
+ // line/row counter at the end.  BOINK relies on this asymmetry to leave an
+ // infinite-height background row and enter its fixed footer without an
+ // extra stale raster.
+ wire [7:0] completion_lpr=dma_advance_compatibility?dma_advance_lpr:
+  native_lines_per_row(lines_per_row_code);
  reg configuration_diff_q=1'b1;
  assign debug_dma_next_y=dma_next_y;
  assign debug_fill_y=fill_y;
@@ -320,17 +339,36 @@ module gime_scanline_buffer (
   if(!reset_n) begin
    state<=IDLE;memory_request<=0;memory_addr<=0;h_valid0<=0;h_valid1<=0;
    c_valid0<=0;c_valid1<=0;h_dirty0<=0;h_dirty1<=0;c_dirty0<=0;c_dirty1<=0;
-   mode_signature<=17'h1ffff;last_screen_base<=19'h7ffff;
+   mode_signature<=17'h1ffff;last_screen_base<=21'h1fffff;
    frame_screen_base<=0;
    h_next_bank<=0;c_next_bank<=0;fill_dirty<=0;configuration_diff_q<=1'b1;
    h_pending<=0;c_pending<=0;coalesce_count<=0;
    fill_sequential<=0;dma_next_y<=0;dma_next_address<=0;
-   dma_line_in_row<=0;upper_border_q<=0;
+   dma_line_in_row<=0;dma_advance_pending<=0;dma_prefetch_y_q<=0;
+   upper_border_q<=0;
   end else begin
    // Register the wide mode comparison before it controls the renderer.  A
    // one-cycle-later flush is harmless and avoids making that comparison the
    // select input for nearly every state register in this 108 MHz block.
    configuration_diff_q<=configuration_diff;
+   dma_prefetch_y_q<=hd_p_s;
+   // Commit the preceding raster's DMA counter at the next logical-raster
+   // boundary, not when its speculative SDRAM render happens to finish.
+   // By this point an HBORD handler has installed the LPR which the physical
+   // GIME uses for its post-raster line/row comparison.
+   if(dma_advance_pending&&hd_pv_s&&hd_p_s!=dma_prefetch_y_q)begin
+    dma_next_y<=dma_advance_y+1'b1;
+    if(dma_advance_bit_plane&&completion_lpr==8'hff)begin
+     dma_next_address<=dma_advance_base;dma_line_in_row<=0;
+    end else if(dma_advance_glyph+1'b1>=completion_lpr)begin
+     dma_next_address<={dma_advance_base[20:19],
+       dma_advance_base[18:0]+dma_advance_stride};dma_line_in_row<=0;
+    end else begin
+     dma_next_address<=dma_advance_base;
+     dma_line_in_row<=dma_advance_glyph+1'b1;
+    end
+    dma_advance_pending<=0;
+   end
    // The GIME transfers VOFF into its running video address during vertical
    // blank.  HDMI's upper border continuously requests logical row zero, so
    // it provides a safe equivalent latch window without adding those border
@@ -339,6 +377,7 @@ module gime_scanline_buffer (
    if(upper_border)frame_screen_base<=screen_base;
    if(upper_border&&(!upper_border_q||screen_base!=frame_screen_base))begin
     dma_next_y<=0;dma_next_address<=screen_base;
+    dma_advance_pending<=0;
     dma_line_in_row<=compatibility_mode||
       native_lines_per_row(lines_per_row_code)==8'd1||
       vertical_scroll>=native_lines_per_row(lines_per_row_code)?
@@ -465,7 +504,7 @@ module gime_scanline_buffer (
      source_byte_index<=0;source_character_column<=0;
      scale_phase<=0;hdmi_out_x<=0;hdmi_filter_phase<=0;
      hdmi_filter_previous<=0;state<=LINE_ADDRESS;end
-    LINE_ADDRESS:begin line_address<=fill_base+row_address;
+    LINE_ADDRESS:begin line_address<={fill_base[20:19],fill_base[18:0]+row_address};
      state<=PIXEL_ADDRESS;end
     PIXEL_ADDRESS:begin
      if(fill_bit_plane&&graphics_cache_valid&&graphics_cache_index==source_byte_index)
@@ -476,11 +515,14 @@ module gime_scanline_buffer (
      else begin byte_address<=calculated_byte_address;state<=CHECK_WORD;end
     end
     CHECK_WORD:begin
-     if(!word_valid||word_tag!=aligned_address)begin memory_addr<={4'd0,aligned_address};
+     if(!word_valid||word_tag!=aligned_address)begin memory_addr<={2'd0,aligned_address};
       memory_request<=1;state<=WAIT_WORD;end
      else if(!fill_bit_plane)begin
       character<=cached_byte;
-      if(fill_attributes)begin byte_address<=byte_address+1'b1;state<=CHECK_ATTRIBUTE;end
+      if(fill_attributes)begin
+       byte_address<={byte_address[20:19],byte_address[18:0]+1'b1};
+       state<=CHECK_ATTRIBUTE;
+      end
       else if(fill_compatibility&&cached_byte[7])begin
        text_cache_column<=source_character_column;text_cache_valid<=1;
        state<=DECODE_PIXEL;
@@ -499,7 +541,7 @@ module gime_scanline_buffer (
     WAIT_WORD:if(memory_valid)begin word_cache<=memory_data;word_tag<=aligned_address;
      word_valid<=1;memory_request<=0;state<=CHECK_WORD;end
     CHECK_ATTRIBUTE:begin
-     if(!word_valid||word_tag!=aligned_address)begin memory_addr<={4'd0,aligned_address};
+     if(!word_valid||word_tag!=aligned_address)begin memory_addr<={2'd0,aligned_address};
       memory_request<=1;state<=WAIT_ATTRIBUTE;end
      else begin attribute<=cached_byte;font_addr<={1'b0,character[6:0],glyph_line};
       state<=FONT_WAIT1;end
@@ -573,21 +615,14 @@ module gime_scanline_buffer (
        c_next_bank<=!fill_c_bank;
       end
       if(fill_sequential)begin
-       dma_next_y<=fill_y+1'b1;
-       // Native graphics LPR=111 is an infinite-height row.  Its internal
-       // line counter remains zero, so changing back to LPR=000 advances by
-       // exactly one row instead of first dividing a wrapped 4-bit count.
-       // LPR is captured with the rest of the immutable row state.  HDMI is
-       // deliberately one native raster behind HBORD, so a timed FF98 write
-       // is visible when the following prefetch starts and cannot retarget a
-       // row which is already being rendered.
-       if(fill_bit_plane&&fill_lpr==8'hff)begin
-        dma_next_address<=fill_base;dma_line_in_row<=0;
-       end else if(glyph_line+1'b1>=fill_lpr)begin
-        dma_next_address<=fill_base+fill_stride;dma_line_in_row<=0;
-       end else begin
-        dma_next_address<=fill_base;dma_line_in_row<=glyph_line+1'b1;
-       end
+       // Save the completed raster descriptor.  Address advancement waits
+       // for hd_p_s to enter the following logical raster, so SDRAM/render
+       // latency cannot change which timed FF98 value is observed.
+       dma_advance_pending<=1;dma_advance_y<=fill_y;
+       dma_advance_base<=fill_base;dma_advance_stride<=fill_stride;
+       dma_advance_glyph<=glyph_line;dma_advance_bit_plane<=fill_bit_plane;
+       dma_advance_compatibility<=fill_compatibility;
+       dma_advance_lpr<=fill_lpr;
       end
       state<=IDLE;
      end else begin

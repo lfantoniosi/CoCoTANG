@@ -7,10 +7,10 @@ module tb_coco_sdram_startup_test;
     wire [7:0] mem_wdata;
     wire [18:0] error_addr;
     wire [7:0] error_expected,error_actual;
-    reg [7:0] memory [0:524287];
-    integer errors=0,transactions=0;
+    reg [7:0] memory [0:2097151];
+    integer errors=0,transactions=0,i;
 
-    coco_sdram_startup_test dut(
+    coco_sdram_startup_test #(.ADDRESS_BITS(21)) dut(
         .clk(clk),.reset_n(reset_n),.start(start),.mem_req(mem_req),
         .mem_wr(mem_wr),.mem_addr(mem_addr),.mem_wdata(mem_wdata),
         .mem_rdata(mem_rdata),.mem_ack(mem_ack),.done(done),
@@ -22,8 +22,8 @@ module tb_coco_sdram_startup_test;
         mem_ack <= mem_req && !mem_ack;
         if (mem_req && !mem_ack) begin
             transactions <= transactions+1;
-            if (mem_wr) memory[mem_addr[18:0]] <= mem_wdata;
-            else mem_rdata <= memory[mem_addr[18:0]];
+            if (mem_wr) memory[mem_addr[20:0]] <= mem_wdata;
+            else mem_rdata <= memory[mem_addr[20:0]];
         end
     end
 
@@ -31,13 +31,9 @@ module tb_coco_sdram_startup_test;
         repeat(3) @(negedge clk);
         reset_n=1; start=1;
         wait(done); @(negedge clk);
-        if (!passed || failed || transactions != 1048576) errors=errors+1;
-        // Native attribute text at physical $12340 must spell A12340- .
-        if (memory[19'h12340]!="A" || memory[19'h12341]!=8'h38 ||
-            memory[19'h12342]!="1" || memory[19'h12344]!="2" ||
-            memory[19'h12346]!="3" || memory[19'h12348]!="4" ||
-            memory[19'h1234a]!="0" || memory[19'h1234c]!="-" ||
-            memory[19'h1234e]!=" ") errors=errors+1;
+        if (!passed || failed || transactions != 2097152) errors=errors+1;
+        for (i=0;i<2097152;i=i+1)
+            if (memory[i]!==8'h00) errors=errors+1;
         if (errors==0) $display("tb_coco_sdram_startup_test PASS");
         else $display("tb_coco_sdram_startup_test FAIL errors=%0d tx=%0d",errors,transactions);
         $finish;

@@ -8,8 +8,8 @@ module tb_gime_scanline_buffer;
  reg [1:0] responder_state=0;reg compatibility_mode=0,compatibility_an_g=1;
  reg [2:0] compatibility_gm=0;reg [3:0] hres=7;reg [1:0] cres=1;
  reg bit_plane=1;reg [2:0] lpr=0;reg [3:0] vertical_scroll=0;
- reg [18:0] screen_base=0;
- reg [7:0] horizontal_offset=0;reg cpu_write_strobe=0;reg [18:0] cpu_write_addr=0;
+ reg [20:0] screen_base=0;
+ reg [7:0] horizontal_offset=0;reg cpu_write_strobe=0;reg [20:0] cpu_write_addr=0;
  reg hdmi_prefetch_valid=1,cvbs_prefetch_valid=0;
  reg [7:0] hdmi_prefetch_y=0,cvbs_prefetch_y=0;
  reg hdmi_display_valid=0,hdmi_picture_active=0;reg [7:0] hdmi_display_y=0;
@@ -310,38 +310,53 @@ module tb_gime_scanline_buffer;
   begin : vertical_raster_effect
    reg valid0_before,valid1_before;
    valid0_before=dut.h_valid0;valid1_before=dut.h_valid1;
+   hdmi_prefetch_valid=1;hdmi_prefetch_y=8'd10;
+   force dut.h_need=1'b0;
+   repeat(5)@(posedge clk);
+   dut.dma_next_y=8'd10;dut.dma_next_address=19'h01000;
+   dut.dma_line_in_row=0;dut.dma_advance_pending=0;
    lpr=3'b111;repeat(5)@(posedge clk);#1;
    if(dut.h_valid0!=valid0_before||dut.h_valid1!=valid1_before)begin
     $display("FF98.LPR write invalidated an immutable cached row");errors=errors+1;end
    force dut.state=4'd14;force dut.out_x=10'd639;
    force dut.fill_hdmi=1'b0;force dut.fill_cvbs=1'b0;
    force dut.fill_sequential=1'b1;force dut.fill_y=8'd10;
-   // A timed write after prefetch began must not retarget the immutable row.
-   // The HDMI phase places the following prefetch after HBORD, where it will
-   // capture the new LPR normally.
+   // Pixel selection remains immutable, but the real GIME tests live LPR at
+   // the end of the raster when advancing its address counter.
    force dut.fill_compatibility=1'b0;
    force dut.fill_bit_plane=1'b1;force dut.fill_lpr=8'd1;
    force dut.glyph_line=4'd0;force dut.fill_base=19'h01000;
    force dut.fill_stride=11'd160;
    @(posedge clk);#1;
-   if(dut.dma_next_y!=8'd11||dut.dma_next_address!=19'h010a0||
-      dut.dma_line_in_row!=0)begin
-    $display("in-progress row incorrectly used live infinite LPR: y=%0d addr=%h line=%0d",
-      dut.dma_next_y,dut.dma_next_address,dut.dma_line_in_row);errors=errors+1;end
-   // The inverse transition likewise takes effect on the next prefetched
-   // row, not the infinite-LPR row already in progress.
-   lpr=3'b000;force dut.fill_y=8'd11;force dut.fill_lpr=8'hff;
-   @(posedge clk);#1;
-   if(dut.dma_next_y!=8'd12||dut.dma_next_address!=19'h01000||
-      dut.dma_line_in_row!=0)begin
-    $display("in-progress row incorrectly used live single-line LPR: y=%0d addr=%h line=%0d",
-      dut.dma_next_y,dut.dma_next_address,dut.dma_line_in_row);errors=errors+1;end
    release dut.fill_stride;release dut.fill_base;release dut.glyph_line;
    release dut.fill_lpr;release dut.fill_bit_plane;release dut.fill_compatibility;
-   release dut.fill_y;
-   release dut.fill_sequential;release dut.fill_cvbs;release dut.fill_hdmi;
-   release dut.out_x;release dut.state;
-   lpr=0;
+   release dut.fill_y;release dut.fill_sequential;
+   release dut.fill_cvbs;release dut.fill_hdmi;release dut.out_x;release dut.state;
+   if(!dut.dma_advance_pending)begin
+    $display("completed raster did not defer DMA advancement");errors=errors+1;end
+   hdmi_prefetch_y=8'd11;repeat(5)@(posedge clk);#1;
+   if(dut.dma_next_y!=8'd11||dut.dma_next_address!=19'h01000||
+      dut.dma_line_in_row!=0)begin
+    $display("boundary infinite LPR did not hold DMA row: y=%0d addr=%h line=%0d",
+      dut.dma_next_y,dut.dma_next_address,dut.dma_line_in_row);errors=errors+1;end
+   // The inverse transition advances immediately after the current raster.
+   force dut.state=4'd14;force dut.out_x=10'd639;
+   force dut.fill_hdmi=1'b0;force dut.fill_cvbs=1'b0;
+   force dut.fill_sequential=1'b1;force dut.fill_y=8'd11;
+   force dut.fill_compatibility=1'b0;force dut.fill_bit_plane=1'b1;
+   force dut.fill_lpr=8'hff;force dut.glyph_line=4'd0;
+   force dut.fill_base=19'h01000;force dut.fill_stride=11'd160;
+   @(posedge clk);#1;
+   release dut.fill_stride;release dut.fill_base;release dut.glyph_line;
+   release dut.fill_lpr;release dut.fill_bit_plane;release dut.fill_compatibility;
+   release dut.fill_y;release dut.fill_sequential;
+   release dut.fill_cvbs;release dut.fill_hdmi;release dut.out_x;release dut.state;
+   lpr=3'b000;hdmi_prefetch_y=8'd12;repeat(5)@(posedge clk);#1;
+   if(dut.dma_next_y!=8'd12||dut.dma_next_address!=19'h010a0||
+      dut.dma_line_in_row!=0)begin
+    $display("boundary single-line LPR did not advance DMA row: y=%0d addr=%h line=%0d",
+      dut.dma_next_y,dut.dma_next_address,dut.dma_line_in_row);errors=errors+1;end
+   release dut.h_need;hdmi_prefetch_valid=0;lpr=0;repeat(5)@(posedge clk);
   end
 
   // Compatibility alpha ROM dots are active-low.  A stored row of $c0 must

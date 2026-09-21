@@ -2,7 +2,8 @@
 // and native video rendering live here; SDRAM and output scan conversion are
 // deliberately shared by the board top level with the CoCo 2 implementation.
 module coco3 #(
-    parameter integer DEBUG_S2_VIDEO_MODE = 0
+    parameter integer DEBUG_S2_VIDEO_MODE = 0,
+    parameter integer DISTO_2MB = 0
 ) (
     input             clk,
     input             reset_n,
@@ -89,12 +90,13 @@ module coco3 #(
     wire [3:0] vertical_scroll;
     wire [15:0] video_offset;
     wire [7:0] horizontal_offset;
+    wire [1:0] video_bank;
     wire compatibility_mode;
     assign compatibility_video = compatibility_mode;
     wire [6:0] sam_video_offset;
     wire [95:0] palettes;
     wire hborder_irq_n;
-    gime_registers registers (
+    gime_registers #(.DISTO_2MB(DISTO_2MB)) registers (
         .clk(clk), .reset_n(core_reset_n), .e(e), .e_fall(e_fall),
         .cpu_addr(cpu_addr), .cpu_rw_n(cpu_rw_n), .cpu_data(cpu_data),
         .serint_n(serint_n), .keyint_n(keyint_n), .cart_n(cart_n),
@@ -107,6 +109,7 @@ module coco3 #(
         .vmode(vmode), .vres(vres), .border_color(border_color),
         .vertical_scroll(vertical_scroll), .video_offset(video_offset),
         .horizontal_offset(horizontal_offset),
+        .video_bank(video_bank),
         .compatibility_mode(compatibility_mode),
         .sam_video_offset(sam_video_offset), .palettes(palettes),
         .mmu_task0_page_debug(mmu_task0_page_debug),
@@ -182,7 +185,7 @@ module coco3 #(
     // implemented high FF9D bits and low FF9E bits.  In particular, do not
     // assume the legacy screen is in the power-up $70000 compatibility bank:
     // CoVDG can allocate it in any physical 8K block.
-    reg [18:0] effective_screen_base = 19'd0;
+    reg [20:0] effective_screen_base = 21'd0;
     always @(posedge clk or negedge core_reset_n) begin
         if (!core_reset_n) begin
             effective_bit_plane <= 1'b0;
@@ -190,7 +193,7 @@ module coco3 #(
             effective_cres <= 2'd0;
             effective_lpf <= 2'd0;
             effective_lines_per_row_code <= 3'd3;
-            effective_screen_base <= 19'd0;
+            effective_screen_base <= 21'd0;
         end else begin
             effective_bit_plane <= DEBUG_S2_VIDEO_MODE ? debug_bit_plane :
                                    compatibility_mode ? compatibility_an_g : vmode[7];
@@ -214,12 +217,13 @@ module coco3 #(
                 debug_lines_per_row_code : compatibility_mode ?
                 (compatibility_an_g ? compatibility_lpr(compatibility_gm) : 3'b111) :
                 vmode[2:0];
-            effective_screen_base <= DEBUG_S2_VIDEO_MODE ? 19'd0 :
+            effective_screen_base <= DEBUG_S2_VIDEO_MODE ? 21'd0 :
                 compatibility_mode ?
-                    ({video_offset[15:13],16'b0} +
-                     {10'd0,video_offset[5:0],3'b0} +
-                     {3'd0,sam_video_offset,9'b0}) :
-                    {video_offset,3'b000};
+                    {video_bank,
+                     ({video_offset[15:13],16'b0} +
+                      {10'd0,video_offset[5:0],3'b0} +
+                      {3'd0,sam_video_offset,9'b0})} :
+                    {video_bank,video_offset,3'b000};
         end
     end
 
@@ -244,15 +248,15 @@ module coco3 #(
     // two sets of line-tag range comparators.  Besides making the snoop a
     // clean one-clock event, this avoids a long MMU-decode-to-cache-tag path.
     reg video_cpu_write_strobe = 1'b0;
-    reg [18:0] video_cpu_write_addr = 19'd0;
+    reg [20:0] video_cpu_write_addr = 21'd0;
     always @(posedge clk or negedge core_reset_n) begin
         if (!core_reset_n) begin
             video_cpu_write_strobe <= 1'b0;
-            video_cpu_write_addr <= 19'd0;
+            video_cpu_write_addr <= 21'd0;
         end else begin
             video_cpu_write_strobe <= e_fall && cpu_mem_write;
             if (e_fall && cpu_mem_write)
-                video_cpu_write_addr <= cpu_mem_addr[18:0];
+                video_cpu_write_addr <= cpu_mem_addr[20:0];
         end
     end
     // One MiSTer-compatible renderer services both scanline consumers.  The

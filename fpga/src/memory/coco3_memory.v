@@ -1,9 +1,10 @@
-// CoCo 3 physical-CPU memory service.  The GIME supplies the translated
-// 19-bit RAM address. The internal 32 KiB ROM is loaded from SPI flash into
+// CoCo 3 physical-CPU memory service.  The GIME/DISTO mapper supplies the
+// translated RAM address. The internal 32 KiB ROM is loaded from SPI flash into
 // dedicated dual-port BSRAM; CPU RAM and scanline traffic alone share SDRAM
 // in alternating CPU and early-E-low background slots.
 module coco3_memory #(
-    parameter integer ROM_BYTES = 32768
+    parameter integer ROM_BYTES = 32768,
+    parameter integer DISTO_2MB = 0
 ) (
     input clk, input reset_n, input loader_start,
     input cpu_access_enable, input cpu_bus_valid, input cpu_address_valid,
@@ -194,7 +195,7 @@ module coco3_memory #(
     wire [7:0] test_wdata;
     wire loader_ack;
     wire [7:0] loader_rdata;
-    coco_sdram_startup_test startup_test(
+    coco_sdram_startup_test #(.ADDRESS_BITS(DISTO_2MB ? 21 : 19)) startup_test(
         .clk(clk),.reset_n(reset_n),.start(loader_start),
         .mem_req(test_req),.mem_wr(test_wr),.mem_addr(test_addr),
         .mem_wdata(test_wdata),.mem_rdata(loader_rdata),.mem_ack(test_ack),

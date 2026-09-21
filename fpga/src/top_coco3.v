@@ -20,7 +20,9 @@ module top_coco3 #(
     // synthesis then removes the unused S2 capture-control cone as well.
     parameter integer ENABLE_BUS_LOGGER=0,
     parameter integer DEBUG_OVERLAY=0,
-    parameter integer ANALOG_VIDEO_MODE=1
+    parameter integer ANALOG_VIDEO_MODE=1,
+    // 1: DISTO-compatible 2 MiB DAT/video banking; 0: stock 512 KiB GIME.
+    parameter integer DISTO_2MB=1
 ) (
     input clkin,input s1,input s2,input [7:0] mp,output [1:0] msel,
     inout [7:0] cpu_data,output irq_n_in,output firq_n_in,input audio_in,
@@ -151,7 +153,7 @@ module top_coco3 #(
     wire gime_keyint_n=!mux_keyint_n;
     wire gime_serint_n=!mux_sernt_n;
 
-    coco3 machine(.clk(clk108),.reset_n(board_reset_n),
+    coco3 #(.DISTO_2MB(DISTO_2MB)) machine(.clk(clk108),.reset_n(board_reset_n),
         .cpu_reset_n(cpu_release),.s2(1'b0),.cpu_addr(address),
         .cpu_rw_n(rw_n),.cpu_data(cpu_write_data),
         .serint_n(gime_serint_n),.keyint_n(gime_keyint_n),.cart_n(mux_cart_n),
@@ -251,7 +253,8 @@ module top_coco3 #(
 
     wire [7:0] memory_rdata;
     wire memory_data_oe,cpu_memory_wait;
-    coco3_memory memory(.clk(clk108),.reset_n(sdram_reset_n),
+    coco3_memory #(.DISTO_2MB(DISTO_2MB)) memory(
+        .clk(clk108),.reset_n(sdram_reset_n),
         .loader_start(loader_start),.cpu_access_enable(cpu_memory_service),
         .cpu_bus_valid(bus_snapshot_valid),.cpu_address_valid(bus_address_valid),
         .e(e_core),.q(q_core),.e_fall(e_fall),
