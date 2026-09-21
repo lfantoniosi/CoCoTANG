@@ -149,6 +149,49 @@ module tb_gime_scanline_buffer;
    $display("native font bit order wrong: A pixel 4 is not foreground");errors=errors+1;end
   slow_memory=0;
 
+  // A timed HRES change belongs to the following raster.  The row already
+  // being fetched has captured its old mode and must be allowed to finish;
+  // aborting it produces a black first copy of a doubled HDMI scanline.
+  hdmi_prefetch_valid=0;cvbs_prefetch_valid=0;hdmi_display_valid=0;
+  hres=7;cres=1;bit_plane=1;slow_memory=1;repeat(8)@(posedge clk);
+  hdmi_prefetch_y=8'd17;hdmi_prefetch_valid=1;
+  timeout=0;while(dut.state!=6&&timeout<200000)begin
+   @(posedge clk);timeout=timeout+1;end
+  if(timeout==200000)begin
+   $display("mode-change fill did not reach WAIT_WORD");errors=errors+1;
+  end else begin
+   hres=6;
+   repeat(8)@(posedge clk);#1;
+   if(dut.state==0||!dut.memory_request)begin
+    $display("raster mode change aborted active row fill");errors=errors+1;end
+   timeout=0;
+   while(!((dut.h_valid0&&dut.h_tag0==17)||(dut.h_valid1&&dut.h_tag1==17))&&
+         timeout<200000)begin @(posedge clk);timeout=timeout+1;end
+   if(timeout==200000)begin
+    $display("row did not complete after raster mode change");errors=errors+1;end
+  end
+  hdmi_prefetch_valid=0;slow_memory=0;hres=7;repeat(8)@(posedge clk);
+
+  // HBORD handlers update the mode for the row after the one already
+  // prefetched.  Preserve both the displayed row and that completed prefetch
+  // across the write; invalidating the latter gives the renderer only one
+  // physical HDMI line to recover and creates a thin black gap.
+  hdmi_display_valid=0;hdmi_prefetch_y=8'd18;hdmi_prefetch_valid=1;
+  timeout=0;
+  while(!((dut.h_valid0&&dut.h_tag0==18)||(dut.h_valid1&&dut.h_tag1==18))&&
+        timeout<200000)begin @(posedge clk);timeout=timeout+1;end
+  hdmi_prefetch_y=8'd19;
+  timeout=0;
+  while(!((dut.h_valid0&&dut.h_tag0==19)||(dut.h_valid1&&dut.h_tag1==19))&&
+        timeout<200000)begin @(posedge clk);timeout=timeout+1;end
+  hdmi_display_y=8'd18;hdmi_display_valid=1;repeat(8)@(posedge clk);
+  hres=6;repeat(8)@(posedge clk);#1;
+  if(!((dut.h_valid0&&dut.h_tag0==18)||(dut.h_valid1&&dut.h_tag1==18))||
+     !((dut.h_valid0&&dut.h_tag0==19)||(dut.h_valid1&&dut.h_tag1==19)))begin
+   $display("raster mode write discarded current/prefetched row");errors=errors+1;
+  end
+  hdmi_display_valid=0;hdmi_prefetch_valid=0;hres=7;repeat(8)@(posedge clk);
+
   // A phase-separated CVBS request must not displace the HDMI master row.
   // The one render is mirrored into both RAM copies; otherwise two nearby
   // requests continually evict each other and produce alternating black or

@@ -361,23 +361,30 @@ module gime_scanline_buffer (
     if(write_hits_c0)c_dirty0<=1;if(write_hits_c1)c_dirty1<=1;
     if(write_hits_fill)fill_dirty<=1;
    end
-   if(configuration_diff_q) begin
+   // A raster-time mode write describes a future row.  At HBORD the next row
+   // is normally already cached, because scanout is one native raster behind
+   // the GIME interrupt generator.  Preserve both the row being displayed and
+   // that completed prefetch.  Invalidating the prefetch leaves only one 480p
+   // half-line in which to rebuild it and produces DEMO.BIN's thin black gaps.
+   // Rows capture all mode/address state when their fill starts, so an active
+   // fill is immutable as well; subsequent fills see the new live settings.
+   if(configuration_diff_q&&configuration_diff&&state==IDLE)begin
     mode_signature<=live_signature;last_screen_base<=frame_screen_base;
-    // Mode and frame-latched base changes invalidate stale prefetches. FF9F
-    // is deliberately absent from this path: it is sampled when each row
-    // fill begins, and a mid-fill write applies to the following row without
-    // aborting the immutable row already being produced.
-    h_valid0<=hd_v_s&&h_valid0&&h_tag0==hd_y_s;
-    h_valid1<=hd_v_s&&h_valid1&&h_tag1==hd_y_s;
-    c_valid0<=cv_v_s&&c_valid0&&c_tag0==cv_y_s;
-    c_valid1<=cv_v_s&&c_valid1&&c_tag1==cv_y_s;
-    h_dirty0<=hd_v_s&&h_valid0&&h_tag0==hd_y_s&&h_dirty0;
-    h_dirty1<=hd_v_s&&h_valid1&&h_tag1==hd_y_s&&h_dirty1;
-    c_dirty0<=cv_v_s&&c_valid0&&c_tag0==cv_y_s&&c_dirty0;
-    c_dirty1<=cv_v_s&&c_valid1&&c_tag1==cv_y_s&&c_dirty1;
-    state<=IDLE;memory_request<=0;word_valid<=0;h_pending<=0;c_pending<=0;
+    h_valid0<=h_valid0&&((hd_v_s&&h_tag0==hd_y_s)||(hd_pv_s&&h_tag0==hd_p_s));
+    h_valid1<=h_valid1&&((hd_v_s&&h_tag1==hd_y_s)||(hd_pv_s&&h_tag1==hd_p_s));
+    c_valid0<=c_valid0&&((cv_v_s&&c_tag0==cv_y_s)||(cv_pv_s&&c_tag0==cv_p_s));
+    c_valid1<=c_valid1&&((cv_v_s&&c_tag1==cv_y_s)||(cv_pv_s&&c_tag1==cv_p_s));
+    h_dirty0<=h_dirty0&&((hd_v_s&&h_tag0==hd_y_s)||(hd_pv_s&&h_tag0==hd_p_s));
+    h_dirty1<=h_dirty1&&((hd_v_s&&h_tag1==hd_y_s)||(hd_pv_s&&h_tag1==hd_p_s));
+    c_dirty0<=c_dirty0&&((cv_v_s&&c_tag0==cv_y_s)||(cv_pv_s&&c_tag0==cv_p_s));
+    c_dirty1<=c_dirty1&&((cv_v_s&&c_tag1==cv_y_s)||(cv_pv_s&&c_tag1==cv_p_s));
+    memory_request<=0;word_valid<=0;h_pending<=0;c_pending<=0;
     coalesce_count<=0;
-   end else case(state)
+   end else begin
+    if(configuration_diff_q&&configuration_diff)begin
+     mode_signature<=live_signature;last_screen_base<=frame_screen_base;
+    end
+    case(state)
     IDLE:if(h_pending&&coalesce_count==3'd7) begin
      // A row selected by the HDMI master is mirrored into both output RAMs.
      // CVBS therefore consumes the same immutable row without initiating a
@@ -579,8 +586,9 @@ module gime_scanline_buffer (
       state<=PIXEL_ADDRESS;
      end
     end
-    default:state<=IDLE;
-   endcase
+     default:state<=IDLE;
+    endcase
+   end
   end
  end
 
