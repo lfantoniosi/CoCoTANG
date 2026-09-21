@@ -68,16 +68,8 @@ Compiling module 'coco_sdram_startup_test'("/Users/felipe/src/fpga/CoCoTANG/fpga
 Compiling module 'coco_flash_loader(SDRAM_ADDRESS=23'd0,BYTE_COUNT=32768)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_flash_loader.v":1)
 Compiling module 'spi_flash_reader(CLK_DIV=4)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/spi_flash_reader.v":1)
 Compiling module 'cpu_sdram_arbiter'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/cpu_sdram_arbiter.v":5)
-Compiling module 'cpu_bus_logger(LOG_ADDR_WIDTH=13,LOG_COUNT_WIDTH=14,LOG_DEPTH=4092,LOG_START_ADDRESS=16'b0000000000000000,LOG_WRITE_START_ADDRESS=16'b0000000000000000,LOG_WRITE_END_ADDRESS=16'b0000000000000000,LOG_WRITE_DATA_MASK=8'b00000000,LOG_WRITE_DATA_VALUE=8'b00000000,LOG_CAPTURE_START_ADDRESS=16'b0000000000000000,LOG_CAPTURE_END_ADDRESS=16'b1111111111111111,LOG_CAPTURE_EXTRA_ADDRESS=16'b1111111111111111,LOG_MARKER_ADDRESS=16'b1111111110011011,LOG_MARKER_DATA=8'b11000111)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/debug/cpu_bus_logger.v":2)
-WARN  (EX3791) : Expression size 8 truncated to fit in target size 7("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":373)
-Compiling module 'coco3_hdmi(LOG_ADDR_WIDTH=13,LOG_COUNT_WIDTH=14,LOG_PAGE_WIDTH=7,LOG_DEPTH=4092,ENABLE_DEBUG_OVERLAY=1)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco3_hdmi.sv":3)
-Compiling module 'hdmi_debug_overlay(LOG_ADDR_WIDTH=13,LOG_COUNT_WIDTH=14,LOG_PAGE_WIDTH=7,LOG_DEPTH=4092,EXTENDED_HEADER=2)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi_debug_overlay.sv":4)
-Extracting RAM for identifier 'display_memory'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi_debug_overlay.sv":42)
-WARN  (EX3791) : Expression size 32 truncated to fit in target size 7("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi_debug_overlay.sv":192)
-WARN  (EX3791) : Expression size 8 truncated to fit in target size 7("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi_debug_overlay.sv":194)
-WARN  (EX3791) : Expression size 15 truncated to fit in target size 14("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi_debug_overlay.sv":195)
-WARN  (EX3791) : Expression size 31 truncated to fit in target size 4("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi_debug_overlay.sv":314)
-WARN  (EX3791) : Expression size 32 truncated to fit in target size 4("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi_debug_overlay.sv":322)
+WARN  (EX3791) : Expression size 8 truncated to fit in target size 7("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":376)
+Compiling module 'coco3_hdmi(LOG_ADDR_WIDTH=13,LOG_COUNT_WIDTH=14,LOG_PAGE_WIDTH=7,LOG_DEPTH=4092)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco3_hdmi.sv":3)
 Compiling module 'hdmi(VIDEO_ID_CODE=2,DVI_OUTPUT=1'b1,VIDEO_REFRESH_RATE=60.0,AUDIO_RATE=48000)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/hdmi.sv":4)
 Compiling module 'tmds_channel'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/tmds_channel.sv":4)
 Compiling module 'tmds_channel(CN=1)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/tmds_channel.sv":4)
@@ -87,7 +79,8 @@ Compiling module 'serializer(VIDEO_RATE=0)'("/Users/felipe/src/fpga/CoCoTANG/fpg
 Compiling module 'coco_cvbs_ntsc'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_cvbs_ntsc.v":7)
 NOTE  (EX0101) : Current top module is "top_coco3"
 [5%] Running netlist conversion ...
-WARN  (CV0016) : Input audio_in is unused("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":23)
+WARN  (CV0016) : Input s2 is unused("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":25)
+WARN  (CV0016) : Input audio_in is unused("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":26)
 Running device independent optimization ...
 [10%] Optimizing Phase 0 completed
 [15%] Optimizing Phase 1 completed
@@ -104,6 +97,7 @@ Running technical mapping ...
 [80%] Tech-Mapping Phase 3 completed
 [90%] Tech-Mapping Phase 4 completed
 WARN  (NL0002) : The module "gime_mode_debug" instantiated to "debug_modes" is swept in optimizing("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/coco3.v":129)
+WARN  (NL0002) : The module "input_filter" instantiated to "mux_reset_filter" is swept in optimizing("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":115)
 [95%] Generate netlist file "/Users/felipe/src/fpga/CoCoTANG/fpga/impl/gwsynthesis/CoCoTANG.vg" completed
 [100%] Generate report file "/Users/felipe/src/fpga/CoCoTANG/fpga/impl/gwsynthesis/CoCoTANG_syn.rpt.html" completed
 GowinSynthesis finish

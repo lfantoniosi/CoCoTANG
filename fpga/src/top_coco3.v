@@ -15,7 +15,10 @@ module top_coco3 #(
     parameter [15:0] LOG_MARKER_ADDRESS=16'hff9b,
     parameter [7:0] LOG_MARKER_DATA=8'hc7,
     parameter integer LOG_REBASE_EVERY_MATCH=0,
-    parameter integer ENABLE_BUS_LOGGER=1,
+    // Set to 1 only for bus-debug builds.  At the default 0, the generate
+    // blocks omit both the capture logger/RAM and the HDMI debug overlay;
+    // synthesis then removes the unused S2 capture-control cone as well.
+    parameter integer ENABLE_BUS_LOGGER=0,
     parameter integer DEBUG_OVERLAY=0,
     parameter integer ANALOG_VIDEO_MODE=1
 ) (

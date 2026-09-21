@@ -6,7 +6,7 @@ module coco_hdmi #(
     parameter integer LOG_COUNT_WIDTH = 13,
     parameter integer LOG_PAGE_WIDTH = 6,
     parameter integer LOG_DEPTH = 4096,
-    parameter integer ENABLE_DEBUG_OVERLAY = 1
+    parameter integer ENABLE_DEBUG_OVERLAY = 0
 ) (
     input logic pixel_clk,
     input logic serial_clk,
