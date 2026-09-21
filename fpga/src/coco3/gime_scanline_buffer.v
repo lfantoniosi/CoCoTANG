@@ -284,7 +284,6 @@ module gime_scanline_buffer (
                       cpu_write_addr<line_address+fill_row_bytes;
  reg [16:0] mode_signature=17'h1ffff;reg [18:0] last_screen_base=19'h7ffff;
  reg [18:0] frame_screen_base=0;
- reg [3:0] last_vertical_scroll=4'hf;
  // Running GIME DMA state.  This cannot be reconstructed as y*stride when
  // FF98.LPR or FF9F.HVEN changes during the picture: each raster advances
  // from the address left by the preceding raster.
@@ -299,8 +298,13 @@ module gime_scanline_buffer (
  // its two immutable scanline buffers.
  wire [16:0] live_signature={compatibility_mode,compatibility_an_g,compatibility_gm,
   compatibility_css,bit_plane,hres,cres,3'b000,1'b0};
+ // FF9C vertical fine scroll is a raster control, just like FF98.LPR.  It is
+ // sampled when a row fill begins; changing it must not abort that fill or
+ // invalidate the row currently being scanned.  Doing so can blank only the
+ // first of HDMI's two copies of a native row, producing a one-pixel-high
+ // horizontal gap in raster demos.
  wire configuration_diff=live_signature!=mode_signature||
-  frame_screen_base!=last_screen_base||vertical_scroll!=last_vertical_scroll;
+  frame_screen_base!=last_screen_base;
  reg configuration_diff_q=1'b1;
  assign debug_dma_next_y=dma_next_y;
  assign debug_fill_y=fill_y;
@@ -311,7 +315,7 @@ module gime_scanline_buffer (
    state<=IDLE;memory_request<=0;memory_addr<=0;h_valid0<=0;h_valid1<=0;
    c_valid0<=0;c_valid1<=0;h_dirty0<=0;h_dirty1<=0;c_dirty0<=0;c_dirty1<=0;
    mode_signature<=17'h1ffff;last_screen_base<=19'h7ffff;
-   frame_screen_base<=0;last_vertical_scroll<=4'hf;
+   frame_screen_base<=0;
    h_next_bank<=0;c_next_bank<=0;fill_dirty<=0;configuration_diff_q<=1'b1;
    h_pending<=0;c_pending<=0;coalesce_count<=0;
    fill_sequential<=0;dma_next_y<=0;dma_next_address<=0;
@@ -355,7 +359,6 @@ module gime_scanline_buffer (
    end
    if(configuration_diff_q) begin
     mode_signature<=live_signature;last_screen_base<=frame_screen_base;
-    last_vertical_scroll<=vertical_scroll;
     // Mode and frame-latched base changes invalidate stale prefetches. FF9F
     // is deliberately absent from this path: it is sampled when each row
     // fill begins, and a mid-fill write applies to the following row without
@@ -387,10 +390,19 @@ module gime_scanline_buffer (
      // Dirty displayed rows are intentionally still accepted by
      // h_display_cached above, so a same-tag refill request is the upcoming
      // prefetch row and is safe to update in place.
+     // Never replace the bank currently being scanned.  A raster-time mode
+     // change may invalidate the other cache tag without advancing the
+     // round-robin pointer; blindly using h_next_bank in that case writes
+     // into the displayed row and produces black/partially updated pixels
+     // from the left edge until the fill catches scanout.
      fill_h_bank<=(h_valid0&&h_tag0==h_pending_y)?0:
-                  (h_valid1&&h_tag1==h_pending_y)?1:h_next_bank;
+                  (h_valid1&&h_tag1==h_pending_y)?1:
+                  (hd_v_s&&h_valid0&&h_tag0==hd_y_s)?1:
+                  (hd_v_s&&h_valid1&&h_tag1==hd_y_s)?0:h_next_bank;
      fill_c_bank<=(c_valid0&&c_tag0==h_pending_y)?0:
-                  (c_valid1&&c_tag1==h_pending_y)?1:c_next_bank;
+                  (c_valid1&&c_tag1==h_pending_y)?1:
+                  (cv_v_s&&c_valid0&&c_tag0==cv_y_s)?1:
+                  (cv_v_s&&c_valid1&&c_tag1==cv_y_s)?0:c_next_bank;
      fill_bit_plane<=bit_plane;
      fill_cres<=compatibility_mode&&compatibility_an_g?
       ((compatibility_gm==0||compatibility_gm==2||compatibility_gm==4||compatibility_gm==6)?1:0):cres;

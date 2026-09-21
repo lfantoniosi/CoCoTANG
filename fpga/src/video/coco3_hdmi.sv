@@ -102,11 +102,25 @@ module coco3_hdmi #(
     end
 
     logic picture_d=0;
+    // Scanout is deliberately one native GIME raster (two 858-pixel HDMI
+    // rows) behind the interrupt generator so a horizontal-border handler
+    // can finish before the corresponding framebuffer row is prefetched.
+    // Associate one border colour with each native row as well.  Delaying
+    // the raw pixel-clock stream is subtly wrong: a write made in the right
+    // border for the following raster would change only the right edge of
+    // the delayed row.  Sampling once per doubled row keeps both borders
+    // attached to the same immutable framebuffer scanline.
+    logic [5:0] border_row_current=0;
+    logic [5:0] border_row_delayed=0;
     logic [5:0] border_d=0;
     logic [23:0] stream_rgb,rgb;
     always_ff @(posedge pixel_clk) begin
         picture_d<=source_valid;
-        border_d<=border_rgb;
+        if(x==0 && !y[0]) begin
+            border_row_delayed<=border_row_current;
+            border_row_current<=border_rgb;
+        end
+        border_d<=border_row_delayed;
     end
     wire [5:0] selected_rgb=picture_d ? pixel_data : border_d;
     assign stream_rgb={{4{selected_rgb[5:4]}},{4{selected_rgb[3:2]}},
