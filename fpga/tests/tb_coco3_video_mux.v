@@ -72,8 +72,16 @@ module tb_coco3_video_mux;
            dut.effective_bit_plane!=1'b0 || dut.effective_hres!=3'b000)
             errors=errors+1;
 
-        // Program PIA1 PB for A/G=1, GM=110 (CG6), CSS=0. Compatibility
-        // mode must stop forcing text and select 128x192 four-colour fetches.
+        // Program SAM for 128x96 four-colour memory geometry (V=101), then
+        // program PIA1 PB for A/G=1, GM=110.  SAM controls row progression
+        // independently of the live VDG decode pins, so this deliberate
+        // mismatch must repeat each of the 96 source rows twice.
+        cpu_addr=16'hffc1; cpu_data=8'h00; cpu_rw_n=0;
+        repeat(100) @(posedge clk);
+        cpu_addr=16'hffc2;
+        repeat(100) @(posedge clk);
+        cpu_addr=16'hffc5;
+        repeat(100) @(posedge clk);
         cpu_addr=16'hff22; cpu_data=8'hf8; cpu_rw_n=0;
         repeat(100) @(posedge clk);
         cpu_addr=16'hff23; cpu_data=8'h04;
@@ -83,7 +91,8 @@ module tb_coco3_video_mux;
         cpu_rw_n=1;
         repeat(3) @(posedge clk); #1;
         if(dut.effective_bit_plane!=1'b1 || dut.effective_hres!=3'd2 ||
-           dut.effective_cres!=2'd1 || dut.effective_lines_per_row_code!=3'd0)
+           dut.effective_cres!=2'd1 || dut.effective_lines_per_row_code!=3'd1 ||
+           dut.sam_video_mode!=3'd5)
             errors=errors+1;
         if(errors==0) $display("tb_coco3_video_mux PASS");
         else $display("tb_coco3_video_mux FAIL: %0d",errors);

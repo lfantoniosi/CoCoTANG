@@ -14,7 +14,7 @@ Package pins are for the GW2AR-LV18QN88C8/I7 on the Tang Nano 20K.
 | `irq_n_in`, `firq_n_in` | in | 19, 18 | Interrupt observations |
 | `hs_n`, `fs_n` | out | 73, 74 | VDG horizontal/field sync |
 | `y_out`, `pb_out` | out | 56, 54 | Luma plus selectable S-Video chroma or CVBS |
-| `audio_in` | in | 55 | Audio observation/reserved for HDMI audio |
+| `audio_out` | out | 55 | Sigma-delta CoCo DAC audio to the board's filtered line output |
 | `mspi_sclk`, `mspi_cs`, `mspi_mosi`, `mspi_miso` | out/out/out/in | 59, 60, 61, 62 | On-module SPI flash |
 | `tmds_clk_p` | differential out | 33/34 | HDMI clock pair |
 | `tmds_data_p[0]` | differential out | 35/36 | HDMI data 0 pair |

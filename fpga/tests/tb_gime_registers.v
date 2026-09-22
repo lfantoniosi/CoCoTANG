@@ -14,6 +14,7 @@ module tb_gime_registers;
     wire [95:0] palettes;
     wire irq_assert,firq_assert,fast_mode;
     wire compatibility_mode;
+    wire [2:0] sam_video_mode;
     wire [6:0] sam_video_offset;
     integer errors=0;
     integer block;
@@ -31,6 +32,7 @@ module tb_gime_registers;
         .vmode(vmode),.vres(vres),.border_color(border_color),
         .vertical_scroll(vertical_scroll),.video_offset(video_offset),
         .horizontal_offset(horizontal_offset),.compatibility_mode(compatibility_mode),
+        .sam_video_mode(sam_video_mode),
         .sam_video_offset(sam_video_offset),.palettes(palettes));
     always #5 clk=~clk;
 

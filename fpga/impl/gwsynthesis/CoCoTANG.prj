@@ -10,6 +10,8 @@
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco_startup.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/bus/input_filter.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/bus/coco_bus_mux.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/audio/coco_pia1_dac.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/sigma_delta_dac.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/spi_flash_reader.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_flash_loader.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_sdram_startup_test.v" type="verilog"/>

@@ -10,6 +10,8 @@ module coco_hdmi #(
 ) (
     input logic pixel_clk,
     input logic serial_clk,
+    input logic audio_clk,
+    input logic [15:0] audio_pcm,
     input logic reset,
     input logic vdg_clk,
     input logic vdg_pixel_tick,
@@ -153,16 +155,16 @@ module coco_hdmi #(
     endgenerate
 
     logic [15:0] audio_samples [1:0];
-    assign audio_samples[0]=16'd0;
-    assign audio_samples[1]=16'd0;
+    assign audio_samples[0]=audio_pcm;
+    assign audio_samples[1]=audio_pcm;
     logic [9:0] tmds_internal [2:0];
     hdmi #(
-        .VIDEO_ID_CODE(2), .DVI_OUTPUT(1'b1), .VIDEO_REFRESH_RATE(60.0),
+        .VIDEO_ID_CODE(2), .DVI_OUTPUT(1'b0), .VIDEO_REFRESH_RATE(60.0),
         .AUDIO_RATE(48000), .AUDIO_BIT_WIDTH(16), .NUM_CHANNELS(3),
         .START_X(0), .START_Y(0)
     ) encoder (
         .clk_pixel_x5(serial_clk), .clk_pixel(pixel_clk),
-        .clk_audio(pixel_clk), .reset(reset), .rgb(rgb),
+        .clk_audio(audio_clk), .reset(reset), .rgb(rgb),
         .audio_sample_word(audio_samples), .cx(x), .cy(y),
         .frame_width(), .frame_height(), .screen_width(), .screen_height(),
         .tmds_internal(tmds_internal)

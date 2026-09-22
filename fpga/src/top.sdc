@@ -4,8 +4,9 @@ create_clock -name clk108p -period 9.259 -waveform {4.6295 9.259} [get_pins {clo
 create_clock -name clk270 -period 3.704 [get_nets {clk270}] -add
 create_clock -name clk135 -period 7.407 [get_nets {clk135}] -add
 create_clock -name clk27 -period 37.037 [get_nets {clk27}] -add
-set_false_path -from [get_ports {s1 s2 mp[*] irq_n_in firq_n_in audio_in cpu_data[*]}]
-set_clock_groups -asynchronous -group [get_clocks {clkin clk27 clk135 clk270}] -group [get_clocks {clk108 clk108p}]
+create_clock -name audio48k -period 20833.333 [get_nets {pia1_audio_clk}] -add
+set_false_path -from [get_ports {s1 s2 mp[*] irq_n_in firq_n_in cpu_data[*]}]
+set_clock_groups -asynchronous -group [get_clocks {clkin clk27 clk135 clk270}] -group [get_clocks {clk108 clk108p}] -group [get_clocks {audio48k}]
 
 # These outputs clock and select real motherboard devices.  They were
 # previously unconstrained, so harmless RTL changes could move their fabric

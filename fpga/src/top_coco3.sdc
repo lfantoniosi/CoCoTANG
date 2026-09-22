@@ -5,9 +5,10 @@ create_clock -name clk108p -period 9.259 -waveform {4.629 9.259} [get_ports {O_s
 create_clock -name clk270 -period 3.704 [get_nets {clk270}] -add
 create_clock -name clk135 -period 7.407 [get_nets {clk135}] -add
 create_clock -name clk27 -period 37.037 [get_nets {clk27}] -add
+create_clock -name audio48k -period 20833.333 [get_nets {pia1_audio_clk}] -add
 # Keep external input paths visible.  The asynchronous MP bus is captured by
 # input IDDRs and all later crossings use explicit synchronizers.
-set_clock_groups -asynchronous -group [get_clocks {clkin clk27 clk135 clk270}] -group [get_clocks {clk108}]
+set_clock_groups -asynchronous -group [get_clocks {clkin clk27 clk135 clk270}] -group [get_clocks {clk108}] -group [get_clocks {audio48k}]
 set_max_delay 11.000 -from [get_clocks {clk108}] -to [get_ports {e_out q_out}]
 # The mux scanner holds each switched MSEL bank for about 44 ns at 135 MHz.
 # These constraints retain ample external 74HC139/LVC245 settling time.

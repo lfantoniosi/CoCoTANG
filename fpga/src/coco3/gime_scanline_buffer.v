@@ -7,6 +7,7 @@ module gime_scanline_buffer #(
  input [2:0] lines_per_row_code,input [3:0] vertical_scroll,
  input [18:0] screen_base,input [7:0] horizontal_offset,input [95:0] palettes,
  input compatibility_mode,input compatibility_an_g,input [2:0] compatibility_gm,
+ input [2:0] compatibility_sam_mode,
  input compatibility_css,input [1:0] artifact_mode,input blink,
  input cpu_write_strobe,input [18:0] cpu_write_addr,
  input hdmi_read_clk,input [9:0] hdmi_read_x,input [7:0] hdmi_display_y,
@@ -65,10 +66,10 @@ module gime_scanline_buffer #(
   endcase end
  endfunction
  function [7:0] compatibility_lines_per_row;
-  input [2:0] gm;
+  input [2:0] sam_mode;
   begin
-   if(gm<=2)compatibility_lines_per_row=3;
-   else if(gm<=4)compatibility_lines_per_row=2;
+   if(sam_mode<=3)compatibility_lines_per_row=3;
+   else if(sam_mode<=5)compatibility_lines_per_row=2;
    else compatibility_lines_per_row=1;
  end
  endfunction
@@ -137,6 +138,10 @@ module gime_scanline_buffer #(
  wire [10:0] native_text_bytes=native_attributes?{2'b0,native_columns,1'b0}:
                                                   {3'b0,native_columns};
  wire [10:0] native_row_bytes=bit_plane?{1'b0,native_graphics_bytes}:native_text_bytes;
+ // Pixel packing follows the MC6847 GM pins.  The SAM video mode controls
+ // vertical row repetition below, but must not override the 16/32-byte GM
+ // packing: Mega-Bug uses a GM/SAM combination whose vertical geometry is
+ // 96 rows while each decoded colour row remains 32 bytes wide.
  wire [10:0] compatibility_row_bytes=!compatibility_an_g?11'd32:
   ((compatibility_gm==0||compatibility_gm==1||compatibility_gm==3||
     compatibility_gm==5)?11'd16:11'd32);
@@ -365,7 +370,8 @@ wire [3:0] advanced_dma_line=
  // fill, not treated as a mode change which aborts the renderer and flushes
  // its two immutable scanline buffers.
  wire [18:0] live_signature={artifact_mode,compatibility_mode,compatibility_an_g,
-  compatibility_gm,compatibility_css,bit_plane,hres,cres,3'b000,1'b0};
+  compatibility_gm,compatibility_css,bit_plane,hres,cres,
+  compatibility_sam_mode,1'b0};
  // FF9C vertical fine scroll is a raster control, just like FF98.LPR.  It is
  // sampled when a row fill begins; changing it must not abort that fill or
  // invalidate the row currently being scanned.  Doing so can blank only the
@@ -569,7 +575,8 @@ reg configuration_pending=1'b1;
      fill_compatibility<=compatibility_mode;fill_blink<=blink;
      fill_artifact_mode<=artifact_mode;
      fill_lpr<=compatibility_mode?(!compatibility_an_g?12:
-      compatibility_lines_per_row(compatibility_gm)):native_lines_per_row(lines_per_row_code);
+      compatibility_lines_per_row(compatibility_sam_mode)):
+      native_lines_per_row(lines_per_row_code);
      fill_stride<=live_stride;fill_row_bytes<=live_row_bytes;
      fill_source_width<=live_source_width;
      fill_scale_integer<=scale_integer(live_source_width);

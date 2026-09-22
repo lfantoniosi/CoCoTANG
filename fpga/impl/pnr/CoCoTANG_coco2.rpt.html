@@ -83,7 +83,7 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 </tr>
 <tr>
 <td class="label">Created Time</td>
-<td>Thu Sep 17 01:24:52 2026
+<td>Mon Sep 21 17:20:27 2026
 </td>
 </tr>
 <tr>
@@ -97,24 +97,24 @@ table.detail_table th.label {  min-width: 8%; width: 8%; }
 <tr>
 <td class="label">Place & Route Process</td>
 <td>Running placement:
-   Placement Phase 0: CPU time = 0h 0m 0.067s, Elapsed time = 0h 0m 0.067s
-   Placement Phase 1: CPU time = 0h 0m 0.059s, Elapsed time = 0h 0m 0.059s
-   Placement Phase 2: CPU time = 0h 0m 0.082s, Elapsed time = 0h 0m 0.082s
-   Placement Phase 3: CPU time = 0h 0m 0.203s, Elapsed time = 0h 0m 0.203s
-   Total Placement: CPU time = 0h 0m 0.411s, Elapsed time = 0h 0m 0.411s
+   Placement Phase 0: CPU time = 0h 0m 0.105s, Elapsed time = 0h 0m 0.105s
+   Placement Phase 1: CPU time = 0h 0m 0.063s, Elapsed time = 0h 0m 0.063s
+   Placement Phase 2: CPU time = 0h 0m 0.173s, Elapsed time = 0h 0m 0.173s
+   Placement Phase 3: CPU time = 0h 0m 0.267s, Elapsed time = 0h 0m 0.267s
+   Total Placement: CPU time = 0h 0m 0.608s, Elapsed time = 0h 0m 0.608s
 Running routing:
    Routing Phase 0: CPU time = 0h 0m 0s, Elapsed time = 0h 0m 0s
-   Routing Phase 1: CPU time = 0h 0m 0.663s, Elapsed time = 0h 0m 0.664s
-   Routing Phase 2: CPU time = 0h 0m 0.378s, Elapsed time = 0h 0m 0.379s
+   Routing Phase 1: CPU time = 0h 0m 0.723s, Elapsed time = 0h 0m 0.724s
+   Routing Phase 2: CPU time = 0h 0m 0.623s, Elapsed time = 0h 0m 0.624s
    Routing Phase 3: CPU time = 0h 0m 0s, Elapsed time = 0h 0m 0s
    Total Routing: CPU time = 0h 0m 1s, Elapsed time = 0h 0m 1s
 Generate output files:
-   CPU time = 0h 0m 0.576s, Elapsed time = 0h 0m 0.576s
+   CPU time = 0h 0m 0.62s, Elapsed time = 0h 0m 0.62s
 </td>
 </tr>
 <tr>
 <td class="label">Total Time and Memory Usage</td>
-<td>CPU time = 0h 0m 2s, Elapsed time = 0h 0m 2s, Peak memory usage = 461MB</td>
+<td>CPU time = 0h 0m 3s, Elapsed time = 0h 0m 3s, Peak memory usage = 480MB</td>
 </tr>
 </table>
 <br/>
@@ -129,12 +129,12 @@ Generate output files:
 </tr>
 <tr>
 <td class="label">Logic</td>
-<td>1991/20736</td>
-<td>10%</td>
+<td>2837/20736</td>
+<td>14%</td>
 </tr>
 <tr>
 <td class="label">&nbsp &nbsp --LUT,ALU,ROM16</td>
-<td>1991(1740 LUT, 251 ALU, 0 ROM16)</td>
+<td>2837(2550 LUT, 287 ALU, 0 ROM16)</td>
 <td>-</td>
 </tr>
 <tr>
@@ -144,8 +144,8 @@ Generate output files:
 </tr>
 <tr>
 <td class="label">Register</td>
-<td>1200/15915</td>
-<td>8%</td>
+<td>1797/15915</td>
+<td>12%</td>
 </tr>
 <tr>
 <td class="label">&nbsp &nbsp --Logic Register as Latch</td>
@@ -154,8 +154,8 @@ Generate output files:
 </tr>
 <tr>
 <td class="label">&nbsp &nbsp --Logic Register as FF</td>
-<td>1149/15552</td>
-<td>8%</td>
+<td>1745/15552</td>
+<td>12%</td>
 </tr>
 <tr>
 <td class="label">&nbsp &nbsp --I/O Register as Latch</td>
@@ -164,13 +164,13 @@ Generate output files:
 </tr>
 <tr>
 <td class="label">&nbsp &nbsp --I/O Register as FF</td>
-<td>51/363</td>
+<td>52/363</td>
 <td>15%</td>
 </tr>
 <tr>
 <td class="label">CLS</td>
-<td>1374/10368</td>
-<td>14%</td>
+<td>2119/10368</td>
+<td>21%</td>
 </tr>
 <tr>
 <td class="label">I/O Port</td>
@@ -179,7 +179,7 @@ Generate output files:
 </tr>
 <tr>
 <td class="label">I/O Buf</td>
-<td>40</td>
+<td>41</td>
 <td>-</td>
 </tr>
 <tr>
@@ -189,7 +189,7 @@ Generate output files:
 </tr>
 <tr>
 <td class="label"> &nbsp &nbsp --Output Buf</td>
-<td>21</td>
+<td>22</td>
 <td>-</td>
 </tr>
 <tr>
@@ -257,8 +257,8 @@ Generate output files:
 </tr>
 <tr>
 <td class="label">PRIMARY</td>
-<td>6/8</td>
-<td>75%</td>
+<td>7/8</td>
+<td>88%</td>
 </tr>
 <tr>
 <td class="label">LW</td>
@@ -292,12 +292,12 @@ Generate output files:
 <tr>
 <td class="label">clkin_d</td>
 <td>PRIMARY</td>
-<td> TR TL BR BL</td>
+<td> BR BL</td>
 </tr>
 <tr>
 <td class="label">clk27</td>
 <td>PRIMARY</td>
-<td> TR BR BL</td>
+<td> BR BL</td>
 </tr>
 <tr>
 <td class="label">clk108</td>
@@ -312,12 +312,17 @@ Generate output files:
 <tr>
 <td class="label">clk270</td>
 <td>PRIMARY</td>
-<td> TR BR</td>
+<td> TL BR</td>
 </tr>
 <tr>
 <td class="label">clk135</td>
 <td>PRIMARY</td>
 <td> TR TL BR BL</td>
+</tr>
+<tr>
+<td class="label">pia1_audio_clk</td>
+<td>PRIMARY</td>
+<td> BR BL</td>
 </tr>
 <tr>
 <td class="label">board_reset_n_Z</td>
@@ -335,7 +340,7 @@ Generate output files:
 <td> -</td>
 </tr>
 <tr>
-<td class="label">vdg/vdg_0/n2381_5</td>
+<td class="label">hdmi_output/encoder/true_hdmi_output.packet_picker/n3823_4</td>
 <td>LW</td>
 <td> -</td>
 </tr>
@@ -577,25 +582,6 @@ Generate output files:
 <td>3.3</td>
 </tr>
 <tr>
-<td class="label">audio_in</td>
-<td>-</td>
-<td>55/3</td>
-<td>Y</td>
-<td>in</td>
-<td>IOR36[B]</td>
-<td>SSPI_CS_N/D0</td>
-<td>LVCMOS33</td>
-<td>NA</td>
-<td>DOWN</td>
-<td>ON</td>
-<td>NONE</td>
-<td>NA</td>
-<td>NA</td>
-<td>OFF</td>
-<td>NA</td>
-<td>3.3</td>
-</tr>
-<tr>
 <td class="label">mspi_miso</td>
 <td>-</td>
 <td>62/3</td>
@@ -682,6 +668,25 @@ Generate output files:
 <td>LVCMOS33</td>
 <td>8</td>
 <td>DOWN</td>
+<td>NA</td>
+<td>NA</td>
+<td>OFF</td>
+<td>NA</td>
+<td>OFF</td>
+<td>NA</td>
+<td>3.3</td>
+</tr>
+<tr>
+<td class="label">audio_out</td>
+<td>-</td>
+<td>55/3</td>
+<td>Y</td>
+<td>out</td>
+<td>IOR36[B]</td>
+<td>SSPI_CS_N/D0</td>
+<td>LVCMOS33</td>
+<td>8</td>
+<td>NONE</td>
 <td>NA</td>
 <td>NA</td>
 <td>OFF</td>
@@ -4137,16 +4142,16 @@ Generate output files:
 </tr>
 <tr>
 <td class="label">55/3</td>
-<td>audio_in</td>
-<td>in</td>
+<td>audio_out</td>
+<td>out</td>
 <td>IOR36[B]</td>
 <td>SSPI_CS_N/D0</td>
 <td>LVCMOS33</td>
-<td>NA</td>
-<td>DOWN</td>
-<td>ON</td>
+<td>8</td>
 <td>NONE</td>
 <td>NA</td>
+<td>NA</td>
+<td>OFF</td>
 <td>NA</td>
 <td>OFF</td>
 <td>NA</td>

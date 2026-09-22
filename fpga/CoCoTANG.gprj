@@ -11,6 +11,8 @@
         <File path="src/coco_startup.v" type="file.verilog" enable="1"/>
         <File path="src/bus/input_filter.v" type="file.verilog" enable="1"/>
         <File path="src/bus/coco_bus_mux.v" type="file.verilog" enable="1"/>
+        <File path="src/audio/coco_pia1_dac.v" type="file.verilog" enable="1"/>
+        <File path="src/video/sigma_delta_dac.v" type="file.verilog" enable="1"/>
         <File path="src/memory/spi_flash_reader.v" type="file.verilog" enable="1"/>
         <File path="src/memory/coco_flash_loader.v" type="file.verilog" enable="1"/>
         <File path="src/memory/coco_sdram_startup_test.v" type="file.verilog" enable="1"/>

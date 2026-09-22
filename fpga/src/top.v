@@ -25,7 +25,7 @@ module top #(
     inout [7:0] cpu_data,
     output irq_n_in,
     output firq_n_in,
-    input audio_in,
+    output audio_out,
     output halt_drive,
     output e_out,
     output q_out,
@@ -188,6 +188,19 @@ module top #(
         else if (cpu_bus_active && e_out && !rw_n)
             cpu_write_data<=cpu_data_in;
     end
+    wire [5:0] pia1_dac_level;
+    wire [7:0] pia1_pwm_sample;
+    wire [15:0] pia1_pcm_sample;
+    wire pia1_audio_clk;
+    wire pia1_audio_reset_n=board_reset_n && cpu_release && filtered_mux_reset_n;
+    coco_pia1_dac pia1_audio_shadow(
+        .clk(clk108),.reset_n(pia1_audio_reset_n),.e_fall(e_fall),
+        .cpu_rw_n(rw_n),.cpu_addr(address),.cpu_data(cpu_write_data),
+        .dac_level(pia1_dac_level),.pwm_sample(pia1_pwm_sample),
+        .pcm_sample(pia1_pcm_sample),.audio_clk(pia1_audio_clk));
+    sigma_delta_dac line_audio_dac(
+        .clk(clk270),.reset_n(pia1_audio_reset_n),
+        .sample(pia1_pwm_sample),.bit_out(audio_out));
     // cpu_memory_wait is diagnostic only.  It must never feed the SAM clock
     // generator: the memory path has to prefetch/cache early enough to meet
     // the fixed 6809 bus cycle.
@@ -614,6 +627,7 @@ module top #(
         .ENABLE_DEBUG_OVERLAY(ENABLE_BUS_LOGGER)
     ) hdmi_output (
         .pixel_clk(clk27), .serial_clk(clk135), .reset(!board_reset_n),
+        .audio_clk(pia1_audio_clk), .audio_pcm(pia1_pcm_sample),
         .vdg_clk(clk108), .vdg_pixel_tick(vdg_master_tick),
         .debug_clk(clk108), .log_we(log_we), .log_addr(log_addr),
         .log_data(log_data), .log_count(log_count), .log_page(log_page),
@@ -649,8 +663,9 @@ module top #(
 
     // These motherboard-owned signals reach the physical CPU directly. They
     // are observed here for diagnostics, but must never qualify FPGA memory.
-    wire unused_inputs=audio_in ^ mux_slenb_n ^ mux_cart_n ^
+    wire unused_inputs=mux_slenb_n ^ mux_cart_n ^
                        mux_nmi_n ^
                        video_memory_valid ^ vdg_hblank ^ vdg_vblank ^
-                       ^vdg_red ^ ^vdg_green ^ ^vdg_blue;
+                       ^vdg_red ^ ^vdg_green ^ ^vdg_blue ^
+                       ^pia1_dac_level;
 endmodule

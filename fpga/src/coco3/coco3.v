@@ -95,6 +95,7 @@ module coco3 #(
     wire [7:0] horizontal_offset;
     wire compatibility_mode;
     assign compatibility_video = compatibility_mode;
+    wire [2:0] sam_video_mode;
     wire [6:0] sam_video_offset;
     wire [95:0] palettes;
     wire hborder_irq_n;
@@ -112,6 +113,7 @@ module coco3 #(
         .vertical_scroll(vertical_scroll), .video_offset(video_offset),
         .horizontal_offset(horizontal_offset),
         .compatibility_mode(compatibility_mode),
+        .sam_video_mode(sam_video_mode),
         .sam_video_offset(sam_video_offset), .palettes(palettes),
         .mmu_task0_page_debug(mmu_task0_page_debug),
         .mmu_task1_page_debug(mmu_task1_page_debug),
@@ -167,10 +169,10 @@ module coco3 #(
     endfunction
 
     function [2:0] compatibility_lpr;
-        input [2:0] gm;
+        input [2:0] sam_mode;
         begin
-            if (gm <= 3'd2) compatibility_lpr=3'b010;      // 64 lines, 3x
-            else if (gm <= 3'd4) compatibility_lpr=3'b001; // 96 lines, 2x
+            if (sam_mode <= 3'd3) compatibility_lpr=3'b010;      // 64 lines, 3x
+            else if (sam_mode <= 3'd5) compatibility_lpr=3'b001; // 96 lines, 2x
             else compatibility_lpr=3'b000;                 // 192 lines
         end
     endfunction
@@ -216,7 +218,7 @@ module coco3 #(
             // 32-column text is the MC6847 twelve-raster character cell.
             effective_lines_per_row_code <= DEBUG_S2_VIDEO_MODE ?
                 debug_lines_per_row_code : compatibility_mode ?
-                (compatibility_an_g ? compatibility_lpr(compatibility_gm) : 3'b111) :
+                (compatibility_an_g ? compatibility_lpr(sam_video_mode) : 3'b111) :
                 vmode[2:0];
             effective_screen_base <= DEBUG_S2_VIDEO_MODE ? 19'd0 :
                 compatibility_mode ?
@@ -281,6 +283,7 @@ module coco3 #(
         .compatibility_mode(compatibility_mode),
         .compatibility_an_g(compatibility_an_g),
         .compatibility_gm(compatibility_gm),
+        .compatibility_sam_mode(sam_video_mode),
         .compatibility_css(pia1_effective[3]),
         .artifact_mode(artifact_mode),
         .blink(blink_divider[25]),

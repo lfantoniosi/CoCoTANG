@@ -12,27 +12,27 @@
   <Part Number>: GW2AR-LV18QN88C8/I7
   <Device>: GW2AR-18
   <Device Version>: C
-  <Created Time>:Thu Sep 17 01:24:52 2026
+  <Created Time>:Mon Sep 21 17:20:27 2026
 
 
 2. PnR Details
 
   Running placement:
-    Placement Phase 0: CPU time = 0h 0m 0.067s, Elapsed time = 0h 0m 0.067s
-    Placement Phase 1: CPU time = 0h 0m 0.059s, Elapsed time = 0h 0m 0.059s
-    Placement Phase 2: CPU time = 0h 0m 0.082s, Elapsed time = 0h 0m 0.082s
-    Placement Phase 3: CPU time = 0h 0m 0.203s, Elapsed time = 0h 0m 0.203s
-    Total Placement: CPU time = 0h 0m 0.411s, Elapsed time = 0h 0m 0.411s
+    Placement Phase 0: CPU time = 0h 0m 0.105s, Elapsed time = 0h 0m 0.105s
+    Placement Phase 1: CPU time = 0h 0m 0.063s, Elapsed time = 0h 0m 0.063s
+    Placement Phase 2: CPU time = 0h 0m 0.173s, Elapsed time = 0h 0m 0.173s
+    Placement Phase 3: CPU time = 0h 0m 0.267s, Elapsed time = 0h 0m 0.267s
+    Total Placement: CPU time = 0h 0m 0.608s, Elapsed time = 0h 0m 0.608s
  Running routing:
     Routing Phase 0: CPU time = 0h 0m 0s, Elapsed time = 0h 0m 0s
-    Routing Phase 1: CPU time = 0h 0m 0.663s, Elapsed time = 0h 0m 0.664s
-    Routing Phase 2: CPU time = 0h 0m 0.378s, Elapsed time = 0h 0m 0.379s
+    Routing Phase 1: CPU time = 0h 0m 0.723s, Elapsed time = 0h 0m 0.724s
+    Routing Phase 2: CPU time = 0h 0m 0.623s, Elapsed time = 0h 0m 0.624s
     Routing Phase 3: CPU time = 0h 0m 0s, Elapsed time = 0h 0m 0s
     Total Routing: CPU time = 0h 0m 1s, Elapsed time = 0h 0m 1s
  Generate output files:
-    CPU time = 0h 0m 0.576s, Elapsed time = 0h 0m 0.576s
+    CPU time = 0h 0m 0.62s, Elapsed time = 0h 0m 0.62s
 
- Total Time and Memory Usage: CPU time = 0h 0m 2s, Elapsed time = 0h 0m 2s, Peak memory usage = 461MB
+ Total Time and Memory Usage: CPU time = 0h 0m 3s, Elapsed time = 0h 0m 3s, Peak memory usage = 480MB
 
 
 3. Resource Usage Summary
@@ -40,19 +40,19 @@
   --------------------------------------------------------------------------------
   Resources                   | Usage                               | Utilization
   --------------------------------------------------------------------------------
-  Logic                       | 1991/20736                          |  10%
-    --LUT,ALU,ROM16           | 1991(1740 LUT, 251 ALU, 0 ROM16)    | -
+  Logic                       | 2837/20736                          |  14%
+    --LUT,ALU,ROM16           | 2837(2550 LUT, 287 ALU, 0 ROM16)    | -
     --SSRAM(RAM16)            | 0                                   | -
-  Register                    | 1200/15915                          |  8%
+  Register                    | 1797/15915                          |  12%
     --Logic Register as Latch | 0/15552                             |  0%
-    --Logic Register as FF    | 1149/15552                          |  8%
+    --Logic Register as FF    | 1745/15552                          |  12%
     --I/O Register as Latch   | 0/363                               |  0%
-    --I/O Register as FF      | 51/363                              |  15%
-  CLS                         | 1374/10368                          |  14%
+    --I/O Register as FF      | 52/363                              |  15%
+  CLS                         | 2119/10368                          |  21%
   I/O Port                    | 46/66                               |  70%
-  I/O Buf                     | 40                                  | -
+  I/O Buf                     | 41                                  | -
     --Input Buf               | 11                                  | -
-    --Output Buf              | 21                                  | -
+    --Output Buf              | 22                                  | -
     --Inout Buf               | 8                                   | -
   IOLOGIC                     | 14/121                              | 12%
     --ODDR                    | 8
@@ -85,7 +85,7 @@
   ------------------------------------------
   Clock Resource| Usage         | Utilization 
   ------------------------------------------
-  PRIMARY       | 6/8           | 75%
+  PRIMARY       | 7/8           | 88%
   LW            | 4/8           | 50%
   GCLK_PIN      | 2/5           | 40%
   CLKDIV        | 1/8           | 13%
@@ -98,16 +98,17 @@
   -------------------------------------------
   Signal         | Global Clock   | Location
   -------------------------------------------
-  clkin_d        | PRIMARY        |  TR TL BR BL
-  clk27          | PRIMARY        |  TR BR BL
+  clkin_d        | PRIMARY        |  BR BL
+  clk27          | PRIMARY        |  BR BL
   clk108         | PRIMARY        |  TR TL BR BL
   O_sdram_clk_d  | PRIMARY        |  TR
-  clk270         | PRIMARY        |  TR BR
+  clk270         | PRIMARY        |  TL BR
   clk135         | PRIMARY        |  TR TL BR BL
+  pia1_audio_clk | PRIMARY        |  BR BL
   board_reset_n_Z| LW             |  -
   sdram_reset_n_Z| LW             |  -
   n283_12        | LW             |  -
-  vdg/vdg_0/n2381_5| LW             |  -
+  hdmi_output/encoder/true_hdmi_output.packet_picker/n3823_4| LW             |  -
   clk135         | HCLK           | BANK4_BANK5_HCLK0
   ===========================================
 
@@ -128,12 +129,12 @@ mp[4]             | -         | 26/5          | Y          | in    | IOB6[B]  | 
 mp[5]             | -         | 29/5          | Y          | in    | IOB14[A] | -               | LVCMOS33   | NA    | NONE      | ON        | NONE       | NA         | NA         | NA              | NA            | 3.3       
 mp[6]             | -         | 30/5          | Y          | in    | IOB14[B] | -               | LVCMOS33   | NA    | NONE      | ON        | NONE       | NA         | NA         | NA              | NA            | 3.3       
 mp[7]             | -         | 31/5          | Y          | in    | IOB18[A] | -               | LVCMOS33   | NA    | NONE      | ON        | NONE       | NA         | NA         | NA              | NA            | 3.3       
-audio_in          | -         | 55/3          | Y          | in    | IOR36[B] | SSPI_CS_N/D0    | LVCMOS33   | NA    | DOWN      | ON        | NONE       | NA         | NA         | OFF             | NA            | 3.3       
 mspi_miso         | -         | 62/3          | Y          | in    | IOR33[A] | MI/D7           | LVCMOS33   | NA    | UP        | ON        | NONE       | NA         | NA         | OFF             | NA            | 3.3       
 msel[0]           | -         | 17/6          | Y          | out   | IOL49[A] | -               | LVCMOS33   | 8     | UP        | NA        | NA         | OFF        | NA         | OFF             | NA            | 3.3       
 msel[1]           | -         | 20/6          | Y          | out   | IOL51[B] | -               | LVCMOS33   | 8     | UP        | NA        | NA         | OFF        | NA         | OFF             | NA            | 3.3       
 irq_n_in          | -         | 19/6          | Y          | out   | IOL51[A] | -               | LVCMOS33   | 8     | DOWN      | NA        | NA         | OFF        | NA         | OFF             | NA            | 3.3       
 firq_n_in         | -         | 18/6          | Y          | out   | IOL49[B] | -               | LVCMOS33   | 8     | DOWN      | NA        | NA         | OFF        | NA         | OFF             | NA            | 3.3       
+audio_out         | -         | 55/3          | Y          | out   | IOR36[B] | SSPI_CS_N/D0    | LVCMOS33   | 8     | NONE      | NA        | NA         | OFF        | NA         | OFF             | NA            | 3.3       
 halt_drive        | -         | 42/4          | Y          | out   | IOB42[B] | -               | LVCMOS33   | 8     | DOWN      | NA        | NA         | OFF        | NA         | NA              | NA            | 3.3       
 e_out             | -         | 51/3          | Y          | out   | IOR45[A] | RPLL2_T_in      | LVCMOS33   | 8     | DOWN      | NA        | NA         | OFF        | NA         | OFF             | NA            | 3.3       
 q_out             | -         | 76/1          | Y          | out   | IOT30[B] | GCLKC_1         | LVCMOS33   | 8     | DOWN      | NA        | NA         | OFF        | NA         | NA              | NA            | 3.3       
@@ -339,7 +340,7 @@ p52/2    | IO_sdram_dq[29]   | io    | IOR18[B] | -               | LVTTL33  | -
 59/3     | mspi_sclk         | out   | IOR34[B] | MCLK/D4         | LVCMOS33 | 8     | UP        | NA        | NA         | OFF        | NA         | OFF             | NA            | 3.3  
 57/3     | -                 | in    | IOR35[A] | FASTRD_N/D3     | LVCMOS33 | NA    | UP        | ON        | NONE       | NA         | NA         | NA              | NA            | 3.3  
 56/3     | y_out             | out   | IOR36[A] | SO/D1           | LVCMOS33 | 8     | DOWN      | NA        | NA         | OFF        | NA         | OFF             | NA            | 3.3  
-55/3     | audio_in          | in    | IOR36[B] | SSPI_CS_N/D0    | LVCMOS33 | NA    | DOWN      | ON        | NONE       | NA         | NA         | OFF             | NA            | 3.3  
+55/3     | audio_out         | out   | IOR36[B] | SSPI_CS_N/D0    | LVCMOS33 | 8     | NONE      | NA        | NA         | OFF        | NA         | OFF             | NA            | 3.3  
 54/3     | pb_out            | out   | IOR38[A] | DIN/CLKHOLD_N   | LVCMOS33 | 8     | DOWN      | NA        | NA         | OFF        | NA         | OFF             | NA            | 3.3  
 53/3     | cpu_data[6]       | io    | IOR38[B] | DOUT/WE_N       | LVCMOS33 | 8     | UP        | NA        | NONE       | OFF        | NA         | OFF             | NA            | 3.3  
 52/3     | cpu_data[7]       | io    | IOR39[A] | SCLK            | LVCMOS33 | 8     | UP        | NA        | NONE       | OFF        | NA         | OFF             | NA            | 3.3  

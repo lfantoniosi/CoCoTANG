@@ -7,7 +7,8 @@ module tb_gime_scanline_buffer;
  integer transactions=0,errors=0,i,timeout;
  integer responder_delay=0;reg slow_memory=0;
  reg [1:0] responder_state=0;reg compatibility_mode=0,compatibility_an_g=1;
- reg [2:0] compatibility_gm=0;reg [3:0] hres=7;reg [1:0] cres=1;
+ reg [2:0] compatibility_gm=0,compatibility_sam_mode=0;
+ reg [3:0] hres=7;reg [1:0] cres=1;
  reg bit_plane=1;reg [2:0] lpr=0;reg [3:0] vertical_scroll=0;
  reg [18:0] screen_base=0;
  reg [7:0] horizontal_offset=0;reg cpu_write_strobe=0;reg [18:0] cpu_write_addr=0;
@@ -21,6 +22,7 @@ module tb_gime_scanline_buffer;
   .horizontal_offset(horizontal_offset),.palettes(palettes),
   .compatibility_mode(compatibility_mode),.compatibility_an_g(compatibility_an_g),
   .compatibility_gm(compatibility_gm),.compatibility_css(1'b0),
+  .compatibility_sam_mode(compatibility_sam_mode),
   .artifact_mode(2'd0),.blink(1'b0),
   .cpu_write_strobe(cpu_write_strobe),.cpu_write_addr(cpu_write_addr),
   .hdmi_read_clk(hdmi_clk),.hdmi_read_x(10'd0),.hdmi_display_y(hdmi_display_y),
@@ -108,6 +110,18 @@ module tb_gime_scanline_buffer;
   if(dut.c_valid0 ? dut.cvbs_line0[10]!==mapped(6'd2):
                     dut.cvbs_line1[10]!==mapped(6'd2))begin
    $display("SG4 top-right quadrant should be background");errors=errors+1;end
+
+  // Mega-Bug selects 128x96 SAM addressing.  Compatibility DMA geometry is
+  // controlled by SAM V0:V2, independently of the PIA GM decode.  A stale or
+  // intentionally different 192-line GM value must therefore still repeat
+  // every source row twice, while GM continues to select 32-byte colour
+  // packing.
+  compatibility_an_g=1;compatibility_gm=6;compatibility_sam_mode=5;#1;
+  if(dut.compatibility_lines_per_row(compatibility_sam_mode)!=2||
+     dut.compatibility_row_bytes!=32)begin
+   $display("128x96 SAM geometry decoded as lpr=%0d stride=%0d",
+    dut.compatibility_lines_per_row(compatibility_sam_mode),
+    dut.compatibility_row_bytes);errors=errors+1;end
 
   // Both consumers requesting the same line share the one render/fetch pass.
   hdmi_prefetch_valid=0;cvbs_prefetch_valid=0;repeat(5)@(posedge clk);

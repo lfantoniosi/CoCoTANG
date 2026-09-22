@@ -14,6 +14,7 @@ module gime_registers (
     output reg [15:0] video_offset,
     output reg [7:0] horizontal_offset,
     output compatibility_mode,
+    output reg [2:0] sam_video_mode,
     output reg [6:0] sam_video_offset,
     output [95:0] palettes,
     output [5:0] mmu_task0_page_debug,
@@ -197,6 +198,7 @@ module gime_registers (
             vertical_scroll <= 4'd0;
             video_offset <= 16'd0;
             horizontal_offset <= 8'd0;
+            sam_video_mode <= 3'd0;
             sam_video_offset <= 7'd0;
             ram_mode <= 1'b0;
             // Both MMU tasks power up with the logical 64K window on the
@@ -267,11 +269,17 @@ module gime_registers (
                 // CoCo speed-control POKEs remain available in native mode.
                 if (cpu_addr == 16'hffd8) fast_mode <= 1'b0;
                 if (cpu_addr == 16'hffd9) fast_mode <= 1'b1;
-                // Legacy SAM controls retained by the GIME. Each paired
-                // address clears/sets one display-offset bit. TY selects
+                // Legacy SAM controls retained by the GIME.  V0:V2 still
+                // control compatibility-video DMA geometry independently of
+                // the MC6847 GM pins on PIA1.  Games such as Mega-Bug use
+                // the 128x96 SAM geometry even when the live GM value would
+                // otherwise look like a 192-line fetch to a simplified VDG.
+                // Each paired address clears/sets one bit. TY selects
                 // ROM-overlay versus all-RAM mapping.  The CoCo 3 GIME
                 // ignores the legacy SAM P1 strobes at FFD4/FFD5; Extended
                 // BASIC writes FFD5 during startup and expects no remapping.
+                if (cpu_addr >= 16'hffc0 && cpu_addr <= 16'hffc5)
+                    sam_video_mode[(cpu_addr-16'hffc0)>>1] <= cpu_addr[0];
                 if (cpu_addr >= 16'hffc6 && cpu_addr <= 16'hffd3)
                     sam_video_offset[(cpu_addr-16'hffc6)>>1] <= cpu_addr[0];
                 if (cpu_addr == 16'hffde) ram_mode <= 1'b0;

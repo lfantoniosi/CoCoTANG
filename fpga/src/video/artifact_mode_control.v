@@ -1,8 +1,10 @@
 // Cycle the artifact selection on the active-low CoCo motherboard RESET.
 // The mode register deliberately has no reset input: FPGA configuration starts
-// it OFF, while subsequent CoCo resets preserve and advance the selection.
+// it at INITIAL_MODE, while subsequent CoCo resets preserve and advance it.
 module artifact_mode_control #(
-    parameter integer DEBOUNCE_CYCLES=1080000
+    parameter integer DEBOUNCE_CYCLES=1080000,
+    // 0=OFF, 1=ON (blue/orange), 2=REVERSE (orange/blue).
+    parameter [1:0] INITIAL_MODE=2'd1
 ) (
     input clk,
     input enable,
@@ -13,7 +15,7 @@ module artifact_mode_control #(
     reg reset_meta=1,reset_sync=1,reset_state=1;
     reg armed=0;
     reg [COUNT_WIDTH-1:0] stable_count=0;
-    reg [1:0] mode_value=2'd0;
+    reg [1:0] mode_value=INITIAL_MODE;
     assign mode=mode_value;
 
     always @(posedge clk) begin

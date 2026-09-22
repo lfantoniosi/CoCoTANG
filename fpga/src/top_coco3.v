@@ -21,12 +21,14 @@ module top_coco3 #(
     parameter integer ENABLE_BUS_LOGGER=0,
     parameter integer DEBUG_OVERLAY=0,
     parameter integer ANALOG_VIDEO_MODE=1,
+    // 0=OFF, 1=ON (blue/orange), 2=REVERSE (orange/blue).
+    parameter [1:0] INITIAL_ARTIFACT_MODE=2'd1,
     // 1: native GIME HDMI is a sharp 640-dot 1:1 image (wider than 4:3).
     // 0: native GIME HDMI is aspect-correct 512-dot RGB888-filtered output.
     parameter integer NATIVE_HDMI_640=1
 ) (
     input clkin,input s1,input s2,input [7:0] mp,output [1:0] msel,
-    inout [7:0] cpu_data,output irq_n_in,output firq_n_in,input audio_in,
+    inout [7:0] cpu_data,output irq_n_in,output firq_n_in,output audio_out,
     output halt_drive,output e_out,output q_out,output hs_n,output fs_n,
     output [2:0] sam_s,output y_out,output pb_out,
     output tmds_clk_p,output tmds_clk_n,
@@ -117,10 +119,10 @@ module top_coco3 #(
     wire filtered_mux_reset_n;
     input_filter #(.WIDTH(1)) mux_reset_filter(.clk(clk108),
         .reset_n(board_reset_n),.in(mux_reset_n),.out(filtered_mux_reset_n));
-    artifact_mode_control artifact_control(.clk(clk108),
+    artifact_mode_control #(.INITIAL_MODE(INITIAL_ARTIFACT_MODE)) artifact_control(.clk(clk108),
         .enable(cpu_release),.reset_n(filtered_mux_reset_n),
         .mode(artifact_mode));
-    reg [1:0] artifact_mode_video=0;
+    reg [1:0] artifact_mode_video=INITIAL_ARTIFACT_MODE;
     always @(posedge clk108)
         artifact_mode_video<=artifact_mode;
 
@@ -150,6 +152,19 @@ module top_coco3 #(
     reg [7:0] cvbs_source_y=0,cvbs_prefetch_y=0;
     reg cvbs_source_valid=0,cvbs_prefetch_valid=0;
     reg [7:0] cpu_write_data=8'hff;
+    wire [5:0] pia1_dac_level;
+    wire [7:0] pia1_pwm_sample;
+    wire [15:0] pia1_pcm_sample;
+    wire pia1_audio_clk;
+    wire pia1_audio_reset_n=board_reset_n && cpu_release && filtered_mux_reset_n;
+    coco_pia1_dac pia1_audio_shadow(.clk(clk108),
+        .reset_n(pia1_audio_reset_n),.e_fall(e_fall),.cpu_rw_n(rw_n),
+        .cpu_addr(address),.cpu_data(cpu_write_data),
+        .dac_level(pia1_dac_level),.pwm_sample(pia1_pwm_sample),
+        .pcm_sample(pia1_pcm_sample),.audio_clk(pia1_audio_clk));
+    sigma_delta_dac line_audio_dac(.clk(clk270),
+        .reset_n(pia1_audio_reset_n),.sample(pia1_pwm_sample),
+        .bit_out(audio_out));
     wire [7:0] cpu_data_in;
     wire [31:0] raster_debug;
     wire [5:0] mmu_task0_page_debug,mmu_task1_page_debug;
@@ -425,6 +440,7 @@ module top_coco3 #(
         .LOG_DEPTH(LOG_DEPTH),.ENABLE_DEBUG_OVERLAY(ENABLE_BUS_LOGGER),
         .NATIVE_HDMI_640(NATIVE_HDMI_640)) hdmi_output(
         .pixel_clk(clk27),.serial_clk(clk135),.reset(!board_reset_n),
+        .audio_clk(pia1_audio_clk),.audio_pcm(pia1_pcm_sample),
         .debug_clk(clk108),.log_we(log_we),.log_addr(log_addr),
         .log_base(log_base),
         .log_data(log_data),.log_count(log_count),.log_page(log_page),
@@ -486,6 +502,7 @@ module top_coco3 #(
     assign y_out=analog_luma;
     assign pb_out=(ANALOG_VIDEO_MODE==0)?analog_chroma:analog_cvbs;
 
-    wire unused_inputs=audio_in ^ mux_slenb_n ^ mux_nmi_n ^ native_hblank ^
-        native_vblank ^ ^native_red ^ ^native_green ^ ^native_blue ^ e_rise;
+    wire unused_inputs=mux_slenb_n ^ mux_nmi_n ^ native_hblank ^
+        native_vblank ^ ^native_red ^ ^native_green ^ ^native_blue ^ e_rise ^
+        ^pia1_dac_level;
 endmodule
