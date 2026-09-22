@@ -34,6 +34,7 @@ module top #(
     output [2:0] sam_s,
     output y_out,
     output pb_out,
+    output cvbs_out,
     output tmds_clk_p,
     output tmds_clk_n,
     output [2:0] tmds_data_p,
@@ -650,7 +651,8 @@ module top #(
     wire [15:0] unused_cvbs_framebuffer_addr;
     coco_cvbs_ntsc #(.STREAMING_INPUT(1)) analog_encoder (
         .clk135(clk135), .clk270(clk270), .reset_n(vdg_reset_n),
-        .high_resolution(1'b0), .framebuffer_data(vdg_native_rgb),
+        .high_resolution(1'b0), .compatibility_mode(1'b1),
+        .framebuffer_data(vdg_native_rgb),
         .border_rgb(vdg_border_rgb), .active_height(8'd192),
         .framebuffer_addr(unused_cvbs_framebuffer_addr),
         .source_x(unused_cvbs_source_x), .source_y(unused_cvbs_source_y),
@@ -661,7 +663,8 @@ module top #(
         .cvbs_out(analog_cvbs)
     );
     assign y_out=analog_luma;
-    assign pb_out=(ANALOG_VIDEO_MODE == 0) ? analog_chroma : analog_cvbs;
+    assign pb_out=analog_chroma;
+    assign cvbs_out=analog_cvbs;
 
     // These motherboard-owned signals reach the physical CPU directly. They
     // are observed here for diagnostics, but must never qualify FPGA memory.

@@ -159,13 +159,14 @@ module gime_scanline_buffer #(
  // because HDMI and CVBS have unrelated read clocks; this is still two lines
  // per output, never a framebuffer.
  reg [23:0] hdmi_line0[0:639],hdmi_line1[0:639];
- reg [5:0] cvbs_line0[0:639],cvbs_line1[0:639];
- reg h_valid0=0,h_valid1=0,c_valid0=0,c_valid1=0;
- reg h_dirty0=0,h_dirty1=0,c_dirty0=0,c_dirty1=0;
- reg [7:0] h_tag0=0,h_tag1=0,c_tag0=0,c_tag1=0;
- reg [18:0] h_start0=0,h_start1=0,c_start0=0,c_start1=0;
- reg [10:0] h_bytes0=0,h_bytes1=0,c_bytes0=0,c_bytes1=0;
- reg h_next_bank=0,c_next_bank=0;
+ reg [5:0] cvbs_line0[0:639],cvbs_line1[0:639],cvbs_line2[0:639];
+ reg h_valid0=0,h_valid1=0,c_valid0=0,c_valid1=0,c_valid2=0;
+ reg h_dirty0=0,h_dirty1=0,c_dirty0=0,c_dirty1=0,c_dirty2=0;
+ reg [7:0] h_tag0=0,h_tag1=0,c_tag0=0,c_tag1=0,c_tag2=0;
+ reg [18:0] h_start0=0,h_start1=0,c_start0=0,c_start1=0,c_start2=0;
+ reg [10:0] h_bytes0=0,h_bytes1=0,c_bytes0=0,c_bytes1=0,c_bytes2=0;
+ reg h_next_bank=0;
+ reg [1:0] c_next_bank=0;
 
  reg [7:0] hd_y_m=0,hd_y_s=0,hd_p_m=0,hd_p_s=0;
  reg hd_v_m=0,hd_v_s=0,hd_pa_m=0,hd_pa_s=0,hd_pv_m=0,hd_pv_s=0;
@@ -187,17 +188,28 @@ module gime_scanline_buffer #(
  // giving raster-safe (at most one-frame-late) CPU/video coherence.
  wire h_prefetch_cached=(h_valid0&&h_tag0==hd_p_s)||
                          (h_valid1&&h_tag1==hd_p_s);
- wire c_display_cached=(c_valid0&&c_tag0==cv_y_s)||(c_valid1&&c_tag1==cv_y_s);
+ wire c_display_cached=(c_valid0&&c_tag0==cv_y_s)||
+                        (c_valid1&&c_tag1==cv_y_s)||
+                        (c_valid2&&c_tag2==cv_y_s);
  wire c_prefetch_cached=(c_valid0&&c_tag0==cv_p_s)||
-                         (c_valid1&&c_tag1==cv_p_s);
+                         (c_valid1&&c_tag1==cv_p_s)||
+                         (c_valid2&&c_tag2==cv_p_s);
  wire h_need=(hd_v_s&&!h_display_cached)||(hd_pv_s&&!h_prefetch_cached);
  wire c_need=(cv_v_s&&!c_display_cached)||(cv_pv_s&&!c_prefetch_cached);
  wire [7:0] h_need_y=(hd_v_s&&!h_display_cached)?hd_y_s:hd_p_s;
  wire [7:0] c_need_y=(cv_v_s&&!c_display_cached)?cv_y_s:cv_p_s;
+ // Prefer an unused CVBS bank.  Once all three are live, advance round-robin
+ // but skip the bank selected by the current scanline.  Three retained rows
+ // cover the one-line phase excursion of alternating 262/263-line fields.
+ wire [1:0] c_replacement_bank=!c_valid0?2'd0:!c_valid1?2'd1:!c_valid2?2'd2:
+  (cv_v_s&&c_valid0&&c_tag0==cv_y_s&&c_next_bank==2'd0)?2'd1:
+  (cv_v_s&&c_valid1&&c_tag1==cv_y_s&&c_next_bank==2'd1)?2'd2:
+  (cv_v_s&&c_valid2&&c_tag2==cv_y_s&&c_next_bank==2'd2)?2'd0:c_next_bank;
  reg h_pending=0,c_pending=0;reg [7:0] h_pending_y=0,c_pending_y=0;
  reg [2:0] coalesce_count=0;
 
- reg fill_hdmi=0,fill_cvbs=0,fill_h_bank=0,fill_c_bank=0;
+ reg fill_hdmi=0,fill_cvbs=0,fill_h_bank=0;
+ reg [1:0] fill_c_bank=0;
  reg fill_sequential=0;
  reg [7:0] fill_y=0; reg fill_bit_plane=0; reg [1:0] fill_cres=0;
  reg fill_attributes=0;reg [2:0] fill_gm=0;reg fill_css=0;
@@ -331,6 +343,7 @@ module gime_scanline_buffer #(
  wire write_hits_h1=h_valid1&&cpu_write_addr>=h_start1&&cpu_write_addr<h_start1+h_bytes1;
  wire write_hits_c0=c_valid0&&cpu_write_addr>=c_start0&&cpu_write_addr<c_start0+c_bytes0;
  wire write_hits_c1=c_valid1&&cpu_write_addr>=c_start1&&cpu_write_addr<c_start1+c_bytes1;
+ wire write_hits_c2=c_valid2&&cpu_write_addr>=c_start2&&cpu_write_addr<c_start2+c_bytes2;
  wire write_hits_fill=state!=IDLE&&cpu_write_addr>=line_address&&
                       cpu_write_addr<line_address+fill_row_bytes;
 reg [18:0] mode_signature=19'h7ffff;reg [18:0] last_screen_base=19'h7ffff;
@@ -399,7 +412,7 @@ reg configuration_pending=1'b1;
  reg [9:0] hdmi_write_x=0;
  reg [23:0] hdmi_write_data=0;
  reg cvbs_write_pending=0;
- reg cvbs_write_bank=0;
+ reg [1:0] cvbs_write_bank=0;
  reg [9:0] cvbs_write_x=0;
  reg [5:0] cvbs_write_data=0;
  always @(posedge clk) begin
@@ -444,15 +457,19 @@ reg configuration_pending=1'b1;
    else hdmi_line0[hdmi_write_x]<=hdmi_write_data;
   end
   if(cvbs_write_pending)begin
-   if(cvbs_write_bank)cvbs_line1[cvbs_write_x]<=cvbs_write_data;
-   else cvbs_line0[cvbs_write_x]<=cvbs_write_data;
+   case(cvbs_write_bank)
+    2'd0:cvbs_line0[cvbs_write_x]<=cvbs_write_data;
+    2'd1:cvbs_line1[cvbs_write_x]<=cvbs_write_data;
+    default:cvbs_line2[cvbs_write_x]<=cvbs_write_data;
+   endcase
   end
  end
 
  always @(posedge clk or negedge reset_n) begin
  if(!reset_n) begin
    state<=IDLE;memory_request<=0;memory_addr<=0;h_valid0<=0;h_valid1<=0;
-   c_valid0<=0;c_valid1<=0;h_dirty0<=0;h_dirty1<=0;c_dirty0<=0;c_dirty1<=0;
+   c_valid0<=0;c_valid1<=0;c_valid2<=0;
+   h_dirty0<=0;h_dirty1<=0;c_dirty0<=0;c_dirty1<=0;c_dirty2<=0;
    mode_signature<=19'h7ffff;last_screen_base<=19'h7ffff;
    frame_screen_base<=0;
    h_next_bank<=0;c_next_bank<=0;fill_dirty<=0;configuration_pending<=1'b1;
@@ -495,6 +512,7 @@ reg configuration_pending=1'b1;
    if(cpu_write_strobe) begin
     if(write_hits_h0)h_dirty0<=1;if(write_hits_h1)h_dirty1<=1;
     if(write_hits_c0)c_dirty0<=1;if(write_hits_c1)c_dirty1<=1;
+    if(write_hits_c2)c_dirty2<=1;
     if(write_hits_fill)fill_dirty<=1;
    end
    // A raster-time mode write describes a future row.  At HBORD the next row
@@ -518,6 +536,8 @@ reg configuration_pending=1'b1;
               ((c_tag0==cv_y_s)||(cv_pv_s&&c_tag0==cv_p_s));
     c_valid1<=c_valid1&&cv_v_s&&
               ((c_tag1==cv_y_s)||(cv_pv_s&&c_tag1==cv_p_s));
+    c_valid2<=c_valid2&&cv_v_s&&
+              ((c_tag2==cv_y_s)||(cv_pv_s&&c_tag2==cv_p_s));
     h_dirty0<=h_dirty0&&hd_pa_s&&
               ((h_tag0==hd_y_s)||(hd_pv_s&&h_tag0==hd_p_s));
     h_dirty1<=h_dirty1&&hd_pa_s&&
@@ -526,6 +546,8 @@ reg configuration_pending=1'b1;
               ((c_tag0==cv_y_s)||(cv_pv_s&&c_tag0==cv_p_s));
     c_dirty1<=c_dirty1&&cv_v_s&&
               ((c_tag1==cv_y_s)||(cv_pv_s&&c_tag1==cv_p_s));
+    c_dirty2<=c_dirty2&&cv_v_s&&
+              ((c_tag2==cv_y_s)||(cv_pv_s&&c_tag2==cv_p_s));
    memory_request<=0;word_valid<=0;h_pending<=0;c_pending<=0;
    coalesce_count<=0;
    end else begin
@@ -567,8 +589,7 @@ reg configuration_pending=1'b1;
                   (hd_v_s&&h_valid1&&h_tag1==hd_y_s)?0:h_next_bank;
      fill_c_bank<=(c_valid0&&c_tag0==h_pending_y)?0:
                   (c_valid1&&c_tag1==h_pending_y)?1:
-                  (cv_v_s&&c_valid0&&c_tag0==cv_y_s)?1:
-                  (cv_v_s&&c_valid1&&c_tag1==cv_y_s)?0:c_next_bank;
+                  (c_valid2&&c_tag2==h_pending_y)?2:c_replacement_bank;
      fill_bit_plane<=bit_plane;
      fill_cres<=compatibility_mode&&compatibility_an_g?
       ((compatibility_gm==0||compatibility_gm==2||compatibility_gm==4||compatibility_gm==6)?1:0):cres;
@@ -735,13 +756,21 @@ reg configuration_pending=1'b1;
        h_next_bank<=!fill_h_bank;
       end
       if(fill_cvbs)begin
-       if(fill_c_bank)begin c_tag1<=fill_y;c_start1<=line_address;c_bytes1<=fill_row_bytes;
-        c_valid1<=1;c_dirty1<=fill_dirty;
-        if(c_valid0&&c_tag0==fill_y)begin c_valid0<=0;c_dirty0<=0;end end
-       else begin c_tag0<=fill_y;c_start0<=line_address;c_bytes0<=fill_row_bytes;
-        c_valid0<=1;c_dirty0<=fill_dirty;
-        if(c_valid1&&c_tag1==fill_y)begin c_valid1<=0;c_dirty1<=0;end end
-       c_next_bank<=!fill_c_bank;
+       case(fill_c_bank)
+        2'd0:begin c_tag0<=fill_y;c_start0<=line_address;c_bytes0<=fill_row_bytes;
+         c_valid0<=1;c_dirty0<=fill_dirty;
+         if(c_valid1&&c_tag1==fill_y)begin c_valid1<=0;c_dirty1<=0;end
+         if(c_valid2&&c_tag2==fill_y)begin c_valid2<=0;c_dirty2<=0;end end
+        2'd1:begin c_tag1<=fill_y;c_start1<=line_address;c_bytes1<=fill_row_bytes;
+         c_valid1<=1;c_dirty1<=fill_dirty;
+         if(c_valid0&&c_tag0==fill_y)begin c_valid0<=0;c_dirty0<=0;end
+         if(c_valid2&&c_tag2==fill_y)begin c_valid2<=0;c_dirty2<=0;end end
+        default:begin c_tag2<=fill_y;c_start2<=line_address;c_bytes2<=fill_row_bytes;
+         c_valid2<=1;c_dirty2<=fill_dirty;
+         if(c_valid0&&c_tag0==fill_y)begin c_valid0<=0;c_dirty0<=0;end
+         if(c_valid1&&c_tag1==fill_y)begin c_valid1<=0;c_dirty1<=0;end end
+       endcase
+       c_next_bank <= (fill_c_bank == 2'd2) ? 2'd0 : fill_c_bank + 1'b1;
       end
       if(fill_sequential)begin
        dma_next_y<=fill_y+1'b1;
@@ -783,9 +812,11 @@ reg configuration_pending=1'b1;
    else hdmi_pixel_data<=hdmi_line0[h_read_addr];
   end else hdmi_pixel_data<=0;
  end
- reg [7:0] c_tag0_m=0,c_tag0_r=0,c_tag1_m=0,c_tag1_r=0;
- reg c_v0_m=0,c_v0_r=0,c_v1_m=0,c_v1_r=0;
- reg c_read_bank=0,c_read_valid=0;
+ reg [7:0] c_tag0_m=0,c_tag0_r=0,c_tag1_m=0,c_tag1_r=0,
+           c_tag2_m=0,c_tag2_r=0;
+ reg c_v0_m=0,c_v0_r=0,c_v1_m=0,c_v1_r=0,c_v2_m=0,c_v2_r=0;
+ reg [1:0] c_read_bank=0;
+ reg c_read_valid=0;
  reg [9:0] c_read_addr=0;
  always @(posedge cvbs_read_clk)begin
   // CVBS is always the 640-sample path in the CoCo 3 top.  Preload zero in
@@ -793,17 +824,24 @@ reg configuration_pending=1'b1;
   // address does not add a visible horizontal pixel of delay.
   c_read_addr<=cvbs_display_valid ? cvbs_read_x+1'b1 : 10'd0;
   c_tag0_m<=c_tag0;c_tag0_r<=c_tag0_m;c_tag1_m<=c_tag1;c_tag1_r<=c_tag1_m;
+  c_tag2_m<=c_tag2;c_tag2_r<=c_tag2_m;
   c_v0_m<=c_valid0;c_v0_r<=c_v0_m;c_v1_m<=c_valid1;c_v1_r<=c_v1_m;
+  c_v2_m<=c_valid2;c_v2_r<=c_v2_m;
   if(!cvbs_display_valid)begin c_read_valid<=0;cvbs_pixel_data<=0;end
   else if(cvbs_read_x==0)begin
    if(c_v0_r&&c_tag0_r==cvbs_display_y)begin
     c_read_bank<=0;c_read_valid<=1;cvbs_pixel_data<=cvbs_line0[c_read_addr];end
    else if(c_v1_r&&c_tag1_r==cvbs_display_y)begin
     c_read_bank<=1;c_read_valid<=1;cvbs_pixel_data<=cvbs_line1[c_read_addr];end
+   else if(c_v2_r&&c_tag2_r==cvbs_display_y)begin
+    c_read_bank<=2;c_read_valid<=1;cvbs_pixel_data<=cvbs_line2[c_read_addr];end
    else begin c_read_valid<=0;cvbs_pixel_data<=0;end
   end else if(c_read_valid)begin
-   if(c_read_bank)cvbs_pixel_data<=cvbs_line1[c_read_addr];
-   else cvbs_pixel_data<=cvbs_line0[c_read_addr];
+   case(c_read_bank)
+    2'd0:cvbs_pixel_data<=cvbs_line0[c_read_addr];
+    2'd1:cvbs_pixel_data<=cvbs_line1[c_read_addr];
+    default:cvbs_pixel_data<=cvbs_line2[c_read_addr];
+   endcase
   end else cvbs_pixel_data<=0;
  end
 endmodule

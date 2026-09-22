@@ -4,6 +4,7 @@ module tb_coco_cvbs_ntsc;
     reg clk135 = 1'b0;
     reg reset_n = 1'b0;
     reg high_resolution = 1'b0;
+    reg compatibility_mode = 1'b1;
     reg [5:0] framebuffer_data = 6'b111111;
     reg [5:0] border_rgb = 6'b001100;
     wire [15:0] framebuffer_addr;
@@ -19,6 +20,7 @@ module tb_coco_cvbs_ntsc;
 
     coco_cvbs_ntsc dut(
         .clk135(clk135),.clk270(clk270),.reset_n(reset_n),.high_resolution(high_resolution),
+        .compatibility_mode(compatibility_mode),
         .framebuffer_data(framebuffer_data),.border_rgb(border_rgb),.active_height(8'd192),
         .framebuffer_addr(framebuffer_addr),
         .source_x(source_x),.source_y(source_y),.source_valid(source_valid),
@@ -51,13 +53,13 @@ module tb_coco_cvbs_ntsc;
         seek(10'd64,9'd10);
         if (dut.sync_tip) begin $display("horizontal sync end"); errors = errors + 1; end
 
-        seek(10'd67,9'd10);
+        seek(10'd71,9'd10);
         if (dut.in_burst) begin $display("burst starts too early"); errors = errors + 1; end
-        seek(10'd68,9'd10);
+        seek(10'd72,9'd10);
         if (!dut.in_burst) begin $display("burst window"); errors = errors + 1; end
         saved_fraction = dut.carrier_fraction;
         saved_octant = dut.carrier_octant;
-        seek(10'd68,9'd11);
+        seek(10'd72,9'd11);
         if ((dut.carrier_fraction != saved_fraction) ||
             (dut.carrier_octant != saved_octant + 3'd4))
             begin $display("carrier line phase"); errors = errors + 1; end
@@ -67,19 +69,19 @@ module tb_coco_cvbs_ntsc;
         seek(10'd158,9'd17);
         if (!dut.in_vdg_window || dut.in_picture) begin $display("top-left border window"); errors = errors + 1; end
 
-        seek(10'd222,9'd24);
+        seek(10'd222,9'd43);
         if (framebuffer_addr != 16'd0) begin $display("framebuffer first pixel"); errors = errors + 1; end
-        seek(10'd224,9'd24);
+        seek(10'd224,9'd43);
         if (framebuffer_addr != 16'd1) begin $display("framebuffer horizontal scale"); errors = errors + 1; end
-        seek(10'd732,9'd215);
+        seek(10'd732,9'd234);
         if (framebuffer_addr != {8'd191,8'd255}) begin $display("framebuffer last pixel: %h",framebuffer_addr); errors = errors + 1; end
 
         high_resolution = 1'b1;
-        seek(10'd158,9'd24);
+        seek(10'd158,9'd43);
         if (!source_valid || source_x != 10'd0 || source_y != 8'd0) begin
             $display("640-wide first pixel: %0d,%0d",source_x,source_y); errors=errors+1;
         end
-        seek(10'd797,9'd24);
+        seek(10'd797,9'd43);
         if (!source_valid || !dut.in_vdg_window || source_x != 10'd639) begin
             $display("640-wide last pixel: %0d",source_x); errors=errors+1;
         end
@@ -104,15 +106,28 @@ module tb_coco_cvbs_ntsc;
         seek(10'd795,9'd261);
         if (!dut.in_vdg_window || dut.in_picture) begin $display("bottom-right border window"); errors = errors + 1; end
 
-        // The final field line is exactly half length.  This makes the CVBS
-        // frame equal to 525 HDMI lines and prevents their shared scanline
-        // requests from walking through one another on successive frames.
-        seek(10'd428,9'd262);
+        // The backwards seek used by the high-resolution checks has advanced
+        // us to the short field. Compatibility/VDG remains unshifted.
+        if (dut.field_odd !== 1'b0) begin
+            $display("short field parity"); errors = errors + 1;
+        end
+        seek(10'd857,9'd261);
         repeat (10) @(posedge clk135); #1;
         if (dut.h_sample != 0 || dut.v_line != 0 || dut.sample_phase != 0) begin
-            $display("262.5-line frame wrap: h=%0d v=%0d p=%0d",
+            $display("262-line field wrap: h=%0d v=%0d p=%0d",
                      dut.h_sample,dut.v_line,dut.sample_phase);
             errors = errors + 1;
+        end
+        if (dut.field_odd !== 1'b1) begin
+            $display("field parity did not toggle"); errors = errors + 1;
+        end
+
+        // Native GIME starts one line later in every field. This is a fixed
+        // cache phase delay, not an alternating vertical displacement.
+        compatibility_mode = 1'b0;
+        seek(10'd222,9'd44);
+        if (!source_valid || source_y != 0 || dut.field_odd !== 1'b1) begin
+            $display("native 263-line field top margin"); errors = errors + 1;
         end
 
         if (errors == 0) $display("tb_coco_cvbs_ntsc PASS");

@@ -36,7 +36,7 @@ Analyzing entity 'mc6847'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847
 Analyzing architecture 'syn'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847.vhd":45)
 WARN  (EX4319) : Shared variables must be of a protected type("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847.vhd":139)
 WARN  (EX4319) : Shared variables must be of a protected type("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847.vhd":140)
-WARN  (EX3073) : Port 'address_ready' remains unconnected for this instance("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v":133)
+WARN  (EX3073) : Port 'address_ready' remains unconnected for this instance("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v":134)
 Compiling module 'top'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top.v":4)
 Compiling module 'coco_clocks'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco_clocks.v":1)
 Compiling module 'CLK108'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/gowin_rpll/clk108.v":10)

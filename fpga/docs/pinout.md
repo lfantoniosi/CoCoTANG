@@ -9,11 +9,11 @@ Package pins are for the GW2AR-LV18QN88C8/I7 on the Tang Nano 20K.
 | `msel[1:0]` | out | 20, 17 | 74HC139 mux selection |
 | `cpu_data[7:0]` | inout | 48, 49, 86, 79, 72, 71, 53, 52 | Buffered 6809 data bus |
 | `sam_s[2:0]` | out | 16, 41, 15 | SAM device selects to motherboard decoder |
-| `e_out`, `q_out` | out | 51, 76 | 6809 clocks; E uses the former PR_33 connection |
+| `e_out`, `q_out` | out | 51, 76 | 6809 clocks; E uses the PR_33 connection |
 | `halt_drive` | out | 42 | High turns Q2 on and pulls `/HALT` low |
-| `irq_n_in`, `firq_n_in` | in | 19, 18 | Interrupt observations |
+| `irq_n_in`, `firq_n_in` | out | 19, 75 | Active-high transistor drives for active-low IRQ/FIRQ |
 | `hs_n`, `fs_n` | out | 73, 74 | VDG horizontal/field sync |
-| `y_out`, `pb_out` | out | 56, 54 | Luma plus selectable S-Video chroma or CVBS |
+| `y_out`, `pb_out`, `cvbs_out` | out | 56, 54, 18 | S-Video luma, S-Video chroma, and composite video |
 | `audio_out` | out | 55 | Sigma-delta CoCo DAC audio to the board's filtered line output |
 | `mspi_sclk`, `mspi_cs`, `mspi_mosi`, `mspi_miso` | out/out/out/in | 59, 60, 61, 62 | On-module SPI flash |
 | `tmds_clk_p` | differential out | 33/34 | HDMI clock pair |
@@ -22,10 +22,9 @@ Package pins are for the GW2AR-LV18QN88C8/I7 on the Tang Nano 20K.
 | `tmds_data_p[2]` | differential out | 39/40 | HDMI data 2 pair |
 | `s1`, `s2` | in | 88, 87 | Module buttons; S1 resets, S2 toggles HDMI debug |
 
-`y_out` is always S-Video luma. With the default `ANALOG_VIDEO_MODE=1`,
-`pb_out` is composite video; set the parameter to `0` for S-Video chroma.
-Package pin 51/PR_33 now carries the 6809 E clock. Package pin 75 is left
-unused because it is connected to the Tang Nano 20K onboard `HSPI_DIR` signal.
+`y_out` is S-Video luma, `pb_out` is S-Video chroma, and `cvbs_out` is the
+independent composite output. Package pin 51 carries the 6809 E clock, pin 18
+carries CVBS, and package pin 75/`HSPI_DIR` drives the FIRQ transistor.
 
 ## 74HC139 scan map
 

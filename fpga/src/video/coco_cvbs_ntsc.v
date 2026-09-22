@@ -9,6 +9,7 @@ module coco_cvbs_ntsc (
     input  wire        clk270,
     input  wire        reset_n,
     input  wire        high_resolution,
+    input  wire        compatibility_mode,
     input  wire [5:0]  framebuffer_data,
     input  wire [5:0]  border_rgb,
     input  wire [7:0]  active_height,
@@ -25,10 +26,9 @@ module coco_cvbs_ntsc (
     parameter integer STREAMING_INPUT = 0;
     localparam [9:0] H_TOTAL        = 10'd858;
     localparam [9:0] H_SYNC         = 10'd64;
-    // Advance the calibrated back-porch content by four 13.5 MHz samples.
-    // Horizontal sync remains fixed; burst and active picture move together.
-    localparam [9:0] BURST_START    = 10'd68;
-    localparam [9:0] BURST_END      = 10'd102;
+    // Calibrated burst window from the proven NTSCVideo implementation.
+    localparam [9:0] BURST_START    = 10'd72;
+    localparam [9:0] BURST_END      = 10'd106;
     // A framebuffer scales the 256 source pixels to 512 samples.  A live VDG
     // stream instead occupies its native 256/455 share of the 858-sample
     // line, or approximately 483 samples.
@@ -38,20 +38,30 @@ module coco_cvbs_ntsc (
                                STREAMING_INPUT ? 10'd754 : 10'd734;
     wire [9:0] border_left   = 10'd158;
     wire [9:0] border_right  = high_resolution ? 10'd798 : 10'd796;
-    // 480p contains 525 lines, so one doubled source period is two HDMI
-    // lines and a frame is 262.5 source periods.  Keep CVBS at precisely the
-    // same frame duration: 262 complete 858-sample lines followed by one
-    // 429-sample half-line.  A former 262-line frame made the two scanline
-    // consumers slip by half a row on every frame.
-    localparam [8:0] V_TOTAL        = 9'd263;
+    // Alternate complete 262- and 263-line fields.  Two fields are still
+    // exactly 525 lines, but every scanline retains normal horizontal timing.
+    // The CVBS cache is three rows deep to absorb the resulting +/- one-HDMI-
+    // line phase movement.
     reg [7:0] height_meta = 8'd192;
-    reg [8:0] picture_top = 9'd44;
-    reg [8:0] picture_bottom = 9'd236;
-    // Match the HDMI scan doubler's source-line phase: HDMI begins after 48
-    // 480p lines, which is 24 doubled source-line periods.  Starting CVBS at
-    // source line 24 lets one GIME render/fetch feed both output line caches.
-    wire [8:0] next_picture_top = (9'd240 - {1'b0,height_meta}) >> 1;
-    wire [8:0] border_top = picture_top >= 9'd27 ? picture_top - 9'd27 : 9'd0;
+    localparam [8:0] V_PHASE_OFFSET = 9'd17;
+    reg [8:0] picture_top = 9'd43;
+    reg [8:0] picture_bottom = 9'd235;
+    // Explicit field parity: zero is the 262-line short field and one is the
+    // 263-line long field.
+    (* keep = "true" *) reg field_odd = 1'b0;
+    // Center the picture in the analog field. The counter begins 17 lines
+    // ahead by the same V_PHASE_OFFSET, so logical row zero is still consumed
+    // when HDMI produces it for the shared two-line GIME cache.
+    wire [8:0] next_picture_top = height_meta == 8'd225 ? 9'd26 :
+                                  height_meta == 8'd199 ? 9'd41 : 9'd43;
+    // Compatibility/VDG video keeps the proven position. Native GIME video
+    // is delayed by one line in BOTH fields, keeping its cache consumer
+    // behind the HDMI producer without alternating the visible position.
+    wire [8:0] field_picture_top = picture_top +
+                                  (!compatibility_mode ? 9'd1 : 9'd0);
+    wire [8:0] field_picture_bottom = field_picture_top + {1'b0,height_meta};
+    wire [8:0] border_top = field_picture_top >= 9'd27 ?
+                            field_picture_top - 9'd27 : 9'd0;
 
     localparam [5:0] LEVEL_SYNC     = 6'd0;
     localparam [5:0] LEVEL_BLANK    = 6'd10;
@@ -61,28 +71,28 @@ module coco_cvbs_ntsc (
     reg [3:0] sample_phase = 4'd0;
     reg [9:0] h_sample = 10'd0;
     reg [8:0] v_line = 9'd0;
-    wire [9:0] line_last_sample = (v_line == V_TOTAL-1'b1) ?
-                                  10'd428 : H_TOTAL-1'b1;
+    wire [8:0] field_last_line = field_odd ? 9'd262 : 9'd261;
+    wire [9:0] line_last_sample = H_TOTAL-1'b1;
 
     wire in_picture = (h_sample >= picture_left) &&
                       (h_sample < picture_right) &&
-                      (v_line >= picture_top) &&
-                      (v_line < picture_bottom);
+                      (v_line >= field_picture_top) &&
+                      (v_line < field_picture_bottom);
     wire in_vdg_window = (h_sample >= border_left) &&
                          (h_sample < border_right) &&
                          (v_line >= border_top) &&
-                         (v_line < V_TOTAL);
+                         (v_line <= field_last_line);
     wire [9:0] picture_x = high_resolution ? (h_sample-picture_left) :
                                               ((h_sample-picture_left) >> 1);
-    wire [8:0] picture_y_full = v_line - picture_top;
+    wire [8:0] picture_y_full = v_line - field_picture_top;
     wire [7:0] picture_y = picture_y_full[7:0];
     assign framebuffer_addr = in_picture ? {picture_y, picture_x[7:0]} : 16'd0;
     assign source_x = picture_x;
     assign source_y = picture_y;
     assign source_valid = in_picture;
-    assign prefetch_y = (v_line < picture_top) ? 8'd0 : picture_y+1'b1;
-    assign prefetch_valid = (v_line < picture_top) ? 1'b1 :
-                            ((v_line < picture_bottom) &&
+    assign prefetch_y = (v_line < field_picture_top) ? 8'd0 : picture_y+1'b1;
+    assign prefetch_valid = (v_line < field_picture_top) ? 1'b1 :
+                            ((v_line < field_picture_bottom) &&
                              (picture_y+1'b1 < height_meta));
 
     // Six pre-equalizing half-lines, six broad-sync half-lines and six
@@ -248,10 +258,13 @@ module coco_cvbs_ntsc (
         if (!reset_n) begin
             sample_phase <= 4'd0;
             height_meta <= 8'd192;
-            picture_top <= 9'd44;
-            picture_bottom <= 9'd236;
+            picture_top <= 9'd43;
+            picture_bottom <= 9'd235;
+            // Offset the progressive analog raster without changing the time
+            // at which logical row zero meets HDMI's shared line cache.
             h_sample <= 10'd0;
-            v_line <= 9'd0;
+            v_line <= V_PHASE_OFFSET;
+            field_odd <= 1'b0;
             carrier_fraction <= 9'd0;
             carrier_octant <= 3'd0;
             source_sync <= 1'b1;
@@ -347,13 +360,14 @@ module coco_cvbs_ntsc (
                 carrier_fraction <= carrier_fraction + 9'd91;
             end
 
-            if (sample_phase == 4'd9) begin
+            if(sample_phase == 4'd9) begin
                 sample_phase <= 4'd0;
                 if (h_sample == line_last_sample) begin
                     h_sample <= 10'd0;
-                    if (v_line == V_TOTAL - 1'b1)
+                    if (v_line == field_last_line) begin
                         v_line <= 9'd0;
-                    else
+                        field_odd <= ~field_odd;
+                    end else
                         v_line <= v_line + 1'b1;
                 end else begin
                     h_sample <= h_sample + 1'b1;

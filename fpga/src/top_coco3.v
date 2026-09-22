@@ -30,7 +30,7 @@ module top_coco3 #(
     input clkin,input s1,input s2,input [7:0] mp,output [1:0] msel,
     inout [7:0] cpu_data,output irq_n_in,output firq_n_in,output audio_out,
     output halt_drive,output e_out,output q_out,output hs_n,output fs_n,
-    output [2:0] sam_s,output y_out,output pb_out,
+    output [2:0] sam_s,output y_out,output pb_out,output cvbs_out,
     output tmds_clk_p,output tmds_clk_n,
     output [2:0] tmds_data_p,output [2:0] tmds_data_n,
     output mspi_sclk,output mspi_cs,output mspi_mosi,input mspi_miso,
@@ -480,8 +480,8 @@ module top_coco3 #(
     // clk135 boundary.  There are ten clk135 clocks per CVBS sample, so this
     // one-clock staging still leaves the scanline RAM response comfortably
     // ahead of the sample which consumes it.
-    always @(posedge clk135 or negedge cpu_release) begin
-        if(!cpu_release) begin
+    always @(posedge clk135 or negedge board_reset_n) begin
+        if(!board_reset_n) begin
             cvbs_source_x<=0;cvbs_source_y<=0;cvbs_source_valid<=0;
             cvbs_prefetch_y<=0;cvbs_prefetch_valid<=0;
         end else begin
@@ -493,8 +493,12 @@ module top_coco3 #(
         end
     end
     coco_cvbs_ntsc #(.STREAMING_INPUT(0)) analog_encoder(
-        .clk135(clk135),.clk270(clk270),.reset_n(cpu_release),
-        .high_resolution(1'b1),.framebuffer_data(visible_cvbs_pixel),
+        // Start on the same board reset as HDMI.  cpu_release is aligned to
+        // the CoCo bus, not to video, and made the CVBS consumer enter the
+        // shared two-line cache at an arbitrary scanline phase.
+        .clk135(clk135),.clk270(clk270),.reset_n(board_reset_n),
+        .high_resolution(1'b1),.compatibility_mode(compatibility_video),
+        .framebuffer_data(visible_cvbs_pixel),
         .border_rgb(visible_border_rgb),.active_height(active_height),
         .framebuffer_addr(unused_cvbs_framebuffer_addr),
         .source_x(cvbs_source_x_raw),.source_y(cvbs_source_y_raw),
@@ -502,7 +506,8 @@ module top_coco3 #(
         .prefetch_valid(cvbs_prefetch_valid_raw),.luma_out(analog_luma),
         .chroma_out(analog_chroma),.cvbs_out(analog_cvbs));
     assign y_out=analog_luma;
-    assign pb_out=(ANALOG_VIDEO_MODE==0)?analog_chroma:analog_cvbs;
+    assign pb_out=analog_chroma;
+    assign cvbs_out=analog_cvbs;
 
     wire unused_inputs=mux_slenb_n ^ mux_nmi_n ^ native_hblank ^
         native_vblank ^ ^native_red ^ ^native_green ^ ^native_blue ^ e_rise ^

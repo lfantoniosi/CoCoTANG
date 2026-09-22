@@ -25,7 +25,7 @@ IO_LOC "msel[1]" 20;
 IO_PORT "msel[0]" IO_TYPE=LVCMOS33 PULL_MODE=UP DRIVE=8 BANK_VCCIO=3.3;
 IO_PORT "msel[1]" IO_TYPE=LVCMOS33 PULL_MODE=UP DRIVE=8 BANK_VCCIO=3.3;
 IO_LOC "irq_n_in" 19;
-IO_LOC "firq_n_in" 18;
+IO_LOC "firq_n_in" 75;
 IO_LOC "audio_out" 55;
 IO_PORT "irq_n_in" IO_TYPE=LVCMOS33 PULL_MODE=DOWN DRIVE=8 BANK_VCCIO=3.3;
 IO_PORT "firq_n_in" IO_TYPE=LVCMOS33 PULL_MODE=DOWN DRIVE=8 BANK_VCCIO=3.3;
@@ -51,9 +51,10 @@ IO_PORT "cpu_data[1]" IO_TYPE=LVCMOS33 PULL_MODE=UP DRIVE=8 BANK_VCCIO=3.3;
 IO_PORT "cpu_data[0]" IO_TYPE=LVCMOS33 PULL_MODE=UP DRIVE=8 BANK_VCCIO=3.3;
 IO_LOC "hs_n" 73;
 IO_LOC "fs_n" 74;
-// PR_33 is repurposed as the 6809 E clock because package pin 75 is
-// connected to the Tang Nano 20K onboard HSPI_DIR signal.
+// E remains on PR_33/pin 51. The former FIRQ transistor-drive connection on
+// pin 18 carries composite video, while HSPI_DIR/pin 75 drives FIRQ.
 IO_LOC "e_out" 51;
+IO_LOC "cvbs_out" 18;
 // The project schematic symbol says package 78. Official Tang Nano 20K
 // documentation and the QN88 database identify this header contact as 76.
 IO_LOC "q_out" 76;
@@ -64,10 +65,10 @@ IO_LOC "sam_s[2]" 16;
 IO_PORT "hs_n" IO_TYPE=LVCMOS33 PULL_MODE=UP DRIVE=8 BANK_VCCIO=3.3;
 IO_PORT "fs_n" IO_TYPE=LVCMOS33 PULL_MODE=UP DRIVE=8 BANK_VCCIO=3.3;
 IO_PORT "e_out" IO_TYPE=LVCMOS33 PULL_MODE=DOWN DRIVE=8 BANK_VCCIO=3.3;
+IO_PORT "cvbs_out" IO_TYPE=LVCMOS33 PULL_MODE=DOWN DRIVE=8 BANK_VCCIO=3.3;
 IO_PORT "q_out" IO_TYPE=LVCMOS33 PULL_MODE=DOWN DRIVE=8 BANK_VCCIO=3.3;
-// Keep the two physical 6809 clock registers at the locations used by the
-// proven booting image.  Otherwise unrelated HDMI netlist changes can move
-// them and alter the clock-to-pin delay by nearly a nanosecond.
+// Keep the physical 6809 clock registers at the locations used by the proven
+// booting image so unrelated netlist changes cannot shift clock-to-pin delay.
 INS_LOC "sam/e_s0" R16C35[1][A];
 INS_LOC "sam/q_s0" R16C35[0][A];
 IO_PORT "halt_drive" IO_TYPE=LVCMOS33 PULL_MODE=DOWN DRIVE=8 BANK_VCCIO=3.3;
