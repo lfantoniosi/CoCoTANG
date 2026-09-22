@@ -12,27 +12,27 @@
   <Part Number>: GW2AR-LV18QN88C8/I7
   <Device>: GW2AR-18
   <Device Version>: C
-  <Created Time>:Mon Sep 21 17:47:35 2026
+  <Created Time>:Mon Sep 21 18:04:54 2026
 
 
 2. PnR Details
 
   Running placement:
-    Placement Phase 0: CPU time = 0h 0m 0.255s, Elapsed time = 0h 0m 0.255s
-    Placement Phase 1: CPU time = 0h 0m 0.074s, Elapsed time = 0h 0m 0.074s
-    Placement Phase 2: CPU time = 0h 0m 0.53s, Elapsed time = 0h 0m 0.53s
-    Placement Phase 3: CPU time = 0h 0m 0.514s, Elapsed time = 0h 0m 0.514s
+    Placement Phase 0: CPU time = 0h 0m 0.257s, Elapsed time = 0h 0m 0.257s
+    Placement Phase 1: CPU time = 0h 0m 0.075s, Elapsed time = 0h 0m 0.075s
+    Placement Phase 2: CPU time = 0h 0m 0.522s, Elapsed time = 0h 0m 0.522s
+    Placement Phase 3: CPU time = 0h 0m 0.623s, Elapsed time = 0h 0m 0.623s
     Total Placement: CPU time = 0h 0m 1s, Elapsed time = 0h 0m 1s
  Running routing:
     Routing Phase 0: CPU time = 0h 0m 0.001s, Elapsed time = 0h 0m 0.001s
-    Routing Phase 1: CPU time = 0h 0m 0.712s, Elapsed time = 0h 0m 0.712s
+    Routing Phase 1: CPU time = 0h 0m 0.722s, Elapsed time = 0h 0m 0.723s
     Routing Phase 2: CPU time = 0h 0m 2s, Elapsed time = 0h 0m 2s
     Routing Phase 3: CPU time = 0h 0m 0s, Elapsed time = 0h 0m 0s
     Total Routing: CPU time = 0h 0m 2s, Elapsed time = 0h 0m 2s
  Generate output files:
-    CPU time = 0h 0m 0.648s, Elapsed time = 0h 0m 0.651s
+    CPU time = 0h 0m 0.636s, Elapsed time = 0h 0m 0.637s
 
- Total Time and Memory Usage: CPU time = 0h 0m 4s, Elapsed time = 0h 0m 4s, Peak memory usage = 528MB
+ Total Time and Memory Usage: CPU time = 0h 0m 4s, Elapsed time = 0h 0m 4s, Peak memory usage = 529MB
 
 
 3. Resource Usage Summary
@@ -40,15 +40,15 @@
   --------------------------------------------------------------------------------
   Resources                   | Usage                               | Utilization
   --------------------------------------------------------------------------------
-  Logic                       | 5550/20736                          |  27%
-    --LUT,ALU,ROM16           | 5478(4514 LUT, 964 ALU, 0 ROM16)    | -
+  Logic                       | 5587/20736                          |  27%
+    --LUT,ALU,ROM16           | 5515(4550 LUT, 965 ALU, 0 ROM16)    | -
     --SSRAM(RAM16)            | 12                                  | -
-  Register                    | 3384/15915                          |  22%
+  Register                    | 3387/15915                          |  22%
     --Logic Register as Latch | 0/15552                             |  0%
-    --Logic Register as FF    | 3331/15552                          |  22%
+    --Logic Register as FF    | 3334/15552                          |  22%
     --I/O Register as Latch   | 0/363                               |  0%
     --I/O Register as FF      | 53/363                              |  15%
-  CLS                         | 4158/10368                          |  41%
+  CLS                         | 4169/10368                          |  41%
   I/O Port                    | 46/66                               |  70%
   I/O Buf                     | 41                                  | -
     --Input Buf               | 11                                  | -
@@ -113,8 +113,8 @@
   sdram_reset_n_Z| LW             |  -
   system_ready_Z | LW             |  -
   machine/n557_5 | LW             |  -
+  machine/scanlines/fill_y_7_6| LW             |  -
   machine/scanlines/artifact_shift_260_7| LW             |  -
-  machine/scanlines/fill_y_7_8| LW             |  -
   hdmi_output/encoder/true_hdmi_output.packet_picker/n3823_4| LW             |  -
   clk135         | HCLK           | BANK4_BANK5_HCLK0
   ===========================================

@@ -44,7 +44,7 @@ Compiling module 'CLK270'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/gowin_rpll/c
 Compiling module 'coco_sam'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/coco_sam.v":2)
 Compiling module 'coco_bus_mux'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/bus/coco_bus_mux.v":1)
 Compiling module 'input_filter'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/bus/input_filter.v":1)
-Compiling module 'coco_pia1_dac'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/audio/coco_pia1_dac.v":4)
+Compiling module 'coco_pia1_dac'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/audio/coco_pia1_dac.v":5)
 Compiling module 'sigma_delta_dac'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/sigma_delta_dac.v":1)
 Compiling module 'coco_startup'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco_startup.v":1)
 Compiling module 'sdram'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/sdram.v":27)

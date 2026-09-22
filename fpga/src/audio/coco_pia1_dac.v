@@ -1,6 +1,7 @@
-// Minimal shadow of PIA1 port A for the CoCo six-bit DAC.  The motherboard
-// PIA remains the bus-visible device; this block only observes CPU writes so
-// the FPGA can reproduce the otherwise-unavailable PA7..PA2 audio value.
+// Minimal shadow of PIA1 port A and port B control for the CoCo six-bit DAC.
+// The motherboard PIA remains the bus-visible device; this block only observes
+// CPU writes so the FPGA can reproduce the otherwise-unavailable PA7..PA2 DAC
+// and CB2 sound-enable state.
 module coco_pia1_dac (
     input clk,
     input reset_n,
@@ -9,6 +10,7 @@ module coco_pia1_dac (
     input [15:0] cpu_addr,
     input [7:0] cpu_data,
     output [5:0] dac_level,
+    output sound_enable,
     output [7:0] pwm_sample,
     output [15:0] pcm_sample,
     output reg audio_clk
@@ -16,6 +18,7 @@ module coco_pia1_dac (
     reg [7:0] port_a_data = 8'h00;
     reg [7:0] port_a_ddr = 8'h00;
     reg [7:0] control_a = 8'h00;
+    reg [7:0] control_b = 8'h00;
 
     // 108 MHz / (2 * 1125) = 48 kHz.  The HDMI packet engine samples PCM on
     // each rising edge of this clock.
@@ -26,6 +29,7 @@ module coco_pia1_dac (
             port_a_data <= 8'h00;
             port_a_ddr <= 8'h00;
             control_a <= 8'h00;
+            control_b <= 8'h00;
             audio_divider <= 11'd0;
             audio_clk <= 1'b0;
         end else begin
@@ -39,6 +43,8 @@ module coco_pia1_dac (
             if (e_fall && !cpu_rw_n) begin
                 if (cpu_addr == 16'hff21)
                     control_a <= cpu_data;
+                else if (cpu_addr == 16'hff23)
+                    control_b <= cpu_data;
                 else if (cpu_addr == 16'hff20) begin
                     if (control_a[2])
                         port_a_data <= cpu_data;
@@ -51,9 +57,17 @@ module coco_pia1_dac (
 
     wire [7:0] port_a_pins = port_a_data & port_a_ddr;
     assign dac_level = port_a_pins[7:2];
-    assign pwm_sample = {port_a_pins[7:2], 2'b00};
+
+    // PIA1 CB2 is the CoCo analog sound-enable line.  Joystick reads use the
+    // same DAC as a comparator reference with CB2 low, so forwarding every DAC
+    // write would turn joystick movement into loud noise.  The CoCo programs
+    // CRB to manual-output mode ($34=low, $3c=high) for this signal.
+    assign sound_enable = control_b[5] && control_b[4] && control_b[3];
+    assign pwm_sample = sound_enable ? {port_a_pins[7:2], 2'b00} : 8'h80;
 
     // Convert the CoCo's unsigned six-bit DAC to signed 16-bit PCM.  DAC 32
     // is digital zero, while DAC 0/63 become -32768/+31744 respectively.
-    assign pcm_sample = {~port_a_pins[7], port_a_pins[6:2], 10'b0};
+    assign pcm_sample = sound_enable
+                      ? {~port_a_pins[7], port_a_pins[6:2], 10'b0}
+                      : 16'h0000;
 endmodule

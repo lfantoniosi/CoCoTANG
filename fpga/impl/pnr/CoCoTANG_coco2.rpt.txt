@@ -12,7 +12,7 @@
   <Part Number>: GW2AR-LV18QN88C8/I7
   <Device>: GW2AR-18
   <Device Version>: C
-  <Created Time>:Mon Sep 21 17:20:27 2026
+  <Created Time>:Mon Sep 21 18:04:23 2026
 
 
 2. PnR Details
@@ -20,17 +20,17 @@
   Running placement:
     Placement Phase 0: CPU time = 0h 0m 0.105s, Elapsed time = 0h 0m 0.105s
     Placement Phase 1: CPU time = 0h 0m 0.063s, Elapsed time = 0h 0m 0.063s
-    Placement Phase 2: CPU time = 0h 0m 0.173s, Elapsed time = 0h 0m 0.173s
-    Placement Phase 3: CPU time = 0h 0m 0.267s, Elapsed time = 0h 0m 0.267s
-    Total Placement: CPU time = 0h 0m 0.608s, Elapsed time = 0h 0m 0.608s
+    Placement Phase 2: CPU time = 0h 0m 0.184s, Elapsed time = 0h 0m 0.184s
+    Placement Phase 3: CPU time = 0h 0m 0.265s, Elapsed time = 0h 0m 0.265s
+    Total Placement: CPU time = 0h 0m 0.617s, Elapsed time = 0h 0m 0.617s
  Running routing:
     Routing Phase 0: CPU time = 0h 0m 0s, Elapsed time = 0h 0m 0s
-    Routing Phase 1: CPU time = 0h 0m 0.723s, Elapsed time = 0h 0m 0.724s
-    Routing Phase 2: CPU time = 0h 0m 0.623s, Elapsed time = 0h 0m 0.624s
+    Routing Phase 1: CPU time = 0h 0m 0.702s, Elapsed time = 0h 0m 0.703s
+    Routing Phase 2: CPU time = 0h 0m 0.59s, Elapsed time = 0h 0m 0.59s
     Routing Phase 3: CPU time = 0h 0m 0s, Elapsed time = 0h 0m 0s
     Total Routing: CPU time = 0h 0m 1s, Elapsed time = 0h 0m 1s
  Generate output files:
-    CPU time = 0h 0m 0.62s, Elapsed time = 0h 0m 0.62s
+    CPU time = 0h 0m 0.604s, Elapsed time = 0h 0m 0.604s
 
  Total Time and Memory Usage: CPU time = 0h 0m 3s, Elapsed time = 0h 0m 3s, Peak memory usage = 480MB
 
@@ -40,15 +40,15 @@
   --------------------------------------------------------------------------------
   Resources                   | Usage                               | Utilization
   --------------------------------------------------------------------------------
-  Logic                       | 2837/20736                          |  14%
-    --LUT,ALU,ROM16           | 2837(2550 LUT, 287 ALU, 0 ROM16)    | -
+  Logic                       | 2840/20736                          |  14%
+    --LUT,ALU,ROM16           | 2840(2553 LUT, 287 ALU, 0 ROM16)    | -
     --SSRAM(RAM16)            | 0                                   | -
-  Register                    | 1797/15915                          |  12%
+  Register                    | 1800/15915                          |  12%
     --Logic Register as Latch | 0/15552                             |  0%
-    --Logic Register as FF    | 1745/15552                          |  12%
+    --Logic Register as FF    | 1748/15552                          |  12%
     --I/O Register as Latch   | 0/363                               |  0%
     --I/O Register as FF      | 52/363                              |  15%
-  CLS                         | 2119/10368                          |  21%
+  CLS                         | 2110/10368                          |  21%
   I/O Port                    | 46/66                               |  70%
   I/O Buf                     | 41                                  | -
     --Input Buf               | 11                                  | -
@@ -99,10 +99,10 @@
   Signal         | Global Clock   | Location
   -------------------------------------------
   clkin_d        | PRIMARY        |  BR BL
-  clk27          | PRIMARY        |  BR BL
+  clk27          | PRIMARY        |  TR TL BR BL
   clk108         | PRIMARY        |  TR TL BR BL
   O_sdram_clk_d  | PRIMARY        |  TR
-  clk270         | PRIMARY        |  TL BR
+  clk270         | PRIMARY        |  TR BR BL
   clk135         | PRIMARY        |  TR TL BR BL
   pia1_audio_clk | PRIMARY        |  BR BL
   board_reset_n_Z| LW             |  -

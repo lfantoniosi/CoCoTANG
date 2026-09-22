@@ -189,6 +189,7 @@ module top #(
             cpu_write_data<=cpu_data_in;
     end
     wire [5:0] pia1_dac_level;
+    wire pia1_sound_enable;
     wire [7:0] pia1_pwm_sample;
     wire [15:0] pia1_pcm_sample;
     wire pia1_audio_clk;
@@ -196,7 +197,8 @@ module top #(
     coco_pia1_dac pia1_audio_shadow(
         .clk(clk108),.reset_n(pia1_audio_reset_n),.e_fall(e_fall),
         .cpu_rw_n(rw_n),.cpu_addr(address),.cpu_data(cpu_write_data),
-        .dac_level(pia1_dac_level),.pwm_sample(pia1_pwm_sample),
+        .dac_level(pia1_dac_level),.sound_enable(pia1_sound_enable),
+        .pwm_sample(pia1_pwm_sample),
         .pcm_sample(pia1_pcm_sample),.audio_clk(pia1_audio_clk));
     sigma_delta_dac line_audio_dac(
         .clk(clk270),.reset_n(pia1_audio_reset_n),
