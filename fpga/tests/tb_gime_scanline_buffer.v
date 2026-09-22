@@ -110,6 +110,17 @@ module tb_gime_scanline_buffer;
   if(dut.c_valid0 ? dut.cvbs_line0[10]!==mapped(6'd2):
                     dut.cvbs_line1[10]!==mapped(6'd2))begin
    $display("SG4 top-right quadrant should be background");errors=errors+1;end
+  // In the 640-dot configuration compatibility video still occupies the
+  // centered 512-dot aperture, but it is point-replicated: each 256-wide VDG
+  // pixel appears exactly twice with no 5:4 RGB blend at colour boundaries.
+  for(i=0;i<8;i=i+1)
+   if((dut.h_valid0&&dut.h_tag0==0 ? dut.hdmi_line0[i] : dut.hdmi_line1[i])
+       !==dut.expand_rgb222(mapped(6'd54)))begin
+    $display("SG4 HDMI 2x foreground pixel %0d was filtered",i);
+    errors=errors+1;i=8;end
+  if((dut.h_valid0&&dut.h_tag0==0 ? dut.hdmi_line0[8] : dut.hdmi_line1[8])
+      !==dut.expand_rgb222(mapped(6'd2)))begin
+   $display("SG4 HDMI exact 2x boundary is wrong");errors=errors+1;end
 
   // Mega-Bug selects 128x96 SAM addressing.  Compatibility DMA geometry is
   // controlled by SAM V0:V2, independently of the PIA GM decode.  A stale or

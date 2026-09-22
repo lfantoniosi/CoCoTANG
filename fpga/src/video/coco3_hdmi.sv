@@ -103,7 +103,9 @@ module coco3_hdmi #(
         source_picture_active=(y>=top && y<top+doubled_height);
         // Native GIME can either retain all 640 dots for sharp 80-column
         // text, or use the aspect-correct RGB888 5:4 reduction. VDG and
-        // artifact modes always use the 512-dot aperture.
+        // artifact modes always use the centered 512-dot aperture. In the
+        // 640 configuration ordinary VDG pixels use exact 2x/4x/8x point
+        // replication; artifact pixels retain their composite phase decode.
         source_x=source_valid ? picture_x : 10'd0;
         source_y=source_line[7:0];
         // CoCo2's ping-pong scan doubler starts producing the next source

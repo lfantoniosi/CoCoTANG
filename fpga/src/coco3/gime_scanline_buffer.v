@@ -410,7 +410,9 @@ reg configuration_pending=1'b1;
   cvbs_write_pending<=0;
   if(renderer_write)begin
    if(fill_hdmi)begin
-    if((NATIVE_HDMI_640!=0&&!fill_compatibility)||hdmi_filter_phase==0||
+    if((NATIVE_HDMI_640!=0&&!fill_compatibility)||
+       (NATIVE_HDMI_640!=0&&fill_compatibility&&!renderer_artifact)||
+       hdmi_filter_phase==0||
        (renderer_artifact&&hdmi_filter_phase!=1))begin
      hdmi_write_pending<=1;
      hdmi_write_data<=renderer_hdmi_pixel;
