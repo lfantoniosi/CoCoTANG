@@ -176,6 +176,18 @@ module coco_cvbs_ntsc (
         end
     endfunction
 
+    function [5:0] add_level_wide;
+        input [5:0] base;
+        input signed [6:0] delta;
+        reg signed [7:0] result;
+        begin
+            result = $signed({1'b0,base}) + delta;
+            if (result < 0) add_level_wide = 6'd0;
+            else if (result > 63) add_level_wide = 6'd63;
+            else add_level_wide = result[5:0];
+        end
+    endfunction
+
     // The framebuffer stores RGB222. Expand each channel to six bits before
     // applying the same RGB-axis and luma conversion proven by NTSCVideo.
     reg [5:0] pixel_rgb = 6'd0;
@@ -233,19 +245,46 @@ module coco_cvbs_ntsc (
 
     wire signed [5:0] mod_picture_chroma =
         rgb_chroma(mod_x4,mod_y4,mod_sum3,mod_difference3,mod_carrier);
+    wire signed [5:0] mod_picture_chroma_next =
+        rgb_chroma(mod_x4,mod_y4,mod_sum3,mod_difference3,mod_carrier + 3'd1);
+    wire signed [6:0] mod_picture_chroma_ext = mod_picture_chroma;
+    wire signed [6:0] mod_picture_chroma_next_ext = mod_picture_chroma_next;
+    // Half-octant interpolation rotates only S-Video picture chroma by
+    // approximately +22.5 degrees.  The accepted burst phase is untouched.
+    wire signed [6:0] mod_svideo_chroma_sum =
+        mod_picture_chroma_ext + mod_picture_chroma_next_ext;
+    wire signed [5:0] mod_svideo_picture_chroma =
+        mod_svideo_chroma_sum >>> 1;
     wire signed [5:0] mod_selected_chroma = mod_burst ?
         chroma8(mod_carrier + 3'd4,2'd3) : mod_picture_chroma;
 
     reg level_sync = 1'b1;
     reg level_burst = 1'b0;
     reg level_picture = 1'b0;
+    reg [2:0] level_carrier = 3'd0;
     reg [5:0] level_luma = LEVEL_BLANK;
     reg signed [5:0] level_chroma = 6'sd0;
+    reg signed [5:0] level_svideo_chroma = 6'sd0;
+
+    // The coherent S-Video burst survives the external emitter follower much
+    // better than the sigma-delta picture chroma.  Restore their intended
+    // ratio by multiplying active-picture chroma by seven.  Preserve the wider
+    // result until the final saturating add so strong colors clip rather than
+    // wrap in six-bit signed arithmetic.
+    // Keep CVBS at the original
+    // amplitude so this does not make composite dot crawl worse.
+    // The external S-Video input locks to the opposite burst polarity from
+    // the composite modulator's convention.  Keep that accepted burst and
+    // rotate picture chroma with it so their relative phase remains correct.
+    wire signed [6:0] svideo_chroma_wide = level_svideo_chroma;
+    wire signed [6:0] svideo_picture_chroma_wide =
+        -((svideo_chroma_wide <<< 3) - svideo_chroma_wide);
 
     wire [5:0] luma_level = level_sync ? LEVEL_SYNC :
                             level_picture ? level_luma : LEVEL_BLANK;
-    wire [5:0] chroma_level = (level_burst || level_picture) ?
-        add_level(CHROMA_CENTER,level_chroma) : CHROMA_CENTER;
+    wire [5:0] chroma_level = level_picture ?
+        add_level_wide(CHROMA_CENTER,svideo_picture_chroma_wide) :
+        level_burst ? add_level(CHROMA_CENTER,level_chroma) : CHROMA_CENTER;
     wire [5:0] composite_level = level_sync ? LEVEL_SYNC :
         level_burst ? add_level(LEVEL_BLANK,level_chroma) :
         level_picture ? add_level(level_luma,level_chroma) : LEVEL_BLANK;
@@ -253,6 +292,8 @@ module coco_cvbs_ntsc (
     reg [5:0] luma_level_135 = LEVEL_SYNC;
     reg [5:0] chroma_level_135 = CHROMA_CENTER;
     reg [5:0] cvbs_level_135 = LEVEL_SYNC;
+    reg chroma_burst_135 = 1'b0;
+    reg chroma_burst_bit_135 = 1'b0;
 
     always @(posedge clk135) begin
         if (!reset_n) begin
@@ -299,11 +340,15 @@ module coco_cvbs_ntsc (
             level_sync <= 1'b1;
             level_burst <= 1'b0;
             level_picture <= 1'b0;
+            level_carrier <= 3'd0;
             level_luma <= LEVEL_BLANK;
             level_chroma <= 6'sd0;
+            level_svideo_chroma <= 6'sd0;
             luma_level_135 <= LEVEL_SYNC;
             chroma_level_135 <= CHROMA_CENTER;
             cvbs_level_135 <= LEVEL_SYNC;
+            chroma_burst_135 <= 1'b0;
+            chroma_burst_bit_135 <= 1'b0;
         end else begin
             height_meta <= active_height;
             picture_top <= next_picture_top;
@@ -311,6 +356,8 @@ module coco_cvbs_ntsc (
             luma_level_135 <= luma_level;
             chroma_level_135 <= chroma_level;
             cvbs_level_135 <= composite_level;
+            chroma_burst_135 <= level_burst;
+            chroma_burst_bit_135 <= ~level_carrier[2];
 
             source_sync <= sync_tip;
             source_burst <= in_burst;
@@ -350,8 +397,10 @@ module coco_cvbs_ntsc (
             level_sync <= mod_sync;
             level_burst <= mod_burst;
             level_picture <= mod_picture;
+            level_carrier <= mod_carrier;
             level_luma <= mod_luma > LEVEL_WHITE ? LEVEL_WHITE : mod_luma;
             level_chroma <= mod_selected_chroma;
+            level_svideo_chroma <= mod_svideo_picture_chroma;
 
             if (carrier_fraction >= 9'd338) begin
                 carrier_fraction <= carrier_fraction - 9'd338;
@@ -390,12 +439,25 @@ module coco_cvbs_ntsc (
     reg luma_out_reg = 1'b0;
     reg chroma_out_reg = 1'b0;
     reg cvbs_out_reg = 1'b0;
+    reg chroma_burst_270 = 1'b0;
+    reg chroma_burst_bit_270 = 1'b0;
+    reg [2:0] burst_shape_phase = 3'd0;
     wire [5:0] luma_sum = {1'b0,luma_sigma[4:0]} + luma_dac_level;
     wire [5:0] chroma_sum = {1'b0,chroma_sigma[4:0]} + chroma_dac_level;
     wire [5:0] cvbs_sum = {1'b0,cvbs_sigma[4:0]} + cvbs_dac_level;
     assign luma_out = luma_out_reg;
     assign chroma_out = chroma_out_reg;
     assign cvbs_out = cvbs_out_reg;
+
+    // Preserve a coherent fSC reference through the transistor output stage,
+    // but attenuate its fundamental without an analogue DAC.  Two of every
+    // eight 270-MHz samples invert the carrier.  The monitor rejects those
+    // high-frequency products while the wanted 3.58-MHz carrier is 1/2 of
+    // the full-swing diagnostic burst.  This is the lowest level that the
+    // tested CRT reliably reacquires after switching inputs.
+    wire burst_shape_invert = (burst_shape_phase == 3'd1) ||
+                              (burst_shape_phase == 3'd5);
+    wire shaped_burst_bit = chroma_burst_bit_270 ^ burst_shape_invert;
 
     always @(posedge clk270) begin
         if (!reset_n) begin
@@ -408,15 +470,22 @@ module coco_cvbs_ntsc (
             luma_out_reg <= 1'b0;
             chroma_out_reg <= 1'b0;
             cvbs_out_reg <= 1'b0;
+            chroma_burst_270 <= 1'b0;
+            chroma_burst_bit_270 <= 1'b0;
+            burst_shape_phase <= 3'd0;
         end else begin
             luma_dac_level <= luma_level_135;
             chroma_dac_level <= chroma_level_135;
             cvbs_dac_level <= cvbs_level_135;
+            chroma_burst_270 <= chroma_burst_135;
+            chroma_burst_bit_270 <= chroma_burst_bit_135;
+            burst_shape_phase <= burst_shape_phase + 1'b1;
             luma_sigma <= luma_sum;
             chroma_sigma <= chroma_sum;
             cvbs_sigma <= cvbs_sum;
             luma_out_reg <= luma_sigma[5];
-            chroma_out_reg <= chroma_sigma[5];
+            chroma_out_reg <= chroma_burst_270 ?
+                              shaped_burst_bit : chroma_sigma[5];
             cvbs_out_reg <= cvbs_sigma[5];
         end
     end
