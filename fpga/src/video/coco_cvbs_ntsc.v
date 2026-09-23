@@ -211,18 +211,25 @@ module coco_cvbs_ntsc (
     reg source_picture = 1'b0;
     reg source_active = 1'b0;
     reg [2:0] source_carrier = 3'd0;
+    reg source_sample_tick = 1'b0;
 
     reg pixel_sync = 1'b1;
     reg pixel_burst = 1'b0;
     reg pixel_picture = 1'b0;
     reg [2:0] pixel_carrier = 3'd0;
+    reg pixel_sample_tick = 1'b0;
 
     reg encoder_sync = 1'b1;
     reg encoder_burst = 1'b0;
     reg encoder_picture = 1'b0;
     reg [2:0] encoder_carrier = 3'd0;
+    reg encoder_sample_tick = 1'b0;
     reg signed [7:0] encoder_x_axis = 8'sd0;
     reg signed [7:0] encoder_y_axis = 8'sd0;
+    reg signed [7:0] chroma_x_previous = 8'sd0;
+    reg signed [7:0] chroma_y_previous = 8'sd0;
+    reg signed [7:0] chroma_x_filtered = 8'sd0;
+    reg signed [7:0] chroma_y_filtered = 8'sd0;
     reg [9:0] encoder_luma_rb = 10'd0;
     reg [9:0] encoder_luma_g = 10'd0;
 
@@ -232,6 +239,24 @@ module coco_cvbs_ntsc (
     wire signed [10:0] encoder_y = encoder_y_axis;
     wire signed [10:0] encoder_sum = encoder_x + encoder_y;
     wire signed [10:0] encoder_difference = encoder_x - encoder_y;
+
+    // Two-tap horizontal chroma filter.  Update once per 13.5-MHz
+    // sample, not once per clk135 cycle, because each source sample is held
+    // for ten clocks.  Luma remains unfiltered, so text detail is unchanged.
+    wire signed [8:0] chroma_x_pair =
+        $signed(encoder_x_axis) + $signed(chroma_x_previous);
+    wire signed [8:0] chroma_y_pair =
+        $signed(encoder_y_axis) + $signed(chroma_y_previous);
+    wire signed [7:0] chroma_x_average = chroma_x_pair >>> 1;
+    wire signed [7:0] chroma_y_average = chroma_y_pair >>> 1;
+    // Consume the registered average in the existing modulator stage.  This
+    // avoids duplicating the expensive chroma matrix, which otherwise moves
+    // unrelated scanline logic enough to disturb timing on the nearly-full
+    // device.  The cost is one 13.5-MHz chroma sample of horizontal delay.
+    wire signed [10:0] filtered_x = chroma_x_filtered;
+    wire signed [10:0] filtered_y = chroma_y_filtered;
+    wire signed [10:0] filtered_sum = filtered_x + filtered_y;
+    wire signed [10:0] filtered_difference = filtered_x - filtered_y;
 
     reg mod_sync = 1'b1;
     reg mod_burst = 1'b0;
@@ -313,10 +338,12 @@ module coco_cvbs_ntsc (
             source_picture <= 1'b0;
             source_active <= 1'b0;
             source_carrier <= 3'd0;
+            source_sample_tick <= 1'b0;
             pixel_sync <= 1'b1;
             pixel_burst <= 1'b0;
             pixel_picture <= 1'b0;
             pixel_carrier <= 3'd0;
+            pixel_sample_tick <= 1'b0;
             pixel_rgb <= 6'd0;
             border_meta <= 6'd0;
             border_sample <= 6'd0;
@@ -324,8 +351,13 @@ module coco_cvbs_ntsc (
             encoder_burst <= 1'b0;
             encoder_picture <= 1'b0;
             encoder_carrier <= 3'd0;
+            encoder_sample_tick <= 1'b0;
             encoder_x_axis <= 8'sd0;
             encoder_y_axis <= 8'sd0;
+            chroma_x_previous <= 8'sd0;
+            chroma_y_previous <= 8'sd0;
+            chroma_x_filtered <= 8'sd0;
+            chroma_y_filtered <= 8'sd0;
             encoder_luma_rb <= 10'd0;
             encoder_luma_g <= 10'd0;
             mod_sync <= 1'b1;
@@ -364,6 +396,7 @@ module coco_cvbs_ntsc (
             source_picture <= in_vdg_window;
             source_active <= in_picture;
             source_carrier <= carrier_octant;
+            source_sample_tick <= (sample_phase == 4'd0);
 
             // Register the synchronous BSRAM output before RGB arithmetic.
             // source_* is delayed by the same stage to retain alignment.
@@ -371,6 +404,7 @@ module coco_cvbs_ntsc (
             pixel_burst <= source_burst;
             pixel_picture <= source_picture;
             pixel_carrier <= source_carrier;
+            pixel_sample_tick <= source_sample_tick;
             border_meta <= border_rgb;
             border_sample <= border_meta;
             pixel_rgb <= source_active ? framebuffer_data : border_sample;
@@ -379,20 +413,29 @@ module coco_cvbs_ntsc (
             encoder_burst <= pixel_burst;
             encoder_picture <= pixel_picture;
             encoder_carrier <= pixel_carrier;
+            encoder_sample_tick <= pixel_sample_tick;
             encoder_x_axis <= fb_x_axis;
             encoder_y_axis <= fb_y_axis;
             encoder_luma_rb <= fb_luma_rb;
             encoder_luma_g <= fb_luma_g;
+
+            if (encoder_sample_tick) begin
+                chroma_x_previous <= encoder_x_axis;
+                chroma_y_previous <= encoder_y_axis;
+                chroma_x_filtered <= chroma_x_average;
+                chroma_y_filtered <= chroma_y_average;
+            end
 
             mod_sync <= encoder_sync;
             mod_burst <= encoder_burst;
             mod_picture <= encoder_picture;
             mod_carrier <= encoder_carrier;
             mod_luma <= LEVEL_BLANK + encoder_luma_sum[10:6];
-            mod_x4 <= encoder_x <<< 2;
-            mod_y4 <= encoder_y <<< 2;
-            mod_sum3 <= (encoder_sum <<< 1) + encoder_sum;
-            mod_difference3 <= (encoder_difference <<< 1) + encoder_difference;
+            mod_x4 <= filtered_x <<< 2;
+            mod_y4 <= filtered_y <<< 2;
+            mod_sum3 <= (filtered_sum <<< 1) + filtered_sum;
+            mod_difference3 <=
+                (filtered_difference <<< 1) + filtered_difference;
 
             level_sync <= mod_sync;
             level_burst <= mod_burst;
