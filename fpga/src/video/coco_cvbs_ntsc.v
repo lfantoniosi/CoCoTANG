@@ -178,8 +178,8 @@ module coco_cvbs_ntsc (
 
     function [5:0] add_level_wide;
         input [5:0] base;
-        input signed [6:0] delta;
-        reg signed [7:0] result;
+        input signed [7:0] delta;
+        reg signed [8:0] result;
         begin
             result = $signed({1'b0,base}) + delta;
             if (result < 0) add_level_wide = 6'd0;
@@ -270,16 +270,9 @@ module coco_cvbs_ntsc (
 
     wire signed [5:0] mod_picture_chroma =
         rgb_chroma(mod_x4,mod_y4,mod_sum3,mod_difference3,mod_carrier);
-    wire signed [5:0] mod_picture_chroma_next =
-        rgb_chroma(mod_x4,mod_y4,mod_sum3,mod_difference3,mod_carrier + 3'd1);
-    wire signed [6:0] mod_picture_chroma_ext = mod_picture_chroma;
-    wire signed [6:0] mod_picture_chroma_next_ext = mod_picture_chroma_next;
-    // Half-octant interpolation rotates only S-Video picture chroma by
-    // approximately +22.5 degrees.  The accepted burst phase is untouched.
-    wire signed [6:0] mod_svideo_chroma_sum =
-        mod_picture_chroma_ext + mod_picture_chroma_next_ext;
     wire signed [5:0] mod_svideo_picture_chroma =
-        mod_svideo_chroma_sum >>> 1;
+        rgb_chroma(mod_x4,mod_y4,mod_sum3,mod_difference3,
+                   mod_carrier + 3'd1);
     wire signed [5:0] mod_selected_chroma = mod_burst ?
         chroma8(mod_carrier + 3'd4,2'd3) : mod_picture_chroma;
 
@@ -291,24 +284,21 @@ module coco_cvbs_ntsc (
     reg signed [5:0] level_chroma = 6'sd0;
     reg signed [5:0] level_svideo_chroma = 6'sd0;
 
-    // The coherent S-Video burst survives the external emitter follower much
-    // better than the sigma-delta picture chroma.  Restore their intended
-    // ratio by multiplying active-picture chroma by seven.  Preserve the wider
-    // result until the final saturating add so strong colors clip rather than
-    // wrap in six-bit signed arithmetic.
-    // Keep CVBS at the original
-    // amplitude so this does not make composite dot crawl worse.
-    // The external S-Video input locks to the opposite burst polarity from
-    // the composite modulator's convention.  Keep that accepted burst and
-    // rotate picture chroma with it so their relative phase remains correct.
-    wire signed [6:0] svideo_chroma_wide = level_svideo_chroma;
-    wire signed [6:0] svideo_picture_chroma_wide =
-        -((svideo_chroma_wide <<< 3) - svideo_chroma_wide);
+    // The S-Video connector locks to the inverted burst convention below, so
+    // active-picture chroma must use the same polarity.  Advance picture hue
+    // by one 45-degree carrier octant to compensate the measured analogue
+    // rotation.  The corrected Q8 emitter follower still attenuates picture
+    // chroma; a moderate x4 gain restores saturation without the severe
+    // clipping of the former x7 gain.
+    wire signed [7:0] svideo_chroma_extended = level_svideo_chroma;
+    wire signed [7:0] svideo_picture_chroma =
+        -(svideo_chroma_extended <<< 2);
 
     wire [5:0] luma_level = level_sync ? LEVEL_SYNC :
                             level_picture ? level_luma : LEVEL_BLANK;
+    // The receiver derives hue and saturation from the picture-to-burst ratio.
     wire [5:0] chroma_level = level_picture ?
-        add_level_wide(CHROMA_CENTER,svideo_picture_chroma_wide) :
+        add_level_wide(CHROMA_CENTER,svideo_picture_chroma) :
         level_burst ? add_level(CHROMA_CENTER,level_chroma) : CHROMA_CENTER;
     wire [5:0] composite_level = level_sync ? LEVEL_SYNC :
         level_burst ? add_level(LEVEL_BLANK,level_chroma) :
