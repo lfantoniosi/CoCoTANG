@@ -231,6 +231,28 @@ module gime_scanline_buffer #(
  // overwrite the row just before component/CVBS starts reading it.
  wire cv_line_active=cv_v_s||(cv_pv_s&&cv_p_s!=0);
  wire [7:0] cv_active_y=cv_v_s?cv_y_s:(cv_p_s-1'b1);
+ wire h_keep_tag0=h_valid0&&hd_pa_s&&
+                  ((h_tag0==hd_y_s)||(hd_pv_s&&h_tag0==hd_p_s));
+ wire h_keep_tag1=h_valid1&&hd_pa_s&&
+                  ((h_tag1==hd_y_s)||(hd_pv_s&&h_tag1==hd_p_s));
+ // The CVBS RAM is a mirror written by the HDMI-mastered renderer.  Across a
+ // raster configuration write it must retain every row which HDMI retains,
+ // even when analogue scanout is one row behind.  Otherwise HDMI continues
+ // to report its prefetch as cached and never recreates the invalidated
+ // analogue copy.  Also retain the row analogue is consuming so its bank
+ // cannot be selected for replacement before that physical line completes.
+ wire c_keep_tag0=(h_keep_tag0&&c_tag0==h_tag0)||
+                  (h_keep_tag1&&c_tag0==h_tag1)||
+                  (cv_line_active&&((c_tag0==cv_active_y)||
+                                    (cv_pv_s&&c_tag0==cv_p_s)));
+ wire c_keep_tag1=(h_keep_tag0&&c_tag1==h_tag0)||
+                  (h_keep_tag1&&c_tag1==h_tag1)||
+                  (cv_line_active&&((c_tag1==cv_active_y)||
+                                    (cv_pv_s&&c_tag1==cv_p_s)));
+ wire c_keep_tag2=(h_keep_tag0&&c_tag2==h_tag0)||
+                  (h_keep_tag1&&c_tag2==h_tag1)||
+                  (cv_line_active&&((c_tag2==cv_active_y)||
+                                    (cv_pv_s&&c_tag2==cv_p_s)));
  wire [1:0] c_replacement_bank=!c_valid0?2'd0:!c_valid1?2'd1:!c_valid2?2'd2:
   (cv_line_active&&c_valid0&&c_tag0==cv_active_y&&c_next_bank==2'd0)?2'd1:
   (cv_line_active&&c_valid1&&c_tag1==cv_active_y&&c_next_bank==2'd1)?2'd2:
@@ -568,26 +590,23 @@ reg configuration_pending=1'b1;
     // During upper border row zero is only speculative.  Do not preserve it
     // across a late frame-setup write; discard and regenerate it.  The next
     // row is protected only while an actual picture row is being displayed.
-    h_valid0<=h_valid0&&hd_pa_s&&
-              ((h_tag0==hd_y_s)||(hd_pv_s&&h_tag0==hd_p_s));
-    h_valid1<=h_valid1&&hd_pa_s&&
-              ((h_tag1==hd_y_s)||(hd_pv_s&&h_tag1==hd_p_s));
-    c_valid0<=c_valid0&&cv_v_s&&
-              ((c_tag0==cv_y_s)||(cv_pv_s&&c_tag0==cv_p_s));
-    c_valid1<=c_valid1&&cv_v_s&&
-              ((c_tag1==cv_y_s)||(cv_pv_s&&c_tag1==cv_p_s));
-    c_valid2<=c_valid2&&cv_v_s&&
-              ((c_tag2==cv_y_s)||(cv_pv_s&&c_tag2==cv_p_s));
+    h_valid0<=h_keep_tag0;
+    h_valid1<=h_keep_tag1;
+    // cv_v_s covers only active horizontal pixels. Raster handlers write
+    // GIME registers in HBORD, where it is low although the same analogue
+    // row is still in progress. Preserve the current and prefetched rows
+    // using the full-line identity derived from prefetch_y; otherwise each
+    // scrolling/mode write creates a component/CVBS-only black scanline.
+    c_valid0<=c_valid0&&c_keep_tag0;
+    c_valid1<=c_valid1&&c_keep_tag1;
+    c_valid2<=c_valid2&&c_keep_tag2;
     h_dirty0<=h_dirty0&&hd_pa_s&&
               ((h_tag0==hd_y_s)||(hd_pv_s&&h_tag0==hd_p_s));
     h_dirty1<=h_dirty1&&hd_pa_s&&
               ((h_tag1==hd_y_s)||(hd_pv_s&&h_tag1==hd_p_s));
-    c_dirty0<=c_dirty0&&cv_v_s&&
-              ((c_tag0==cv_y_s)||(cv_pv_s&&c_tag0==cv_p_s));
-    c_dirty1<=c_dirty1&&cv_v_s&&
-              ((c_tag1==cv_y_s)||(cv_pv_s&&c_tag1==cv_p_s));
-    c_dirty2<=c_dirty2&&cv_v_s&&
-              ((c_tag2==cv_y_s)||(cv_pv_s&&c_tag2==cv_p_s));
+    c_dirty0<=c_dirty0&&c_keep_tag0;
+    c_dirty1<=c_dirty1&&c_keep_tag1;
+    c_dirty2<=c_dirty2&&c_keep_tag2;
    memory_request<=0;word_valid<=0;h_pending<=0;c_pending<=0;
    coalesce_count<=0;
    end else begin

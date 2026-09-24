@@ -277,12 +277,25 @@ module tb_gime_scanline_buffer;
   // requests continually evict each other and produce alternating black or
   // repeated physical scanlines.
   hdmi_prefetch_valid=0;cvbs_prefetch_valid=0;repeat(5)@(posedge clk);
+  timeout=0;
+  while((dut.state!=0||dut.h_pending||memory_request)&&timeout<200000)begin
+   @(posedge clk);timeout=timeout+1;
+  end
   hdmi_prefetch_y=8'd2;cvbs_prefetch_y=8'd3;transactions=0;
   repeat(5)@(posedge clk);hdmi_prefetch_valid=1;cvbs_prefetch_valid=1;timeout=0;
   while((!((dut.h_valid0&&dut.h_tag0==2)||(dut.h_valid1&&dut.h_tag1==2))||
-          !((dut.c_valid0&&dut.c_tag0==2)||(dut.c_valid1&&dut.c_tag1==2)))&&timeout<6800)
+          !((dut.c_valid0&&dut.c_tag0==2)||(dut.c_valid1&&dut.c_tag1==2)||
+            (dut.c_valid2&&dut.c_tag2==2)))&&timeout<6800)
    begin @(posedge clk);timeout=timeout+1;end
-  if(timeout==6800)begin $display("master row mirror missed deadline");errors=errors+1;end
+  if(timeout==6800)begin
+   $display("master row mirror missed deadline h=%b/%0d %b/%0d c=%b/%0d %b/%0d %b/%0d state=%0d pending=%b/%0d",
+    dut.h_valid0,dut.h_tag0,dut.h_valid1,dut.h_tag1,
+    dut.c_valid0,dut.c_tag0,dut.c_valid1,dut.c_tag1,dut.c_valid2,dut.c_tag2,
+    dut.state,dut.h_pending,dut.h_pending_y);
+   $display("mirror diagnostics transactions=%0d slow=%b responder=%0d delay=%0d",
+    transactions,slow_memory,responder_state,responder_delay);
+   errors=errors+1;
+  end
   if(transactions!=40)begin
    $display("phase-separated request caused %0d transactions",transactions);errors=errors+1;end
   else $display("master row mirrored in %0d clocks",timeout);
@@ -299,6 +312,32 @@ module tb_gime_scanline_buffer;
   release dut.c_next_bank;release dut.cv_p_s;release dut.cv_pv_s;release dut.cv_v_s;
   release dut.c_tag2;release dut.c_tag1;release dut.c_tag0;
   release dut.c_valid2;release dut.c_valid1;release dut.c_valid0;
+
+  // A GIME raster handler commonly changes VOFF/mode in analogue horizontal
+  // border.  Analogue scanout is one row behind HDMI here.  Since HDMI is the
+  // sole producer for both RAM copies, retain its prefetched row 32 as well
+  // as analogue's current/prefetched rows 30/31.  Dropping row 32 only from
+  // the analogue mirror cannot self-heal: HDMI still considers it cached.
+  @(negedge clk);
+  dut.c_valid0=1;dut.c_tag0=8'd30;dut.c_dirty0=1;
+  dut.c_valid1=1;dut.c_tag1=8'd31;dut.c_dirty1=1;
+  dut.c_valid2=1;dut.c_tag2=8'd32;dut.c_dirty2=1;
+  force dut.h_valid0=1;force dut.h_tag0=8'd31;
+  force dut.h_valid1=1;force dut.h_tag1=8'd32;
+  force dut.cv_v_s=0;force dut.cv_pv_s=1;force dut.cv_p_s=8'd31;
+  force dut.hd_pa_s=1;force dut.hd_y_s=8'd31;
+  force dut.hd_pv_s=1;force dut.hd_p_s=8'd32;
+  force dut.state=4'd0;force dut.configuration_pending=1'b1;
+  @(posedge clk);#1;
+  if(!dut.c_valid0||!dut.c_valid1||!dut.c_valid2||
+     !dut.c_dirty0||!dut.c_dirty1||!dut.c_dirty2)begin
+   $display("analogue HBORD mode write discarded phase-shifted mirror row");
+   errors=errors+1;
+  end
+  release dut.configuration_pending;release dut.state;
+  release dut.h_tag1;release dut.h_valid1;release dut.h_tag0;release dut.h_valid0;
+  release dut.hd_p_s;release dut.hd_pv_s;release dut.hd_y_s;release dut.hd_pa_s;
+  release dut.cv_p_s;release dut.cv_pv_s;release dut.cv_v_s;
 
   // Scrolling writes commonly dirty the row which has already been
   // prefetched while the preceding row is being shown twice by HDMI.  Keep
