@@ -21,6 +21,7 @@ module tb_gime_scanline_buffer;
   .lines_per_row_code(lpr),.vertical_scroll(vertical_scroll),.screen_base(screen_base),
   .video_bank(video_bank),
   .horizontal_offset(horizontal_offset),.palettes(palettes),
+  .border_rgb(6'd0),
   .compatibility_mode(compatibility_mode),.compatibility_an_g(compatibility_an_g),
   .compatibility_gm(compatibility_gm),.compatibility_css(1'b0),
   .compatibility_sam_mode(compatibility_sam_mode),
@@ -81,6 +82,23 @@ module tb_gime_scanline_buffer;
   // than rounding back to grey as the old RGB222 filter did.
   if(dut.blend_quarters(24'haaaaaa,24'h000000,2'd1)!==24'h808080)begin
    $display("HDMI RGB888 filter lost fractional coverage");errors=errors+1;end
+
+  // Native even-HRES rows use the GIME's narrow 512-dot aperture; odd-HRES
+  // rows use the full 640 dots.  This distinction is required by raster
+  // demos which alternate 256- and 320-pixel modes between scanlines.
+  if(dut.scale_integer_512(13'd256)!=0||
+     dut.scale_remainder_512(13'd256)!=10'd256)begin
+   $display("256-pixel narrow-aperture scaling is wrong");errors=errors+1;end
+  force dut.fill_narrow_aperture=1'b1;force dut.out_x=10'd63;#1;
+  if(dut.in_fill_aperture)begin
+   $display("narrow-aperture left border is not blanked");errors=errors+1;end
+  force dut.out_x=10'd64;#1;
+  if(!dut.in_fill_aperture)begin
+   $display("narrow-aperture first picture dot is blanked");errors=errors+1;end
+  force dut.out_x=10'd576;#1;
+  if(dut.in_fill_aperture)begin
+   $display("narrow-aperture right border is not blanked");errors=errors+1;end
+  release dut.out_x;release dut.fill_narrow_aperture;
 
   invalidate_all();
   if(!(dut.h_dirty0||dut.h_dirty1))begin

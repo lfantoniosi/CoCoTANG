@@ -284,6 +284,7 @@ module coco3 #(
         .screen_base(effective_screen_base),
         .video_bank(video_bank),
         .horizontal_offset(horizontal_offset), .palettes(palettes),
+        .border_rgb(border_rgb),
         .compatibility_mode(compatibility_mode),
         .compatibility_an_g(compatibility_an_g),
         .compatibility_gm(compatibility_gm),

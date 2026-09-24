@@ -6,7 +6,7 @@ module gime_scanline_buffer #(
  input clk,input reset_n,input bit_plane,input [3:0] hres,input [1:0] cres,
  input [2:0] lines_per_row_code,input [3:0] vertical_scroll,
  input [18:0] screen_base,input [1:0] video_bank,
- input [7:0] horizontal_offset,input [95:0] palettes,
+ input [7:0] horizontal_offset,input [95:0] palettes,input [5:0] border_rgb,
  input compatibility_mode,input compatibility_an_g,input [2:0] compatibility_gm,
  input [2:0] compatibility_sam_mode,
  input compatibility_css,input [1:0] artifact_mode,input blink,
@@ -103,6 +103,26 @@ module gime_scanline_buffer #(
    13'd4096:scale_remainder=256;
    13'd640,13'd1280,13'd2560,13'd5120:scale_remainder=0;
    default:scale_remainder=width[9:0];
+  endcase end
+ endfunction
+ function [3:0] scale_integer_512;
+  input [12:0] width;
+  begin case(width)
+   13'd512:scale_integer_512=1;13'd640:scale_integer_512=1;
+   13'd1024:scale_integer_512=2;13'd1280:scale_integer_512=2;
+   13'd2048:scale_integer_512=4;13'd2560:scale_integer_512=5;
+   13'd4096:scale_integer_512=8;13'd5120:scale_integer_512=10;
+   default:scale_integer_512=0;
+  endcase end
+ endfunction
+ function [9:0] scale_remainder_512;
+  input [12:0] width;
+  begin case(width)
+   13'd640:scale_remainder_512=128;
+   13'd1280:scale_remainder_512=256;
+   13'd512,13'd1024,13'd2048,13'd2560,13'd4096,13'd5120:
+    scale_remainder_512=0;
+   default:scale_remainder_512=width[9:0];
   endcase end
  endfunction
  function compatibility_inverse;
@@ -218,6 +238,7 @@ module gime_scanline_buffer #(
  reg [7:0] fill_lpr=1;
  reg [10:0] fill_stride=0,fill_row_bytes=0;reg [12:0] fill_source_width=0;
  reg [3:0] fill_scale_integer=0;reg [9:0] fill_scale_remainder=0;
+ reg fill_narrow_aperture=0;reg [5:0] fill_border_rgb=0;
  reg [18:0] fill_base=0;reg [6:0] fill_hoff=0;reg [95:0] fill_palettes=0;
  reg [1:0] fill_video_bank=0;
  reg [8:0] row_remainder=0;reg [7:0] source_row=0;reg [3:0] glyph_line=0;
@@ -243,7 +264,9 @@ module gime_scanline_buffer #(
  wire [10:0] next_scale_phase_sum={1'b0,scale_phase}+
                                   {1'b0,fill_scale_remainder};
  wire [12:0] next_source_x=source_x+fill_scale_integer+
-     (next_scale_phase_sum>=11'd640);
+     (next_scale_phase_sum>=(fill_narrow_aperture?11'd512:11'd640));
+ wire in_fill_aperture=!fill_narrow_aperture||
+                       (out_x>=10'd64&&out_x<10'd576);
  wire [11:0] next_source_byte_index=fill_cres==0?next_source_x[12:3]:
   fill_cres==1?next_source_x[12:2]:next_source_x[12:1];
  wire [18:0] pixel_byte_index=fill_bit_plane?{7'd0,source_byte_index}:
@@ -612,8 +635,16 @@ reg configuration_pending=1'b1;
       native_lines_per_row(lines_per_row_code);
      fill_stride<=live_stride;fill_row_bytes<=live_row_bytes;
      fill_source_width<=live_source_width;
-     fill_scale_integer<=scale_integer(live_source_width);
-     fill_scale_remainder<=scale_remainder(live_source_width);
+     // HRES selects two physical GIME apertures. Even HRES values are the
+     // 256/512-dot family and occupy 512 master dots; odd values are the
+     // 320/640-dot family and occupy all 640. Keeping every row at 640 erased
+     // raster tricks which switch HRES between scanlines (Sock Master).
+     fill_narrow_aperture<=!compatibility_mode&&!hres[0];
+     fill_border_rgb<=border_rgb;
+     fill_scale_integer<=(!compatibility_mode&&!hres[0])?
+       scale_integer_512(live_source_width):scale_integer(live_source_width);
+     fill_scale_remainder<=(!compatibility_mode&&!hres[0])?
+       scale_remainder_512(live_source_width):scale_remainder(live_source_width);
      fill_hoff<=horizontal_offset[6:0];fill_palettes<=palettes;
      // Native LPR=0/1 is one raster line per memory row.  The real GIME
      // forces its fine-scroll counter to zero in this mode; FF9C must not
@@ -650,7 +681,11 @@ reg configuration_pending=1'b1;
     LINE_ADDRESS:begin line_address<=fill_base+row_address;
      state<=PIXEL_ADDRESS;end
     PIXEL_ADDRESS:begin
-     if(fill_bit_plane&&graphics_cache_valid&&graphics_cache_index==source_byte_index)
+     if(!in_fill_aperture)begin
+      pixel_latched<=fill_border_rgb;
+      hdmi_pixel_latched<=expand_rgb222(fill_border_rgb);
+      state<=WRITE_PIXEL;
+     end else if(fill_bit_plane&&graphics_cache_valid&&graphics_cache_index==source_byte_index)
       state<=DECODE_PIXEL;
      else if(!fill_bit_plane&&text_cache_valid&&
              text_cache_column==source_character_column)
@@ -728,11 +763,15 @@ reg configuration_pending=1'b1;
        state<=ARTIFACT_DECODE;
       end else state<=FINALIZE_LINE;
      end else begin
-      out_x<=out_x+1'b1;source_x<=next_source_x;
-      source_byte_index<=next_source_byte_index;
-      source_character_column<=next_source_x[10:3];
-      scale_phase<=(next_scale_phase_sum>=11'd640)?
-                   (next_scale_phase_sum-11'd640):next_scale_phase_sum[9:0];
+      out_x<=out_x+1'b1;
+      if(in_fill_aperture)begin
+       source_x<=next_source_x;
+       source_byte_index<=next_source_byte_index;
+       source_character_column<=next_source_x[10:3];
+       scale_phase<=next_scale_phase_sum>=(fill_narrow_aperture?11'd512:11'd640)?
+                    (next_scale_phase_sum-(fill_narrow_aperture?11'd512:11'd640)):
+                    next_scale_phase_sum[9:0];
+      end
       state<=PIXEL_ADDRESS;
      end
     end
