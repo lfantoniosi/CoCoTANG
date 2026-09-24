@@ -17,7 +17,8 @@ module gime_scanline_buffer #(
  output reg [23:0] hdmi_pixel_data,
  input cvbs_read_clk,input [9:0] cvbs_read_x,input [7:0] cvbs_display_y,
  input cvbs_display_valid,input [7:0] cvbs_prefetch_y,input cvbs_prefetch_valid,
- output reg [5:0] cvbs_pixel_data,
+ output reg [5:0] cvbs_pixel_data,output reg [5:0] cvbs_border_data,
+ output reg cvbs_border_valid,
  output reg memory_request,output reg [22:0] memory_addr,
  input [31:0] memory_data,input memory_valid,
  output [7:0] debug_dma_next_y,output [7:0] debug_fill_y,
@@ -186,6 +187,7 @@ module gime_scanline_buffer #(
  reg [7:0] h_tag0=0,h_tag1=0,c_tag0=0,c_tag1=0,c_tag2=0;
  reg [20:0] h_start0=0,h_start1=0,c_start0=0,c_start1=0,c_start2=0;
  reg [10:0] h_bytes0=0,h_bytes1=0,c_bytes0=0,c_bytes1=0,c_bytes2=0;
+ reg [5:0] c_border0=0,c_border1=0,c_border2=0;
  reg h_next_bank=0;
  reg [1:0] c_next_bank=0;
 
@@ -222,10 +224,17 @@ module gime_scanline_buffer #(
  // Prefer an unused CVBS bank.  Once all three are live, advance round-robin
  // but skip the bank selected by the current scanline.  Three retained rows
  // cover the one-line phase excursion of alternating 262/263-line fields.
+ // During horizontal blank source_valid is low even though the analogue
+ // consumer is about to scan the same logical row.  prefetch_y remains N+1,
+ // so use it to protect N across the complete line.  Otherwise a change in
+ // render duration (notably 256 -> 320 dots) can make round-robin replacement
+ // overwrite the row just before component/CVBS starts reading it.
+ wire cv_line_active=cv_v_s||(cv_pv_s&&cv_p_s!=0);
+ wire [7:0] cv_active_y=cv_v_s?cv_y_s:(cv_p_s-1'b1);
  wire [1:0] c_replacement_bank=!c_valid0?2'd0:!c_valid1?2'd1:!c_valid2?2'd2:
-  (cv_v_s&&c_valid0&&c_tag0==cv_y_s&&c_next_bank==2'd0)?2'd1:
-  (cv_v_s&&c_valid1&&c_tag1==cv_y_s&&c_next_bank==2'd1)?2'd2:
-  (cv_v_s&&c_valid2&&c_tag2==cv_y_s&&c_next_bank==2'd2)?2'd0:c_next_bank;
+  (cv_line_active&&c_valid0&&c_tag0==cv_active_y&&c_next_bank==2'd0)?2'd1:
+  (cv_line_active&&c_valid1&&c_tag1==cv_active_y&&c_next_bank==2'd1)?2'd2:
+  (cv_line_active&&c_valid2&&c_tag2==cv_active_y&&c_next_bank==2'd2)?2'd0:c_next_bank;
  reg h_pending=0,c_pending=0;reg [7:0] h_pending_y=0,c_pending_y=0;
  reg [2:0] coalesce_count=0;
 
@@ -809,14 +818,17 @@ reg configuration_pending=1'b1;
       if(fill_cvbs)begin
        case(fill_c_bank)
         2'd0:begin c_tag0<=fill_y;c_start0<={fill_video_bank,line_address};c_bytes0<=fill_row_bytes;
+         c_border0<=fill_border_rgb;
          c_valid0<=1;c_dirty0<=fill_dirty;
          if(c_valid1&&c_tag1==fill_y)begin c_valid1<=0;c_dirty1<=0;end
          if(c_valid2&&c_tag2==fill_y)begin c_valid2<=0;c_dirty2<=0;end end
         2'd1:begin c_tag1<=fill_y;c_start1<={fill_video_bank,line_address};c_bytes1<=fill_row_bytes;
+         c_border1<=fill_border_rgb;
          c_valid1<=1;c_dirty1<=fill_dirty;
          if(c_valid0&&c_tag0==fill_y)begin c_valid0<=0;c_dirty0<=0;end
          if(c_valid2&&c_tag2==fill_y)begin c_valid2<=0;c_dirty2<=0;end end
         default:begin c_tag2<=fill_y;c_start2<={fill_video_bank,line_address};c_bytes2<=fill_row_bytes;
+         c_border2<=fill_border_rgb;
          c_valid2<=1;c_dirty2<=fill_dirty;
          if(c_valid0&&c_tag0==fill_y)begin c_valid0<=0;c_dirty0<=0;end
          if(c_valid1&&c_tag1==fill_y)begin c_valid1<=0;c_dirty1<=0;end end
@@ -873,20 +885,39 @@ reg configuration_pending=1'b1;
   // CVBS is always the 640-sample path in the CoCo 3 top.  Preload zero in
   // blanking, then request the following sample so the registered BSRAM
   // address does not add a visible horizontal pixel of delay.
-  c_read_addr<=cvbs_display_valid ? cvbs_read_x+1'b1 : 10'd0;
+  c_read_addr<=cvbs_display_valid ?
+               (cvbs_read_x==10'd639 ? 10'd639 : cvbs_read_x+1'b1) : 10'd0;
   c_tag0_m<=c_tag0;c_tag0_r<=c_tag0_m;c_tag1_m<=c_tag1;c_tag1_r<=c_tag1_m;
   c_tag2_m<=c_tag2;c_tag2_r<=c_tag2_m;
   c_v0_m<=c_valid0;c_v0_r<=c_v0_m;c_v1_m<=c_valid1;c_v1_r<=c_v1_m;
   c_v2_m<=c_valid2;c_v2_r<=c_v2_m;
-  if(!cvbs_display_valid)begin c_read_valid<=0;cvbs_pixel_data<=0;end
+  if(!cvbs_display_valid)begin
+   // source_y is already the upcoming row throughout horizontal blank.
+   // Select its bank and preload pixel zero while the encoder is still
+   // drawing border, so synchronous BSRAM latency cannot leak the previous
+   // border/row into the left edge of the active component/CVBS picture.
+   if(c_v0_r&&c_tag0_r==cvbs_display_y)begin
+    c_read_bank<=0;c_read_valid<=1;cvbs_pixel_data<=cvbs_line0[c_read_addr];
+    cvbs_border_data<=c_border0;cvbs_border_valid<=1;end
+   else if(c_v1_r&&c_tag1_r==cvbs_display_y)begin
+    c_read_bank<=1;c_read_valid<=1;cvbs_pixel_data<=cvbs_line1[c_read_addr];
+    cvbs_border_data<=c_border1;cvbs_border_valid<=1;end
+   else if(c_v2_r&&c_tag2_r==cvbs_display_y)begin
+    c_read_bank<=2;c_read_valid<=1;cvbs_pixel_data<=cvbs_line2[c_read_addr];
+    cvbs_border_data<=c_border2;cvbs_border_valid<=1;end
+   else begin c_read_valid<=0;cvbs_pixel_data<=0;cvbs_border_valid<=0;end
+  end
   else if(cvbs_read_x==0)begin
    if(c_v0_r&&c_tag0_r==cvbs_display_y)begin
-    c_read_bank<=0;c_read_valid<=1;cvbs_pixel_data<=cvbs_line0[c_read_addr];end
+    c_read_bank<=0;c_read_valid<=1;cvbs_pixel_data<=cvbs_line0[c_read_addr];
+    cvbs_border_data<=c_border0;cvbs_border_valid<=1;end
    else if(c_v1_r&&c_tag1_r==cvbs_display_y)begin
-    c_read_bank<=1;c_read_valid<=1;cvbs_pixel_data<=cvbs_line1[c_read_addr];end
+    c_read_bank<=1;c_read_valid<=1;cvbs_pixel_data<=cvbs_line1[c_read_addr];
+    cvbs_border_data<=c_border1;cvbs_border_valid<=1;end
    else if(c_v2_r&&c_tag2_r==cvbs_display_y)begin
-    c_read_bank<=2;c_read_valid<=1;cvbs_pixel_data<=cvbs_line2[c_read_addr];end
-   else begin c_read_valid<=0;cvbs_pixel_data<=0;end
+    c_read_bank<=2;c_read_valid<=1;cvbs_pixel_data<=cvbs_line2[c_read_addr];
+    cvbs_border_data<=c_border2;cvbs_border_valid<=1;end
+   else begin c_read_valid<=0;cvbs_pixel_data<=0;cvbs_border_valid<=0;end
   end else if(c_read_valid)begin
    case(c_read_bank)
     2'd0:cvbs_pixel_data<=cvbs_line0[c_read_addr];

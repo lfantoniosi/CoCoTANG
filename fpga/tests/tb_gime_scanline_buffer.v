@@ -15,6 +15,8 @@ module tb_gime_scanline_buffer;
  reg hdmi_prefetch_valid=1,cvbs_prefetch_valid=0;
  reg [7:0] hdmi_prefetch_y=0,cvbs_prefetch_y=0;
  reg hdmi_display_valid=0,hdmi_picture_active=0;reg [7:0] hdmi_display_y=0;
+ reg [9:0] cvbs_display_x=0;reg [7:0] cvbs_display_y=0;
+ reg cvbs_display_valid=0;
 
  gime_scanline_buffer dut(
   .clk(clk),.reset_n(reset_n),.bit_plane(bit_plane),.hres(hres),.cres(cres),
@@ -31,8 +33,8 @@ module tb_gime_scanline_buffer;
   .hdmi_display_valid(hdmi_display_valid),.hdmi_prefetch_y(hdmi_prefetch_y),
   .hdmi_picture_active(hdmi_picture_active),
   .hdmi_prefetch_valid(hdmi_prefetch_valid),.hdmi_pixel_data(hdmi_pixel),
-  .cvbs_read_clk(cvbs_clk),.cvbs_read_x(10'd0),.cvbs_display_y(8'd0),
-  .cvbs_display_valid(1'b0),.cvbs_prefetch_y(cvbs_prefetch_y),
+  .cvbs_read_clk(cvbs_clk),.cvbs_read_x(cvbs_display_x),.cvbs_display_y(cvbs_display_y),
+  .cvbs_display_valid(cvbs_display_valid),.cvbs_prefetch_y(cvbs_prefetch_y),
   .cvbs_prefetch_valid(cvbs_prefetch_valid),.cvbs_pixel_data(cvbs_pixel),
   .memory_request(memory_request),.memory_addr(memory_addr),
   .memory_data(memory_data),.memory_valid(memory_valid));
@@ -99,6 +101,29 @@ module tb_gime_scanline_buffer;
   if(dut.in_fill_aperture)begin
    $display("narrow-aperture right border is not blanked");errors=errors+1;end
   release dut.out_x;release dut.fill_narrow_aperture;
+
+  // Preserve the synchronous-RAM one-pixel look-ahead, but never request
+  // nonexistent element 640 at the right edge of a 640-sample GIME line.
+  cvbs_display_valid=1;cvbs_display_x=10'd638;
+  @(posedge cvbs_clk);#1;
+  if(dut.c_read_addr!=10'd639)begin
+   $display("CVBS look-ahead address %0d",dut.c_read_addr);errors=errors+1;end
+  cvbs_display_x=10'd639;
+  @(posedge cvbs_clk);#1;
+  if(dut.c_read_addr!=10'd639)begin
+   $display("CVBS final address %0d",dut.c_read_addr);errors=errors+1;end
+  cvbs_display_valid=0;cvbs_display_x=0;
+
+  // Horizontal blank preloads the upcoming row's pixel zero.  The encoder
+  // still outputs border, but the RAM value must be ready when active video
+  // opens rather than leaving a one-pixel seam at the left edge.
+  force dut.c_valid0=1;force dut.c_tag0=8'd23;force dut.c_border0=6'h16;
+  dut.cvbs_line0[0]=6'h2d;cvbs_display_y=8'd23;
+  repeat(4)@(posedge cvbs_clk);#1;
+  if(!dut.c_read_valid||dut.c_read_bank!=0||cvbs_pixel!==6'h2d||
+     !dut.cvbs_border_valid||dut.cvbs_border_data!==6'h16)begin
+   $display("CVBS blanking did not preload pixel zero");errors=errors+1;end
+  release dut.c_border0;release dut.c_tag0;release dut.c_valid0;cvbs_display_y=0;
 
   invalidate_all();
   if(!(dut.h_dirty0||dut.h_dirty1))begin
@@ -224,9 +249,8 @@ module tb_gime_scanline_buffer;
   hdmi_prefetch_valid=0;slow_memory=0;hres=7;repeat(8)@(posedge clk);
 
   // HBORD handlers update the mode for the row after the one already
-  // prefetched.  Preserve both the displayed row and that completed prefetch
-  // across the write; invalidating the latter gives the renderer only one
-  // physical HDMI line to recover and creates a thin black gap.
+  // prefetched. Preserve both the displayed row and that completed prefetch
+  // across the write; invalidating the latter creates a thin black gap.
   hdmi_display_valid=0;hdmi_prefetch_y=8'd18;hdmi_prefetch_valid=1;
   timeout=0;
   while(!((dut.h_valid0&&dut.h_tag0==18)||(dut.h_valid1&&dut.h_tag1==18))&&
@@ -262,6 +286,19 @@ module tb_gime_scanline_buffer;
   if(transactions!=40)begin
    $display("phase-separated request caused %0d transactions",transactions);errors=errors+1;end
   else $display("master row mirrored in %0d clocks",timeout);
+
+  // CVBS/component horizontal blank must still protect the row that will be
+  // consumed on this physical scanline.  source_valid is low there, while
+  // prefetch_y continues to identify current_y+1.
+  force dut.c_valid0=1;force dut.c_valid1=1;force dut.c_valid2=1;
+  force dut.c_tag0=8'd9;force dut.c_tag1=8'd10;force dut.c_tag2=8'd11;
+  force dut.cv_v_s=0;force dut.cv_pv_s=1;force dut.cv_p_s=8'd10;
+  force dut.c_next_bank=0;#1;
+  if(dut.c_replacement_bank==0)begin
+   $display("CVBS blanking replacement selected active row");errors=errors+1;end
+  release dut.c_next_bank;release dut.cv_p_s;release dut.cv_pv_s;release dut.cv_v_s;
+  release dut.c_tag2;release dut.c_tag1;release dut.c_tag0;
+  release dut.c_valid2;release dut.c_valid1;release dut.c_valid0;
 
   // Scrolling writes commonly dirty the row which has already been
   // prefetched while the preceding row is being shown twice by HDMI.  Keep

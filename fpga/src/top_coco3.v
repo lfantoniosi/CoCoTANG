@@ -141,7 +141,8 @@ module top_coco3 #(
     wire [7:0] active_height;
     wire compatibility_video;
     wire artifact_video_active,artifact_css;
-    wire [5:0] border_rgb,cvbs_pixel_data;
+    wire [5:0] border_rgb,cvbs_pixel_data,cvbs_border_data;
+    wire cvbs_border_valid;
     wire [23:0] hdmi_pixel_data;
     wire [7:0] native_red,native_green,native_blue;
     wire native_hblank,native_vblank;
@@ -223,7 +224,8 @@ module top_coco3 #(
         .cvbs_source_valid(cvbs_source_valid),
         .cvbs_prefetch_y(cvbs_prefetch_y),
         .cvbs_prefetch_valid(cvbs_prefetch_valid),
-        .cvbs_pixel_data(cvbs_pixel_data),
+        .cvbs_pixel_data(cvbs_pixel_data),.cvbs_border_data(cvbs_border_data),
+        .cvbs_border_valid(cvbs_border_valid),
         .mmu_task0_page_debug(mmu_task0_page_debug),
         .mmu_task1_page_debug(mmu_task1_page_debug),
         .mmu_task_debug(mmu_task_debug),
@@ -502,6 +504,9 @@ module top_coco3 #(
         6'b001100 : cvbs_pixel_data;
     wire [5:0] visible_border_rgb = startup_video_blank ?
         6'b001100 : border_rgb;
+    wire [5:0] visible_cvbs_border = startup_video_blank ?
+        6'b001100 : cvbs_border_data;
+    wire visible_cvbs_border_valid = !startup_video_blank && cvbs_border_valid;
     coco3_hdmi #(.LOG_ADDR_WIDTH(LOG_ADDR_WIDTH),
         .LOG_COUNT_WIDTH(LOG_COUNT_WIDTH),.LOG_PAGE_WIDTH(LOG_PAGE_WIDTH),
         .LOG_DEPTH(LOG_DEPTH),.ENABLE_DEBUG_OVERLAY(ENABLE_BUS_LOGGER),
@@ -558,14 +563,15 @@ module top_coco3 #(
             cvbs_prefetch_valid<=cvbs_prefetch_valid_raw;
         end
     end
-    coco_cvbs_ntsc #(.STREAMING_INPUT(0)) analog_encoder(
+    coco_cvbs_ntsc #(.STREAMING_INPUT(0),.CANONICAL_640_INPUT(1)) analog_encoder(
         // Start on the same board reset as HDMI.  cpu_release is aligned to
         // the CoCo bus, not to video, and made the CVBS consumer enter the
         // shared two-line cache at an arbitrary scanline phase.
         .clk135(clk135),.clk270(clk270),.reset_n(board_reset_n),
         .high_resolution(1'b1),.compatibility_mode(compatibility_video),
         .framebuffer_data(visible_cvbs_pixel),
-        .border_rgb(visible_border_rgb),.active_height(active_height),
+        .border_rgb(visible_border_rgb),.row_border_rgb(visible_cvbs_border),
+        .row_border_valid(visible_cvbs_border_valid),.active_height(active_height),
         .framebuffer_addr(unused_cvbs_framebuffer_addr),
         .source_x(cvbs_source_x_raw),.source_y(cvbs_source_y_raw),
         .source_valid(cvbs_source_valid_raw),.prefetch_y(cvbs_prefetch_y_raw),

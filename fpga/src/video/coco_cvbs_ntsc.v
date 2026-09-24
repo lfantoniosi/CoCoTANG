@@ -12,6 +12,8 @@ module coco_cvbs_ntsc (
     input  wire        compatibility_mode,
     input  wire [5:0]  framebuffer_data,
     input  wire [5:0]  border_rgb,
+    input  wire [5:0]  row_border_rgb,
+    input  wire        row_border_valid,
     input  wire [7:0]  active_height,
     output wire [15:0] framebuffer_addr,
     output wire [9:0]  source_x,
@@ -26,6 +28,10 @@ module coco_cvbs_ntsc (
     output wire        component_pr_out
 );
     parameter integer STREAMING_INPUT = 0;
+    // The CoCo 3 scanline cache stores every row in a canonical 640-sample
+    // representation. Compatibility video still occupies a 512-sample
+    // analogue aperture, so its read coordinate must cover that entire row.
+    parameter integer CANONICAL_640_INPUT = 0;
     localparam [9:0] H_TOTAL        = 10'd858;
     localparam [9:0] H_SYNC         = 10'd64;
     // Calibrated burst window from the proven NTSCVideo implementation.
@@ -34,12 +40,16 @@ module coco_cvbs_ntsc (
     // A framebuffer scales the 256 source pixels to 512 samples.  A live VDG
     // stream instead occupies its native 256/455 share of the 858-sample
     // line, or approximately 483 samples.
-    wire [9:0] picture_left  = high_resolution ? 10'd158 :
+    wire picture_high_resolution = high_resolution && !compatibility_mode;
+    wire [9:0] picture_left  = picture_high_resolution ? 10'd158 :
                                STREAMING_INPUT ? 10'd271 : 10'd222;
-    wire [9:0] picture_right = high_resolution ? 10'd798 :
+    wire [9:0] picture_right = picture_high_resolution ? 10'd798 :
                                STREAMING_INPUT ? 10'd754 : 10'd734;
-    wire [9:0] border_left   = 10'd158;
-    wire [9:0] border_right  = high_resolution ? 10'd798 : 10'd796;
+    // The analogue active aperture is 720 samples wide. Native GIME uses a
+    // centered 640-sample body (40-sample borders); VDG uses a centered
+    // 512-sample body (104-sample borders). Neither changes line timing.
+    wire [9:0] border_left   = 10'd118;
+    wire [9:0] border_right  = 10'd838;
     // Alternate complete 262- and 263-line fields.  Two fields are still
     // exactly 525 lines, but every scanline retains normal horizontal timing.
     // The CVBS cache is three rows deep to absorb the resulting +/- one-HDMI-
@@ -88,8 +98,12 @@ module coco_cvbs_ntsc (
                          (h_sample < border_right) &&
                          (v_line >= border_top) &&
                          (v_line <= field_last_line);
-    wire [9:0] picture_x = high_resolution ? (h_sample-picture_left) :
-                                              ((h_sample-picture_left) >> 1);
+    wire [9:0] picture_offset = h_sample-picture_left;
+    wire [11:0] canonical_x_sum = {2'b0,picture_offset}+
+                                   ({2'b0,picture_offset}<<2);
+    wire [9:0] picture_x = picture_high_resolution ? picture_offset :
+        (CANONICAL_640_INPUT && !STREAMING_INPUT) ? canonical_x_sum[11:2] :
+                                                   (picture_offset>>1);
     wire [8:0] picture_y_full = v_line - field_picture_top;
     wire [7:0] picture_y = picture_y_full[7:0];
     assign framebuffer_addr = in_picture ? {picture_y, picture_x[7:0]} : 16'd0;
@@ -198,6 +212,9 @@ module coco_cvbs_ntsc (
     // applying the same RGB-axis and luma conversion proven by NTSCVideo.
     reg [5:0] pixel_rgb = 6'd0;
     reg [5:0] border_meta = 6'd0;
+    reg [5:0] border_row_current = 6'd0;
+    reg [5:0] border_row_delay1 = 6'd0;
+    reg [5:0] border_row_delay2 = 6'd0;
     reg [5:0] border_sample = 6'd0;
     wire [5:0] fb_red   = {3{pixel_rgb[5:4]}};
     wire [5:0] fb_green = {3{pixel_rgb[3:2]}};
@@ -369,6 +386,9 @@ module coco_cvbs_ntsc (
             pixel_sample_tick <= 1'b0;
             pixel_rgb <= 6'd0;
             border_meta <= 6'd0;
+            border_row_current <= 6'd0;
+            border_row_delay1 <= 6'd0;
+            border_row_delay2 <= 6'd0;
             border_sample <= 6'd0;
             encoder_sync <= 1'b1;
             encoder_burst <= 1'b0;
@@ -423,6 +443,17 @@ module coco_cvbs_ntsc (
             chroma_burst_135 <= level_burst;
             chroma_burst_bit_135 <= ~level_carrier[2];
 
+            // Keep one immutable border colour for the complete analogue
+            // scanline. The cached picture emerges two physical scanlines
+            // behind the live GIME border register, so carry the captured
+            // border through the same two-line phase before displaying it.
+            border_meta <= border_rgb;
+            if(h_sample==0 && sample_phase==0) begin
+                border_row_delay2 <= border_row_delay1;
+                border_row_delay1 <= border_row_current;
+                border_row_current <= border_meta;
+            end
+
             source_sync <= sync_tip;
             source_burst <= in_burst;
             source_picture <= in_vdg_window;
@@ -437,8 +468,7 @@ module coco_cvbs_ntsc (
             pixel_picture <= source_picture;
             pixel_carrier <= source_carrier;
             pixel_sample_tick <= source_sample_tick;
-            border_meta <= border_rgb;
-            border_sample <= border_meta;
+            border_sample <= row_border_valid ? row_border_rgb : border_row_delay2;
             pixel_rgb <= source_active ? framebuffer_data : border_sample;
 
             encoder_sync <= pixel_sync;

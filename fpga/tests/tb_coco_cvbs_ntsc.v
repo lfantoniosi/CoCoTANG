@@ -7,6 +7,8 @@ module tb_coco_cvbs_ntsc;
     reg compatibility_mode = 1'b1;
     reg [5:0] framebuffer_data = 6'b111111;
     reg [5:0] border_rgb = 6'b001100;
+    reg [5:0] row_border_rgb = 6'b001100;
+    reg row_border_valid = 1'b0;
     wire [15:0] framebuffer_addr;
     wire [9:0] source_x;
     wire [7:0] source_y,prefetch_y;
@@ -18,10 +20,12 @@ module tb_coco_cvbs_ntsc;
     reg [8:0] saved_fraction;
     reg [2:0] saved_octant;
 
-    coco_cvbs_ntsc dut(
+    coco_cvbs_ntsc #(.CANONICAL_640_INPUT(1)) dut(
         .clk135(clk135),.clk270(clk270),.reset_n(reset_n),.high_resolution(high_resolution),
         .compatibility_mode(compatibility_mode),
-        .framebuffer_data(framebuffer_data),.border_rgb(border_rgb),.active_height(8'd192),
+        .framebuffer_data(framebuffer_data),.border_rgb(border_rgb),
+        .row_border_rgb(row_border_rgb),.row_border_valid(row_border_valid),
+        .active_height(8'd192),
         .framebuffer_addr(framebuffer_addr),
         .source_x(source_x),.source_y(source_y),.source_valid(source_valid),
         .prefetch_y(prefetch_y),.prefetch_valid(prefetch_valid),
@@ -65,27 +69,30 @@ module tb_coco_cvbs_ntsc;
             (dut.carrier_octant != saved_octant + 3'd4))
             begin $display("carrier line phase"); errors = errors + 1; end
 
-        seek(10'd157,9'd17);
+        seek(10'd117,9'd17);
         if (dut.in_vdg_window) begin $display("border starts too early"); errors = errors + 1; end
-        seek(10'd158,9'd17);
+        seek(10'd118,9'd17);
         if (!dut.in_vdg_window || dut.in_picture) begin $display("top-left border window"); errors = errors + 1; end
 
         seek(10'd222,9'd43);
-        if (framebuffer_addr != 16'd0) begin $display("framebuffer first pixel"); errors = errors + 1; end
+        if (!source_valid || source_x != 10'd0) begin $display("VDG first pixel"); errors = errors + 1; end
         seek(10'd224,9'd43);
-        if (framebuffer_addr != 16'd1) begin $display("framebuffer horizontal scale"); errors = errors + 1; end
-        seek(10'd732,9'd234);
-        if (framebuffer_addr != {8'd191,8'd255}) begin $display("framebuffer last pixel: %h",framebuffer_addr); errors = errors + 1; end
+        if (source_x != 10'd2) begin $display("VDG canonical scale: %0d",source_x); errors = errors + 1; end
+        seek(10'd733,9'd234);
+        if (!source_valid || source_x != 10'd638 || source_y != 8'd191) begin
+            $display("VDG last pixel: %0d,%0d",source_x,source_y); errors = errors + 1; end
 
         high_resolution = 1'b1;
-        seek(10'd158,9'd43);
+        compatibility_mode = 1'b0;
+        seek(10'd158,9'd44);
         if (!source_valid || source_x != 10'd0 || source_y != 8'd0) begin
             $display("640-wide first pixel: %0d,%0d",source_x,source_y); errors=errors+1;
         end
-        seek(10'd797,9'd43);
+        seek(10'd797,9'd44);
         if (!source_valid || !dut.in_vdg_window || source_x != 10'd639) begin
             $display("640-wide last pixel: %0d",source_x); errors=errors+1;
         end
+        compatibility_mode = 1'b1;
         high_resolution = 1'b0;
 
         // Component outputs are baseband differences, not colour-subcarrier
@@ -104,7 +111,7 @@ module tb_coco_cvbs_ntsc;
 
         // Move to an ordinary blank interval and allow the encoder pipeline
         // to settle. Level 10 in a modulo-32 DAC is exactly 40 ones/128.
-        seek(10'd130,9'd236);
+        seek(10'd110,9'd236);
         repeat (20) @(negedge clk135);
         ones = 0;
         for (i=0;i<128;i=i+1) begin
@@ -118,8 +125,10 @@ module tb_coco_cvbs_ntsc;
             errors = errors + 1;
         end
 
-        seek(10'd795,9'd261);
+        seek(10'd837,9'd261);
         if (!dut.in_vdg_window || dut.in_picture) begin $display("bottom-right border window"); errors = errors + 1; end
+        seek(10'd838,9'd261);
+        if (dut.in_vdg_window) begin $display("border ends too late"); errors = errors + 1; end
 
         // The backwards seek used by the high-resolution checks has advanced
         // us to the short field. Compatibility/VDG remains unshifted.
