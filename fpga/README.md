@@ -36,13 +36,23 @@ including PMODE 3 (128x192 four-color) and PMODE 4 (256x192 two-color).
 Alternating line
 buffers bridge the scan-doubled VDG stream into 720x480 DVI-compatible HDMI;
 there is no full-frame buffer. Top-level parameter
-`ANALOG_VIDEO_MODE` selects the signal on the second one-bit analog output:
-`0` generates S-Video chroma on Pb; the default `1` generates composite video
-on Pb. Y always generates luma. The former Pr output is repurposed as the 6809
-E clock because the original E pin is shared with the module's HSPI interface.
+`ANALOG_VIDEO_MODE=2` (the default) generates component video: Y with sync on
+pin 56, Pb on pin 54, and Pr on pin 18. Values 0 and 1 retain the previous
+simultaneous S-Video chroma and composite outputs on pins 54 and 18. Pin 51
+carries the 6809 E clock because the original E pin is shared with HSPI.
 Both analog modes use the calibrated NTSCVideo format: a 13.5 MHz
 858x262 sample grid, NTSC equalizing/broad sync, 227.5 color-carrier cycles
 per line, levels 0/10/32 for sync/blank/white, and a 270 MHz sigma-delta DAC.
+
+## Glenside IDE / TF card
+
+The Tang Nano 20K TF socket is exposed as a Glenside-compatible IDE adapter.
+The default task-file is `$FF50-$FF57`; `$FF58` is the Glenside high-byte
+latch. `IDE_BASE` changes the 16-byte decode page and
+`ENABLE_GLENSIDE_IDE=0` removes the adapter. The implementation supports
+LBA28 `READ SECTORS`, `WRITE SECTORS`, and `IDENTIFY DEVICE`, including the
+Glenside latch ordering required by existing CoCo IDE drivers. The TF card is
+accessed in native one-bit SD mode and may be SD, SDHC, or SDXC media.
 
 For board diagnostics, `ENABLE_BUS_LOGGER=1` and `DEBUG_OVERLAY=1` add a
 full-screen 90x60-character bus log. It captures the first 464 CPU cycles after

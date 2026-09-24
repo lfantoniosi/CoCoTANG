@@ -11,7 +11,7 @@ module tb_coco_cvbs_ntsc;
     wire [9:0] source_x;
     wire [7:0] source_y,prefetch_y;
     wire source_valid,prefetch_valid;
-    wire luma_out, chroma_out, cvbs_out;
+    wire luma_out, chroma_out, cvbs_out,component_pb_out,component_pr_out;
     integer errors = 0;
     integer ones;
     integer i;
@@ -25,7 +25,8 @@ module tb_coco_cvbs_ntsc;
         .framebuffer_addr(framebuffer_addr),
         .source_x(source_x),.source_y(source_y),.source_valid(source_valid),
         .prefetch_y(prefetch_y),.prefetch_valid(prefetch_valid),
-        .luma_out(luma_out),.chroma_out(chroma_out),.cvbs_out(cvbs_out));
+        .luma_out(luma_out),.chroma_out(chroma_out),.cvbs_out(cvbs_out),
+        .component_pb_out(component_pb_out),.component_pr_out(component_pr_out));
 
     always #1.85185 clk270 = ~clk270;
     always #3.70370 clk135 = ~clk135;
@@ -86,6 +87,20 @@ module tb_coco_cvbs_ntsc;
             $display("640-wide last pixel: %0d",source_x); errors=errors+1;
         end
         high_resolution = 1'b0;
+
+        // Component outputs are baseband differences, not colour-subcarrier
+        // waveforms. Check primary-colour matrix levels around midpoint 16.
+        force dut.level_picture=1'b1;
+        force dut.mod_component_x=8'sd63;force dut.mod_component_y=8'sd0;#1;
+        if(dut.component_pb_level!=6'd31||dut.component_pr_level!=6'd14)begin
+            $display("blue component Pb=%0d Pr=%0d",
+                     dut.component_pb_level,dut.component_pr_level);errors=errors+1;end
+        force dut.mod_component_x=8'sd0;force dut.mod_component_y=8'sd63;#1;
+        if(dut.component_pb_level!=6'd11||dut.component_pr_level!=6'd31)begin
+            $display("red component Pb=%0d Pr=%0d",
+                     dut.component_pb_level,dut.component_pr_level);errors=errors+1;end
+        release dut.mod_component_y;release dut.mod_component_x;
+        release dut.level_picture;
 
         // Move to an ordinary blank interval and allow the encoder pipeline
         // to settle. Level 10 in a modulo-32 DAC is exactly 40 ones/128.

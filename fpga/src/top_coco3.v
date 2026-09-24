@@ -20,13 +20,17 @@ module top_coco3 #(
     // synthesis then removes the unused S2 capture-control cone as well.
     parameter integer ENABLE_BUS_LOGGER=0,
     parameter integer DEBUG_OVERLAY=0,
-    parameter integer ANALOG_VIDEO_MODE=1,
+    // 0/1: existing simultaneous S-Video and CVBS; 2: Y/Pb/Pr component.
+    parameter integer ANALOG_VIDEO_MODE=2,
     // 0=OFF, 1=ON (blue/orange), 2=REVERSE (orange/blue).
     parameter [1:0] INITIAL_ARTIFACT_MODE=2'd1,
     // 1: native GIME HDMI is a sharp 640-dot 1:1 image (wider than 4:3).
     // 0: native GIME HDMI is aspect-correct 512-dot RGB888-filtered output.
     parameter integer NATIVE_HDMI_640=1,
-    parameter integer DISTO_2MB=1
+    parameter integer DISTO_2MB=1,
+    // Glenside task-file occupies IDE_BASE..IDE_BASE+$0f; $FF50 is standard.
+    parameter integer ENABLE_GLENSIDE_IDE=0,
+    parameter [15:0] IDE_BASE=16'hff50
 ) (
     input clkin,input s1,input s2,input [7:0] mp,output [1:0] msel,
     inout [7:0] cpu_data,output irq_n_in,output firq_n_in,output audio_out,
@@ -35,6 +39,8 @@ module top_coco3 #(
     output tmds_clk_p,output tmds_clk_n,
     output [2:0] tmds_data_p,output [2:0] tmds_data_n,
     output mspi_sclk,output mspi_cs,output mspi_mosi,input mspi_miso,
+    output sd_sclk,inout sd_cmd,inout sd_dat0,inout sd_dat1,
+    inout sd_dat2,inout sd_dat3,
     output O_sdram_clk,output O_sdram_cke,output O_sdram_cs_n,
     output O_sdram_cas_n,output O_sdram_ras_n,output O_sdram_wen_n,
     inout [31:0] IO_sdram_dq,output [10:0] O_sdram_addr,
@@ -131,6 +137,7 @@ module top_coco3 #(
     wire [22:0] cpu_mem_addr;
     wire [7:0] core_rdata;
     wire core_data_oe,gime_irq,gime_firq;
+    wire [2:0] machine_sam_s;
     wire [7:0] active_height;
     wire compatibility_video;
     wire artifact_video_active,artifact_css;
@@ -187,7 +194,7 @@ module top_coco3 #(
         .cpu_addr(address),
         .cpu_rw_n(rw_n),.cpu_data(cpu_write_data),
         .serint_n(gime_serint_n),.keyint_n(gime_keyint_n),.cart_n(mux_cart_n),
-        .irq_assert(gime_irq),.firq_assert(gime_firq),.sam_s(sam_s),
+        .irq_assert(gime_irq),.firq_assert(gime_firq),.sam_s(machine_sam_s),
         .e(e_core),.q(q_core),.e_pin(e_out),.q_pin(q_out),
         .e_rise(e_rise),.e_fall(e_fall),
         .cpu_mem_read(cpu_mem_read),.cpu_mem_write(cpu_mem_write),
@@ -311,6 +318,58 @@ module top_coco3 #(
         .sd_refresh(sd_refresh),.sd_addr(sd_addr),.sd_din(sd_din),
         .sd_wdm(sd_wdm),.sd_dout(sd_dout),.sd_dout32(sd_dout32),
         .sd_data_ready(sd_data_ready),.sd_busy(sd_busy));
+
+    wire ide_live_selected=(ENABLE_GLENSIDE_IDE != 0) &&
+        (address[15:4] == IDE_BASE[15:4]);
+    // The integrated adapter owns its I/O page.  Export S0 there so the
+    // motherboard cartridge-control decode cannot contend with FPGA data.
+    assign sam_s=ide_live_selected ? 3'd0 : machine_sam_s;
+
+    // Freeze one complete scanned CPU transaction.  The mux address changes
+    // while its banks are being acquired, so a live FF5x comparison is not a
+    // valid read/write qualifier.  Hold the snapshot through E falling, just
+    // as the memory service holds its transaction tag.
+    reg ide_cycle_active=1'b0;
+    reg ide_cycle_rw_n=1'b1;
+    reg [15:0] ide_cycle_addr=16'hffff;
+    always @(posedge clk108 or negedge board_reset_n) begin
+        if (!board_reset_n) begin
+            ide_cycle_active<=1'b0;
+            ide_cycle_rw_n<=1'b1;
+            ide_cycle_addr<=16'hffff;
+        end else begin
+            if (bus_snapshot_valid) begin
+                ide_cycle_active<=ide_live_selected;
+                ide_cycle_rw_n<=rw_n;
+                ide_cycle_addr<=address;
+            end else if (e_fall)
+                ide_cycle_active<=1'b0;
+        end
+    end
+
+    wire [7:0] ide_rdata;
+    wire ide_raw_data_oe;
+    wire ide_data_oe=ide_raw_data_oe && e_core;
+    generate if (ENABLE_GLENSIDE_IDE != 0) begin:glenside_ide_enabled
+      glenside_ide #(.IDE_BASE(IDE_BASE)) ide(
+        .clk(clk108),.reset_n(board_reset_n),
+        .cpu_enable(cpu_bus_active && ide_cycle_active),
+        .e_fall(e_fall),.cpu_addr(ide_cycle_addr),
+        .cpu_rw_n(ide_cycle_rw_n),
+        .cpu_wdata(cpu_write_data),.cpu_rdata(ide_rdata),
+        .cpu_data_oe(ide_raw_data_oe),.sd_sclk(sd_sclk),.sd_cmd(sd_cmd),
+        .sd_dat0(sd_dat0),.sd_dat1(sd_dat1),.sd_dat2(sd_dat2),
+        .sd_dat3(sd_dat3));
+    end else begin:glenside_ide_disabled
+      assign ide_rdata=8'hff;
+      assign ide_raw_data_oe=1'b0;
+      assign sd_sclk=1'b0;
+      assign sd_cmd=1'bz;
+      assign sd_dat0=1'bz;
+      assign sd_dat1=1'bz;
+      assign sd_dat2=1'bz;
+      assign sd_dat3=1'bz;
+    end endgenerate
     // GIME register reads are decoded as soon as the address banks settle.
     // Register their value once before the I/O cells so the palette/MMU mux
     // is not on the 108 MHz pad-output path.
@@ -319,8 +378,13 @@ module top_coco3 #(
         if (!board_reset_n) core_rdata_pipe<=8'hff;
         else core_rdata_pipe<=core_rdata;
     end
-    wire [7:0] fpga_read_data=core_data_oe ? core_rdata_pipe : memory_rdata;
-    wire fpga_data_oe=cpu_bus_active && (core_data_oe || memory_data_oe);
+    // Keep the established CPU read timing.  With IDE disabled this reduces
+    // exactly to the original core/memory path; no extra pipeline stage is
+    // inserted into every CPU read.
+    wire [7:0] fpga_read_data=ide_data_oe ? ide_rdata :
+        (core_data_oe ? core_rdata_pipe : memory_rdata);
+    wire fpga_data_oe=cpu_bus_active &&
+        (ide_data_oe || core_data_oe || memory_data_oe);
 
     wire [7:0] cpu_pin_data,cpu_pin_oen;
     genvar cpu_data_bit;
@@ -476,6 +540,7 @@ module top_coco3 #(
         .tmds_data_n(tmds_data_n));
 
     wire analog_luma,analog_chroma,analog_cvbs;
+    wire analog_component_pb,analog_component_pr;
     wire [15:0] unused_cvbs_framebuffer_addr;
     // Cut the encoder-counter -> line-buffer BSRAM-address path at the
     // clk135 boundary.  There are ten clk135 clocks per CVBS sample, so this
@@ -505,10 +570,12 @@ module top_coco3 #(
         .source_x(cvbs_source_x_raw),.source_y(cvbs_source_y_raw),
         .source_valid(cvbs_source_valid_raw),.prefetch_y(cvbs_prefetch_y_raw),
         .prefetch_valid(cvbs_prefetch_valid_raw),.luma_out(analog_luma),
-        .chroma_out(analog_chroma),.cvbs_out(analog_cvbs));
+        .chroma_out(analog_chroma),.cvbs_out(analog_cvbs),
+        .component_pb_out(analog_component_pb),
+        .component_pr_out(analog_component_pr));
     assign y_out=analog_luma;
-    assign pb_out=analog_chroma;
-    assign cvbs_out=analog_cvbs;
+    assign pb_out=(ANALOG_VIDEO_MODE==2)?analog_component_pb:analog_chroma;
+    assign cvbs_out=(ANALOG_VIDEO_MODE==2)?analog_component_pr:analog_cvbs;
 
     wire unused_inputs=mux_slenb_n ^ mux_nmi_n ^ native_hblank ^
         native_vblank ^ ^native_red ^ ^native_green ^ ^native_blue ^ e_rise ^

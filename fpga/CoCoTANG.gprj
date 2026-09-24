@@ -19,6 +19,12 @@
         <File path="src/memory/sdram.v" type="file.verilog" enable="1"/>
         <File path="src/memory/cpu_sdram_arbiter.v" type="file.verilog" enable="1"/>
         <File path="src/memory/coco3_memory.v" type="file.verilog" enable="1"/>
+        <File path="src/storage/sd_crc16.v" type="file.verilog" enable="1"/>
+        <File path="src/storage/sdcmd_ctrl.sv" type="file.verilog" enable="1"/>
+        <File path="src/storage/sd_reader.sv" type="file.verilog" enable="1"/>
+        <File path="src/storage/glenside_sector_buffer.v" type="file.verilog" enable="1"/>
+        <File path="src/storage/glenside_ata.v" type="file.verilog" enable="1"/>
+        <File path="src/storage/glenside_ide.v" type="file.verilog" enable="1"/>
         <File path="src/coco2/mc6847_char_rom.v" type="file.verilog" enable="1"/>
         <File path="src/coco3/coco3_char_rom.v" type="file.verilog" enable="1"/>
         <File path="src/coco3/gime_timing.v" type="file.verilog" enable="1"/>
