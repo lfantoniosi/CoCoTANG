@@ -10,8 +10,8 @@ module tb_gime_scanline_buffer;
  reg [2:0] compatibility_gm=0,compatibility_sam_mode=0;
  reg [3:0] hres=7;reg [1:0] cres=1;
  reg bit_plane=1;reg [2:0] lpr=0;reg [3:0] vertical_scroll=0;
- reg [18:0] screen_base=0;
- reg [7:0] horizontal_offset=0;reg cpu_write_strobe=0;reg [18:0] cpu_write_addr=0;
+ reg [18:0] screen_base=0;reg [1:0] video_bank=0;
+ reg [7:0] horizontal_offset=0;reg cpu_write_strobe=0;reg [20:0] cpu_write_addr=0;
  reg hdmi_prefetch_valid=1,cvbs_prefetch_valid=0;
  reg [7:0] hdmi_prefetch_y=0,cvbs_prefetch_y=0;
  reg hdmi_display_valid=0,hdmi_picture_active=0;reg [7:0] hdmi_display_y=0;
@@ -19,6 +19,7 @@ module tb_gime_scanline_buffer;
  gime_scanline_buffer dut(
   .clk(clk),.reset_n(reset_n),.bit_plane(bit_plane),.hres(hres),.cres(cres),
   .lines_per_row_code(lpr),.vertical_scroll(vertical_scroll),.screen_base(screen_base),
+  .video_bank(video_bank),
   .horizontal_offset(horizontal_offset),.palettes(palettes),
   .compatibility_mode(compatibility_mode),.compatibility_an_g(compatibility_an_g),
   .compatibility_gm(compatibility_gm),.compatibility_css(1'b0),
@@ -333,6 +334,29 @@ module tb_gime_scanline_buffer;
    release dut.source_byte_index;release dut.fill_hoff;
    release dut.fill_bit_plane;release dut.fill_compatibility;release dut.line_address;
    horizontal_offset=0;
+  end
+
+  // DISTO FF9B is a prefix at the SDRAM boundary, not part of the GIME's
+  // running 19-bit DMA address.  This preserves the card's documented wrap
+  // from the end to the beginning of the same selected 512K bank.
+  begin : disto_video_bank_wrap
+   force dut.fill_video_bank=2'd2;force dut.aligned_address=19'h7fffc;
+   force dut.word_valid=1'b0;force dut.state=5'd5;
+   @(posedge clk);#1;
+   if(memory_addr!=23'h17fffc)begin
+    $display("DISTO bank prefix address=%h",memory_addr);errors=errors+1;end
+   release dut.state;release dut.word_valid;release dut.aligned_address;
+   release dut.fill_video_bank;
+   force dut.dma_advance_bit_plane=1'b1;
+   force dut.dma_advance_infinite=1'b0;force dut.dma_advance_row=1'b1;
+   force dut.dma_advance_base=19'h7fff0;force dut.dma_advance_stride=11'd160;#1;
+   if(dut.advanced_dma_address!=19'h00090)begin
+    $display("DISTO video escaped 512K bank: %h",dut.advanced_dma_address);
+    errors=errors+1;end
+   release dut.dma_advance_stride;release dut.dma_advance_base;
+   release dut.dma_advance_row;release dut.dma_advance_infinite;
+   release dut.dma_advance_bit_plane;
+   dut.memory_request=0;
   end
 
   // FF98.LPR is sampled at raster boundaries.  In graphics mode 111 holds

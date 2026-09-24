@@ -5,11 +5,12 @@ module gime_scanline_buffer #(
 ) (
  input clk,input reset_n,input bit_plane,input [3:0] hres,input [1:0] cres,
  input [2:0] lines_per_row_code,input [3:0] vertical_scroll,
- input [18:0] screen_base,input [7:0] horizontal_offset,input [95:0] palettes,
+ input [18:0] screen_base,input [1:0] video_bank,
+ input [7:0] horizontal_offset,input [95:0] palettes,
  input compatibility_mode,input compatibility_an_g,input [2:0] compatibility_gm,
  input [2:0] compatibility_sam_mode,
  input compatibility_css,input [1:0] artifact_mode,input blink,
- input cpu_write_strobe,input [18:0] cpu_write_addr,
+ input cpu_write_strobe,input [20:0] cpu_write_addr,
  input hdmi_read_clk,input [9:0] hdmi_read_x,input [7:0] hdmi_display_y,
  input hdmi_display_valid,input hdmi_picture_active,
  input [7:0] hdmi_prefetch_y,input hdmi_prefetch_valid,
@@ -163,7 +164,7 @@ module gime_scanline_buffer #(
  reg h_valid0=0,h_valid1=0,c_valid0=0,c_valid1=0,c_valid2=0;
  reg h_dirty0=0,h_dirty1=0,c_dirty0=0,c_dirty1=0,c_dirty2=0;
  reg [7:0] h_tag0=0,h_tag1=0,c_tag0=0,c_tag1=0,c_tag2=0;
- reg [18:0] h_start0=0,h_start1=0,c_start0=0,c_start1=0,c_start2=0;
+ reg [20:0] h_start0=0,h_start1=0,c_start0=0,c_start1=0,c_start2=0;
  reg [10:0] h_bytes0=0,h_bytes1=0,c_bytes0=0,c_bytes1=0,c_bytes2=0;
  reg h_next_bank=0;
  reg [1:0] c_next_bank=0;
@@ -218,6 +219,7 @@ module gime_scanline_buffer #(
  reg [10:0] fill_stride=0,fill_row_bytes=0;reg [12:0] fill_source_width=0;
  reg [3:0] fill_scale_integer=0;reg [9:0] fill_scale_remainder=0;
  reg [18:0] fill_base=0;reg [6:0] fill_hoff=0;reg [95:0] fill_palettes=0;
+ reg [1:0] fill_video_bank=0;
  reg [8:0] row_remainder=0;reg [7:0] source_row=0;reg [3:0] glyph_line=0;
  reg [9:0] out_x=0;reg [12:0] source_x=0;reg [9:0] scale_phase=0;
  // Cache the byte/character indices alongside source_x.  Deriving them
@@ -344,10 +346,12 @@ module gime_scanline_buffer #(
  wire write_hits_c0=c_valid0&&cpu_write_addr>=c_start0&&cpu_write_addr<c_start0+c_bytes0;
  wire write_hits_c1=c_valid1&&cpu_write_addr>=c_start1&&cpu_write_addr<c_start1+c_bytes1;
  wire write_hits_c2=c_valid2&&cpu_write_addr>=c_start2&&cpu_write_addr<c_start2+c_bytes2;
- wire write_hits_fill=state!=IDLE&&cpu_write_addr>=line_address&&
-                      cpu_write_addr<line_address+fill_row_bytes;
+wire [20:0] fill_physical_start={fill_video_bank,line_address};
+wire write_hits_fill=state!=IDLE&&cpu_write_addr>=fill_physical_start&&
+                      cpu_write_addr<fill_physical_start+fill_row_bytes;
 reg [18:0] mode_signature=19'h7ffff;reg [18:0] last_screen_base=19'h7ffff;
 reg [18:0] frame_screen_base=0;
+reg [1:0] frame_video_bank=0,last_video_bank=0;
  // Running GIME DMA state.  This cannot be reconstructed as y*stride when
  // FF98.LPR or FF9F.HVEN changes during the picture: each raster advances
  // from the address left by the preceding raster.
@@ -391,7 +395,7 @@ wire [3:0] advanced_dma_line=
  // first of HDMI's two copies of a native row, producing a one-pixel-high
  // horizontal gap in raster demos.
 wire configuration_diff=live_signature!=mode_signature||
-  frame_screen_base!=last_screen_base;
+  frame_screen_base!=last_screen_base||frame_video_bank!=last_video_bank;
 reg configuration_pending=1'b1;
  assign debug_dma_next_y=dma_next_y;
  assign debug_fill_y=fill_y;
@@ -471,7 +475,7 @@ reg configuration_pending=1'b1;
    c_valid0<=0;c_valid1<=0;c_valid2<=0;
    h_dirty0<=0;h_dirty1<=0;c_dirty0<=0;c_dirty1<=0;c_dirty2<=0;
    mode_signature<=19'h7ffff;last_screen_base<=19'h7ffff;
-   frame_screen_base<=0;
+   frame_screen_base<=0;frame_video_bank<=0;last_video_bank<=0;
    h_next_bank<=0;c_next_bank<=0;fill_dirty<=0;configuration_pending<=1'b1;
    h_pending<=0;c_pending<=0;coalesce_count<=0;
    fill_sequential<=0;dma_next_y<=0;dma_next_address<=0;
@@ -486,8 +490,11 @@ reg configuration_pending=1'b1;
    // it provides a safe equivalent latch window without adding those border
    // lines to the logical row number.
    upper_border_q<=upper_border;
-   if(upper_border)frame_screen_base<=screen_base;
-   if(upper_border&&(!upper_border_q||screen_base!=frame_screen_base))begin
+   if(upper_border)begin
+    frame_screen_base<=screen_base;frame_video_bank<=video_bank;
+   end
+   if(upper_border&&(!upper_border_q||screen_base!=frame_screen_base||
+                     video_bank!=frame_video_bank))begin
     dma_next_y<=0;dma_next_address<=screen_base;
     dma_advance_pending<=0;
     dma_line_in_row<=compatibility_mode||
@@ -525,6 +532,7 @@ reg configuration_pending=1'b1;
    if(configuration_pending&&state==IDLE)begin
     configuration_pending<=1'b0;
     mode_signature<=live_signature;last_screen_base<=frame_screen_base;
+    last_video_bank<=frame_video_bank;
     // During upper border row zero is only speculative.  Do not preserve it
     // across a late frame-setup write; discard and regenerate it.  The next
     // row is protected only while an actual picture row is being displayed.
@@ -560,6 +568,7 @@ reg configuration_pending=1'b1;
      configuration_pending<=1'b0;
      mode_signature<=live_signature;
      last_screen_base<=frame_screen_base;
+     last_video_bank<=frame_video_bank;
     end
     case(state)
     IDLE:if(h_pending&&coalesce_count==3'd7) begin
@@ -596,6 +605,7 @@ reg configuration_pending=1'b1;
      fill_attributes<=!compatibility_mode&&native_attributes;
      fill_gm<=compatibility_gm;fill_css<=compatibility_css;
      fill_compatibility<=compatibility_mode;fill_blink<=blink;
+     fill_video_bank<=frame_video_bank;
      fill_artifact_mode<=artifact_mode;
      fill_lpr<=compatibility_mode?(!compatibility_an_g?12:
       compatibility_lines_per_row(compatibility_sam_mode)):
@@ -648,7 +658,8 @@ reg configuration_pending=1'b1;
      else begin byte_address<=calculated_byte_address;state<=CHECK_WORD;end
     end
     CHECK_WORD:begin
-     if(!word_valid||word_tag!=aligned_address)begin memory_addr<={4'd0,aligned_address};
+     if(!word_valid||word_tag!=aligned_address)begin
+      memory_addr<={2'b00,fill_video_bank,aligned_address};
       memory_request<=1;state<=WAIT_WORD;end
      else if(!fill_bit_plane)begin
       character<=cached_byte;
@@ -671,7 +682,8 @@ reg configuration_pending=1'b1;
     WAIT_WORD:if(memory_valid)begin word_cache<=memory_data;word_tag<=aligned_address;
      word_valid<=1;memory_request<=0;state<=CHECK_WORD;end
     CHECK_ATTRIBUTE:begin
-     if(!word_valid||word_tag!=aligned_address)begin memory_addr<={4'd0,aligned_address};
+     if(!word_valid||word_tag!=aligned_address)begin
+      memory_addr<={2'b00,fill_video_bank,aligned_address};
       memory_request<=1;state<=WAIT_ATTRIBUTE;end
      else begin attribute<=cached_byte;font_addr<={1'b0,character[6:0],glyph_line};
       state<=FONT_WAIT1;end
@@ -747,25 +759,25 @@ reg configuration_pending=1'b1;
     end
     FINALIZE_LINE:begin
       if(fill_hdmi)begin
-       if(fill_h_bank)begin h_tag1<=fill_y;h_start1<=line_address;h_bytes1<=fill_row_bytes;
+       if(fill_h_bank)begin h_tag1<=fill_y;h_start1<={fill_video_bank,line_address};h_bytes1<=fill_row_bytes;
         h_valid1<=1;h_dirty1<=fill_dirty;
         if(h_valid0&&h_tag0==fill_y)begin h_valid0<=0;h_dirty0<=0;end end
-       else begin h_tag0<=fill_y;h_start0<=line_address;h_bytes0<=fill_row_bytes;
+       else begin h_tag0<=fill_y;h_start0<={fill_video_bank,line_address};h_bytes0<=fill_row_bytes;
         h_valid0<=1;h_dirty0<=fill_dirty;
         if(h_valid1&&h_tag1==fill_y)begin h_valid1<=0;h_dirty1<=0;end end
        h_next_bank<=!fill_h_bank;
       end
       if(fill_cvbs)begin
        case(fill_c_bank)
-        2'd0:begin c_tag0<=fill_y;c_start0<=line_address;c_bytes0<=fill_row_bytes;
+        2'd0:begin c_tag0<=fill_y;c_start0<={fill_video_bank,line_address};c_bytes0<=fill_row_bytes;
          c_valid0<=1;c_dirty0<=fill_dirty;
          if(c_valid1&&c_tag1==fill_y)begin c_valid1<=0;c_dirty1<=0;end
          if(c_valid2&&c_tag2==fill_y)begin c_valid2<=0;c_dirty2<=0;end end
-        2'd1:begin c_tag1<=fill_y;c_start1<=line_address;c_bytes1<=fill_row_bytes;
+        2'd1:begin c_tag1<=fill_y;c_start1<={fill_video_bank,line_address};c_bytes1<=fill_row_bytes;
          c_valid1<=1;c_dirty1<=fill_dirty;
          if(c_valid0&&c_tag0==fill_y)begin c_valid0<=0;c_dirty0<=0;end
          if(c_valid2&&c_tag2==fill_y)begin c_valid2<=0;c_dirty2<=0;end end
-        default:begin c_tag2<=fill_y;c_start2<=line_address;c_bytes2<=fill_row_bytes;
+        default:begin c_tag2<=fill_y;c_start2<={fill_video_bank,line_address};c_bytes2<=fill_row_bytes;
          c_valid2<=1;c_dirty2<=fill_dirty;
          if(c_valid0&&c_tag0==fill_y)begin c_valid0<=0;c_dirty0<=0;end
          if(c_valid1&&c_tag1==fill_y)begin c_valid1<=0;c_dirty1<=0;end end

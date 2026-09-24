@@ -25,7 +25,8 @@ module top_coco3 #(
     parameter [1:0] INITIAL_ARTIFACT_MODE=2'd1,
     // 1: native GIME HDMI is a sharp 640-dot 1:1 image (wider than 4:3).
     // 0: native GIME HDMI is aspect-correct 512-dot RGB888-filtered output.
-    parameter integer NATIVE_HDMI_640=1
+    parameter integer NATIVE_HDMI_640=1,
+    parameter integer DISTO_2MB=1
 ) (
     input clkin,input s1,input s2,input [7:0] mp,output [1:0] msel,
     inout [7:0] cpu_data,output irq_n_in,output firq_n_in,output audio_out,
@@ -180,7 +181,7 @@ module top_coco3 #(
     wire gime_keyint_n=!mux_keyint_n;
     wire gime_serint_n=!mux_sernt_n;
 
-    coco3 #(.NATIVE_HDMI_640(NATIVE_HDMI_640)) machine(
+    coco3 #(.NATIVE_HDMI_640(NATIVE_HDMI_640),.DISTO_2MB(DISTO_2MB)) machine(
         .clk(clk108),.reset_n(board_reset_n),
         .cpu_reset_n(cpu_release),.s2(1'b0),.artifact_mode(artifact_mode_video),
         .cpu_addr(address),

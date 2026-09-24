@@ -63,6 +63,8 @@ test:
 	vvp /private/tmp/cocotang_tb_gime_native_video
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_registers tests/tb_gime_registers.v src/coco3/gime_registers.v
 	vvp /private/tmp/cocotang_tb_gime_registers
+	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_disto tests/tb_gime_disto.v src/coco3/gime_registers.v
+	vvp /private/tmp/cocotang_tb_gime_disto
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_video tests/tb_gime_video.v src/coco3/gime_video.v src/coco2/mc6847_char_rom.v
 	vvp /private/tmp/cocotang_tb_gime_video
 	iverilog -g2012 -o /private/tmp/cocotang_tb_artifact_decode tests/tb_ntsc_artifact_decode.v src/video/ntsc_artifact_decode.v

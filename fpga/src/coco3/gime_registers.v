@@ -1,4 +1,9 @@
-module gime_registers (
+module gime_registers #(
+    // External DISTO DAT/video-bank extension.  The stock GIME remains the
+    // low six address bits, so disabling this parameter is bit-for-bit the
+    // original 512 KiB map.
+    parameter integer DISTO_2MB = 0
+) (
     input clk, input reset_n, input e, input e_fall,
     input [15:0] cpu_addr, input cpu_rw_n, input [7:0] cpu_data,
     input serint_n, input keyint_n, input cart_n,
@@ -13,6 +18,7 @@ module gime_registers (
     output reg [3:0] vertical_scroll,
     output reg [15:0] video_offset,
     output reg [7:0] horizontal_offset,
+    output [1:0] video_bank,
     output compatibility_mode,
     output reg [2:0] sam_video_mode,
     output reg [6:0] sam_video_offset,
@@ -33,6 +39,8 @@ module gime_registers (
     reg prior_hs_n, prior_fs_n;
     reg [5:0] palette [0:15];
     reg [5:0] mmu [0:15];
+    reg [1:0] disto_mmu [0:15];
+    reg [1:0] disto_video_bank;
     reg ram_mode;
     integer i;
 
@@ -85,12 +93,16 @@ module gime_registers (
     wire external_rom_selected = rom_window && !vector_selected &&
         ((!rom_map[1] && rom_byte_addr[14]) || rom_map == 2'b11);
     wire rom_selected = rom_window && !external_rom_selected;
-    wire [18:0] compatibility_ram_address =
-        19'h70000 + {3'd0,cpu_addr};
-    wire [18:0] ram_address = constant_fe_page ?
-                              (19'h7fe00 + {11'd0,cpu_addr[7:0]}) :
+    // The card supplies D7:D6 externally.  It has no GIME MMU-enable input,
+    // so those two latched bits remain active over the GIME's fixed $38-$3f
+    // compatibility pages when INIT0.MMU is clear.
+    wire [1:0] external_page = DISTO_2MB ? disto_mmu[mmu_index] : 2'b00;
+    wire [20:0] compatibility_ram_address =
+        {external_page,3'b111,cpu_addr};
+    wire [20:0] ram_address = constant_fe_page ?
+                              (21'h07fe00 + {13'd0,cpu_addr[7:0]}) :
                               mmu_enabled ?
-                              {mmu[mmu_index],cpu_addr[12:0]} :
+                              {external_page,mmu[mmu_index],cpu_addr[12:0]} :
                               compatibility_ram_address;
 
     assign cpu_mem_read = cpu_rw_n && !gime_selected &&
@@ -101,11 +113,12 @@ module gime_registers (
     assign cpu_mem_write = !cpu_rw_n && !io_selected;
     assign cpu_mem_is_rom = cpu_rw_n && rom_selected;
     assign cpu_mem_addr = (cpu_rw_n && rom_selected) ?
-                          {8'd0,rom_byte_addr} : {4'd0,ram_address};
+                          {8'd0,rom_byte_addr} : {2'd0,ram_address};
     assign core_data_oe = e && cpu_rw_n && gime_selected;
     assign irq_assert = init0[5] && |irq_pending;
     assign firq_assert = init0[4] && |firq_pending;
     assign compatibility_mode = init0[7];
+    assign video_bank = DISTO_2MB ? disto_video_bank : 2'b00;
     assign mmu_task0_page_debug=mmu[{1'b0,cpu_block}];
     assign mmu_task1_page_debug=mmu[{1'b1,cpu_block}];
     assign mmu_task_debug=init1[0];
@@ -198,13 +211,17 @@ module gime_registers (
             vertical_scroll <= 4'd0;
             video_offset <= 16'd0;
             horizontal_offset <= 8'd0;
+            disto_video_bank <= 2'd0;
             sam_video_mode <= 3'd0;
             sam_video_offset <= 7'd0;
             ram_mode <= 1'b0;
             // Both MMU tasks power up with the logical 64K window on the
             // uppermost 64K of 512K RAM.  Each task owns eight 8K blocks;
             // using i directly here formerly wrapped task 1 to pages 00-07.
-            for (i=0;i<16;i=i+1) mmu[i] <= 6'h38 + {3'b000,i[2:0]};
+            for (i=0;i<16;i=i+1) begin
+                mmu[i] <= 6'h38 + {3'b000,i[2:0]};
+                disto_mmu[i] <= 2'b00;
+            end
             // CoCo3FPGA RGB defaults.  The former values were its composite
             // approximations and produced visibly wrong HDMI/derived-CVBS.
             palette[0]<=6'd18; palette[1]<=6'd54; palette[2]<=6'd9;  palette[3]<=6'd36;
@@ -301,13 +318,18 @@ module gime_registers (
                         16'hff98: vmode <= cpu_data;
                         16'hff99: vres <= cpu_data;
                         16'hff9a: border_color <= cpu_data[5:0];
+                        16'hff9b: if (DISTO_2MB)
+                            disto_video_bank <= cpu_data[1:0];
                         16'hff9c: vertical_scroll <= cpu_data[3:0];
                         16'hff9d: video_offset[15:8] <= cpu_data;
                         16'hff9e: video_offset[7:0] <= cpu_data;
                         16'hff9f: horizontal_offset <= cpu_data;
                         default: begin
-                            if (cpu_addr >= 16'hffa0 && cpu_addr <= 16'hffaf)
+                            if (cpu_addr >= 16'hffa0 && cpu_addr <= 16'hffaf) begin
                                 mmu[cpu_addr[3:0]] <= cpu_data[5:0];
+                                if (DISTO_2MB)
+                                    disto_mmu[cpu_addr[3:0]] <= cpu_data[7:6];
+                            end
                             else if (cpu_addr >= 16'hffb0 && cpu_addr <= 16'hffbf)
                                 palette[cpu_addr[3:0]] <= cpu_data[5:0];
                         end
