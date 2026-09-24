@@ -594,9 +594,9 @@ module coco_cvbs_ntsc (
             cvbs_dac_level <= LEVEL_SYNC;
             component_pb_dac_level <= CHROMA_CENTER;
             component_pr_dac_level <= CHROMA_CENTER;
-            luma_sigma <= 6'd0;
+            luma_sigma <= 6'd16;
             chroma_sigma <= 6'd0;
-            cvbs_sigma <= 6'd0;
+            cvbs_sigma <= 6'd16;
             component_pb_sigma <= 6'd0;
             component_pr_sigma <= 6'd0;
             luma_out_reg <= 1'b0;
@@ -619,9 +619,9 @@ module coco_cvbs_ntsc (
             // Phase-lock only the signals containing luma.  The event lands
             // in the horizontal sync tip, so the accumulator transient is
             // invisible; Pb/Pr and S-Video chroma retain continuous phase.
-            luma_sigma <= dac_line_start ? 6'd0 : luma_sum;
+            luma_sigma <= dac_line_start ? 6'd16 : luma_sum;
             chroma_sigma <= chroma_sum;
-            cvbs_sigma <= dac_line_start ? 6'd0 : cvbs_sum;
+            cvbs_sigma <= dac_line_start ? 6'd16 : cvbs_sum;
             component_pb_sigma <= component_pb_sum;
             component_pr_sigma <= component_pr_sum;
             luma_out_reg <= luma_sigma[5];
