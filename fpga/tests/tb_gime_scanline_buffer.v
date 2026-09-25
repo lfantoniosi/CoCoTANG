@@ -339,6 +339,21 @@ module tb_gime_scanline_buffer;
   release dut.hd_p_s;release dut.hd_pv_s;release dut.hd_y_s;release dut.hd_pa_s;
   release dut.cv_p_s;release dut.cv_pv_s;release dut.cv_v_s;
 
+  // A mode write in HBORD must not cancel a row request which has already
+  // crossed into the renderer but is still in its coalescing window.  Raster
+  // demos issue this sequence repeatedly; dropping the request skips both
+  // the visible row and its sequential DMA advance.
+  @(negedge clk);
+  force dut.state=4'd0;
+  dut.h_pending=1'b1;dut.h_pending_y=8'd33;
+  dut.coalesce_count=3'd4;
+  dut.configuration_pending=1'b1;
+  @(posedge clk);#1;
+  if(!dut.h_pending||dut.h_pending_y!=8'd33||dut.coalesce_count!=0)begin
+   $display("HBORD mode write discarded queued row request");errors=errors+1;
+  end
+  dut.h_pending=0;release dut.state;
+
   // Scrolling writes commonly dirty the row which has already been
   // prefetched while the preceding row is being shown twice by HDMI.  Keep
   // that immutable row for this raster pass instead of immediately

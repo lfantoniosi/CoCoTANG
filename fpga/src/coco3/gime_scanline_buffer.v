@@ -607,7 +607,14 @@ reg configuration_pending=1'b1;
     c_dirty0<=c_dirty0&&c_keep_tag0;
     c_dirty1<=c_dirty1&&c_keep_tag1;
     c_dirty2<=c_dirty2&&c_keep_tag2;
-   memory_request<=0;word_valid<=0;h_pending<=0;c_pending<=0;
+   memory_request<=0;word_valid<=0;c_pending<=0;
+   // A horizontal-border register write can arrive after scanout has
+   // already queued the following row but before its short coalescing delay
+   // expires.  Do not discard that request: BOINK performs several such
+   // raster writes, and losing the queued row leaves a black scanline (and
+   // skips the corresponding sequential DMA handoff).  Restart the delay so
+   // the fill captures the newly settled mode inputs, while retaining the
+   // requested logical row.
    coalesce_count<=0;
    end else begin
     // Raster-time writes describe the following row.  Consume their mode
