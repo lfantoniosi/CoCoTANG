@@ -555,6 +555,16 @@ module coco_cvbs_ntsc (
     reg cvbs_out_reg = 1'b0;
     reg component_pb_out_reg = 1'b0;
     reg component_pr_out_reg = 1'b0;
+    // Decorrelate the luma pulse-density pattern between scanlines.  A fixed
+    // accumulator phase (or a two-line 0/16 alternation) produces coherent
+    // vertical beat patterns after the analogue reconstruction filter.  This
+    // maximal-length x^16+x^14+x^13+x^11+1 sequence has a 65535-line period;
+    // selecting five bits changes phase only, never the requested DC level.
+    reg [15:0] luma_phase_lfsr = 16'h1ace;
+    wire luma_phase_feedback = luma_phase_lfsr[15] ^
+                               luma_phase_lfsr[13] ^
+                               luma_phase_lfsr[12] ^
+                               luma_phase_lfsr[10];
     reg chroma_burst_270 = 1'b0;
     reg chroma_burst_bit_270 = 1'b0;
     reg [2:0] burst_shape_phase = 3'd0;
@@ -604,6 +614,7 @@ module coco_cvbs_ntsc (
             cvbs_out_reg <= 1'b0;
             component_pb_out_reg <= 1'b0;
             component_pr_out_reg <= 1'b0;
+            luma_phase_lfsr <= 16'h1ace;
             chroma_burst_270 <= 1'b0;
             chroma_burst_bit_270 <= 1'b0;
             burst_shape_phase <= 3'd0;
@@ -619,11 +630,16 @@ module coco_cvbs_ntsc (
             // Phase-lock only the signals containing luma.  The event lands
             // in the horizontal sync tip, so the accumulator transient is
             // invisible; Pb/Pr and S-Video chroma retain continuous phase.
-            luma_sigma <= dac_line_start ? 6'd16 : luma_sum;
+            luma_sigma <= dac_line_start ?
+                          {1'b0,luma_phase_lfsr[4:0]} : luma_sum;
             chroma_sigma <= chroma_sum;
-            cvbs_sigma <= dac_line_start ? 6'd16 : cvbs_sum;
+            cvbs_sigma <= dac_line_start ?
+                          {1'b0,luma_phase_lfsr[4:0]} : cvbs_sum;
             component_pb_sigma <= component_pb_sum;
             component_pr_sigma <= component_pr_sum;
+            if (dac_line_start)
+                luma_phase_lfsr <= {luma_phase_lfsr[14:0],
+                                    luma_phase_feedback};
             luma_out_reg <= luma_sigma[5];
             chroma_out_reg <= chroma_burst_270 ?
                               shaped_burst_bit : chroma_sigma[5];
