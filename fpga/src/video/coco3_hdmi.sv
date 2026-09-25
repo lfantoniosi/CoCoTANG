@@ -6,7 +6,8 @@ module coco3_hdmi #(
     parameter integer LOG_PAGE_WIDTH=6,
     parameter integer LOG_DEPTH=4096,
     parameter integer ENABLE_DEBUG_OVERLAY=0,
-    parameter integer NATIVE_HDMI_640=1
+    parameter integer NATIVE_HDMI_640=1,
+    parameter integer PAL_MACHINE=0
 ) (
     input logic pixel_clk,input logic serial_clk,
     input logic audio_clk,input logic [15:0] audio_pcm,input logic reset,
@@ -252,7 +253,8 @@ module coco3_hdmi #(
     logic [15:0] audio_samples[1:0];
     assign audio_samples[0]=audio_pcm; assign audio_samples[1]=audio_pcm;
     logic [9:0] tmds_internal[2:0];
-    hdmi #(.VIDEO_ID_CODE(2),.DYNAMIC_480_576(1),.DVI_OUTPUT(1'b0),
+    hdmi #(.VIDEO_ID_CODE(2),.DYNAMIC_480_576(1),
+           .PAL_MACHINE(PAL_MACHINE),.DVI_OUTPUT(1'b0),
            .VIDEO_REFRESH_RATE(59.94),
            .AUDIO_RATE(48000),.AUDIO_BIT_WIDTH(16),.NUM_CHANNELS(3),
            .START_X(0),.START_Y(0)) encoder(

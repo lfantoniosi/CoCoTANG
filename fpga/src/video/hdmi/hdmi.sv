@@ -10,6 +10,10 @@ module hdmi
     // Runtime switch between CTA VIC 2 (720x480p59.94) and VIC 17
     // (720x576p50). The pixel clock is 27 MHz for both modes.
     parameter bit DYNAMIC_480_576 = 1'b0,
+    // A PAL motherboard retains its 912-dot/114-E-cycle scanline when FF98
+    // selects the short frame. Use 864 HDMI clocks for that mode as well so
+    // the HDMI cache consumer remains line-locked to GIME.
+    parameter bit PAL_MACHINE = 1'b0,
 
     // The IT content bit indicates that image samples are generated in an ad-hoc
     // manner (e.g. directly from values in a framebuffer, as by a PC video
@@ -126,7 +130,8 @@ generate
             end
         2, 3:
         begin
-            assign frame_width = (DYNAMIC_480_576 && active_video_50hz) ?
+            assign frame_width = (DYNAMIC_480_576 &&
+                                  (active_video_50hz || PAL_MACHINE)) ?
                                  864 : 858;
             assign frame_height = (DYNAMIC_480_576 && active_video_50hz) ?
                                   625 : 525;

@@ -1,4 +1,4 @@
--d /Users/felipe/src/fpga/CoCoTANG/fpga/impl/gwsynthesis/CoCoTANG_PAL.vg
+-d /Users/felipe/src/fpga/CoCoTANG/fpga/impl/gwsynthesis/CoCoTANG.vg
 -p GW2AR-18C-QFN88-8
 -pn GW2AR-LV18QN88C8/I7
 -cst /Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.cst

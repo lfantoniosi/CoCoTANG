@@ -562,7 +562,7 @@ module top_coco3 #(
     coco3_hdmi #(.LOG_ADDR_WIDTH(LOG_ADDR_WIDTH),
         .LOG_COUNT_WIDTH(LOG_COUNT_WIDTH),.LOG_PAGE_WIDTH(LOG_PAGE_WIDTH),
         .LOG_DEPTH(LOG_DEPTH),.ENABLE_DEBUG_OVERLAY(ENABLE_BUS_LOGGER),
-        .NATIVE_HDMI_640(NATIVE_HDMI_640)) hdmi_output(
+        .NATIVE_HDMI_640(NATIVE_HDMI_640),.PAL_MACHINE(PAL_MACHINE)) hdmi_output(
         .pixel_clk(clk27),.serial_clk(clk135),.reset(!board_reset_n),
         .audio_clk(pia1_audio_clk),.audio_pcm(pia1_pcm_sample),
         .debug_clk(clk108),.log_we(log_we),.log_addr(log_addr),

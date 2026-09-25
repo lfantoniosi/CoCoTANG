@@ -16,6 +16,12 @@ module tb_pal_chroma;
  always #2 clk270=~clk270;
  initial begin
   #20; reset_n=1; #20;
+  // FF98 may select the short frame, but a PAL motherboard retains its
+  // 912-dot/114-cycle horizontal period in both frame-rate modes.
+  force dut.video_50hz_active=1'b0; #1;
+  if(dut.h_total!==10'd864)begin
+   $display("PAL 60Hz line total=%0d",dut.h_total);errors=errors+1;end
+  release dut.video_50hz_active;
   force dut.mod_burst=1'b1; force dut.mod_carrier=3'd0;
   force dut.mod_pal_odd=1'b0; #1;
   if(dut.mod_selected_chroma!==6)begin
