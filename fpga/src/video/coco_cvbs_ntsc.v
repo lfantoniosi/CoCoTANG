@@ -87,6 +87,9 @@ module coco_cvbs_ntsc #(
     localparam [5:0] LEVEL_SYNC     = 6'd0;
     localparam [5:0] LEVEL_BLANK    = 6'd10;
     localparam [5:0] LEVEL_WHITE    = 6'd32;
+    // Q2 equivalents used by the higher-precision separate Y output.
+    localparam [6:0] LUMA_SYNC_Q2  = 7'd0;
+    localparam [6:0] LUMA_BLANK_Q2 = 7'd40;
     localparam [5:0] CHROMA_CENTER  = 6'd16;
 
     reg [3:0] sample_phase = 4'd0;
@@ -305,6 +308,7 @@ module coco_cvbs_ntsc #(
     reg mod_picture = 1'b0;
     reg [2:0] mod_carrier = 3'd0;
     reg [5:0] mod_luma = LEVEL_BLANK;
+    reg [6:0] mod_luma_q2 = LUMA_BLANK_Q2;
     reg signed [10:0] mod_x4 = 11'sd0;
     reg signed [10:0] mod_y4 = 11'sd0;
     reg signed [10:0] mod_sum3 = 11'sd0;
@@ -325,6 +329,7 @@ module coco_cvbs_ntsc #(
     reg level_picture = 1'b0;
     reg [2:0] level_carrier = 3'd0;
     reg [5:0] level_luma = LEVEL_BLANK;
+    reg [6:0] level_luma_q2 = LUMA_BLANK_Q2;
     reg signed [5:0] level_chroma = 6'sd0;
     reg signed [5:0] level_svideo_chroma = 6'sd0;
 
@@ -358,10 +363,12 @@ module coco_cvbs_ntsc #(
     wire signed [7:0] svideo_picture_chroma =
         -(svideo_chroma_extended <<< 2);
 
-    wire [5:0] selected_luma_level = (FORCE_LUMA_LEVEL >= 0) ?
-                                     FORCE_LUMA_LEVEL[5:0] : level_luma;
-    wire [5:0] luma_level = level_sync ? LEVEL_SYNC :
-                            level_picture ? selected_luma_level : LEVEL_BLANK;
+    wire [6:0] selected_luma_level_q2 = (FORCE_LUMA_LEVEL >= 0) ?
+                                        {FORCE_LUMA_LEVEL[4:0],2'b00} :
+                                        level_luma_q2;
+    wire [6:0] luma_level = level_sync ? LUMA_SYNC_Q2 :
+                            level_picture ? selected_luma_level_q2 :
+                                            LUMA_BLANK_Q2;
     // The receiver derives hue and saturation from the picture-to-burst ratio.
     wire [5:0] chroma_level = level_picture ?
         add_level_wide(CHROMA_CENTER,svideo_picture_chroma) :
@@ -374,7 +381,7 @@ module coco_cvbs_ntsc #(
     wire [6:0] component_pr_level = level_picture ?
         add_component_level(component_pr_delta_q2) : 7'd64;
 
-    reg [5:0] luma_level_135 = LEVEL_SYNC;
+    reg [6:0] luma_level_135 = LUMA_SYNC_Q2;
     reg [5:0] chroma_level_135 = CHROMA_CENTER;
     reg [5:0] cvbs_level_135 = LEVEL_SYNC;
     reg [6:0] component_pb_level_135 = 7'd64;
@@ -430,6 +437,7 @@ module coco_cvbs_ntsc #(
             mod_picture <= 1'b0;
             mod_carrier <= 3'd0;
             mod_luma <= LEVEL_BLANK;
+            mod_luma_q2 <= LUMA_BLANK_Q2;
             mod_x4 <= 11'sd0;
             mod_y4 <= 11'sd0;
             mod_sum3 <= 11'sd0;
@@ -441,9 +449,10 @@ module coco_cvbs_ntsc #(
             level_picture <= 1'b0;
             level_carrier <= 3'd0;
             level_luma <= LEVEL_BLANK;
+            level_luma_q2 <= LUMA_BLANK_Q2;
             level_chroma <= 6'sd0;
             level_svideo_chroma <= 6'sd0;
-            luma_level_135 <= LEVEL_SYNC;
+            luma_level_135 <= LUMA_SYNC_Q2;
             chroma_level_135 <= CHROMA_CENTER;
             cvbs_level_135 <= LEVEL_SYNC;
             component_pb_level_135 <= 7'd64;
@@ -515,6 +524,7 @@ module coco_cvbs_ntsc #(
             mod_picture <= encoder_picture;
             mod_carrier <= encoder_carrier;
             mod_luma <= LEVEL_BLANK + encoder_luma_sum[10:6];
+            mod_luma_q2 <= LUMA_BLANK_Q2 + encoder_luma_sum[10:4];
             mod_x4 <= filtered_x <<< 2;
             mod_y4 <= filtered_y <<< 2;
             mod_sum3 <= (filtered_sum <<< 1) + filtered_sum;
@@ -531,6 +541,7 @@ module coco_cvbs_ntsc #(
             level_picture <= mod_picture;
             level_carrier <= mod_carrier;
             level_luma <= mod_luma > LEVEL_WHITE ? LEVEL_WHITE : mod_luma;
+            level_luma_q2 <= mod_luma_q2;
             level_chroma <= mod_selected_chroma;
             level_svideo_chroma <= mod_svideo_picture_chroma;
 
@@ -559,7 +570,7 @@ module coco_cvbs_ntsc #(
         end
     end
 
-    reg [5:0] luma_dac_level = LEVEL_SYNC;
+    reg [6:0] luma_dac_level = LUMA_SYNC_Q2;
     reg [5:0] chroma_dac_level = CHROMA_CENTER;
     reg [5:0] cvbs_dac_level = LEVEL_SYNC;
     reg [6:0] component_pb_dac_level = 7'd64;
@@ -567,7 +578,7 @@ module coco_cvbs_ntsc #(
     // Keep the DAC output bit and five-bit error accumulator in one register.
     // This is the same first-order sigma-delta recurrence, and lets the carry
     // destination pack beside the adder instead of in a distant output flop.
-    reg [5:0] luma_sigma = 6'd0;
+    reg [7:0] luma_sigma = 8'd0;
     reg [5:0] chroma_sigma = 6'd0;
     reg [5:0] cvbs_sigma = 6'd0;
     reg [7:0] component_pb_sigma = 8'd0;
@@ -594,9 +605,10 @@ module coco_cvbs_ntsc #(
     // luma_level_135 is the next level.  Their transition into zero occurs
     // exactly once at the leading edge of every horizontal sync tip, giving
     // a line-phase reference without another counter or CDC state machine.
-    wire dac_line_start = (luma_dac_level != LEVEL_SYNC) &&
-                          (luma_level_135 == LEVEL_SYNC);
-    wire [5:0] luma_sum = {1'b0,luma_sigma[4:0]} + luma_dac_level;
+    wire dac_line_start = (luma_dac_level != LUMA_SYNC_Q2) &&
+                          (luma_level_135 == LUMA_SYNC_Q2);
+    wire [7:0] luma_sum = {1'b0,luma_sigma[6:0]} +
+                          {1'b0,luma_dac_level};
     wire [5:0] chroma_sum = {1'b0,chroma_sigma[4:0]} + chroma_dac_level;
     wire [5:0] cvbs_sum = {1'b0,cvbs_sigma[4:0]} + cvbs_dac_level;
     wire [7:0] component_pb_sum =
@@ -623,12 +635,12 @@ module coco_cvbs_ntsc #(
 
     always @(posedge clk270) begin
         if (!reset_n) begin
-            luma_dac_level <= LEVEL_SYNC;
+            luma_dac_level <= LUMA_SYNC_Q2;
             chroma_dac_level <= CHROMA_CENTER;
             cvbs_dac_level <= LEVEL_SYNC;
             component_pb_dac_level <= 7'd64;
             component_pr_dac_level <= 7'd64;
-            luma_sigma <= 6'd16;
+            luma_sigma <= 8'd64;
             chroma_sigma <= 6'd0;
             cvbs_sigma <= 6'd16;
             component_pb_sigma <= 8'd0;
@@ -655,7 +667,7 @@ module coco_cvbs_ntsc #(
             // in the horizontal sync tip, so the accumulator transient is
             // invisible; Pb/Pr and S-Video chroma retain continuous phase.
             luma_sigma <= dac_line_start ?
-                          {1'b0,luma_phase_lfsr[4:0]} : luma_sum;
+                          {1'b0,luma_phase_lfsr[6:0]} : luma_sum;
             chroma_sigma <= chroma_sum;
             cvbs_sigma <= dac_line_start ?
                           {1'b0,luma_phase_lfsr[4:0]} : cvbs_sum;
@@ -667,7 +679,7 @@ module coco_cvbs_ntsc #(
             if (dac_line_start)
                 luma_phase_lfsr <= {luma_phase_lfsr[14:0],
                                     luma_phase_feedback};
-            luma_out_reg <= luma_sigma[5];
+            luma_out_reg <= luma_sigma[7];
             chroma_out_reg <= chroma_burst_270 ?
                               shaped_burst_bit : chroma_sigma[5];
             cvbs_out_reg <= cvbs_sigma[5];

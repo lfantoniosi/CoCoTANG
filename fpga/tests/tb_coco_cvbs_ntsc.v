@@ -16,6 +16,7 @@ module tb_coco_cvbs_ntsc;
     wire luma_out, chroma_out, cvbs_out,component_pb_out,component_pr_out;
     integer errors = 0;
     integer ones;
+    integer luma_ones;
     integer i;
     reg [8:0] saved_fraction;
     reg [2:0] saved_octant;
@@ -114,14 +115,22 @@ module tb_coco_cvbs_ntsc;
         seek(10'd110,9'd236);
         repeat (20) @(negedge clk135);
         ones = 0;
+        luma_ones = 0;
         for (i=0;i<128;i=i+1) begin
             if (cvbs_out) ones = ones + 1;
+            if (luma_out) luma_ones = luma_ones + 1;
             @(negedge clk270);
         end
         if (ones != 40) begin
             $display("blank density: %0d level135=%0d dac=%0d acc=%0d sync=%0d h=%0d v=%0d",
                 ones,dut.cvbs_level_135,dut.cvbs_dac_level,dut.cvbs_sigma[4:0],
                 dut.level_sync,dut.h_sample,dut.v_line);
+            errors = errors + 1;
+        end
+        if (luma_ones != 40) begin
+            $display("Q2 luma blank density: %0d level135=%0d dac=%0d acc=%0d",
+                luma_ones,dut.luma_level_135,dut.luma_dac_level,
+                dut.luma_sigma[6:0]);
             errors = errors + 1;
         end
 
