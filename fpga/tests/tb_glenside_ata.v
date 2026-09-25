@@ -78,6 +78,34 @@ module tb_glenside_ata;
         read_reg(4'h7,value);
         if(value!==8'h50) fail("ready status after SD initialization");
 
+        // HDB-DOS HDINIT requires EXECUTE DEVICE DIAGNOSTIC to finish ready
+        // and return diagnostic code $01 in the error register.
+        write_reg(4'h7,8'h90);
+        repeat(3) @(posedge clk);
+        read_reg(4'h7,value);
+        if(value!==8'h50) fail("EXECUTE DIAGNOSTIC ready status");
+        read_reg(4'h1,value);
+        if(value!==8'h01) fail("EXECUTE DIAGNOSTIC device-0 pass code");
+
+        // Private buffer diagnostic fills the existing sector DPB without
+        // involving the SD reader.  Every byte must equal its byte offset.
+        write_reg(4'h7,8'he2);
+        repeat(260) @(posedge clk);
+        read_reg(4'h7,value);
+        if(value!==8'h58) fail("BUFFER TEST did not assert DRQ");
+        for(i=0;i<256;i=i+1) begin
+            read_reg(4'h0,value);
+            if(value!==((i*2)&255)) begin
+                $display("BUFFER TEST word %0d low expected %02x got %02x",i,(i*2)&255,value);
+                fail("BUFFER TEST low byte");
+            end
+            read_reg(4'h8,value);
+            if(value!==((i*2+1)&255)) begin
+                $display("BUFFER TEST word %0d high expected %02x got %02x",i,(i*2+1)&255,value);
+                fail("BUFFER TEST high byte");
+            end
+        end
+
         // LBA28 read, one sector.
         write_reg(4'h2,8'h01);
         write_reg(4'h3,8'h67);

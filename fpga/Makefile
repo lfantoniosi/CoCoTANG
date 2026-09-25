@@ -37,6 +37,8 @@ coco2_rebuild: check-tools
 	$(call run-gowin,CoCoTANG_coco2.gprj,top,CoCoTANG_coco2)
 
 test:
+	iverilog -g2012 -o /private/tmp/cocotang_tb_sd_spi tests/tb_sd_spi_block.v src/storage/sd_spi_block.v
+	vvp /private/tmp/cocotang_tb_sd_spi
 	iverilog -g2012 -o /private/tmp/cocotang_tb_glenside tests/tb_glenside_ata.v src/storage/glenside_ata.v src/storage/glenside_sector_buffer.v
 	vvp /private/tmp/cocotang_tb_glenside
 	iverilog -g2012 -o /private/tmp/cocotang_tb_pia1_dac tests/tb_coco_pia1_dac.v src/audio/coco_pia1_dac.v

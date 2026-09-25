@@ -29,7 +29,7 @@ module top_coco3 #(
     parameter integer NATIVE_HDMI_640=1,
     parameter integer DISTO_2MB=1,
     // Glenside task-file occupies IDE_BASE..IDE_BASE+$0f; $FF50 is standard.
-    parameter integer ENABLE_GLENSIDE_IDE=0,
+    parameter integer ENABLE_GLENSIDE_IDE=1,
     parameter [15:0] IDE_BASE=16'hff50
 ) (
     input clkin,input s1,input s2,input [7:0] mp,output [1:0] msel,
@@ -323,9 +323,6 @@ module top_coco3 #(
 
     wire ide_live_selected=(ENABLE_GLENSIDE_IDE != 0) &&
         (address[15:4] == IDE_BASE[15:4]);
-    // The integrated adapter owns its I/O page.  Export S0 there so the
-    // motherboard cartridge-control decode cannot contend with FPGA data.
-    assign sam_s=ide_live_selected ? 3'd0 : machine_sam_s;
 
     // Freeze one complete scanned CPU transaction.  The mux address changes
     // while its banks are being acquired, so a live FF5x comparison is not a
@@ -333,17 +330,29 @@ module top_coco3 #(
     // as the memory service holds its transaction tag.
     reg ide_cycle_active=1'b0;
     reg ide_cycle_rw_n=1'b1;
-    reg [15:0] ide_cycle_addr=16'hffff;
+    reg [15:0] ide_address_pipe=16'hffff;
+    reg [2:0] sam_s_pipe=3'd0;
+    // The integrated adapter owns its I/O page.  Qualify ownership from the
+    // completed early address capture, never from the partially scanned live
+    // address.  Waiting for the later control snapshot leaves a window where
+    // S6 can start selecting an external FF5x cartridge before we take over;
+    // that device can then contend with an integrated-IDE read.  The address
+    // capture is already atomic and arrives a complete mux bank before E.
+    assign sam_s=sam_s_pipe;
     always @(posedge clk108 or negedge board_reset_n) begin
         if (!board_reset_n) begin
             ide_cycle_active<=1'b0;
             ide_cycle_rw_n<=1'b1;
-            ide_cycle_addr<=16'hffff;
+            ide_address_pipe<=16'hffff;
+            sam_s_pipe<=3'd0;
         end else begin
+            if (bus_address_valid) begin
+                ide_address_pipe<=address;
+                sam_s_pipe<=ide_live_selected ? 3'd0 : machine_sam_s;
+            end
             if (bus_snapshot_valid) begin
                 ide_cycle_active<=ide_live_selected;
                 ide_cycle_rw_n<=rw_n;
-                ide_cycle_addr<=address;
             end else if (e_fall)
                 ide_cycle_active<=1'b0;
         end
@@ -351,12 +360,16 @@ module top_coco3 #(
 
     wire [7:0] ide_rdata;
     wire ide_raw_data_oe;
+    // Match the proven GIME-register bus timing: the external transceiver is
+    // selected by S0, while the FPGA drives its side only during E high.
+    // The output IOLOGIC retains the value through the physical E-falling
+    // sample edge without extending ownership into the following CPU cycle.
     wire ide_data_oe=ide_raw_data_oe && e_core;
     generate if (ENABLE_GLENSIDE_IDE != 0) begin:glenside_ide_enabled
       glenside_ide #(.IDE_BASE(IDE_BASE)) ide(
         .clk(clk108),.reset_n(board_reset_n),
         .cpu_enable(cpu_bus_active && ide_cycle_active),
-        .e_fall(e_fall),.cpu_addr(ide_cycle_addr),
+        .e_fall(e_fall),.cpu_addr(ide_address_pipe),
         .cpu_rw_n(ide_cycle_rw_n),
         .cpu_wdata(cpu_write_data),.cpu_rdata(ide_rdata),
         .cpu_data_oe(ide_raw_data_oe),.sd_sclk(sd_sclk),.sd_cmd(sd_cmd),
@@ -372,6 +385,15 @@ module top_coco3 #(
       assign sd_dat2=1'bz;
       assign sd_dat3=1'bz;
     end endgenerate
+    // Register IDE data continuously, exactly like the GIME register read
+    // path below.  The synchronous sector RAM has the whole preceding CPU
+    // cycle to follow data_pointer, and the register captures the current word
+    // before the pointer advances at E falling.
+    reg [7:0] ide_rdata_pipe=8'hff;
+    always @(posedge clk108 or negedge board_reset_n) begin
+        if (!board_reset_n) ide_rdata_pipe<=8'hff;
+        else ide_rdata_pipe<=ide_rdata;
+    end
     // GIME register reads are decoded as soon as the address banks settle.
     // Register their value once before the I/O cells so the palette/MMU mux
     // is not on the 108 MHz pad-output path.
@@ -380,10 +402,10 @@ module top_coco3 #(
         if (!board_reset_n) core_rdata_pipe<=8'hff;
         else core_rdata_pipe<=core_rdata;
     end
-    // Keep the established CPU read timing.  With IDE disabled this reduces
-    // exactly to the original core/memory path; no extra pipeline stage is
-    // inserted into every CPU read.
-    wire [7:0] fpga_read_data=ide_data_oe ? ide_rdata :
+    // Keep IDE data isolated from the continuously changing GIME read bus.
+    // ATA data-port reads are back-to-back, so an IDE byte must remain intact
+    // until its E phase has completed.
+    wire [7:0] fpga_read_data=ide_data_oe ? ide_rdata_pipe :
         (core_data_oe ? core_rdata_pipe : memory_rdata);
     wire fpga_data_oe=cpu_bus_active &&
         (ide_data_oe || core_data_oe || memory_data_oe);

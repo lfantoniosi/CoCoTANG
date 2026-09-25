@@ -14,9 +14,7 @@ Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_sdr
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/sdram.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/cpu_sdram_arbiter.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco3_memory.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/sd_crc16.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/sdcmd_ctrl.sv'
-Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/sd_reader.sv'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/sd_spi_block.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/glenside_sector_buffer.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/glenside_ata.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/glenside_ide.v'
@@ -86,7 +84,11 @@ Compiling module 'coco_sdram_startup_test'("/Users/felipe/src/fpga/CoCoTANG/fpga
 Compiling module 'coco_flash_loader(SDRAM_ADDRESS=23'd0,BYTE_COUNT=32768)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_flash_loader.v":1)
 Compiling module 'spi_flash_reader(CLK_DIV=4)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/spi_flash_reader.v":1)
 Compiling module 'cpu_sdram_arbiter'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/cpu_sdram_arbiter.v":5)
-WARN  (EX3791) : Expression size 8 truncated to fit in target size 7("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":477)
+Compiling module 'glenside_ide(IDE_BASE=16'b1111111101010000)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/glenside_ide.v":9)
+Compiling module 'glenside_ata(IDE_BASE=16'b1111111101010000)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/glenside_ata.v":7)
+Compiling module 'glenside_sector_buffer'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/glenside_sector_buffer.v":3)
+Compiling module 'sd_spi_block'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/sd_spi_block.v":6)
+WARN  (EX3791) : Expression size 8 truncated to fit in target size 7("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":499)
 Compiling module 'coco3_hdmi(LOG_ADDR_WIDTH=13,LOG_COUNT_WIDTH=14,LOG_PAGE_WIDTH=7,LOG_DEPTH=4092)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco3_hdmi.sv":3)
 Compiling module 'artifact_mode_osd'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/artifact_mode_osd.sv":3)
 Compiling module 'hdmi(VIDEO_ID_CODE=2,VIDEO_REFRESH_RATE=60.0,AUDIO_RATE=48000)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/hdmi.sv":4)

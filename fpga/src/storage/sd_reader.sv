@@ -151,6 +151,23 @@ sdcmd_ctrl u_sdcmd_ctrl (
 reg sddat0oe = 0;
 reg sddat0out;
 
+// DAT0 is asynchronous to the 108 MHz fabric clock.  The card changes data
+// around SDCLK's falling edge and it is consumed on the following rising
+// edge, leaving many fabric clocks of settling time even at the fastest SD
+// rate used here.  Synchronize it and use a three-sample majority value so a
+// metastable first stage or a short coupled glitch cannot become a sector
+// data bit.
+reg [2:0] sddat0_sync = 3'b111;
+wire sddat0_sample = (sddat0_sync[2] & sddat0_sync[1]) |
+                     (sddat0_sync[2] & sddat0_sync[0]) |
+                     (sddat0_sync[1] & sddat0_sync[0]);
+
+always @(posedge clk or negedge rstn)
+    if (~rstn)
+        sddat0_sync <= 3'b111;
+    else
+        sddat0_sync <= {sddat0_sync[1:0], sddat0};
+
 assign sdcmd = (sdcmdoe) ? sdcmdout : 1'bz;
 assign sddat0 = (sddat0oe) ? sddat0out : 1'bz;
 
@@ -339,6 +356,7 @@ always @ (posedge clk or negedge rstn)
             sddat_stat <= RWAIT;
             outaddr <= '1;
             raddr <= '0;
+            crc_error <= 0;
             timeout_error <= 0;
             ridx   <= 0;
         end else if (sdcmd_stat == WRITING) begin
@@ -353,9 +371,10 @@ always @ (posedge clk or negedge rstn)
             case(sddat_stat)
                 // reading
                 RWAIT   : begin
-                    if(~sddat0) begin           // start bit = 0
+                    if(~sddat0_sample) begin    // start bit = 0
                         sddat_stat <= RDURING;
                         ridx   <= 0;
+                        crc_init <= 1;
 
                     end else begin
                         if(ridx > 1000000)      // according to SD datasheet, 1ms is enough to wait for DAT result, here, we set timeout to 1000000 clock cycles = 80ms (when SDCLK=12.5MHz)
@@ -364,7 +383,9 @@ always @ (posedge clk or negedge rstn)
                     end
                 end
                 RDURING : begin
-                    outbyte[3'd7 - ridx[2:0]] <= sddat0;
+                    outbyte[3'd7 - ridx[2:0]] <= sddat0_sample;
+                    crc_bit <= sddat0_sample;
+                    crc_ena <= 1;
                   
                     if(ridx[2:0] == 3'd7) begin
                         outen  <= 1'b1;
@@ -379,8 +400,20 @@ always @ (posedge clk or negedge rstn)
                     end
                 end
                 RTAIL   : begin
-                    if(ridx >= 8*8-1)          // ignores crc and end bit
+                    // A one-bit SD block ends with CRC16 (MSB first) and one
+                    // high end bit.  Reject a damaged block rather than
+                    // exposing silently corrupted bytes to the ATA buffer.
+                    if (ridx < 16) begin
+                        // Feeding the transmitted CRC through the same
+                        // generator must leave a zero residue for a valid
+                        // data block.  This avoids a wide indexed CRC mux.
+                        crc_bit <= sddat0_sample;
+                        crc_ena <= 1;
+                    end
+                    else if (ridx == 16) begin
+                        crc_error <= (|crc_out) | ~sddat0_sample;
                         sddat_stat <= RDONE;
+                    end
                     ridx   <= ridx + 1;
                 end
                 RTIMEOUT :timeout_error <= 1;
@@ -416,7 +449,7 @@ always @ (posedge clk or negedge rstn)
                         sddat0oe <= 0;          // wait for crc status 2 cycles  
                         ridx   <= ridx + 1;                 
                     end else begin
-                        if (!sddat0) begin      // wait for ack
+                        if (!sddat0_sample) begin // wait for ack
                             sddat_stat = WTAIL;
                             ridx <= 0;
                         end else 
@@ -435,14 +468,14 @@ always @ (posedge clk or negedge rstn)
                 end
                 WTAIL   : begin                 // busy wait
                     if (ridx < 3) begin
-                        crc_stat <= { crc_stat[1:0], sddat0 };
+                        crc_stat <= { crc_stat[1:0], sddat0_sample };
                         ridx   <= ridx + 1;
                     end else begin
         
                         if (ridx == 4)
                             crc_error <= crc_stat != 3'b010;
 
-                        if (!sddat0) begin      // wait for ack
+                        if (!sddat0_sample) begin // wait for ack
                             sddat_stat = WBUSY;
                             ridx <= 0;
                         
@@ -455,7 +488,7 @@ always @ (posedge clk or negedge rstn)
                     //ridx   <= ridx + 1;
                 end
                 WBUSY   :  begin
-                    if (sddat0) begin      // wait for ack
+                    if (sddat0_sample) begin // wait for ack
                         sddat_stat = WDONE;
                         ridx <= 0;
                     end else

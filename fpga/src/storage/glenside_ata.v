@@ -48,6 +48,7 @@ module glenside_ata #(
     localparam [3:0] S_IDENTIFY   = 4'd8;
     localparam [3:0] S_READ_NEXT  = 4'd9;
     localparam [3:0] S_WRITE_NEXT = 4'd10;
+    localparam [3:0] S_TEST_FILL  = 4'd11;
 
     localparam integer INIT_COUNT_WIDTH = $clog2(INIT_TIMEOUT_CYCLES + 1);
 
@@ -65,6 +66,7 @@ module glenside_ata #(
     reg [7:0] high_latch;
     reg [8:0] data_pointer;
     reg [8:0] identify_pointer;
+    reg [8:0] test_pointer;
     reg [8:0] remaining_sectors;
     reg [27:0] active_lba;
     reg [31:0] identify_capacity;
@@ -82,7 +84,14 @@ module glenside_ata #(
 
     wire cpu_word_write = selected && e_fall && !cpu_rw_n &&
         (register_number == 4'h0) && (state == S_WRITE_DATA) && status_reg[3];
+    wire test_word_write = state == S_TEST_FILL;
     wire sector_sd_write = sd_data_valid && (state == S_READ_WAIT);
+
+    wire [7:0] sector_ata_addr = test_word_write ?
+        test_pointer[8:1] : data_pointer[8:1];
+    wire [15:0] sector_ata_wdata = test_word_write ?
+        {test_pointer[7:0] + 8'd1,test_pointer[7:0]} :
+        {high_latch,cpu_wdata};
 
     function [15:0] identify_word;
         input [7:0] word_number;
@@ -131,9 +140,9 @@ module glenside_ata #(
 
     glenside_sector_buffer sector_buffer(
         .clk(clk),
-        .ata_addr(data_pointer[8:1]),
-        .ata_we(cpu_word_write),
-        .ata_wdata({high_latch,cpu_wdata}),
+        .ata_addr(sector_ata_addr),
+        .ata_we(cpu_word_write || test_word_write),
+        .ata_wdata(sector_ata_wdata),
         .ata_rdata(sector_cpu_word),
         .sd_addr(sd_data_addr),.sd_we(sector_sd_write),
         .sd_wdata(sd_data_in),.sd_rdata(sector_sd_byte));
@@ -167,6 +176,7 @@ module glenside_ata #(
             high_latch <= 8'h00;
             data_pointer <= 9'd0;
             identify_pointer <= 9'd0;
+            test_pointer <= 9'd0;
             remaining_sectors <= 9'd0;
             active_lba <= 28'd0;
             identify_capacity <= 32'd0;
@@ -198,6 +208,9 @@ module glenside_ata #(
                     8'h90: begin
                         if (card_ready) begin
                             status_reg <= ST_DRDY | ST_DSC;
+                            // ATA diagnostic code $01 means device 0 passed.
+                            // HDB-DOS requires this exact value after $90.
+                            error_reg <= 8'h01;
                             state <= S_READY;
                         end else begin
                             status_reg <= ST_BSY;
@@ -213,6 +226,17 @@ module glenside_ata #(
                             32'h0fffffff : capacity_sectors;
                         status_reg <= ST_BSY;
                         state <= S_IDENTIFY;
+                    end
+                    // Private hardware diagnostic: fill the sector DPB with
+                    // two copies of 00..FF, then expose it through the normal
+                    // ATA data port.  No SD-card transaction is performed.
+                    8'he2: begin
+                        identify_transfer <= 1'b0;
+                        test_pointer <= 9'd0;
+                        data_pointer <= 9'd0;
+                        remaining_sectors <= 9'd1;
+                        status_reg <= ST_BSY;
+                        state <= S_TEST_FILL;
                     end
                     8'h20,8'h21: begin
                         identify_transfer <= 1'b0;
@@ -260,9 +284,12 @@ module glenside_ata #(
                     if (sd_busy)
                         sd_busy_seen <= 1'b1;
                     if (sd_busy_seen && !sd_busy) begin
-                        card_ready <= 1'b1;
-                        status_reg <= ST_DRDY | ST_DSC;
-                        error_reg <= 8'h00;
+                        card_ready <= !sd_error;
+                        status_reg <= sd_error ?
+                                      (ST_DRDY | ST_DSC | ST_ERR) :
+                                      (ST_DRDY | ST_DSC);
+                        // $01 is the ATA device-0 diagnostic pass code.
+                        error_reg <= sd_error ? 8'h04 : 8'h01;
                         state <= S_READY;
                     end else if (init_timeout != 0) begin
                         init_timeout <= init_timeout - 1'b1;
@@ -350,6 +377,15 @@ module glenside_ata #(
                     data_pointer <= 9'd0;
                     status_reg <= ST_DRDY | ST_DSC | ST_DRQ;
                     state <= S_WRITE_DATA;
+                end
+                S_TEST_FILL: begin
+                    if (test_pointer == 9'd510) begin
+                        data_pointer <= 9'd0;
+                        status_reg <= ST_DRDY | ST_DSC | ST_DRQ;
+                        state <= S_READY;
+                    end else begin
+                        test_pointer <= test_pointer + 9'd2;
+                    end
                 end
                 default: begin
                     // S_READY and S_WRITE_DATA are driven by task-file accesses.

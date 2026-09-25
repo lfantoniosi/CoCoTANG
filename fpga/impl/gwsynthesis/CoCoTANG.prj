@@ -18,9 +18,7 @@
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/sdram.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/cpu_sdram_arbiter.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco3_memory.v" type="verilog"/>
-        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/sd_crc16.v" type="verilog"/>
-        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/sdcmd_ctrl.sv" type="verilog"/>
-        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/sd_reader.sv" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/sd_spi_block.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/glenside_sector_buffer.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/glenside_ata.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/glenside_ide.v" type="verilog"/>
