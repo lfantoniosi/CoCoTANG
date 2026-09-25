@@ -412,10 +412,12 @@ module coco_cvbs_ntsc #(
     // active-picture chroma must use the same polarity.  Advance picture hue
     // by one 45-degree carrier octant to compensate the measured analogue
     // rotation.  The corrected Q8 emitter follower still attenuates picture
-    // chroma; a moderate x4 gain restores saturation without the severe
-    // clipping of the former x7 gain.
+    // chroma.  NTSC retains the calibrated x4 gain; PAL uses x3 because its
+    // x2 swinging burst otherwise leaves deep-blue picture chroma close to
+    // clipping and produces visible black/blue dot crawl in the monitor.
     wire signed [7:0] svideo_chroma_extended = level_svideo_chroma;
-    wire signed [7:0] svideo_picture_chroma =
+    wire signed [7:0] svideo_picture_chroma = PAL_MACHINE ?
+        -(svideo_chroma_extended + (svideo_chroma_extended <<< 1)) :
         -(svideo_chroma_extended <<< 2);
 
     wire [6:0] selected_luma_level_q2 = (FORCE_LUMA_LEVEL >= 0) ?
