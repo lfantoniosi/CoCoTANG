@@ -11,7 +11,25 @@ module tb_sd_spi_block;
     reg sd_miso=1;
     reg [7:0] memory [0:511];
     reg [7:0] received [0:511];
+    reg [7:0] memory_q;
     integer i;
+
+    function [15:0] crc16_byte;
+        input [15:0] crc_in;
+        input [7:0] data;
+        reg [15:0] value;
+        integer bit_index;
+        begin
+            value=crc_in;
+            for(bit_index=7;bit_index>=0;bit_index=bit_index-1) begin
+                if(value[15]^data[bit_index])
+                    value={value[14:0],1'b0}^16'h1021;
+                else
+                    value={value[14:0],1'b0};
+            end
+            crc16_byte=value;
+        end
+    endfunction
 
     always #5 clk=~clk;
 
@@ -20,12 +38,16 @@ module tb_sd_spi_block;
         .read_start(read_start),.write_start(write_start),.sector(sector),
         .busy(busy),.done(done),.error(error),
         .data_valid(data_valid),.data_addr(data_addr),.data_out(data_out),
-        .data_in(memory[data_addr]),.capacity_sectors(capacity_sectors),
+        .data_in(memory_q),.capacity_sectors(capacity_sectors),
         .sd_sclk(sd_sclk),.sd_cs_n(sd_cs_n),.sd_mosi(sd_mosi),.sd_miso(sd_miso));
 
     always @(posedge clk)
         if (data_valid)
             received[data_addr] <= data_out;
+
+    // Match the one-clock read latency of the Gowin sector-buffer DPB.
+    always @(posedge clk)
+        memory_q <= memory[data_addr];
 
     task fail;
         input [8*80-1:0] message;
@@ -85,6 +107,7 @@ module tb_sd_spi_block;
 
     initial begin : card_model
         reg [7:0] value;
+        reg [15:0] expected_crc;
         integer n;
         sd_miso=1;
         wait(reset_n);
@@ -104,24 +127,42 @@ module tb_sd_spi_block;
         wait(sd_cs_n); wait(!sd_cs_n);
         expect_command(17,32'd3); card_put_byte(8'h00);
         card_put_byte(8'hff); card_put_byte(8'hfe);
-        for(n=0;n<512;n=n+1) card_put_byte(n[7:0]^8'ha5);
-        card_put_byte(8'h12); card_put_byte(8'h34);
+        expected_crc=0;
+        for(n=0;n<512;n=n+1) begin
+            value=n[7:0]^8'ha5;
+            expected_crc=crc16_byte(expected_crc,value);
+            card_put_byte(value);
+        end
+        card_put_byte(expected_crc[15:8]);
+        card_put_byte(expected_crc[7:0]);
 
         wait(sd_cs_n); wait(!sd_cs_n);
         expect_command(24,32'd4); card_put_byte(8'h00);
         card_get_byte(value); // inter-command gap
         card_get_byte(value);
         if(value!==8'hfe) fail("missing single-block write token");
+        expected_crc=0;
         for(n=0;n<512;n=n+1) begin
             card_get_byte(value);
             if(value!==memory[n]) begin
                 $display("write byte %0d expected %02x got %02x",n,memory[n],value);
                 fail("write payload mismatch");
             end
+            expected_crc=crc16_byte(expected_crc,value);
         end
-        card_get_byte(value); card_get_byte(value); // dummy CRC
+        card_get_byte(value);
+        if(value!==expected_crc[15:8]) fail("write CRC high byte mismatch");
+        card_get_byte(value);
+        if(value!==expected_crc[7:0]) fail("write CRC low byte mismatch");
         card_put_byte(8'h05);
         card_put_byte(8'h00); card_put_byte(8'h00); card_put_byte(8'hff);
+
+        // A deliberately bad read CRC must be reported to the ATA layer.
+        wait(sd_cs_n); wait(!sd_cs_n);
+        expect_command(17,32'd5); card_put_byte(8'h00);
+        card_put_byte(8'hfe);
+        for(n=0;n<512;n=n+1) card_put_byte(n[7:0]);
+        card_put_byte(8'h00); card_put_byte(8'h00);
     end
 
     initial begin : host
@@ -150,7 +191,13 @@ module tb_sd_spi_block;
         @(negedge clk); write_start=0;
         wait(done);
         if(error) fail("CMD24 write failed");
-        $display("PASS: SD SPI initialization, CMD17 read and CMD24 write");
+
+        sector=5;
+        @(negedge clk); read_start=1;
+        @(negedge clk); read_start=0;
+        wait(done);
+        if(!error) fail("bad CMD17 CRC was accepted");
+        $display("PASS: SD SPI init, CRC-checked CMD17 and CRC-protected CMD24");
         $finish;
     end
 

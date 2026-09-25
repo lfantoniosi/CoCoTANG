@@ -9,7 +9,7 @@
 module glenside_ide #(
     parameter [15:0] IDE_BASE = 16'hff50,
     parameter integer SPI_INIT_DIV = 135,
-    parameter integer SPI_DATA_DIV = 16,
+    parameter integer SPI_DATA_DIV = 54,
     parameter integer INIT_TIMEOUT_CYCLES = 1080000000
 ) (
     input wire clk,

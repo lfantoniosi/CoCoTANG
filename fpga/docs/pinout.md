@@ -16,7 +16,7 @@ Package pins are for the GW2AR-LV18QN88C8/I7 on the Tang Nano 20K.
 | `y_out`, `pb_out`, `cvbs_out` | out | 56, 54, 18 | Component Y, Pb, and Pr (default mode) |
 | `audio_out` | out | 55 | Sigma-delta CoCo DAC audio to the board's filtered line output |
 | `mspi_sclk`, `mspi_cs`, `mspi_mosi`, `mspi_miso` | out/out/out/in | 59, 60, 61, 62 | On-module SPI flash |
-| `sd_sclk`, `sd_cmd`, `sd_dat[0:3]` | out/inout/inout | 83, 82, 84, 85, 80, 81 | On-module TF card in native one-bit SD mode |
+| `sd_sclk`, `sd_cmd`, `sd_dat[0:3]` | out/inout/inout | 83, 82, 84, 85, 80, 81 | On-module TF card in SPI mode: CMD=MOSI, DAT0=MISO, DAT3=CS |
 | `tmds_clk_p` | differential out | 33/34 | HDMI clock pair |
 | `tmds_data_p[0]` | differential out | 35/36 | HDMI data 0 pair |
 | `tmds_data_p[1]` | differential out | 37/38 | HDMI data 1 pair |

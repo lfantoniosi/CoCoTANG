@@ -5,7 +5,7 @@
 // wiring is the standard SD mapping: CMD=MOSI, DAT0=MISO and DAT3=CS_n.
 module sd_spi_block #(
     parameter integer INIT_DIV = 135, // 108 MHz / (2*135) = 400 kHz
-    parameter integer DATA_DIV = 16,  // 108 MHz / (2*16)  = 3.375 MHz
+    parameter integer DATA_DIV = 54,  // 108 MHz / (2*54)  = 1.000 MHz
     parameter integer RESPONSE_TIMEOUT = 65535
 ) (
     input  wire        clk,
@@ -86,6 +86,8 @@ module sd_spi_block #(
     reg [3:0] init_clock_count;
     reg [8:0] byte_count;
     reg [1:0] crc_count;
+    reg [15:0] block_crc;
+    reg [7:0] received_crc_high;
     reg [7:0] write_byte;
     reg operation_error;
 
@@ -104,6 +106,24 @@ module sd_spi_block #(
                 3'd4: command_byte=argument[7:0];
                 default: command_byte=command_crc;
             endcase
+        end
+    endfunction
+
+    // SD data-block CRC16: x^16 + x^12 + x^5 + 1, MSB first.
+    function [15:0] crc16_byte;
+        input [15:0] crc_in;
+        input [7:0] data;
+        reg [15:0] value;
+        integer bit_index;
+        begin
+            value=crc_in;
+            for(bit_index=7;bit_index>=0;bit_index=bit_index-1) begin
+                if (value[15] ^ data[bit_index])
+                    value={value[14:0],1'b0} ^ 16'h1021;
+                else
+                    value={value[14:0],1'b0};
+            end
+            crc16_byte=value;
         end
     endfunction
 
@@ -217,6 +237,8 @@ module sd_spi_block #(
             init_clock_count<=0;
             byte_count<=0;
             crc_count<=0;
+            block_crc<=0;
+            received_crc_high<=0;
             write_byte<=0;
             operation_error<=0;
         end else begin
@@ -374,7 +396,11 @@ module sd_spi_block #(
                     spi_tx<=8'hff; spi_start<=1; state<=ST_READ_TOKEN_WAIT;
                 end
                 ST_READ_TOKEN_WAIT: if (spi_done) begin
-                    if (spi_rx==8'hfe) begin byte_count<=0; state<=ST_READ_DATA_START; end
+                    if (spi_rx==8'hfe) begin
+                        byte_count<=0;
+                        block_crc<=0;
+                        state<=ST_READ_DATA_START;
+                    end
                     else if (spi_rx!=8'hff || timeout_count==RESPONSE_TIMEOUT) begin
                         operation_error<=1; state<=ST_FINISH_START;
                     end else begin timeout_count<=timeout_count+1'b1; state<=ST_READ_TOKEN_START; end
@@ -386,6 +412,7 @@ module sd_spi_block #(
                     data_addr<=byte_count;
                     data_out<=spi_rx;
                     data_valid<=1;
+                    block_crc<=crc16_byte(block_crc,spi_rx);
                     if (byte_count==9'd511) begin crc_count<=0; state<=ST_READ_CRC_START; end
                     else begin byte_count<=byte_count+1'b1; state<=ST_READ_DATA_START; end
                 end
@@ -393,8 +420,15 @@ module sd_spi_block #(
                     spi_tx<=8'hff; spi_start<=1; state<=ST_READ_CRC_WAIT;
                 end
                 ST_READ_CRC_WAIT: if (spi_done) begin
-                    if (crc_count==1) state<=ST_FINISH_START;
-                    else begin crc_count<=crc_count+1'b1; state<=ST_READ_CRC_START; end
+                    if (crc_count==1) begin
+                        if ({received_crc_high,spi_rx} != block_crc)
+                            operation_error<=1;
+                        state<=ST_FINISH_START;
+                    end else begin
+                        received_crc_high<=spi_rx;
+                        crc_count<=crc_count+1'b1;
+                        state<=ST_READ_CRC_START;
+                    end
                 end
 
                 ST_WRITE_CMD_DONE: begin
@@ -409,7 +443,10 @@ module sd_spi_block #(
                     spi_tx<=8'hfe; spi_start<=1; state<=ST_WRITE_TOKEN_WAIT;
                 end
                 ST_WRITE_TOKEN_WAIT: if (spi_done) begin
-                    byte_count<=0; data_addr<=0; state<=ST_WRITE_PREFETCH1;
+                    byte_count<=0;
+                    data_addr<=0;
+                    block_crc<=0;
+                    state<=ST_WRITE_PREFETCH1;
                 end
                 ST_WRITE_PREFETCH1: state<=ST_WRITE_PREFETCH2;
                 ST_WRITE_PREFETCH2: begin write_byte<=data_in; state<=ST_WRITE_DATA_START; end
@@ -417,6 +454,7 @@ module sd_spi_block #(
                     spi_tx<=write_byte; spi_start<=1; state<=ST_WRITE_DATA_WAIT;
                 end
                 ST_WRITE_DATA_WAIT: if (spi_done) begin
+                    block_crc<=crc16_byte(block_crc,write_byte);
                     if (byte_count==9'd511) begin crc_count<=0; state<=ST_WRITE_CRC_START; end
                     else begin
                         byte_count<=byte_count+1'b1;
@@ -425,7 +463,9 @@ module sd_spi_block #(
                     end
                 end
                 ST_WRITE_CRC_START: if (!spi_active) begin
-                    spi_tx<=8'hff; spi_start<=1; state<=ST_WRITE_CRC_WAIT;
+                    spi_tx<=(crc_count==0) ? block_crc[15:8] : block_crc[7:0];
+                    spi_start<=1;
+                    state<=ST_WRITE_CRC_WAIT;
                 end
                 ST_WRITE_CRC_WAIT: if (spi_done) begin
                     if (crc_count==1) state<=ST_WRITE_RESP_START;

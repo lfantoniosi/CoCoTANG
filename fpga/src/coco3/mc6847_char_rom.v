@@ -1,3 +1,5 @@
+// MC6847-compatible character generator used by the CoCo 3 GIME's
+// compatibility video modes.
 module mc6847_char_rom (
     input clk,
     input [10:0] addr,

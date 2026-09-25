@@ -18,7 +18,7 @@ Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/sd_spi_
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/glenside_sector_buffer.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/glenside_ata.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/glenside_ide.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847_char_rom.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/mc6847_char_rom.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/coco3_char_rom.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_timing.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_registers.v'

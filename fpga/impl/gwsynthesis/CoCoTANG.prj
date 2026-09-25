@@ -22,7 +22,7 @@
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/glenside_sector_buffer.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/glenside_ata.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/glenside_ide.v" type="verilog"/>
-        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco2/mc6847_char_rom.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/mc6847_char_rom.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/coco3_char_rom.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_timing.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_registers.v" type="verilog"/>

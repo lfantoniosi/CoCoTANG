@@ -1,6 +1,6 @@
 // CoCo 3 machine-specific block. CPU timing, GIME registers/address mapping
 // and native video rendering live here; SDRAM and output scan conversion are
-// deliberately shared by the board top level with the CoCo 2 implementation.
+// provided by the board top level.
 module coco3 #(
     parameter integer DEBUG_S2_VIDEO_MODE = 0,
     parameter integer NATIVE_HDMI_640 = 1,

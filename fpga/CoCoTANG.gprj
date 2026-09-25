@@ -23,7 +23,7 @@
         <File path="src/storage/glenside_sector_buffer.v" type="file.verilog" enable="1"/>
         <File path="src/storage/glenside_ata.v" type="file.verilog" enable="1"/>
         <File path="src/storage/glenside_ide.v" type="file.verilog" enable="1"/>
-        <File path="src/coco2/mc6847_char_rom.v" type="file.verilog" enable="1"/>
+        <File path="src/coco3/mc6847_char_rom.v" type="file.verilog" enable="1"/>
         <File path="src/coco3/coco3_char_rom.v" type="file.verilog" enable="1"/>
         <File path="src/coco3/gime_timing.v" type="file.verilog" enable="1"/>
         <File path="src/coco3/gime_registers.v" type="file.verilog" enable="1"/>

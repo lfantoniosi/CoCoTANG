@@ -108,8 +108,8 @@ module coco3_hdmi #(
         // replication; artifact pixels retain their composite phase decode.
         source_x=source_valid ? picture_x : 10'd0;
         source_y=source_line[7:0];
-        // CoCo2's ping-pong scan doubler starts producing the next source
-        // line while the current one is first displayed.  Do the same here:
+        // The ping-pong scan doubler starts producing the next source line
+        // while the current one is first displayed:
         // requesting source_line+1 on the first of the two HDMI copies gives
         // the GIME renderer a full source-line period (~63.5 us), rather than
         // only the second 480p line (~31.7 us).  Extended 80-column/640-dot

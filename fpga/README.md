@@ -1,88 +1,83 @@
 # CoCoTANG FPGA
 
-Tang Nano 20K replacement for the CoCo 2 memory/video subsystem. The
-external 6809 and PIAs remain in the CoCo.
+Tang Nano 20K implementation of the CoCo 3 memory, GIME video, storage, and
+digital/analog output subsystem. The original MC6809E and motherboard PIAs
+remain in the computer.
 
-## Machine configuration
+## Design
 
-The root `CoCoTANG.gprj` is the hardware-verified CoCo 2 design. It combines
-the physical CPU-bus interface with SAM timing, SDRAM/ROM service, the MC6847
-renderer, line-buffered HDMI, and streaming composite video. Experimental
-CoCo 3 sources remain under `src/coco3/`, but are not part of the main build.
+`CoCoTANG.gprj` builds `top_coco3`. The FPGA provides:
 
-## Startup and memory
+- GIME-compatible CPU timing, MMU, interrupts, palette, native graphics, and
+  legacy compatibility video modes.
+- 512 KiB base memory with the optional Disto 2 MiB mapping enabled by
+  default.
+- A 32 KiB ROM loaded from module SPI flash into dedicated block RAM.
+- Scanline-buffered HDMI and NTSC-rate component, S-Video, or composite
+  output without a full-frame buffer.
+- A Glenside-compatible IDE interface backed by the module's TF card in SPI
+  mode.
 
-The CPU HALT transistor is driven until both PLLs lock, the embedded SDRAM has
-completed two initialization passes, and the selected ROM image has been
-copied from SPI flash. Program the image at flash offset `0x100000` with
-`make coco2_rom`. The image layout is:
+## ROM and memory
 
-| Image offset | CoCo selection | CoCo address |
-|---:|---|---:|
-| `0x0000-0x1fff` | BASIC | `$A000-$BFFF` and vectors |
-| `0x2000-0x3fff` | Extended BASIC | `$8000-$9FFF` |
+At startup the CPU remains halted until the clocks, SDRAM initialization, and
+ROM load have completed. `roms/coco3.rom` is a 32 KiB CoCo 3 ROM image stored
+in module flash at offset `0x100000`. Program it with:
 
-RAM uses SDRAM byte addresses `0x000000-0x00ffff`. The 16 KiB ROM image is
-loaded at SDRAM byte address `0x080000` before the physical CPU is released.
+```sh
+make rom
+```
 
 ## Video
 
-The MC6847-compatible renderer is based on the MiSTer CoCo 2 implementation.
-SAM writes at `$FFC0-$FFC5` latch the display-address mode internally. PIA1
-port-B writes are shadowed from CPU start for A/G, GM2-GM0, INT/EXT, and CSS;
-the shadow remains active while video timing waits for an HDMI frame boundary.
-The separate controls distinguish modes sharing one SAM memory geometry,
-including PMODE 3 (128x192 four-color) and PMODE 4 (256x192 two-color).
-Alternating line
-buffers bridge the scan-doubled VDG stream into 720x480 DVI-compatible HDMI;
-there is no full-frame buffer. Top-level parameter
-`ANALOG_VIDEO_MODE=2` (the default) generates component video: Y with sync on
-pin 56, Pb on pin 54, and Pr on pin 18. Values 0 and 1 retain the previous
-simultaneous S-Video chroma and composite outputs on pins 54 and 18. Pin 51
-carries the 6809 E clock because the original E pin is shared with HSPI.
-Both analog modes use the calibrated NTSCVideo format: a 13.5 MHz
-858x262 sample grid, NTSC equalizing/broad sync, 227.5 color-carrier cycles
-per line, levels 0/10/32 for sync/blank/white, and a 270 MHz sigma-delta DAC.
+`ANALOG_VIDEO_MODE=2` is the default and produces Y/Pb/Pr component video:
+Y with sync on pin 56, Pb on pin 54, and Pr on pin 18. Values 0 and 1 use pin
+54 for S-Video chroma and pin 18 for composite video. Pin 51 carries the 6809
+E clock because the original E connection is shared with HSPI.
+
+HDMI can use sharp 640-dot native output (`NATIVE_HDMI_640=1`) or an
+aspect-correct 512-dot filtered image. Compatibility modes retain the CoCo 3
+GIME's MC6847-compatible character and artifact-color behavior.
 
 ## Glenside IDE / TF card
 
-The Tang Nano 20K TF socket is exposed as a Glenside-compatible IDE adapter.
-The default task-file is `$FF50-$FF57`; `$FF58` is the Glenside high-byte
-latch. `IDE_BASE` changes the 16-byte decode page and
-`ENABLE_GLENSIDE_IDE=0` removes the adapter. The implementation supports
-LBA28 `READ SECTORS`, `WRITE SECTORS`, and `IDENTIFY DEVICE`, including the
-Glenside latch ordering required by existing CoCo IDE drivers. The TF card is
-accessed in native one-bit SD mode and may be SD, SDHC, or SDXC media.
+The default task-file occupies `$FF50-$FF57`, with the Glenside high-byte
+latch at `$FF58`. The implementation supports LBA28 `READ SECTORS`, `WRITE
+SECTORS`, `IDENTIFY DEVICE`, and `EXECUTE DEVICE DIAGNOSTIC`.
 
-For board diagnostics, `ENABLE_BUS_LOGGER=1` and `DEBUG_OVERLAY=1` add a
-full-screen 90x60-character bus log. It captures the first 464 CPU cycles after
-reset, displays them oldest-first as four 116-cycle pages in two columns, and
-then freezes. Each
-entry shows direction, address, physical bus data (`DI`), FPGA memory data
-(`DO`), output enable, and SAM select. `DO:--` means the FPGA did not drive that
-cycle, as expected for writes and motherboard I/O reads. A short S2 press moves
-to the next page; holding S2 for about one second toggles the overlay off or on.
-It starts visible after FPGA reset. CPU memory traffic is suppressed
-until startup is complete and while CPU reset or halt is asserted. Set
-both parameters to `0` to remove the logger entirely.
+The TF card uses SD SPI mode:
 
-## Build
+- `SD_CLK`: SCLK
+- `SD_CMD`: MOSI
+- `SD_DAT0`: MISO
+- `SD_DAT3`: active-low chip select
 
-Run `make` with Gowin EDA installed. `make program` builds and programs the
-FPGA; `make coco2_rom` programs only the ROM payload. `make test` runs the
-SAM, retained GIME unit tests, framebuffer, CVBS, SDRAM-fill, and
-multiplexed-bus simulations. See
-[`docs/pinout.md`](docs/pinout.md) for the FPGA pin and 74HC139 scan map.
+Initialization runs at 400 kHz and block transfers at 1 MHz. Every read block
+is CRC16-verified and every write carries a calculated CRC16. SD, SDHC, and
+SDXC addressing is supported.
 
-The low-level SDRAM, SPI flash reader, and HDMI encoder/serializer are adapted
-from [new-juice](https://github.com/lfantoniosi/new-juice). The MC6847 renderer
-and character data are adapted from
-[MiSTer CoCo2](https://github.com/MiSTer-devel/CoCo2_MiSTer).
-The initial GIME register/mode behavior was checked against the local
-`Lomont_CoCoHardware.pdf` and the
+## Build and test
+
+With Gowin EDA and `openFPGALoader` installed:
+
+```sh
+make test       # RTL regression suite
+make rebuild    # clean synthesis, place-and-route, and bitstream
+make program    # build if needed and program SRAM
+make reprogram  # program the existing bitstream
+```
+
+The generated bitstream is `impl/pnr/CoCoTANG.fs`. See
+[`docs/pinout.md`](docs/pinout.md) for the FPGA pin and bus-multiplexer map.
+
+Low-level SDRAM, SPI flash, and HDMI code was adapted from
+[new-juice](https://github.com/lfantoniosi/new-juice). GIME behavior and
+character data were checked against `Lomont_CoCoHardware.pdf` and the
 [MiSTer CoCo3 core](https://github.com/MiSTer-devel/CoCo3_MiSTer).
 
-Note: the local KiCad Tang Nano symbol labels the Q header contact as FPGA pin
-78. The official Tang Nano 20K pinout and Gowin QN88 package database both use
-pin 76; `top.cst` uses 76. The schematic symbol should be corrected before the
-next PCB revision.
+## Hardware note
+
+The local KiCad Tang Nano symbol labels the Q header contact as FPGA pin 78.
+The official Tang Nano 20K pinout and Gowin QN88 database use pin 76; the
+CoCo 3 constraint file correctly uses pin 76. Correct the symbol before a PCB
+respin.
