@@ -21,13 +21,20 @@ module top_coco3 #(
     parameter integer ENABLE_BUS_LOGGER=0,
     parameter integer DEBUG_OVERLAY=0,
     // 0/1: existing simultaneous S-Video and CVBS; 2: Y/Pb/Pr component.
-    parameter integer ANALOG_VIDEO_MODE=2,
+    parameter integer ANALOG_VIDEO_MODE=0,
     // 0=OFF, 1=ON (blue/orange), 2=REVERSE (orange/blue).
     parameter [1:0] INITIAL_ARTIFACT_MODE=2'd1,
     // 1: native GIME HDMI is a sharp 640-dot 1:1 image (wider than 4:3).
     // 0: native GIME HDMI is aspect-correct 512-dot RGB888-filtered output.
     parameter integer NATIVE_HDMI_640=1,
     parameter integer DISTO_2MB=1,
+    // Fixed motherboard identity. FF98.H50 may change frame cadence, but it
+    // cannot change the crystal-derived CPU clock or analogue colour family.
+`ifdef COCOTANG_PAL_SOURCE
+    parameter integer PAL_MACHINE=1,
+`else
+    parameter integer PAL_MACHINE=0,
+`endif
     // Glenside task-file occupies IDE_BASE..IDE_BASE+$0f; $FF50 is standard.
     parameter integer ENABLE_GLENSIDE_IDE=1,
     parameter [15:0] IDE_BASE=16'hff50
@@ -139,6 +146,7 @@ module top_coco3 #(
     wire core_data_oe,gime_irq,gime_firq;
     wire [2:0] machine_sam_s;
     wire [7:0] active_height;
+    wire video_50hz;
     wire compatibility_video;
     wire artifact_video_active,artifact_css;
     wire [5:0] border_rgb,cvbs_pixel_data,cvbs_border_data;
@@ -152,6 +160,7 @@ module top_coco3 #(
     wire [9:0] hdmi_source_x;
     wire [7:0] hdmi_source_y;
     wire hdmi_source_valid,hdmi_source_picture_active;
+    wire hdmi_video_50hz;
     wire [7:0] hdmi_prefetch_y;
     wire hdmi_prefetch_valid;
     wire [9:0] cvbs_source_x_raw;
@@ -189,7 +198,8 @@ module top_coco3 #(
     wire gime_keyint_n=!mux_keyint_n;
     wire gime_serint_n=!mux_sernt_n;
 
-    coco3 #(.NATIVE_HDMI_640(NATIVE_HDMI_640),.DISTO_2MB(DISTO_2MB)) machine(
+    coco3 #(.NATIVE_HDMI_640(NATIVE_HDMI_640),.DISTO_2MB(DISTO_2MB),
+        .PAL_MACHINE(PAL_MACHINE)) machine(
         .clk(clk108),.reset_n(board_reset_n),
         .cpu_reset_n(cpu_release),.s2(1'b0),.artifact_mode(artifact_mode_video),
         .cpu_addr(address),
@@ -206,6 +216,7 @@ module top_coco3 #(
         .video_memory_valid(video_memory_valid),
         .video_memory_request(video_memory_request),
         .video_memory_addr(video_memory_addr),.active_height(active_height),
+        .video_50hz(video_50hz),
         .compatibility_video(compatibility_video),
         .artifact_video_active(artifact_video_active),
         .artifact_css(artifact_css),
@@ -364,7 +375,26 @@ module top_coco3 #(
     // selected by S0, while the FPGA drives its side only during E high.
     // The output IOLOGIC retains the value through the physical E-falling
     // sample edge without extending ownership into the following CPU cycle.
-    wire ide_data_oe=ide_raw_data_oe && e_core;
+    // Retain an IDE read for one 108 MHz clock after E falls.  The physical
+    // 6809 samples at that edge; releasing the transceiver on the same FPGA
+    // clock gave essentially zero hold time and became phase-sensitive when
+    // the PAL E/Q NCO ratio was selected.
+    reg ide_read_hold=1'b0;
+    reg [7:0] ide_read_latched=8'hff;
+    always @(posedge clk108 or negedge board_reset_n) begin
+        if (!board_reset_n) begin
+            ide_read_hold<=1'b0;
+            ide_read_latched<=8'hff;
+        end else begin
+            if (ide_raw_data_oe && e_core) begin
+                ide_read_hold<=1'b1;
+                ide_read_latched<=ide_rdata;
+            end else if (!e_core && !e_fall)
+                ide_read_hold<=1'b0;
+        end
+    end
+    wire ide_data_oe=(ide_raw_data_oe && e_core) ||
+                     (ide_read_hold && e_fall);
     generate if (ENABLE_GLENSIDE_IDE != 0) begin:glenside_ide_enabled
       glenside_ide #(.IDE_BASE(IDE_BASE)) ide(
         .clk(clk108),.reset_n(board_reset_n),
@@ -405,7 +435,7 @@ module top_coco3 #(
     // Keep IDE data isolated from the continuously changing GIME read bus.
     // ATA data-port reads are back-to-back, so an IDE byte must remain intact
     // until its E phase has completed.
-    wire [7:0] fpga_read_data=ide_data_oe ? ide_rdata_pipe :
+    wire [7:0] fpga_read_data=ide_data_oe ? ide_read_latched :
         (core_data_oe ? core_rdata_pipe : memory_rdata);
     wire fpga_data_oe=cpu_bus_active &&
         (ide_data_oe || core_data_oe || memory_data_oe);
@@ -555,6 +585,7 @@ module top_coco3 #(
         .artifact_mode(artifact_mode),
         .artifact_video_active(artifact_video_active),
         .artifact_css(artifact_css),
+        .video_50hz(video_50hz),
         .overlay_enable(overlay_visible),.active_height(active_height),
         .compatibility_mode(compatibility_video),
         .border_rgb(visible_border_rgb),.pixel_data(visible_hdmi_pixel),
@@ -562,7 +593,8 @@ module top_coco3 #(
         .source_valid(hdmi_source_valid),
         .source_picture_active(hdmi_source_picture_active),
         .prefetch_y(hdmi_prefetch_y),
-        .prefetch_valid(hdmi_prefetch_valid),.tmds_clk_p(tmds_clk_p),
+        .prefetch_valid(hdmi_prefetch_valid),
+        .active_video_50hz(hdmi_video_50hz),.tmds_clk_p(tmds_clk_p),
         .tmds_clk_n(tmds_clk_n),.tmds_data_p(tmds_data_p),
         .tmds_data_n(tmds_data_n));
 
@@ -585,11 +617,13 @@ module top_coco3 #(
             cvbs_prefetch_valid<=cvbs_prefetch_valid_raw;
         end
     end
-    coco_cvbs_ntsc #(.STREAMING_INPUT(0),.CANONICAL_640_INPUT(1)) analog_encoder(
+    coco_cvbs_ntsc #(.STREAMING_INPUT(0),.CANONICAL_640_INPUT(1),
+        .PAL_MACHINE(PAL_MACHINE)) analog_encoder(
         // Start on the same board reset as HDMI.  cpu_release is aligned to
         // the CoCo bus, not to video, and made the CVBS consumer enter the
         // shared two-line cache at an arbitrary scanline phase.
         .clk135(clk135),.clk270(clk270),.reset_n(board_reset_n),
+        .video_50hz(hdmi_video_50hz),
         .high_resolution(1'b1),.compatibility_mode(compatibility_video),
         .framebuffer_data(visible_cvbs_pixel),
         .border_rgb(visible_border_rgb),.row_border_rgb(visible_cvbs_border),

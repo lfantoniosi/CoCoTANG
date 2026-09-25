@@ -27,6 +27,7 @@ module coco3_hdmi #(
     input logic [7:0] sdram_test_expected,input logic [7:0] sdram_test_actual,
     input logic [1:0] artifact_mode,
     input logic artifact_video_active,input logic artifact_css,
+    input logic video_50hz,
     input logic [7:0] active_height,input logic compatibility_mode,
     input logic [5:0] border_rgb,
     input logic [23:0] pixel_data,
@@ -34,12 +35,15 @@ module coco3_hdmi #(
     output logic source_valid,output logic source_picture_active,
     output logic [7:0] prefetch_y,
     output logic prefetch_valid,
+    output logic active_video_50hz,
     output logic tmds_clk_p,output logic tmds_clk_n,
     output logic [2:0] tmds_data_p,output logic [2:0] tmds_data_n
 );
     logic [9:0] x,y;
     logic [7:0] height_m=8'd192,height_s=8'd192;
     logic compatibility_m=1'b1,compatibility_s=1'b1;
+    logic video_50hz_m=1'b0,video_50hz_s=1'b0;
+    logic active_50hz_m=1'b0,active_50hz_s=1'b0;
     logic rom_done_m=0,rom_done_s=0,rom_pass_m=0,rom_pass_s=0;
     logic [15:0] rom_vector_m=16'hffff,rom_vector_s=16'hffff;
     logic ram_done_m=0,ram_done_s=0,ram_pass_m=0,ram_pass_s=0;
@@ -57,6 +61,10 @@ module coco3_hdmi #(
         height_s<=height_m;
         compatibility_m<=compatibility_mode;
         compatibility_s<=compatibility_m;
+        video_50hz_m<=video_50hz;
+        video_50hz_s<=video_50hz_m;
+        active_50hz_m<=active_video_50hz;
+        active_50hz_s<=active_50hz_m;
         rom_done_m<=rom_verify_done; rom_done_s<=rom_done_m;
         rom_pass_m<=rom_verify_pass; rom_pass_s<=rom_pass_m;
         rom_vector_m<=rom_verify_vector; rom_vector_s<=rom_vector_m;
@@ -81,8 +89,11 @@ module coco3_hdmi #(
         // The line renderer prefetches N+1 while displaying N; this delay
         // places that prefetch after BOINK's HBORD handler for line N, so
         // FF98.LPR is sampled before the affected row begins rendering.
-        top=height_s==8'd225 ? 10'd18 :
-            height_s==8'd199 ? 10'd48 : 10'd52;
+        top=active_50hz_s ?
+            (height_s==8'd225 ? 10'd63 :
+             height_s==8'd199 ? 10'd89 : 10'd96) :
+            (height_s==8'd225 ? 10'd18 :
+             height_s==8'd199 ? 10'd48 : 10'd52);
         // The GIME's 640-dot modes describe the same 4:3 display aperture as
         // its 256-dot modes. Resample every mode into 512x(2*LPF) rather than
         // exposing the CRT's non-square 640-dot sampling as square HDMI pixels.
@@ -241,12 +252,15 @@ module coco3_hdmi #(
     logic [15:0] audio_samples[1:0];
     assign audio_samples[0]=audio_pcm; assign audio_samples[1]=audio_pcm;
     logic [9:0] tmds_internal[2:0];
-    hdmi #(.VIDEO_ID_CODE(2),.DVI_OUTPUT(1'b0),.VIDEO_REFRESH_RATE(60.0),
+    hdmi #(.VIDEO_ID_CODE(2),.DYNAMIC_480_576(1),.DVI_OUTPUT(1'b0),
+           .VIDEO_REFRESH_RATE(59.94),
            .AUDIO_RATE(48000),.AUDIO_BIT_WIDTH(16),.NUM_CHANNELS(3),
            .START_X(0),.START_Y(0)) encoder(
         .clk_pixel_x5(serial_clk),.clk_pixel(pixel_clk),.clk_audio(audio_clk),
-        .reset(reset),.rgb(rgb),.audio_sample_word(audio_samples),.cx(x),.cy(y),
+        .reset(reset),.video_50hz(video_50hz_s),.rgb(rgb),
+        .audio_sample_word(audio_samples),.cx(x),.cy(y),
         .frame_width(),.frame_height(),.screen_width(),.screen_height(),
+        .active_video_50hz(active_video_50hz),
         .tmds_internal(tmds_internal));
     logic [2:0] tmds; logic unused_clock;
     serializer #(.NUM_CHANNELS(3),.VIDEO_RATE(0)) serializer_inst(

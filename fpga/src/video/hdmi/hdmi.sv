@@ -7,6 +7,9 @@ module hdmi
     // See README.md or CEA-861-D for enumeration of video id codes.
     // Pixel repetition, interlaced scans and other special output modes are not implemented (yet).
     parameter int VIDEO_ID_CODE = 1,
+    // Runtime switch between CTA VIC 2 (720x480p59.94) and VIC 17
+    // (720x576p50). The pixel clock is 27 MHz for both modes.
+    parameter bit DYNAMIC_480_576 = 1'b0,
 
     // The IT content bit indicates that image samples are generated in an ad-hoc
     // manner (e.g. directly from values in a framebuffer, as by a PC video
@@ -67,6 +70,7 @@ module hdmi
     input logic clk_pixel_x5,
     input logic clk_pixel,
     input logic clk_audio,
+    input logic video_50hz,
     // synchronous reset back to 0,0
     input logic reset,
     input logic [23:0] rgb,
@@ -90,13 +94,17 @@ module hdmi
     output logic [BIT_WIDTH-1:0] screen_width,
     output logic [BIT_HEIGHT-1:0] screen_height,
 
+    // Standard actually in use by the timing counters.  A requested change
+    // is committed only at frame wrap; analogue scanout uses this indication
+    // so its line-cache consumer changes cadence on the same boundary.
+    output logic active_video_50hz,
+
     output logic [9:0] tmds_internal [NUM_CHANNELS-1:0]
 );
 
 //localparam int NUM_CHANNELS = 3;
 logic hsync;
 logic vsync;
-
 logic [BIT_WIDTH-1:0] hsync_pulse_start, hsync_pulse_size;
 logic [BIT_HEIGHT-1:0] vsync_pulse_start, vsync_pulse_size;
 logic invert;
@@ -118,14 +126,21 @@ generate
             end
         2, 3:
         begin
-            assign frame_width = 858;
-            assign frame_height = 525;
+            assign frame_width = (DYNAMIC_480_576 && active_video_50hz) ?
+                                 864 : 858;
+            assign frame_height = (DYNAMIC_480_576 && active_video_50hz) ?
+                                  625 : 525;
             assign screen_width = 720;
-            assign screen_height = 480;
-            assign hsync_pulse_start = 16;
-            assign hsync_pulse_size = 62;
-            assign vsync_pulse_start = 9;
-            assign vsync_pulse_size = 6;
+            assign screen_height = (DYNAMIC_480_576 && active_video_50hz) ?
+                                   576 : 480;
+            assign hsync_pulse_start = (DYNAMIC_480_576 && active_video_50hz) ?
+                                       12 : 16;
+            assign hsync_pulse_size = (DYNAMIC_480_576 && active_video_50hz) ?
+                                      64 : 62;
+            assign vsync_pulse_start = (DYNAMIC_480_576 && active_video_50hz) ?
+                                       5 : 9;
+            assign vsync_pulse_size = (DYNAMIC_480_576 && active_video_50hz) ?
+                                      5 : 6;
             assign invert = 1;
             end
         4:
@@ -220,9 +235,14 @@ begin
     begin
         cx <= BIT_WIDTH'(START_X);
         cy <= BIT_HEIGHT'(START_Y);
+        active_video_50hz <= 1'b0;
     end
     else
     begin
+        // Commit a requested standard only at a frame boundary. This avoids
+        // changing the counter limits halfway through a transmitted frame.
+        if (cx == frame_width-1'b1 && cy == frame_height-1'b1)
+            active_video_50hz <= DYNAMIC_480_576 && video_50hz;
         cx <= cx == frame_width-1'b1 ? BIT_WIDTH'(0) : cx + 1'b1;
         cy <= cx == frame_width-1'b1 ? cy == frame_height-1'b1 ? BIT_HEIGHT'(0) : cy + 1'b1 : cy;
     end
@@ -313,7 +333,11 @@ generate
             .VENDOR_NAME(VENDOR_NAME),
             .PRODUCT_DESCRIPTION(PRODUCT_DESCRIPTION),
             .SOURCE_DEVICE_INFORMATION(SOURCE_DEVICE_INFORMATION)
-        ) packet_picker (.clk_pixel(clk_pixel), .clk_audio(clk_audio), .reset(reset), .video_field_end(video_field_end), .packet_enable(packet_enable), .packet_pixel_counter(packet_pixel_counter), .audio_sample_word(audio_sample_word), .header(header), .sub(sub));
+        ) packet_picker (.clk_pixel(clk_pixel), .clk_audio(clk_audio),
+            .reset(reset),.video_50hz(active_video_50hz),
+            .video_field_end(video_field_end), .packet_enable(packet_enable),
+            .packet_pixel_counter(packet_pixel_counter),
+            .audio_sample_word(audio_sample_word), .header(header), .sub(sub));
         logic [8:0] packet_data;
         packet_assembler packet_assembler (.clk_pixel(clk_pixel), .reset(reset), .data_island_period(data_island_period), .header(header), .sub(sub), .packet_data(packet_data), .counter(packet_pixel_counter));
 
@@ -373,5 +397,3 @@ endgenerate
 //serializer #(.NUM_CHANNELS(NUM_CHANNELS), .VIDEO_RATE(VIDEO_RATE)) serializer(.clk_pixel(clk_pixel), .clk_pixel_x5(clk_pixel_x5), .reset(reset), .tmds_internal(tmds_internal), .tmds(tmds), .tmds_clock(tmds_clock));
 
 endmodule
-
-

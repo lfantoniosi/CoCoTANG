@@ -1,4 +1,8 @@
-module gime_timing (
+module gime_timing #(
+    // The motherboard crystal is a hardware property, not an FF98 mode.
+    // NTSC machines use 28.63636 MHz; PAL machines use 28.475 MHz.
+    parameter integer PAL_MACHINE = 0
+) (
     input      clk,
     input      reset_n,
     input      fast_mode,
@@ -11,8 +15,10 @@ module gime_timing (
 );
     // CoCo master timing: 108 MHz -> average 14.31818 MHz, divided into the
     // sixteen SAM/GIME phases which produce E and Q.
-    localparam [31:0] SLOW_STEP = 32'd569408471;
-    localparam [31:0] FAST_STEP = 32'd1138816942;
+    localparam [31:0] SLOW_STEP = PAL_MACHINE ?
+        32'd566199971 : 32'd569408471;
+    localparam [31:0] FAST_STEP = PAL_MACHINE ?
+        32'd1132399942 : 32'd1138816942;
     reg [31:0] accumulator = 32'd0;
     reg [3:0] phase = 4'd0;
     // Dedicated pad copies. Preserve them so synthesis cannot merge them

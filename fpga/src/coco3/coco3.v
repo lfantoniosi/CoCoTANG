@@ -4,7 +4,8 @@
 module coco3 #(
     parameter integer DEBUG_S2_VIDEO_MODE = 0,
     parameter integer NATIVE_HDMI_640 = 1,
-    parameter integer DISTO_2MB = 0
+    parameter integer DISTO_2MB = 0,
+    parameter integer PAL_MACHINE = 0
 ) (
     input             clk,
     input             reset_n,
@@ -39,6 +40,7 @@ module coco3 #(
     output            video_memory_request,
     output     [22:0] video_memory_addr,
     output      [7:0] active_height,
+    output            video_50hz,
     output            compatibility_video,
     output            hs_n,
     output            fs_n,
@@ -82,7 +84,7 @@ module coco3 #(
     wire core_reset_n = reset_n && cpu_reset_n;
 
     wire fast_mode;
-    gime_timing timing (
+    gime_timing #(.PAL_MACHINE(PAL_MACHINE)) timing (
         // E/Q must run while the physical CPU is held in RESET; register and
         // video state remain reset until cpu_reset_n is released.
         .clk(clk), .reset_n(reset_n), .fast_mode(fast_mode), .e(e), .q(q),
@@ -103,6 +105,7 @@ module coco3 #(
     wire [6:0] sam_video_offset;
     wire [95:0] palettes;
     wire hborder_irq_n;
+    assign video_50hz = vmode[3];
     gime_registers #(.DISTO_2MB(DISTO_2MB)) registers (
         .clk(clk), .reset_n(core_reset_n), .e(e), .e_fall(e_fall),
         .cpu_addr(cpu_addr), .cpu_rw_n(cpu_rw_n), .cpu_data(cpu_data),
@@ -319,8 +322,9 @@ module coco3 #(
     endfunction
     assign active_height=line_count(effective_lpf);
     wire [8:0] debug_native_y;
-    gime_native_video native_video(
-        .clk(clk),.reset_n(core_reset_n),.active_height(active_height),
+    gime_native_video #(.PAL_MACHINE(PAL_MACHINE)) native_video(
+        .clk(clk),.reset_n(core_reset_n),.video_50hz(video_50hz),
+        .active_height(active_height),
         .pixel_rgb({hdmi_pixel_data[23:22],hdmi_pixel_data[15:14],
                     hdmi_pixel_data[7:6]}),.hs_n(hs_n),.fs_n(fs_n),
         .hborder_irq_n(hborder_irq_n),

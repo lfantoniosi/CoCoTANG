@@ -16,6 +16,7 @@ module packet_picker
     input logic clk_pixel,
     input logic clk_audio,
     input logic reset,
+    input logic video_50hz,
     input logic video_field_end,
     input logic packet_enable,
     input logic [4:0] packet_pixel_counter,
@@ -160,9 +161,10 @@ audio_sample_packet #(.SAMPLING_FREQUENCY(SAMPLING_FREQUENCY), .WORD_LENGTH({{WO
 
 
 auxiliary_video_information_info_frame #(
-    .VIDEO_ID_CODE(7'(VIDEO_ID_CODE)),
     .IT_CONTENT(IT_CONTENT)
-) auxiliary_video_information_info_frame(.header(avi_header), .sub(avi_sub));
+) auxiliary_video_information_info_frame(
+    .video_id_code(video_50hz ? 7'd17 : 7'(VIDEO_ID_CODE)),
+    .header(avi_header), .sub(avi_sub));
 
 
 source_product_description_info_frame #(.VENDOR_NAME(VENDOR_NAME), .PRODUCT_DESCRIPTION(PRODUCT_DESCRIPTION), .SOURCE_DEVICE_INFORMATION(SOURCE_DEVICE_INFORMATION)) source_product_description_info_frame(.header(spd_header), .sub(spd_sub));
@@ -223,4 +225,3 @@ begin
 end
 
 endmodule
-

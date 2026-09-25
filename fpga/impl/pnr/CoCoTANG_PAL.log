@@ -1,0 +1,32 @@
+Reading netlist file: "/Users/felipe/src/fpga/CoCoTANG/fpga/impl/gwsynthesis/CoCoTANG_PAL.vg"
+Parsing netlist file "/Users/felipe/src/fpga/CoCoTANG/fpga/impl/gwsynthesis/CoCoTANG_PAL.vg" completed
+Processing netlist completed
+Reading constraint file: "/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.cst"
+Physical Constraint parsed completed
+Running placement......
+[10%] Placement Phase 0 completed
+[20%] Placement Phase 1 completed
+[30%] Placement Phase 2 completed
+WARN  (TA1117) : Can't calculate clocks' relationship between: "clkin" and "clk135"
+WARN  (TA1117) : Can't calculate clocks' relationship between: "clk27" and "clk135"
+[50%] Placement Phase 3 completed
+Running routing......
+[60%] Routing Phase 0 completed
+[70%] Routing Phase 1 completed
+[80%] Routing Phase 2 completed
+WARN  (PR1014) : Generic routing resource will be used to clock signal 'clkin_d' by the specified constraint. And then it may lead to the excessive delay or skew
+[90%] Routing Phase 3 completed
+Running timing analysis......
+[95%] Timing analysis completed
+Placement and routing completed
+Bitstream generation in progress......
+Bitstream generation completed
+Running power analysis......
+[100%] Power analysis completed
+Generate file "/Users/felipe/src/fpga/CoCoTANG/fpga/impl/pnr/CoCoTANG_PAL.power.html" completed
+Generate file "/Users/felipe/src/fpga/CoCoTANG/fpga/impl/pnr/CoCoTANG_PAL.pin.html" completed
+Generate file "/Users/felipe/src/fpga/CoCoTANG/fpga/impl/pnr/CoCoTANG_PAL.rpt.html" completed
+Generate file "/Users/felipe/src/fpga/CoCoTANG/fpga/impl/pnr/CoCoTANG_PAL.rpt.txt" completed
+Generate file "/Users/felipe/src/fpga/CoCoTANG/fpga/impl/pnr/CoCoTANG_PAL.tr.html" completed
+Fri Sep 25 06:49:08 2026
+

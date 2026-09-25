@@ -3,6 +3,7 @@ module tb_coco_cvbs_ntsc;
     reg clk270 = 1'b0;
     reg clk135 = 1'b0;
     reg reset_n = 1'b0;
+    reg video_50hz = 1'b0;
     reg high_resolution = 1'b0;
     reg compatibility_mode = 1'b1;
     reg [5:0] framebuffer_data = 6'b111111;
@@ -22,7 +23,8 @@ module tb_coco_cvbs_ntsc;
     reg [2:0] saved_octant;
 
     coco_cvbs_ntsc #(.CANONICAL_640_INPUT(1)) dut(
-        .clk135(clk135),.clk270(clk270),.reset_n(reset_n),.high_resolution(high_resolution),
+        .clk135(clk135),.clk270(clk270),.reset_n(reset_n),
+        .video_50hz(video_50hz),.high_resolution(high_resolution),
         .compatibility_mode(compatibility_mode),
         .framebuffer_data(framebuffer_data),.border_rgb(border_rgb),
         .row_border_rgb(row_border_rgb),.row_border_valid(row_border_valid),
@@ -161,6 +163,17 @@ module tb_coco_cvbs_ntsc;
         seek(10'd222,9'd44);
         if (!source_valid || source_y != 0 || dut.field_odd !== 1'b1) begin
             $display("native 263-line field top margin"); errors = errors + 1;
+        end
+
+        video_50hz = 1'b1;
+        repeat (3) @(posedge clk135); #1;
+        if (!dut.video_50hz_sync || !dut.video_50hz_active ||
+            dut.field_last_line != 9'd311 ||
+            dut.next_picture_top != 9'd65 || dut.h_total != 10'd864 ||
+            dut.h_sample != 10'd0 || dut.v_line != dut.V_PHASE_OFFSET) begin
+            $display("50Hz analog geometry last=%0d top=%0d",
+                     dut.field_last_line,dut.next_picture_top);
+            errors = errors + 1;
         end
 
         if (errors == 0) $display("tb_coco_cvbs_ntsc PASS");

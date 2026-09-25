@@ -1,5 +1,7 @@
-module gime_native_video (
-    input clk, input reset_n, input [7:0] active_height,
+module gime_native_video #(
+    parameter integer PAL_MACHINE = 0
+) (
+    input clk, input reset_n, input video_50hz, input [7:0] active_height,
     input [5:0] pixel_rgb,
     output reg hs_n, output reg fs_n, output reg hborder_irq_n,
     output reg hblank, output reg vblank,
@@ -10,7 +12,12 @@ module gime_native_video (
     // 108 MHz system clock the native dot-rate ratio is therefore 35/264.
     // Keeping that exact relationship prevents the CPU-visible raster IRQs
     // from walking horizontally through the independently scanned picture.
-    localparam [31:0] RASTER_STEP = 32'd569408543;
+    // The physical PAL CoCo uses 28.475 MHz / 2 here (about 15.611 kHz), but
+    // this renderer currently shares rows with exact-50-Hz HDMI. Keep the
+    // producer on the 14.250 MHz cache cadence until PAL has its own renderer;
+    // otherwise the consumers separate and component/CVBS blank.
+    localparam [31:0] RASTER_STEP = PAL_MACHINE ?
+        32'd566697074 : 32'd569408543;
     reg [31:0] accumulator=0;
     wire [32:0] sum={1'b0,accumulator}+{1'b0,RASTER_STEP};
     reg raster_tick=0;
@@ -21,8 +28,14 @@ module gime_native_video (
     // where HDMI is also outside its 480-line visible area.  Centering in
     // all 262 lines delayed HBORD-relative raster effects by 10-11 native
     // lines (most visibly BOINK in the non-standard 225-line mode).
-    wire [8:0] top=active_height==8'd225 ? 9'd8 :
-                   active_height==8'd199 ? 9'd23 : 9'd25;
+    wire [8:0] top=video_50hz ?
+        (active_height==8'd225 ? 9'd31 :
+         active_height==8'd199 ? 9'd44 : 9'd48) :
+        (active_height==8'd225 ? 9'd8 :
+         active_height==8'd199 ? 9'd23 : 9'd25);
+    wire [9:0] line_last_dot = PAL_MACHINE ? 10'd911 : 10'd909;
+    wire [9:0] half_line_dot = PAL_MACHINE ? 10'd455 : 10'd454;
+    wire [8:0] frame_last_line = video_50hz ? 9'd312 : 9'd262;
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
             accumulator<=0; raster_tick<=0; x<=0; y<=0;
@@ -45,9 +58,10 @@ module gime_native_video (
                 // FS/HBORD timing has the same frame cadence as scanout.
                 // Wrapping at 262 complete lines made the interrupt raster
                 // gain half a line on the displayed image every frame.
-                if ((y==9'd262 && x==10'd454) || x==10'd909) begin
+                if ((y==frame_last_line && x==half_line_dot) ||
+                    x==line_last_dot) begin
                     x<=0;
-                    y<=y==9'd262 ? 0 : y+1'b1;
+                    y<=y==frame_last_line ? 0 : y+1'b1;
                 end else x<=x+1'b1;
             end
         end
