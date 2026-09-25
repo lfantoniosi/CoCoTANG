@@ -107,8 +107,6 @@ Compiling module 'tmds_channel(CN=1)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/
 Compiling module 'tmds_channel(CN=2)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/tmds_channel.sv":4)
 Compiling module 'serializer(VIDEO_RATE=0)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/serializer.sv":3)
 Compiling module 'coco_cvbs_ntsc(CANONICAL_640_INPUT=1)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_cvbs_ntsc.v":7)
-WARN  (EX3791) : Expression size 11 truncated to fit in target size 8("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_cvbs_ntsc.v":326)
-WARN  (EX3791) : Expression size 10 truncated to fit in target size 8("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_cvbs_ntsc.v":328)
 NOTE  (EX0101) : Current top module is "top_coco3"
 [5%] Running netlist conversion ...
 WARN  (CV0016) : Input s2 is unused("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":35)

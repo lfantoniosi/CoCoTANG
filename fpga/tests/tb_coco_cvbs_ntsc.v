@@ -96,14 +96,14 @@ module tb_coco_cvbs_ntsc;
         high_resolution = 1'b0;
 
         // Component outputs are baseband differences, not colour-subcarrier
-        // waveforms. Check primary-colour matrix levels around midpoint 16.
+        // waveforms. Check the Q2 matrix levels around midpoint 64.
         force dut.level_picture=1'b1;
         force dut.mod_component_x=8'sd63;force dut.mod_component_y=8'sd0;#1;
-        if(dut.component_pb_level!=6'd31||dut.component_pr_level!=6'd14)begin
+        if(dut.component_pb_level!=7'd127||dut.component_pr_level!=7'd55)begin
             $display("blue component Pb=%0d Pr=%0d",
                      dut.component_pb_level,dut.component_pr_level);errors=errors+1;end
         force dut.mod_component_x=8'sd0;force dut.mod_component_y=8'sd63;#1;
-        if(dut.component_pb_level!=6'd11||dut.component_pr_level!=6'd31)begin
+        if(dut.component_pb_level!=7'd43||dut.component_pr_level!=7'd127)begin
             $display("red component Pb=%0d Pr=%0d",
                      dut.component_pb_level,dut.component_pr_level);errors=errors+1;end
         release dut.mod_component_y;release dut.mod_component_x;

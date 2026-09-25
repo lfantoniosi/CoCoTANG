@@ -4,7 +4,14 @@
 // clk135 is divided by ten to the 13.5 MHz BT.601 sample grid. clk270 drives
 // three first-order, one-bit DACs. The composite levels are deliberately the
 // same as the proven pin-51 2N3904/75-ohm circuit: sync=0, blank=10, white=32.
-module coco_cvbs_ntsc (
+module coco_cvbs_ntsc #(
+    parameter integer STREAMING_INPUT = 0,
+    parameter integer CANONICAL_640_INPUT = 0,
+    // Diagnostic override for the separate Y output.  -1 selects normal
+    // pixel luma; 0..63 forces a constant visible-aperture level while sync
+    // and blanking remain valid.  Composite video is deliberately untouched.
+    parameter integer FORCE_LUMA_LEVEL = -1
+) (
     input  wire        clk135,
     input  wire        clk270,
     input  wire        reset_n,
@@ -27,11 +34,9 @@ module coco_cvbs_ntsc (
     output wire        component_pb_out,
     output wire        component_pr_out
 );
-    parameter integer STREAMING_INPUT = 0;
     // The CoCo 3 scanline cache stores every row in a canonical 640-sample
     // representation. Compatibility video still occupies a 512-sample
     // analogue aperture, so its read coordinate must cover that entire row.
-    parameter integer CANONICAL_640_INPUT = 0;
     localparam [9:0] H_TOTAL        = 10'd858;
     localparam [9:0] H_SYNC         = 10'd64;
     // Calibrated burst window from the proven NTSCVideo implementation.
@@ -208,6 +213,20 @@ module coco_cvbs_ntsc (
         end
     endfunction
 
+    // Seven-bit component-video level with two fractional matrix bits.
+    // Midpoint 64/128 is electrically identical to the former 16/32, while
+    // retaining coefficient precision that was previously truncated away.
+    function [6:0] add_component_level;
+        input signed [10:0] delta;
+        reg signed [11:0] result;
+        begin
+            result = 12'sd64 + delta;
+            if (result < 0) add_component_level = 7'd0;
+            else if (result > 127) add_component_level = 7'd127;
+            else add_component_level = result[6:0];
+        end
+    endfunction
+
     // The framebuffer stores RGB222. Expand each channel to six bits before
     // applying the same RGB-axis and luma conversion proven by NTSCVideo.
     reg [5:0] pixel_rgb = 6'd0;
@@ -313,8 +332,9 @@ module coco_cvbs_ntsc (
     // the composite encoder.  With x=B-G and y=R-G:
     //   Pb ~= (0.500*x - 0.169*y) / 2
     //   Pr ~= (0.500*y - 0.081*x) / 2
-    // The final /2 maps the bipolar component excursion to +/-16 DAC codes,
-    // matching the 0..32 luma range around a midpoint of 16.
+    // Q2 arithmetic preserves two fractional bits.  The resulting bipolar
+    // excursion is centred at 64 in a 0..127 DAC, which has the same analogue
+    // amplitude as the former midpoint-16, modulo-32 representation.
     // Keep the constant-coefficient products at their natural width. The
     // former 16-bit expressions produced unnecessarily long carry chains and
     // disturbed placement of the unrelated 108-MHz CPU/SDRAM request path.
@@ -323,10 +343,10 @@ module coco_cvbs_ntsc (
         ($signed(mod_component_y) <<< 1) + $signed(mod_component_y);
     wire signed [9:0] component_pr_x =
         ($signed(mod_component_x) <<< 2) + $signed(mod_component_x);
-    wire signed [7:0] component_pb_delta =
-        ($signed(mod_component_x) >>> 2) - (component_pb_y >>> 7);
-    wire signed [7:0] component_pr_delta =
-        ($signed(mod_component_y) >>> 2) - (component_pr_x >>> 7);
+    wire signed [10:0] component_pb_delta_q2 =
+        $signed(mod_component_x) - (component_pb_y >>> 5);
+    wire signed [10:0] component_pr_delta_q2 =
+        $signed(mod_component_y) - (component_pr_x >>> 5);
 
     // The S-Video connector locks to the inverted burst convention below, so
     // active-picture chroma must use the same polarity.  Advance picture hue
@@ -338,8 +358,10 @@ module coco_cvbs_ntsc (
     wire signed [7:0] svideo_picture_chroma =
         -(svideo_chroma_extended <<< 2);
 
+    wire [5:0] selected_luma_level = (FORCE_LUMA_LEVEL >= 0) ?
+                                     FORCE_LUMA_LEVEL[5:0] : level_luma;
     wire [5:0] luma_level = level_sync ? LEVEL_SYNC :
-                            level_picture ? level_luma : LEVEL_BLANK;
+                            level_picture ? selected_luma_level : LEVEL_BLANK;
     // The receiver derives hue and saturation from the picture-to-burst ratio.
     wire [5:0] chroma_level = level_picture ?
         add_level_wide(CHROMA_CENTER,svideo_picture_chroma) :
@@ -347,16 +369,16 @@ module coco_cvbs_ntsc (
     wire [5:0] composite_level = level_sync ? LEVEL_SYNC :
         level_burst ? add_level(LEVEL_BLANK,level_chroma) :
         level_picture ? add_level(level_luma,level_chroma) : LEVEL_BLANK;
-    wire [5:0] component_pb_level = level_picture ?
-        add_level_wide(CHROMA_CENTER,component_pb_delta) : CHROMA_CENTER;
-    wire [5:0] component_pr_level = level_picture ?
-        add_level_wide(CHROMA_CENTER,component_pr_delta) : CHROMA_CENTER;
+    wire [6:0] component_pb_level = level_picture ?
+        add_component_level(component_pb_delta_q2) : 7'd64;
+    wire [6:0] component_pr_level = level_picture ?
+        add_component_level(component_pr_delta_q2) : 7'd64;
 
     reg [5:0] luma_level_135 = LEVEL_SYNC;
     reg [5:0] chroma_level_135 = CHROMA_CENTER;
     reg [5:0] cvbs_level_135 = LEVEL_SYNC;
-    reg [5:0] component_pb_level_135 = CHROMA_CENTER;
-    reg [5:0] component_pr_level_135 = CHROMA_CENTER;
+    reg [6:0] component_pb_level_135 = 7'd64;
+    reg [6:0] component_pr_level_135 = 7'd64;
     reg chroma_burst_135 = 1'b0;
     reg chroma_burst_bit_135 = 1'b0;
 
@@ -424,8 +446,8 @@ module coco_cvbs_ntsc (
             luma_level_135 <= LEVEL_SYNC;
             chroma_level_135 <= CHROMA_CENTER;
             cvbs_level_135 <= LEVEL_SYNC;
-            component_pb_level_135 <= CHROMA_CENTER;
-            component_pr_level_135 <= CHROMA_CENTER;
+            component_pb_level_135 <= 7'd64;
+            component_pr_level_135 <= 7'd64;
             chroma_burst_135 <= 1'b0;
             chroma_burst_bit_135 <= 1'b0;
         end else begin
@@ -540,16 +562,16 @@ module coco_cvbs_ntsc (
     reg [5:0] luma_dac_level = LEVEL_SYNC;
     reg [5:0] chroma_dac_level = CHROMA_CENTER;
     reg [5:0] cvbs_dac_level = LEVEL_SYNC;
-    reg [5:0] component_pb_dac_level = CHROMA_CENTER;
-    reg [5:0] component_pr_dac_level = CHROMA_CENTER;
+    reg [6:0] component_pb_dac_level = 7'd64;
+    reg [6:0] component_pr_dac_level = 7'd64;
     // Keep the DAC output bit and five-bit error accumulator in one register.
     // This is the same first-order sigma-delta recurrence, and lets the carry
     // destination pack beside the adder instead of in a distant output flop.
     reg [5:0] luma_sigma = 6'd0;
     reg [5:0] chroma_sigma = 6'd0;
     reg [5:0] cvbs_sigma = 6'd0;
-    reg [5:0] component_pb_sigma = 6'd0;
-    reg [5:0] component_pr_sigma = 6'd0;
+    reg [7:0] component_pb_sigma = 8'd0;
+    reg [7:0] component_pr_sigma = 8'd0;
     reg luma_out_reg = 1'b0;
     reg chroma_out_reg = 1'b0;
     reg cvbs_out_reg = 1'b0;
@@ -577,10 +599,12 @@ module coco_cvbs_ntsc (
     wire [5:0] luma_sum = {1'b0,luma_sigma[4:0]} + luma_dac_level;
     wire [5:0] chroma_sum = {1'b0,chroma_sigma[4:0]} + chroma_dac_level;
     wire [5:0] cvbs_sum = {1'b0,cvbs_sigma[4:0]} + cvbs_dac_level;
-    wire [5:0] component_pb_sum =
-        {1'b0,component_pb_sigma[4:0]} + component_pb_dac_level;
-    wire [5:0] component_pr_sum =
-        {1'b0,component_pr_sigma[4:0]} + component_pr_dac_level;
+    wire [7:0] component_pb_sum =
+        {1'b0,component_pb_sigma[6:0]} +
+        {1'b0,component_pb_dac_level};
+    wire [7:0] component_pr_sum =
+        {1'b0,component_pr_sigma[6:0]} +
+        {1'b0,component_pr_dac_level};
     assign luma_out = luma_out_reg;
     assign chroma_out = chroma_out_reg;
     assign cvbs_out = cvbs_out_reg;
@@ -602,13 +626,13 @@ module coco_cvbs_ntsc (
             luma_dac_level <= LEVEL_SYNC;
             chroma_dac_level <= CHROMA_CENTER;
             cvbs_dac_level <= LEVEL_SYNC;
-            component_pb_dac_level <= CHROMA_CENTER;
-            component_pr_dac_level <= CHROMA_CENTER;
+            component_pb_dac_level <= 7'd64;
+            component_pr_dac_level <= 7'd64;
             luma_sigma <= 6'd16;
             chroma_sigma <= 6'd0;
             cvbs_sigma <= 6'd16;
-            component_pb_sigma <= 6'd0;
-            component_pr_sigma <= 6'd0;
+            component_pb_sigma <= 8'd0;
+            component_pr_sigma <= 8'd0;
             luma_out_reg <= 1'b0;
             chroma_out_reg <= 1'b0;
             cvbs_out_reg <= 1'b0;
@@ -635,6 +659,9 @@ module coco_cvbs_ntsc (
             chroma_sigma <= chroma_sum;
             cvbs_sigma <= dac_line_start ?
                           {1'b0,luma_phase_lfsr[4:0]} : cvbs_sum;
+            // Keep colour-difference error continuous.  Resetting either
+            // accumulator at a scanline boundary injects a level transient
+            // which appears as black lines in split/scrolling displays.
             component_pb_sigma <= component_pb_sum;
             component_pr_sigma <= component_pr_sum;
             if (dac_line_start)
@@ -644,8 +671,8 @@ module coco_cvbs_ntsc (
             chroma_out_reg <= chroma_burst_270 ?
                               shaped_burst_bit : chroma_sigma[5];
             cvbs_out_reg <= cvbs_sigma[5];
-            component_pb_out_reg <= component_pb_sigma[5];
-            component_pr_out_reg <= component_pr_sigma[5];
+            component_pb_out_reg <= component_pb_sigma[7];
+            component_pr_out_reg <= component_pr_sigma[7];
         end
     end
 endmodule
