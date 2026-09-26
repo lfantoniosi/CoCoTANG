@@ -827,6 +827,12 @@
           "label": "#",
           "name": "${ITEM_NUMBER}",
           "show": false
+        },
+        {
+          "group_by": false,
+          "label": "Sim.Type",
+          "name": "Sim.Type",
+          "show": false
         }
       ],
       "filter_scope": "reference",
@@ -893,7 +899,7 @@
         "uuid": "975e10be-2eb6-4f70-aa39-19e0743e473f"
       }
     ],
-    "used_designators": "RV1,R3-36,C1-32,#PWR1-118,D1-3,Q1-12,U1-12,J1-25",
+    "used_designators": "RV1,R1,R3-39,C1-33,#PWR1-139,D1-3,Q1-12,U1-12,J1-30",
     "variants": []
   },
   "sheets": [
