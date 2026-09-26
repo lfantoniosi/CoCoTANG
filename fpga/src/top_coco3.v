@@ -20,8 +20,9 @@ module top_coco3 #(
     // synthesis then removes the unused S2 capture-control cone as well.
     parameter integer ENABLE_BUS_LOGGER=0,
     parameter integer DEBUG_OVERLAY=0,
-    // 0/1: existing simultaneous S-Video and CVBS; 2: Y/Pb/Pr component.
-    parameter integer ANALOG_VIDEO_MODE=2,
+    // 0/1: simultaneous S-Video and CVBS; 2: Y/Pb/Pr component;
+    // 3: RGB with composite sync on green (Y=G/SoG, Pb=B, Pr=R).
+    parameter integer ANALOG_VIDEO_MODE=3,
     // 0=OFF, 1=ON (blue/orange), 2=REVERSE (orange/blue).
     parameter [1:0] INITIAL_ARTIFACT_MODE=2'd1,
     // 1: native GIME HDMI is a sharp 640-dot 1:1 image (wider than 4:3).
@@ -396,7 +397,7 @@ module top_coco3 #(
     wire ide_data_oe=(ide_raw_data_oe && e_core) ||
                      (ide_read_hold && e_fall);
     generate if (ENABLE_GLENSIDE_IDE != 0) begin:glenside_ide_enabled
-      glenside_ide #(.IDE_BASE(IDE_BASE)) ide(
+      glenside_ide #(.IDE_BASE(IDE_BASE),.CPU_ENABLE_PREDECODED(1)) ide(
         .clk(clk108),.reset_n(board_reset_n),
         .cpu_enable(cpu_bus_active && ide_cycle_active),
         .e_fall(e_fall),.cpu_addr(ide_address_pipe),
@@ -432,11 +433,19 @@ module top_coco3 #(
         if (!board_reset_n) core_rdata_pipe<=8'hff;
         else core_rdata_pipe<=core_rdata;
     end
+    // Memory and ROM reads are also ready many 108-MHz clocks before the
+    // 6809 samples at E falling.  Register the final byte here so block-RAM
+    // placement and the read-source mux are not on the output-IOLOGIC path.
+    reg [7:0] memory_rdata_pipe=8'hff;
+    always @(posedge clk108 or negedge board_reset_n) begin
+        if (!board_reset_n) memory_rdata_pipe<=8'hff;
+        else memory_rdata_pipe<=memory_rdata;
+    end
     // Keep IDE data isolated from the continuously changing GIME read bus.
     // ATA data-port reads are back-to-back, so an IDE byte must remain intact
     // until its E phase has completed.
     wire [7:0] fpga_read_data=ide_data_oe ? ide_read_latched :
-        (core_data_oe ? core_rdata_pipe : memory_rdata);
+        (core_data_oe ? core_rdata_pipe : memory_rdata_pipe);
     wire fpga_data_oe=cpu_bus_active &&
         (ide_data_oe || core_data_oe || memory_data_oe);
 
@@ -618,7 +627,8 @@ module top_coco3 #(
         end
     end
     coco_cvbs_ntsc #(.STREAMING_INPUT(0),.CANONICAL_640_INPUT(1),
-        .PAL_MACHINE(PAL_MACHINE)) analog_encoder(
+        .PAL_MACHINE(PAL_MACHINE),
+        .RGB_SOG_OUTPUT(ANALOG_VIDEO_MODE==3)) analog_encoder(
         // Start on the same board reset as HDMI.  cpu_release is aligned to
         // the CoCo bus, not to video, and made the CVBS consumer enter the
         // shared two-line cache at an arbitrary scanline phase.
@@ -636,8 +646,10 @@ module top_coco3 #(
         .component_pb_out(analog_component_pb),
         .component_pr_out(analog_component_pr));
     assign y_out=analog_luma;
-    assign pb_out=(ANALOG_VIDEO_MODE==2)?analog_component_pb:analog_chroma;
-    assign cvbs_out=(ANALOG_VIDEO_MODE==2)?analog_component_pr:analog_cvbs;
+    assign pb_out=((ANALOG_VIDEO_MODE==2)||(ANALOG_VIDEO_MODE==3)) ?
+                  analog_component_pb : analog_chroma;
+    assign cvbs_out=((ANALOG_VIDEO_MODE==2)||(ANALOG_VIDEO_MODE==3)) ?
+                    analog_component_pr : analog_cvbs;
 
     wire unused_inputs=mux_slenb_n ^ mux_nmi_n ^ native_hblank ^
         native_vblank ^ ^native_red ^ ^native_green ^ ^native_blue ^ e_rise ^

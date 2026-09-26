@@ -112,6 +112,23 @@ module tb_coco_cvbs_ntsc;
         release dut.mod_component_y;release dut.mod_component_x;
         release dut.level_picture;
 
+        // Separate component/S-Video Y uses the same physical output stage
+        // and 87-code picture excursion as the untrimmed RGB channels.  Its
+        // black and white endpoints must therefore be 40 and 127.
+        force dut.encoder_luma_rb=10'd32;
+        force dut.encoder_luma_g=10'd0;
+        #1;
+        if(dut.encoder_y_picture_excursion!=7'd0)begin
+            $display("separate Y black excursion=%0d",
+                     dut.encoder_y_picture_excursion);errors=errors+1;end
+        force dut.encoder_luma_rb=10'd536;
+        force dut.encoder_luma_g=10'd756;
+        #1;
+        if(dut.encoder_y_picture_excursion!=7'd87)begin
+            $display("separate Y white excursion=%0d",
+                     dut.encoder_y_picture_excursion);errors=errors+1;end
+        release dut.encoder_luma_g;release dut.encoder_luma_rb;
+
         // Move to an ordinary blank interval and allow the encoder pipeline
         // to settle. Level 10 in a modulo-32 DAC is exactly 40 ones/128.
         seek(10'd110,9'd236);

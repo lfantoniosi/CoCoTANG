@@ -6,7 +6,10 @@
 // physical Glenside board.
 module glenside_ata #(
     parameter [15:0] IDE_BASE = 16'hff50,
-    parameter integer INIT_TIMEOUT_CYCLES = 1080000000
+    parameter integer INIT_TIMEOUT_CYCLES = 1080000000,
+    // The integrated top already freezes and decodes the complete CPU cycle.
+    // Standalone users retain the local IDE_BASE comparison by default.
+    parameter integer CPU_ENABLE_PREDECODED = 0
 ) (
     input wire clk,
     input wire reset_n,
@@ -49,6 +52,7 @@ module glenside_ata #(
     localparam [3:0] S_READ_NEXT  = 4'd9;
     localparam [3:0] S_WRITE_NEXT = 4'd10;
     localparam [3:0] S_TEST_FILL  = 4'd11;
+    localparam [3:0] S_LBA_INCREMENT = 4'd12;
 
     localparam integer INIT_COUNT_WIDTH = $clog2(INIT_TIMEOUT_CYCLES + 1);
 
@@ -69,6 +73,8 @@ module glenside_ata #(
     reg [8:0] test_pointer;
     reg [8:0] remaining_sectors;
     reg [27:0] active_lba;
+    reg lba_increment_carry;
+    reg lba_increment_write;
     reg [31:0] identify_capacity;
     reg [7:0] command_reg;
     reg command_pending;
@@ -77,7 +83,8 @@ module glenside_ata #(
     reg card_ready;
     reg [INIT_COUNT_WIDTH-1:0] init_timeout;
 
-    wire selected = cpu_enable && (cpu_addr[15:4] == IDE_BASE[15:4]);
+    wire selected = cpu_enable && (CPU_ENABLE_PREDECODED ||
+                                   cpu_addr[15:4] == IDE_BASE[15:4]);
     wire [3:0] register_number = cpu_addr[3:0];
     assign cpu_data_oe = selected && cpu_rw_n;
     assign sd_data_out = sector_sd_byte;
@@ -179,6 +186,8 @@ module glenside_ata #(
             test_pointer <= 9'd0;
             remaining_sectors <= 9'd0;
             active_lba <= 28'd0;
+            lba_increment_carry <= 1'b0;
+            lba_increment_write <= 1'b0;
             identify_capacity <= 32'd0;
             command_reg <= 8'h00;
             command_pending <= 1'b0;
@@ -339,9 +348,14 @@ module glenside_ata #(
                         end else if (remaining_sectors > 9'd1) begin
                             remaining_sectors <= remaining_sectors - 1'b1;
                             sector_count_reg <= remaining_sectors - 1'b1;
-                            active_lba <= active_lba + 1'b1;
+                            // Split the 28-bit increment over two otherwise
+                            // idle inter-sector clocks.  A single ripple
+                            // increment was a recurring 108-MHz critical path.
+                            active_lba[13:0] <= active_lba[13:0] + 1'b1;
+                            lba_increment_carry <= &active_lba[13:0];
+                            lba_increment_write <= 1'b1;
                             status_reg <= ST_BSY;
-                            state <= S_WRITE_NEXT;
+                            state <= S_LBA_INCREMENT;
                         end else begin
                             remaining_sectors <= 9'd0;
                             sector_count_reg <= 9'd0;
@@ -377,6 +391,11 @@ module glenside_ata #(
                     data_pointer <= 9'd0;
                     status_reg <= ST_DRDY | ST_DSC | ST_DRQ;
                     state <= S_WRITE_DATA;
+                end
+                S_LBA_INCREMENT: begin
+                    if (lba_increment_carry)
+                        active_lba[27:14] <= active_lba[27:14] + 1'b1;
+                    state <= lba_increment_write ? S_WRITE_NEXT : S_READ_NEXT;
                 end
                 S_TEST_FILL: begin
                     if (test_pointer == 9'd510) begin
@@ -430,9 +449,11 @@ module glenside_ata #(
                                     if (remaining_sectors > 9'd1) begin
                                         remaining_sectors <= remaining_sectors - 1'b1;
                                         sector_count_reg <= remaining_sectors - 1'b1;
-                                        active_lba <= active_lba + 1'b1;
+                                        active_lba[13:0] <= active_lba[13:0] + 1'b1;
+                                        lba_increment_carry <= &active_lba[13:0];
+                                        lba_increment_write <= 1'b0;
                                         status_reg <= ST_BSY;
-                                        state <= S_READ_NEXT;
+                                        state <= S_LBA_INCREMENT;
                                     end else begin
                                         remaining_sectors <= 9'd0;
                                         sector_count_reg <= 9'd0;

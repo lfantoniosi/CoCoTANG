@@ -10,7 +10,8 @@ module glenside_ide #(
     parameter [15:0] IDE_BASE = 16'hff50,
     parameter integer SPI_INIT_DIV = 135,
     parameter integer SPI_DATA_DIV = 54,
-    parameter integer INIT_TIMEOUT_CYCLES = 1080000000
+    parameter integer INIT_TIMEOUT_CYCLES = 1080000000,
+    parameter integer CPU_ENABLE_PREDECODED = 0
 ) (
     input wire clk,
     input wire reset_n,
@@ -45,7 +46,8 @@ module glenside_ide #(
 
     glenside_ata #(
         .IDE_BASE(IDE_BASE),
-        .INIT_TIMEOUT_CYCLES(INIT_TIMEOUT_CYCLES)
+        .INIT_TIMEOUT_CYCLES(INIT_TIMEOUT_CYCLES),
+        .CPU_ENABLE_PREDECODED(CPU_ENABLE_PREDECODED)
     ) ata (
         .clk(clk), .reset_n(reset_n),
         .cpu_enable(cpu_enable), .e_fall(e_fall),

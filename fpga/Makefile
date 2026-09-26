@@ -42,6 +42,8 @@ test:
 	vvp /private/tmp/cocotang_tb_mux
 	iverilog -g2012 -o /private/tmp/cocotang_tb_cvbs tests/tb_coco_cvbs_ntsc.v src/video/coco_cvbs_ntsc.v
 	vvp /private/tmp/cocotang_tb_cvbs
+	iverilog -g2012 -o /private/tmp/cocotang_tb_rgb_sog tests/tb_rgb_sog.v src/video/coco_cvbs_ntsc.v
+	vvp /private/tmp/cocotang_tb_rgb_sog
 	iverilog -g2012 -o /private/tmp/cocotang_tb_pal_chroma tests/tb_pal_chroma.v src/video/coco_cvbs_ntsc.v
 	vvp /private/tmp/cocotang_tb_pal_chroma
 	iverilog -g2012 -o /private/tmp/cocotang_tb_fill tests/tb_sdram_test_fill.v src/memory/sdram_test_fill.v

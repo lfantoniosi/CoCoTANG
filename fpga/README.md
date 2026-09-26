@@ -32,10 +32,20 @@ make pal-rom
 
 ## Video
 
-`ANALOG_VIDEO_MODE=2` is the default and produces Y/Pb/Pr component video:
+`ANALOG_VIDEO_MODE=2` produces Y/Pb/Pr component video:
 Y with sync on pin 56, Pb on pin 54, and Pr on pin 18. Values 0 and 1 use pin
 54 for S-Video chroma and pin 18 for composite video. Pin 51 carries the 6809
-E clock because the original E connection is shared with HSPI.
+E clock because the original E connection is shared with HSPI. Separate Y
+uses the component HAT's seven-bit sigma-delta method: a 40-code sync-to-black
+pedestal and an 87-code black-to-white excursion.
+
+`ANALOG_VIDEO_MODE=3` is the default and reuses the component HAT for RGB
+with sync on green:
+pin 56/Y is green with composite sync, pin 54/Pb is blue, and pin 18/Pr is
+red. The existing 1 kOhm/4.7 kOhm transistor inputs, 75-ohm output resistors,
+and 470 pF output capacitors are retained. Measured CRT calibration uses
+independent nonlinear transfer curves for red, green, and blue. Green includes
+the 40-code pedestal required for negative composite sync.
 
 HDMI can use sharp 640-dot native output (`NATIVE_HDMI_640=1`) or an
 aspect-correct 512-dot filtered image. Compatibility modes retain the CoCo 3

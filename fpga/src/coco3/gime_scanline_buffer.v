@@ -257,6 +257,7 @@ module gime_scanline_buffer #(
   (cv_line_active&&c_valid0&&c_tag0==cv_active_y&&c_next_bank==2'd0)?2'd1:
   (cv_line_active&&c_valid1&&c_tag1==cv_active_y&&c_next_bank==2'd1)?2'd2:
   (cv_line_active&&c_valid2&&c_tag2==cv_active_y&&c_next_bank==2'd2)?2'd0:c_next_bank;
+ reg [1:0] c_replacement_bank_q=0;
  reg h_pending=0,c_pending=0;reg [7:0] h_pending_y=0,c_pending_y=0;
  reg [2:0] coalesce_count=0;
 
@@ -283,6 +284,9 @@ module gime_scanline_buffer #(
  reg [23:0] hdmi_filter_previous=0;
  reg [255:0] artifact_bits=0;
  reg [260:0] artifact_shift=0;
+ reg artifact_bit_write_pending=0;
+ reg [7:0] artifact_bit_write_addr=0;
+ reg artifact_bit_write_data=0;
  reg [18:0] row_address=0,line_address=0,byte_address=0;
  reg [31:0] word_cache=0;reg [18:0] word_tag=0;reg word_valid=0;
  reg [7:0] character=0,attribute=0,glyph_cache=0;reg fill_dirty=0;
@@ -534,7 +538,21 @@ reg configuration_pending=1'b1;
    h_pending<=0;c_pending<=0;coalesce_count<=0;
    fill_sequential<=0;dma_next_y<=0;dma_next_address<=0;
    dma_line_in_row<=0;dma_advance_pending<=0;upper_border_q<=0;
+   c_replacement_bank_q<=0;
+   artifact_bit_write_pending<=0;
   end else begin
+   // Bank selection is consumed only after the seven-clock request
+   // coalescing interval.  Register it here so synchronized CVBS scanout tags
+   // do not feed the fill-bank register through the complete replacement
+   // priority chain in one 108-MHz cycle.
+   c_replacement_bank_q<=c_replacement_bank;
+   // Register the dynamically indexed artifact-row write before touching the
+   // 256-bit store.  Driving its decoder directly from WRITE_PIXEL made the
+   // renderer state cone a marginal 108-MHz path and could corrupt a raster
+   // on hardware even when post-route slack was only a few picoseconds.
+   artifact_bit_write_pending<=0;
+   if(artifact_bit_write_pending)
+    artifact_bits[artifact_bit_write_addr]<=artifact_bit_write_data;
    // Collapse the wide live-mode comparison into a single pending bit.  The
    // renderer consumes it only at IDLE, so mode inputs do not become a wide
    // combinational select path into all of the renderer state registers.
@@ -656,7 +674,7 @@ reg configuration_pending=1'b1;
                   (hd_v_s&&h_valid1&&h_tag1==hd_y_s)?0:h_next_bank;
      fill_c_bank<=(c_valid0&&c_tag0==h_pending_y)?0:
                   (c_valid1&&c_tag1==h_pending_y)?1:
-                  (c_valid2&&c_tag2==h_pending_y)?2:c_replacement_bank;
+                  (c_valid2&&c_tag2==h_pending_y)?2:c_replacement_bank_q;
      fill_bit_plane<=bit_plane;
      fill_cres<=compatibility_mode&&compatibility_an_g?
       ((compatibility_gm==0||compatibility_gm==2||compatibility_gm==4||compatibility_gm==6)?1:0):cres;
@@ -774,10 +792,14 @@ reg configuration_pending=1'b1;
      hdmi_pixel_latched<=expand_rgb222(
        palette_rgb(fill_compatibility?color_code_latched:
        fill_palettes[color_index_latched*6+:6]));
+     if(artifact_active)begin
+      artifact_bit_write_pending<=1;
+      artifact_bit_write_addr<=source_x[7:0];
+      artifact_bit_write_data<=color_index_latched[0];
+     end
      state<=WRITE_PIXEL;
     end
     WRITE_PIXEL:begin
-     if(artifact_active)artifact_bits[source_x[7:0]]<=color_index_latched[0];
      // Area-preserving 640 -> 512 horizontal filter for HDMI.  For every
      // five canonical pixels emit four samples at phases 0, 1.25, 2.5 and
      // 3.75.  CVBS retains the original 640-dot row.  This is a streaming

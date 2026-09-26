@@ -68,7 +68,8 @@ module sd_spi_block #(
         ST_WRITE_BUSY_START = 6'd37,
         ST_WRITE_BUSY_WAIT  = 6'd38,
         ST_FINISH_START     = 6'd39,
-        ST_FINISH_WAIT      = 6'd40;
+        ST_FINISH_WAIT      = 6'd40,
+        ST_TIMEOUT_INCREMENT= 6'd41;
 
     reg [5:0] state;
     reg [5:0] command;
@@ -83,6 +84,7 @@ module sd_spi_block #(
     reg high_capacity;
     reg [15:0] init_retry_count;
     reg [15:0] timeout_count;
+    reg [5:0] timeout_return;
     reg [3:0] init_clock_count;
     reg [8:0] byte_count;
     reg [1:0] crc_count;
@@ -204,7 +206,7 @@ module sd_spi_block #(
             command_index<=0;
             command_return<=return_state;
             timeout_count<=0;
-            sd_cs_n<=0;
+            timeout_return<=ST_IDLE;
             state<=ST_CMD_SEND_START;
         end
     endtask
@@ -292,6 +294,11 @@ module sd_spi_block #(
                 end
 
                 ST_CMD_SEND_START: if (!spi_active) begin
+                    // Assert CS in this dedicated launch state rather than
+                    // through every caller of launch_command.  Besides being
+                    // protocol-equivalent, this keeps initialization retry
+                    // decisions off the 108-MHz chip-select timing path.
+                    sd_cs_n<=0;
                     spi_tx<=command_byte(command_index); spi_start<=1;
                     state<=ST_CMD_SEND_WAIT;
                 end
@@ -313,8 +320,8 @@ module sd_spi_block #(
                         operation_error<=1;
                         state<=ST_FINISH_START;
                     end else begin
-                        timeout_count<=timeout_count+1'b1;
-                        state<=ST_CMD_R1_START;
+                        timeout_return<=ST_CMD_R1_START;
+                        state<=ST_TIMEOUT_INCREMENT;
                     end
                 end
 
@@ -403,7 +410,10 @@ module sd_spi_block #(
                     end
                     else if (spi_rx!=8'hff || timeout_count==RESPONSE_TIMEOUT) begin
                         operation_error<=1; state<=ST_FINISH_START;
-                    end else begin timeout_count<=timeout_count+1'b1; state<=ST_READ_TOKEN_START; end
+                    end else begin
+                        timeout_return<=ST_READ_TOKEN_START;
+                        state<=ST_TIMEOUT_INCREMENT;
+                    end
                 end
                 ST_READ_DATA_START: if (!spi_active) begin
                     spi_tx<=8'hff; spi_start<=1; state<=ST_READ_DATA_WAIT;
@@ -488,9 +498,17 @@ module sd_spi_block #(
                         operation_error<=1;
                         state<=ST_FINISH_START;
                     end else begin
-                        timeout_count<=timeout_count+1'b1;
-                        state<=ST_WRITE_BUSY_START;
+                        timeout_return<=ST_WRITE_BUSY_START;
+                        state<=ST_TIMEOUT_INCREMENT;
                     end
+                end
+
+                // Timeout counters advance only once per complete SPI byte.
+                // Isolating the increment from the three caller branches
+                // removes their select logic from the 16-bit carry path.
+                ST_TIMEOUT_INCREMENT: begin
+                    timeout_count<=timeout_count+1'b1;
+                    state<=timeout_return;
                 end
 
                 ST_FINISH_START: if (!spi_active) begin

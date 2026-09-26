@@ -8,6 +8,10 @@ module coco_cvbs_ntsc #(
     parameter integer STREAMING_INPUT = 0,
     parameter integer CANONICAL_640_INPUT = 0,
     parameter integer PAL_MACHINE = 0,
+    // Reuse the component DACs as RGB with negative composite sync on green.
+    // The component HAT then needs no component changes: Y=G/SoG, Pb=B,
+    // and Pr=R.
+    parameter integer RGB_SOG_OUTPUT = 0,
     // Diagnostic override for the separate Y output.  -1 selects normal
     // pixel luma; 0..63 forces a constant visible-aperture level while sync
     // and blanking remain valid.  Composite video is deliberately untouched.
@@ -112,7 +116,9 @@ module coco_cvbs_ntsc #(
     localparam [5:0] LEVEL_SYNC     = 6'd0;
     localparam [5:0] LEVEL_BLANK    = 6'd10;
     localparam [5:0] LEVEL_WHITE    = 6'd32;
-    // Q2 equivalents used by the higher-precision separate Y output.
+    // Seven-bit levels used by the separate Y output.  The component-HAT
+    // transistor stages are identical: sync-to-black uses 40 codes and the
+    // picture uses the same 87-code excursion as the untrimmed RGB outputs.
     localparam [6:0] LUMA_SYNC_Q2  = 7'd0;
     localparam [6:0] LUMA_BLANK_Q2 = 7'd40;
     localparam [5:0] CHROMA_CENTER  = 6'd16;
@@ -265,9 +271,54 @@ module coco_cvbs_ntsc #(
         end
     endfunction
 
+    // RGB monitors expect approximately 0.7 V of picture above black.  CRT
+    // calibration showed different high-level response in each analogue
+    // channel, so retain independent red and blue transfer curves.
+    function [6:0] rgb_red_picture_level;
+        input [1:0] channel;
+        begin
+            case (channel)
+                2'd0: rgb_red_picture_level = 7'd0;
+                2'd1: rgb_red_picture_level = 7'd42;
+                2'd2: rgb_red_picture_level = 7'd74;
+                default: rgb_red_picture_level = 7'd104;
+            endcase
+        end
+    endfunction
+
+    function [6:0] rgb_blue_picture_level;
+        input [1:0] channel;
+        begin
+            case (channel)
+                2'd0: rgb_blue_picture_level = 7'd0;
+                2'd1: rgb_blue_picture_level = 7'd42;
+                2'd2: rgb_blue_picture_level = 7'd80;
+                default: rgb_blue_picture_level = 7'd116;
+            endcase
+        end
+    endfunction
+
+    // Green carries the sync pedestal and has higher measured analogue gain
+    // than red/blue.  With red/blue at full scale, measured CRT calibration
+    // brackets neutral green between excursions 44 (magenta cast) and 79
+    // (green cast); use the midpoint while retaining maximum brightness.
+    function [6:0] rgb_green_picture_level;
+        input [1:0] channel;
+        begin
+            case (channel)
+                2'd0: rgb_green_picture_level = 7'd0;
+                2'd1: rgb_green_picture_level = 7'd18;
+                2'd2: rgb_green_picture_level = 7'd40;
+                default: rgb_green_picture_level = 7'd62;
+            endcase
+        end
+    endfunction
+
     // The framebuffer stores RGB222. Expand each channel to six bits before
     // applying the same RGB-axis and luma conversion proven by NTSCVideo.
     reg [5:0] pixel_rgb = 6'd0;
+    reg [5:0] encoder_rgb = 6'd0;
+    reg [5:0] mod_rgb = 6'd0;
     reg [5:0] border_meta = 6'd0;
     reg [5:0] border_row_current = 6'd0;
     reg [5:0] border_row_delay1 = 6'd0;
@@ -315,6 +366,13 @@ module coco_cvbs_ntsc #(
 
     wire [10:0] encoder_luma_sum = {1'b0,encoder_luma_rb} +
                                              {1'b0,encoder_luma_g};
+    // encoder_luma_sum includes the 32-count rounding bias needed by the
+    // older six-bit composite path.  Remove it for separate Y, then expand
+    // the nominal 0..78 result to 0..87.  The shift-and-add approximation is
+    // exact at both endpoints and avoids a divider in the video pipeline.
+    wire [10:0] encoder_luma_linear = encoder_luma_sum - 11'd32;
+    wire [6:0] encoder_y_picture_excursion =
+        encoder_luma_linear[10:4] + encoder_luma_linear[10:7];
     wire signed [10:0] encoder_x = encoder_x_axis;
     wire signed [10:0] encoder_y = encoder_y_axis;
     wire signed [10:0] encoder_sum = encoder_x + encoder_y;
@@ -424,7 +482,15 @@ module coco_cvbs_ntsc #(
     wire [6:0] selected_luma_level_q2 = (FORCE_LUMA_LEVEL >= 0) ?
                                         {FORCE_LUMA_LEVEL[4:0],2'b00} :
                                         level_luma_q2;
-    wire [6:0] luma_level = level_sync ? LUMA_SYNC_Q2 :
+    wire [6:0] rgb_red_level = level_picture ?
+                           rgb_red_picture_level(mod_rgb[5:4]) : 7'd0;
+    wire [6:0] rgb_blue_level = level_picture ?
+                          rgb_blue_picture_level(mod_rgb[1:0]) : 7'd0;
+    wire [6:0] rgb_green_level = level_sync ? 7'd0 :
+        LUMA_BLANK_Q2 + (level_picture ?
+                         rgb_green_picture_level(mod_rgb[3:2]) : 7'd0);
+    wire [6:0] luma_level = RGB_SOG_OUTPUT ? rgb_green_level :
+                            level_sync ? LUMA_SYNC_Q2 :
                             level_picture ? selected_luma_level_q2 :
                                             LUMA_BLANK_Q2;
     // The receiver derives hue and saturation from the picture-to-burst ratio.
@@ -436,10 +502,10 @@ module coco_cvbs_ntsc #(
     wire [5:0] composite_level = level_sync ? LEVEL_SYNC :
         level_burst ? add_level(LEVEL_BLANK,level_chroma) :
         level_picture ? add_level(level_luma,level_chroma) : LEVEL_BLANK;
-    wire [6:0] component_pb_level = level_picture ?
-        add_component_level(component_pb_delta_q2) : 7'd64;
-    wire [6:0] component_pr_level = level_picture ?
-        add_component_level(component_pr_delta_q2) : 7'd64;
+    wire [6:0] component_pb_level = RGB_SOG_OUTPUT ? rgb_blue_level :
+        level_picture ? add_component_level(component_pb_delta_q2) : 7'd64;
+    wire [6:0] component_pr_level = RGB_SOG_OUTPUT ? rgb_red_level :
+        level_picture ? add_component_level(component_pr_delta_q2) : 7'd64;
 
     reg [6:0] luma_level_135 = LUMA_SYNC_Q2;
     reg [5:0] chroma_level_135 = CHROMA_CENTER;
@@ -486,6 +552,8 @@ module coco_cvbs_ntsc #(
             pixel_carrier <= 3'd0;
             pixel_sample_tick <= 1'b0;
             pixel_rgb <= 6'd0;
+            encoder_rgb <= 6'd0;
+            mod_rgb <= 6'd0;
             border_meta <= 6'd0;
             border_row_current <= 6'd0;
             border_row_delay1 <= 6'd0;
@@ -590,6 +658,7 @@ module coco_cvbs_ntsc #(
             encoder_picture <= pixel_picture;
             encoder_carrier <= pixel_carrier;
             encoder_sample_tick <= pixel_sample_tick;
+            encoder_rgb <= pixel_rgb;
             encoder_x_axis <= fb_x_axis;
             encoder_y_axis <= fb_y_axis;
             encoder_luma_rb <= fb_luma_rb;
@@ -607,8 +676,9 @@ module coco_cvbs_ntsc #(
             mod_picture <= encoder_picture;
             mod_carrier <= encoder_carrier;
             mod_pal_odd <= pal_line_odd;
+            mod_rgb <= encoder_rgb;
             mod_luma <= LEVEL_BLANK + encoder_luma_sum[10:6];
-            mod_luma_q2 <= LUMA_BLANK_Q2 + encoder_luma_sum[10:4];
+            mod_luma_q2 <= LUMA_BLANK_Q2 + encoder_y_picture_excursion;
             mod_x4 <= filtered_x <<< 2;
             mod_y4 <= filtered_y <<< 2;
             mod_sum3 <= (filtered_sum <<< 1) + filtered_sum;
@@ -708,12 +778,14 @@ module coco_cvbs_ntsc #(
     reg chroma_burst_270 = 1'b0;
     reg chroma_burst_bit_270 = 1'b0;
     reg [2:0] burst_shape_phase = 3'd0;
-    // luma_dac_level is the level currently being converted and
-    // luma_level_135 is the next level.  Their transition into zero occurs
-    // exactly once at the leading edge of every horizontal sync tip, giving
-    // a line-phase reference without another counter or CDC state machine.
-    wire dac_line_start = (luma_dac_level != LUMA_SYNC_Q2) &&
-                          (luma_level_135 == LUMA_SYNC_Q2);
+    // Pipeline the luma zero comparison before using it to reset the 270-MHz
+    // sigma-delta accumulators.  The former direct seven-bit comparison fed
+    // the accumulator mux in the same cycle and was the critical setup path.
+    // Edge detection delays the event by one 270-MHz clock, still safely
+    // inside the horizontal sync tip.
+    reg luma_sync_270 = 1'b1;
+    reg luma_sync_270_d = 1'b1;
+    wire dac_line_start = luma_sync_270 && !luma_sync_270_d;
     wire [7:0] luma_sum = {1'b0,luma_sigma[6:0]} +
                           {1'b0,luma_dac_level};
     wire [5:0] chroma_sum = {1'b0,chroma_sigma[4:0]} + chroma_dac_level;
@@ -724,6 +796,7 @@ module coco_cvbs_ntsc #(
     wire [7:0] component_pr_sum =
         {1'b0,component_pr_sigma[6:0]} +
         {1'b0,component_pr_dac_level};
+
     assign luma_out = luma_out_reg;
     assign chroma_out = chroma_out_reg;
     assign cvbs_out = cvbs_out_reg;
@@ -758,6 +831,8 @@ module coco_cvbs_ntsc #(
             component_pb_out_reg <= 1'b0;
             component_pr_out_reg <= 1'b0;
             luma_phase_lfsr <= 16'h1ace;
+            luma_sync_270 <= 1'b1;
+            luma_sync_270_d <= 1'b1;
             chroma_burst_270 <= 1'b0;
             chroma_burst_bit_270 <= 1'b0;
             burst_shape_phase <= 3'd0;
@@ -767,6 +842,8 @@ module coco_cvbs_ntsc #(
             cvbs_dac_level <= cvbs_level_135;
             component_pb_dac_level <= component_pb_level_135;
             component_pr_dac_level <= component_pr_level_135;
+            luma_sync_270 <= (luma_level_135 == LUMA_SYNC_Q2);
+            luma_sync_270_d <= luma_sync_270;
             chroma_burst_270 <= chroma_burst_135;
             chroma_burst_bit_270 <= chroma_burst_bit_135;
             burst_shape_phase <= burst_shape_phase + 1'b1;

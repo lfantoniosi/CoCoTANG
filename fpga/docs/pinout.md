@@ -13,7 +13,7 @@ Package pins are for the GW2AR-LV18QN88C8/I7 on the Tang Nano 20K.
 | `halt_drive` | out | 42 | High turns Q2 on and pulls `/HALT` low |
 | `irq_n_in`, `firq_n_in` | out | 19, 75 | Active-high transistor drives for active-low IRQ/FIRQ |
 | `hs_n`, `fs_n` | out | 73, 74 | VDG horizontal/field sync |
-| `y_out`, `pb_out`, `cvbs_out` | out | 56, 54, 18 | Component Y, Pb, and Pr (default mode) |
+| `y_out`, `pb_out`, `cvbs_out` | out | 56, 54, 18 | RGB green/SoG, blue, and red (default mode) |
 | `audio_out` | out | 55 | Sigma-delta CoCo DAC audio to the board's filtered line output |
 | `mspi_sclk`, `mspi_cs`, `mspi_mosi`, `mspi_miso` | out/out/out/in | 59, 60, 61, 62 | On-module SPI flash |
 | `sd_sclk`, `sd_cmd`, `sd_dat[0:3]` | out/inout/inout | 83, 82, 84, 85, 80, 81 | On-module TF card in SPI mode: CMD=MOSI, DAT0=MISO, DAT3=CS |
@@ -23,10 +23,14 @@ Package pins are for the GW2AR-LV18QN88C8/I7 on the Tang Nano 20K.
 | `tmds_data_p[2]` | differential out | 39/40 | HDMI data 2 pair |
 | `s1`, `s2` | in | 88, 87 | Module buttons; S1 resets, S2 toggles HDMI debug |
 
-In component mode `y_out` is Y/luma with sync, `pb_out` is Pb, and `cvbs_out`
-is Pr. Legacy mode restores S-Video chroma and independent composite on the
+In component mode (`ANALOG_VIDEO_MODE=2`), `y_out` is Y/luma with sync,
+`pb_out` is Pb, and `cvbs_out` is Pr. Legacy mode restores S-Video chroma and
+independent composite on the
 last two pins. Package pin 51 carries the 6809 E clock and package pin
 75/`HSPI_DIR` drives the FIRQ transistor.
+
+With the default `ANALOG_VIDEO_MODE=3`, the same component-HAT outputs become
+green with composite sync, blue, and red respectively.
 
 ## 74HC139 scan map
 
