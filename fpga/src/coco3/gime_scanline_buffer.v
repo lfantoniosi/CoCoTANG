@@ -9,12 +9,23 @@ module gime_scanline_buffer #(
  input [7:0] horizontal_offset,input [95:0] palettes,input [5:0] border_rgb,
  input compatibility_mode,input compatibility_an_g,input [2:0] compatibility_gm,
  input [2:0] compatibility_sam_mode,
- input compatibility_css,input [1:0] artifact_mode,input blink,
+ input compatibility_css,
+ input compatibility_raster_write,input [7:0] compatibility_raster_y,
+ input [4:0] compatibility_raster_byte,input compatibility_raster_css,
+ input compatibility_border_write,input compatibility_border_right,
+ input [8:0] compatibility_border_y,input [5:0] compatibility_border_rgb,
+ input [1:0] artifact_mode,input blink,
  input cpu_write_strobe,input [20:0] cpu_write_addr,
  input hdmi_read_clk,input [9:0] hdmi_read_x,input [7:0] hdmi_display_y,
+ input hdmi_frame_start,input [8:0] hdmi_border_raster_y,
  input hdmi_display_valid,input hdmi_picture_active,
  input [7:0] hdmi_prefetch_y,input hdmi_prefetch_valid,
  output reg [23:0] hdmi_pixel_data,
+ output reg [5:0] hdmi_left_border_data,output reg [5:0] hdmi_right_border_data,
+ output reg hdmi_border_valid,
+ output reg [5:0] hdmi_vertical_left_border_data,
+ output reg [5:0] hdmi_vertical_right_border_data,
+ output reg hdmi_vertical_border_valid,
  input cvbs_read_clk,input [9:0] cvbs_read_x,input [7:0] cvbs_display_y,
  input cvbs_display_valid,input [7:0] cvbs_prefetch_y,input cvbs_prefetch_valid,
  output reg [5:0] cvbs_pixel_data,output reg [5:0] cvbs_border_data,
@@ -187,6 +198,8 @@ module gime_scanline_buffer #(
  reg [7:0] h_tag0=0,h_tag1=0,c_tag0=0,c_tag1=0,c_tag2=0;
  reg [20:0] h_start0=0,h_start1=0,c_start0=0,c_start1=0,c_start2=0;
  reg [10:0] h_bytes0=0,h_bytes1=0,c_bytes0=0,c_bytes1=0,c_bytes2=0;
+ reg [5:0] h_left_border0=0,h_left_border1=0;
+ reg [5:0] h_right_border0=0,h_right_border1=0;
  reg [5:0] c_border0=0,c_border1=0,c_border2=0;
  reg h_next_bank=0;
  reg [1:0] c_next_bank=0;
@@ -267,6 +280,8 @@ module gime_scanline_buffer #(
  reg [7:0] fill_y=0; reg fill_bit_plane=0; reg [1:0] fill_cres=0;
  reg fill_attributes=0;reg [2:0] fill_gm=0;reg fill_css=0;
  reg fill_compatibility=0,fill_blink=0;reg [1:0] fill_artifact_mode=0;
+ reg fill_raster_css_valid=0;
+ reg fill_left_css=0,fill_right_css=0;
  reg [7:0] fill_lpr=1;
  reg [10:0] fill_stride=0,fill_row_bytes=0;reg [12:0] fill_source_width=0;
  reg [3:0] fill_scale_integer=0;reg [9:0] fill_scale_remainder=0;
@@ -292,6 +307,102 @@ module gime_scanline_buffer #(
  reg [7:0] character=0,attribute=0,glyph_cache=0;reg fill_dirty=0;
  reg text_cache_valid=0,graphics_cache_valid=0;
  reg [7:0] text_cache_column=0;reg [11:0] graphics_cache_index=0;
+
+ initial begin
+  hdmi_left_border_data=0;
+  hdmi_right_border_data=0;
+  hdmi_border_valid=0;
+  hdmi_vertical_left_border_data=0;
+  hdmi_vertical_right_border_data=0;
+  hdmi_vertical_border_valid=0;
+ end
+
+ // One captured CSS bit per VDG source byte. The physical raster samples
+ // $FF22 while this renderer can run ahead, so the completed field is read
+ // from the opposite bank on the next field.
+ reg compatibility_css_raster[0:16383];
+ reg compatibility_css_capture_bank=0;
+ reg compatibility_css_capture_started=0;
+ reg compatibility_css_display_valid=0;
+ reg [13:0] compatibility_css_read_addr=0;
+ reg compatibility_css_read_data=0;
+ wire compatibility_css_frame_start=compatibility_raster_write&&
+       compatibility_raster_y==8'd0&&compatibility_raster_byte==5'd0;
+ wire compatibility_css_write_bank=compatibility_css_frame_start?
+       !compatibility_css_capture_bank:compatibility_css_capture_bank;
+ wire compatibility_css_display_bank=!compatibility_css_capture_bank;
+ always @(posedge clk or negedge reset_n) begin
+  if(!reset_n)begin
+   compatibility_css_capture_bank<=0;
+   compatibility_css_capture_started<=0;
+   compatibility_css_display_valid<=0;
+   compatibility_css_read_data<=0;
+  end else if(!compatibility_mode)begin
+   compatibility_css_capture_started<=0;
+   compatibility_css_display_valid<=0;
+  end else begin
+   if(compatibility_raster_write)begin
+    compatibility_css_raster[{compatibility_css_write_bank,
+                              compatibility_raster_y,
+                              compatibility_raster_byte}]<=compatibility_raster_css;
+    if(compatibility_css_frame_start)begin
+     compatibility_css_capture_bank<=!compatibility_css_capture_bank;
+     compatibility_css_capture_started<=1'b1;
+     if(compatibility_css_capture_started)
+      compatibility_css_display_valid<=1'b1;
+    end
+   end
+   compatibility_css_read_data<=compatibility_css_raster[compatibility_css_read_addr];
+  end
+ end
+ wire pixel_compatibility_css=fill_raster_css_valid?
+                              compatibility_css_read_data:fill_css;
+ wire fill_artifact_border=fill_compatibility&&fill_bit_plane&&
+                           fill_gm==3'd7&&fill_artifact_mode!=0;
+ wire [5:0] rendered_left_border=!fill_compatibility?fill_border_rgb:
+  !fill_bit_plane?6'd0:fill_artifact_border?
+  (fill_left_css?6'h3e:6'h18):(fill_left_css?6'h3f:6'h0c);
+ wire [5:0] rendered_right_border=!fill_compatibility?fill_border_rgb:
+  !fill_bit_plane?6'd0:fill_artifact_border?
+  (fill_right_css?6'h3e:6'h18):(fill_right_css?6'h3f:6'h0c);
+
+ // Vertical borders have no rendered picture row to carry CSS. Capture
+ // their actual VDG raster colours before HDMI consumes them, so the small
+ // VDG/HDMI frame-rate difference cannot make a live FF22 change sweep from
+ // the bottom border through the top of the next frame.
+ reg [5:0] compatibility_border_left[0:1023];
+ reg [5:0] compatibility_border_right_rgb[0:1023];
+ reg compatibility_border_capture_bank=0;
+ reg compatibility_border_capture_started=0;
+ reg compatibility_border_display_valid=0;
+ wire compatibility_border_frame_start=compatibility_border_write&&
+       !compatibility_border_right&&compatibility_border_y==9'd0;
+ wire compatibility_border_write_bank=compatibility_border_frame_start?
+       !compatibility_border_capture_bank:compatibility_border_capture_bank;
+ wire compatibility_border_display_bank=!compatibility_border_capture_bank;
+ always @(posedge clk or negedge reset_n) begin
+  if(!reset_n)begin
+   compatibility_border_capture_bank<=0;
+   compatibility_border_capture_started<=0;
+   compatibility_border_display_valid<=0;
+  end else if(!compatibility_mode)begin
+   compatibility_border_capture_started<=0;
+   compatibility_border_display_valid<=0;
+  end else if(compatibility_border_write)begin
+   if(compatibility_border_right)
+    compatibility_border_right_rgb[{compatibility_border_write_bank,
+                                    compatibility_border_y}]<=compatibility_border_rgb;
+   else
+    compatibility_border_left[{compatibility_border_write_bank,
+                               compatibility_border_y}]<=compatibility_border_rgb;
+   if(compatibility_border_frame_start)begin
+    compatibility_border_capture_bank<=!compatibility_border_capture_bank;
+    compatibility_border_capture_started<=1;
+    if(compatibility_border_capture_started)
+     compatibility_border_display_valid<=1;
+   end
+  end
+ end
 
  // Both terms are strictly below 640, so eleven bits cover the complete
  // 0..1278 sum.  Keeping this at fourteen bits needlessly lengthened the
@@ -363,8 +474,8 @@ module gime_scanline_buffer #(
     end else decoded_index=decoded_pixel?1:0;
    end
   end else if(fill_bit_plane) begin
-   decoded_code=fill_cres==0?(decoded_index[0]?vdg_code({fill_css,2'b0}):0):
-                              vdg_code({fill_css,decoded_index[1:0]});
+   decoded_code=fill_cres==0?(decoded_index[0]?vdg_code({pixel_compatibility_css,2'b0}):0):
+                              vdg_code({pixel_compatibility_css,decoded_index[1:0]});
   end else if(character[7]) begin
    // PIA1 PB4 is both GM0 and the VDG INT/EXT selection used by the CoCo:
    // low selects SG4, high selects SG6.  Bits are ordered top-to-bottom as
@@ -375,18 +486,18 @@ module gime_scanline_buffer #(
     if(glyph_line<4)semigraphics_pixel=source_x[2]?character[4]:character[5];
     else if(glyph_line<8)semigraphics_pixel=source_x[2]?character[2]:character[3];
     else semigraphics_pixel=source_x[2]?character[0]:character[1];
-    semigraphics_color={fill_css,character[7:6]};
+    semigraphics_color={pixel_compatibility_css,character[7:6]};
    end else begin
     if(glyph_line<6)semigraphics_pixel=source_x[2]?character[2]:character[3];
     else semigraphics_pixel=source_x[2]?character[0]:character[1];
     semigraphics_color=character[6:4];
    end
    decoded_code=semigraphics_pixel?vdg_code(semigraphics_color):
-                                    (fill_css?6'd4:6'd2);
+                                    (pixel_compatibility_css?6'd4:6'd2);
   end else begin
    decoded_pixel=(~decoded_pixel)^inverse_character;
-   decoded_code=decoded_pixel?vdg_code(fill_css?3'd7:3'd0):
-                              (fill_css?6'd4:6'd2);
+   decoded_code=decoded_pixel?vdg_code(pixel_compatibility_css?3'd7:3'd0):
+                              (pixel_compatibility_css?6'd4:6'd2);
   end
  end
 
@@ -445,7 +556,7 @@ wire [3:0] advanced_dma_line=
  // fill, not treated as a mode change which aborts the renderer and flushes
  // its two immutable scanline buffers.
  wire [18:0] live_signature={artifact_mode,compatibility_mode,compatibility_an_g,
-  compatibility_gm,compatibility_css,bit_plane,hres,cres,
+  compatibility_gm,(compatibility_mode?1'b0:compatibility_css),bit_plane,hres,cres,
   compatibility_sam_mode,1'b0};
  // FF9C vertical fine scroll is a raster control, just like FF98.LPR.  It is
  // sampled when a row fill begins; changing it must not abort that fill or
@@ -540,6 +651,8 @@ reg configuration_pending=1'b1;
    dma_line_in_row<=0;dma_advance_pending<=0;upper_border_q<=0;
    c_replacement_bank_q<=0;
    artifact_bit_write_pending<=0;
+   fill_raster_css_valid<=0;
+   compatibility_css_read_addr<=0;
   end else begin
    // Bank selection is consumed only after the seven-clock request
    // coalescing interval.  Register it here so synchronized CVBS scanout tags
@@ -680,6 +793,8 @@ reg configuration_pending=1'b1;
       ((compatibility_gm==0||compatibility_gm==2||compatibility_gm==4||compatibility_gm==6)?1:0):cres;
      fill_attributes<=!compatibility_mode&&native_attributes;
      fill_gm<=compatibility_gm;fill_css<=compatibility_css;
+     fill_raster_css_valid<=compatibility_mode&&
+                            compatibility_css_display_valid;
      fill_compatibility<=compatibility_mode;fill_blink<=blink;
      fill_video_bank<=frame_video_bank;
      fill_artifact_mode<=artifact_mode;
@@ -729,11 +844,17 @@ reg configuration_pending=1'b1;
     end
     ROW_ADDRESS:begin row_address<=source_row*fill_stride;out_x<=0;source_x<=0;
      source_byte_index<=0;source_character_column<=0;
+     if(fill_compatibility)begin
+      fill_left_css<=fill_css;fill_right_css<=fill_css;
+     end
      scale_phase<=0;hdmi_out_x<=0;hdmi_filter_phase<=0;
      hdmi_filter_previous<=0;state<=LINE_ADDRESS;end
     LINE_ADDRESS:begin line_address<=fill_base+row_address;
      state<=PIXEL_ADDRESS;end
     PIXEL_ADDRESS:begin
+     if(fill_compatibility)
+      compatibility_css_read_addr<={compatibility_css_display_bank,
+                                    fill_y,source_byte_index[4:0]};
      if(!in_fill_aperture)begin
       pixel_latched<=fill_border_rgb;
       hdmi_pixel_latched<=expand_rgb222(fill_border_rgb);
@@ -783,6 +904,10 @@ reg configuration_pending=1'b1;
      text_cache_column<=source_character_column;
      text_cache_valid<=1;state<=DECODE_PIXEL;end
     DECODE_PIXEL:begin
+     if(fill_compatibility)begin
+      if(source_x==0)fill_left_css<=pixel_compatibility_css;
+      fill_right_css<=pixel_compatibility_css;
+     end
      color_index_latched<=decoded_index;color_code_latched<=decoded_code;
      state<=COLOR_LOOKUP;
     end
@@ -856,9 +981,17 @@ reg configuration_pending=1'b1;
     FINALIZE_LINE:begin
       if(fill_hdmi)begin
        if(fill_h_bank)begin h_tag1<=fill_y;h_start1<={fill_video_bank,line_address};h_bytes1<=fill_row_bytes;
+        if(fill_compatibility)begin
+         h_left_border1<=rendered_left_border;
+         h_right_border1<=rendered_right_border;
+        end
         h_valid1<=1;h_dirty1<=fill_dirty;
         if(h_valid0&&h_tag0==fill_y)begin h_valid0<=0;h_dirty0<=0;end end
        else begin h_tag0<=fill_y;h_start0<={fill_video_bank,line_address};h_bytes0<=fill_row_bytes;
+        if(fill_compatibility)begin
+         h_left_border0<=rendered_left_border;
+         h_right_border0<=rendered_right_border;
+        end
         h_valid0<=1;h_dirty0<=fill_dirty;
         if(h_valid1&&h_tag1==fill_y)begin h_valid1<=0;h_dirty1<=0;end end
        h_next_bank<=!fill_h_bank;
@@ -866,17 +999,17 @@ reg configuration_pending=1'b1;
       if(fill_cvbs)begin
        case(fill_c_bank)
         2'd0:begin c_tag0<=fill_y;c_start0<={fill_video_bank,line_address};c_bytes0<=fill_row_bytes;
-         c_border0<=fill_border_rgb;
+         c_border0<=rendered_left_border;
          c_valid0<=1;c_dirty0<=fill_dirty;
          if(c_valid1&&c_tag1==fill_y)begin c_valid1<=0;c_dirty1<=0;end
          if(c_valid2&&c_tag2==fill_y)begin c_valid2<=0;c_dirty2<=0;end end
         2'd1:begin c_tag1<=fill_y;c_start1<={fill_video_bank,line_address};c_bytes1<=fill_row_bytes;
-         c_border1<=fill_border_rgb;
+         c_border1<=rendered_left_border;
          c_valid1<=1;c_dirty1<=fill_dirty;
          if(c_valid0&&c_tag0==fill_y)begin c_valid0<=0;c_dirty0<=0;end
          if(c_valid2&&c_tag2==fill_y)begin c_valid2<=0;c_dirty2<=0;end end
         default:begin c_tag2<=fill_y;c_start2<={fill_video_bank,line_address};c_bytes2<=fill_row_bytes;
-         c_border2<=fill_border_rgb;
+         c_border2<=rendered_left_border;
          c_valid2<=1;c_dirty2<=fill_dirty;
          if(c_valid0&&c_tag0==fill_y)begin c_valid0<=0;c_dirty0<=0;end
          if(c_valid1&&c_tag1==fill_y)begin c_valid1<=0;c_dirty1<=0;end end
@@ -901,6 +1034,26 @@ reg configuration_pending=1'b1;
  end
 
  reg [7:0] h_tag0_m=0,h_tag0_r=0,h_tag1_m=0,h_tag1_r=0;
+ reg border_bank_m=0,border_bank_s=0;
+ reg border_valid_m=0,border_valid_s=0;
+ reg border_read_bank=0,border_read_valid=0;
+ wire border_bank_for_read=hdmi_frame_start?border_bank_s:border_read_bank;
+ wire border_valid_for_read=hdmi_frame_start?border_valid_s:border_read_valid;
+ always @(posedge hdmi_read_clk)begin
+  border_bank_m<=compatibility_border_display_bank;
+  border_bank_s<=border_bank_m;
+  border_valid_m<=compatibility_border_display_valid;
+  border_valid_s<=border_valid_m;
+  if(hdmi_frame_start)begin
+   border_read_bank<=border_bank_s;
+   border_read_valid<=border_valid_s;
+  end
+  hdmi_vertical_left_border_data<=compatibility_border_left[
+       {border_bank_for_read,hdmi_border_raster_y}];
+  hdmi_vertical_right_border_data<=compatibility_border_right_rgb[
+       {border_bank_for_read,hdmi_border_raster_y}];
+  hdmi_vertical_border_valid<=compatibility_mode&&border_valid_for_read;
+ end
  reg h_v0_m=0,h_v0_r=0,h_v1_m=0,h_v1_r=0;
  reg h_read_bank=0,h_read_valid=0;
  reg [9:0] h_read_addr=0;
@@ -908,16 +1061,30 @@ reg configuration_pending=1'b1;
   h_read_addr<=hdmi_read_x;
   h_tag0_m<=h_tag0;h_tag0_r<=h_tag0_m;h_tag1_m<=h_tag1;h_tag1_r<=h_tag1_m;
   h_v0_m<=h_valid0;h_v0_r<=h_v0_m;h_v1_m<=h_valid1;h_v1_r<=h_v1_m;
-  if(!hdmi_display_valid)begin h_read_valid<=0;hdmi_pixel_data<=0;end
+  if((compatibility_mode&&!hdmi_picture_active)||
+     (!compatibility_mode&&!hdmi_display_valid))begin
+   h_read_valid<=0;hdmi_pixel_data<=0;hdmi_border_valid<=0;end
   else if(hdmi_read_x==0)begin
    // Select once at the physical scanline boundary.  A fill which completes
    // after pixel zero is deliberately deferred until the next scanline,
    // preventing the characteristic black-left/valid-right half line.
    if(h_v0_r&&h_tag0_r==hdmi_display_y)begin
-    h_read_bank<=0;h_read_valid<=1;hdmi_pixel_data<=hdmi_line0[h_read_addr];end
+    h_read_bank<=0;h_read_valid<=1;hdmi_pixel_data<=hdmi_line0[h_read_addr];
+    if(compatibility_mode)begin
+     hdmi_left_border_data<=h_left_border0;
+     hdmi_right_border_data<=h_right_border0;hdmi_border_valid<=1;
+    end
+   end
    else if(h_v1_r&&h_tag1_r==hdmi_display_y)begin
-    h_read_bank<=1;h_read_valid<=1;hdmi_pixel_data<=hdmi_line1[h_read_addr];end
-   else begin h_read_valid<=0;hdmi_pixel_data<=0;end
+    h_read_bank<=1;h_read_valid<=1;hdmi_pixel_data<=hdmi_line1[h_read_addr];
+    if(compatibility_mode)begin
+     hdmi_left_border_data<=h_left_border1;
+     hdmi_right_border_data<=h_right_border1;hdmi_border_valid<=1;
+    end
+   end
+   else begin h_read_valid<=0;hdmi_pixel_data<=0;hdmi_border_valid<=0;end
+  end else if(!hdmi_display_valid)begin
+   h_read_valid<=0;hdmi_pixel_data<=0;
   end else if(h_read_valid)begin
    if(h_read_bank)hdmi_pixel_data<=hdmi_line1[h_read_addr];
    else hdmi_pixel_data<=hdmi_line0[h_read_addr];
@@ -939,6 +1106,11 @@ reg configuration_pending=1'b1;
   c_tag2_m<=c_tag2;c_tag2_r<=c_tag2_m;
   c_v0_m<=c_valid0;c_v0_r<=c_v0_m;c_v1_m<=c_valid1;c_v1_r<=c_v1_m;
   c_v2_m<=c_valid2;c_v2_r<=c_v2_m;
+  // Refresh data throughout border selection; validity below still decides
+  // whether the encoder uses it. This keeps tag comparison off the register
+  // enable path without changing the selected row's border colour.
+  if(!cvbs_display_valid||cvbs_read_x==0)
+   cvbs_border_data<=c_border0;
   if(!cvbs_display_valid)begin
    // source_y is already the upcoming row throughout horizontal blank.
    // Select its bank and preload pixel zero while the encoder is still

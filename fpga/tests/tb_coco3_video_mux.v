@@ -17,6 +17,13 @@ module tb_coco3_video_mux;
     integer delay_count;
     reg [22:0] held_addr;
 
+    task wait_bus_write;
+        begin
+            @(posedge dut.e_fall);
+            repeat(2) @(posedge clk);
+        end
+    endtask
+
     coco3 dut(
         .clk(clk),.reset_n(reset_n),.cpu_reset_n(cpu_reset_n),.s2(1'b0),
         .artifact_mode(2'd0),
@@ -51,49 +58,61 @@ module tb_coco3_video_mux;
         // The mux must retain both request and address until acknowledge.
         for(delay_count=0;delay_count<12;delay_count=delay_count+1) begin
             @(posedge clk); #1;
-            if(!video_memory_request || video_memory_addr!=held_addr)
+            if(!video_memory_request || video_memory_addr!=held_addr)begin
+                $display("video request changed before ack: request=%b addr=%h expected=%h",
+                         video_memory_request,video_memory_addr,held_addr);
                 errors=errors+1;
+            end
         end
         video_memory_valid=1;
         @(posedge clk); #1;
         video_memory_valid=0;
         @(posedge clk); #1;
-        if(video_memory_request) errors=errors+1;
+        if(video_memory_request)begin
+            $display("video request stayed asserted after ack");errors=errors+1;end
 
         // Enter the ROM's CoCo-compatible startup mode.  Native LPR=000 is
         // one raster per row, but compatible alpha text must retain the
         // MC6847 twelve-raster character cell.
         cpu_addr=16'hff90; cpu_data=8'hc0; cpu_rw_n=0;
-        repeat(100) @(posedge clk);
+        wait_bus_write();
         cpu_rw_n=1;
         repeat(3) @(posedge clk); #1;
         if(!dut.compatibility_mode ||
            dut.effective_lines_per_row_code!=3'b111 ||
-           dut.effective_bit_plane!=1'b0 || dut.effective_hres!=3'b000)
+           dut.effective_bit_plane!=1'b0 || dut.effective_hres!=3'b000)begin
+            $display("compat startup mode=%b LPR=%b plane=%b HRES=%b",
+                     dut.compatibility_mode,dut.effective_lines_per_row_code,
+                     dut.effective_bit_plane,dut.effective_hres);
             errors=errors+1;
+        end
 
         // Program SAM for 128x96 four-colour memory geometry (V=101), then
         // program PIA1 PB for A/G=1, GM=110.  SAM controls row progression
         // independently of the live VDG decode pins, so this deliberate
         // mismatch must repeat each of the 96 source rows twice.
         cpu_addr=16'hffc1; cpu_data=8'h00; cpu_rw_n=0;
-        repeat(100) @(posedge clk);
+        wait_bus_write();
         cpu_addr=16'hffc2;
-        repeat(100) @(posedge clk);
+        wait_bus_write();
         cpu_addr=16'hffc5;
-        repeat(100) @(posedge clk);
+        wait_bus_write();
         cpu_addr=16'hff22; cpu_data=8'hf8; cpu_rw_n=0;
-        repeat(100) @(posedge clk);
+        wait_bus_write();
         cpu_addr=16'hff23; cpu_data=8'h04;
-        repeat(100) @(posedge clk);
+        wait_bus_write();
         cpu_addr=16'hff22; cpu_data=8'he0;
-        repeat(100) @(posedge clk);
+        wait_bus_write();
         cpu_rw_n=1;
         repeat(3) @(posedge clk); #1;
         if(dut.effective_bit_plane!=1'b1 || dut.effective_hres!=3'd2 ||
            dut.effective_cres!=2'd1 || dut.effective_lines_per_row_code!=3'd1 ||
-           dut.sam_video_mode!=3'd5)
+           dut.sam_video_mode!=3'd5)begin
+            $display("compat SAM mode plane=%b HRES=%b CRES=%b LPR=%b SAM=%b",
+                     dut.effective_bit_plane,dut.effective_hres,dut.effective_cres,
+                     dut.effective_lines_per_row_code,dut.sam_video_mode);
             errors=errors+1;
+        end
         if(errors==0) $display("tb_coco3_video_mux PASS");
         else $display("tb_coco3_video_mux FAIL: %0d",errors);
         $finish;

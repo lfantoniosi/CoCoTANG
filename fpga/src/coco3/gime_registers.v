@@ -9,7 +9,7 @@ module gime_registers #(
     input serint_n, input keyint_n, input cart_n,
     input hs_n, input fs_n,
     output reg [7:0] core_rdata, output core_data_oe,
-    output irq_assert, output firq_assert, output reg fast_mode,
+    output irq_assert, output firq_assert, output wire fast_mode,
     output reg [2:0] sam_s,
     output cpu_mem_read, output cpu_mem_write, output cpu_mem_is_rom,
     output [22:0] cpu_mem_addr,
@@ -42,6 +42,8 @@ module gime_registers #(
     reg [1:0] disto_mmu [0:15];
     reg [1:0] disto_video_bank;
     reg ram_mode;
+    reg selected_fast_mode;
+    reg speed_explicit;
     integer i;
 
     wire gime_selected = cpu_addr >= 16'hff90 && cpu_addr <= 16'hffbf;
@@ -118,6 +120,10 @@ module gime_registers #(
     assign irq_assert = init0[5] && |irq_pending;
     assign firq_assert = init0[4] && |firq_pending;
     assign compatibility_mode = init0[7];
+    // Preserve the native CoCo 3 reset speed. Before the first explicit
+    // $FFD8/$FFD9 write, compatibility software sees the slow CoCo 2 rate.
+    assign fast_mode=selected_fast_mode&&
+                     (!compatibility_mode||speed_explicit);
     assign video_bank = DISTO_2MB ? disto_video_bank : 2'b00;
     assign mmu_task0_page_debug=mmu[{1'b0,cpu_block}];
     assign mmu_task1_page_debug=mmu[{1'b1,cpu_block}];
@@ -204,7 +210,8 @@ module gime_registers #(
             prior_cart_n <= 1'b1;
             prior_hs_n <= 1'b1;
             prior_fs_n <= 1'b1;
-            fast_mode <= 1'b1;
+            selected_fast_mode <= 1'b1;
+            speed_explicit <= 1'b0;
             vmode <= 8'h00;
             vres <= 8'h00;
             border_color <= 6'd0;
@@ -284,8 +291,14 @@ module gime_registers #(
 
             if (e_fall && !cpu_rw_n) begin
                 // CoCo speed-control POKEs remain available in native mode.
-                if (cpu_addr == 16'hffd8) fast_mode <= 1'b0;
-                if (cpu_addr == 16'hffd9) fast_mode <= 1'b1;
+                if (cpu_addr == 16'hffd8) begin
+                    selected_fast_mode <= 1'b0;
+                    speed_explicit <= 1'b1;
+                end
+                if (cpu_addr == 16'hffd9) begin
+                    selected_fast_mode <= 1'b1;
+                    speed_explicit <= 1'b1;
+                end
                 // Legacy SAM controls retained by the GIME.  V0:V2 still
                 // control compatibility-video DMA geometry independently of
                 // the MC6847 GM pins on PIA1.  Games such as Mega-Bug use

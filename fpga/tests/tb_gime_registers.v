@@ -287,10 +287,14 @@ module tb_gime_registers;
             errors=errors+1;
         cpu_rw_n=1;
 
-        // Native CoCo 3 starts fast and retains the standard speed POKEs.
-        if (!fast_mode) errors=errors+1;
-        write_reg(16'hffd8,8'h00); if (fast_mode) errors=errors+1;
+        // Before a speed POKE, VDG uses the slow CoCo rate. Native mode
+        // retains its existing fast reset speed. Explicit POKEs win in both.
+        if (fast_mode) errors=errors+1;
+        write_reg(16'hff90,8'h40); if (!fast_mode) errors=errors+1;
+        write_reg(16'hff90,8'hc0); if (fast_mode) errors=errors+1;
         write_reg(16'hffd9,8'h00); if (!fast_mode) errors=errors+1;
+        write_reg(16'hffd8,8'h00); if (fast_mode) errors=errors+1;
+        write_reg(16'hff90,8'h40); if (fast_mode) errors=errors+1;
 
         // Enable GIME IRQ plus keyboard source, latch its falling edge, then
         // acknowledge it by reading FF92 at E falling.

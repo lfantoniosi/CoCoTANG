@@ -4,14 +4,23 @@ module tb_gime_scanline_buffer;
  reg [95:0] palettes=0;reg [31:0] memory_data=32'h1b1b1b1b;
  reg memory_valid=0;wire memory_request;wire [22:0] memory_addr;
  wire [23:0] hdmi_pixel;wire [5:0] cvbs_pixel;
+ wire [5:0] hdmi_left_border,hdmi_right_border;wire hdmi_border_valid;
+ wire [5:0] hdmi_vertical_left_border,hdmi_vertical_right_border;
+ wire hdmi_vertical_border_valid;
  integer transactions=0,errors=0,i,timeout;
  integer responder_delay=0;reg slow_memory=0;
  reg [1:0] responder_state=0;reg compatibility_mode=0,compatibility_an_g=1;
  reg [2:0] compatibility_gm=0,compatibility_sam_mode=0;
+ reg compatibility_css=0;reg [18:0] signature_without_css=0;
  reg [3:0] hres=7;reg [1:0] cres=1;
  reg bit_plane=1;reg [2:0] lpr=0;reg [3:0] vertical_scroll=0;
  reg [18:0] screen_base=0;reg [1:0] video_bank=0;
  reg [7:0] horizontal_offset=0;reg cpu_write_strobe=0;reg [20:0] cpu_write_addr=0;
+ reg compatibility_raster_write=0;reg [7:0] compatibility_raster_y=0;
+ reg [4:0] compatibility_raster_byte=0;reg compatibility_raster_css=0;
+ reg compatibility_border_write=0,compatibility_border_right=0;
+ reg [8:0] compatibility_border_y=0,hdmi_border_raster_y=0;
+ reg [5:0] compatibility_border_rgb=0;reg hdmi_frame_start=0;
  reg hdmi_prefetch_valid=1,cvbs_prefetch_valid=0;
  reg [7:0] hdmi_prefetch_y=0,cvbs_prefetch_y=0;
  reg hdmi_display_valid=0,hdmi_picture_active=0;reg [7:0] hdmi_display_y=0;
@@ -25,14 +34,30 @@ module tb_gime_scanline_buffer;
   .horizontal_offset(horizontal_offset),.palettes(palettes),
   .border_rgb(6'd0),
   .compatibility_mode(compatibility_mode),.compatibility_an_g(compatibility_an_g),
-  .compatibility_gm(compatibility_gm),.compatibility_css(1'b0),
+  .compatibility_gm(compatibility_gm),.compatibility_css(compatibility_css),
   .compatibility_sam_mode(compatibility_sam_mode),
+  .compatibility_raster_write(compatibility_raster_write),
+  .compatibility_raster_y(compatibility_raster_y),
+  .compatibility_raster_byte(compatibility_raster_byte),
+  .compatibility_raster_css(compatibility_raster_css),
+  .compatibility_border_write(compatibility_border_write),
+  .compatibility_border_right(compatibility_border_right),
+  .compatibility_border_y(compatibility_border_y),
+  .compatibility_border_rgb(compatibility_border_rgb),
   .artifact_mode(2'd0),.blink(1'b0),
   .cpu_write_strobe(cpu_write_strobe),.cpu_write_addr(cpu_write_addr),
   .hdmi_read_clk(hdmi_clk),.hdmi_read_x(10'd0),.hdmi_display_y(hdmi_display_y),
   .hdmi_display_valid(hdmi_display_valid),.hdmi_prefetch_y(hdmi_prefetch_y),
   .hdmi_picture_active(hdmi_picture_active),
   .hdmi_prefetch_valid(hdmi_prefetch_valid),.hdmi_pixel_data(hdmi_pixel),
+  .hdmi_left_border_data(hdmi_left_border),
+  .hdmi_right_border_data(hdmi_right_border),
+  .hdmi_border_valid(hdmi_border_valid),
+  .hdmi_vertical_left_border_data(hdmi_vertical_left_border),
+  .hdmi_vertical_right_border_data(hdmi_vertical_right_border),
+  .hdmi_vertical_border_valid(hdmi_vertical_border_valid),
+  .hdmi_frame_start(hdmi_frame_start),
+  .hdmi_border_raster_y(hdmi_border_raster_y),
   .cvbs_read_clk(cvbs_clk),.cvbs_read_x(cvbs_display_x),.cvbs_display_y(cvbs_display_y),
   .cvbs_display_valid(cvbs_display_valid),.cvbs_prefetch_y(cvbs_prefetch_y),
   .cvbs_prefetch_valid(cvbs_prefetch_valid),.cvbs_pixel_data(cvbs_pixel),
@@ -548,6 +573,95 @@ module tb_gime_scanline_buffer;
    $display("compatibility font polarity wrong at stored zero");errors=errors+1;end
   release dut.source_x;release dut.fill_gm;release dut.character;
   release dut.fill_bit_plane;release dut.fill_compatibility;release dut.glyph_cache;
+
+  // A VDG CSS write changes individual bytes without invalidating a row.
+  compatibility_mode=1;compatibility_css=0;#1;
+  signature_without_css=dut.live_signature;
+  compatibility_css=1;#1;
+  if(dut.live_signature!==signature_without_css)begin
+   $display("VDG CSS still invalidates complete cached lines");errors=errors+1;end
+  for(i=0;i<32;i=i+1)begin
+   compatibility_raster_y=8'd7;compatibility_raster_byte=i[4:0];
+   compatibility_raster_css=i>=16;compatibility_raster_write=1;
+   @(posedge clk);#1;
+  end
+  compatibility_raster_write=0;
+  force dut.fill_raster_css_valid=1'b1;
+  force dut.compatibility_css_read_addr={1'b0,8'd7,5'd0};
+  repeat(2)@(posedge clk);#1;
+  if(dut.pixel_compatibility_css!==1'b0)begin
+   $display("VDG CSS raster lost first-half value");errors=errors+1;end
+  release dut.compatibility_css_read_addr;
+  force dut.compatibility_css_read_addr={1'b0,8'd7,5'd31};
+  repeat(2)@(posedge clk);#1;
+  if(dut.pixel_compatibility_css!==1'b1)begin
+   $display("VDG CSS raster lost second-half value");errors=errors+1;end
+  release dut.compatibility_css_read_addr;release dut.fill_raster_css_valid;
+
+  force dut.fill_compatibility=1'b1;
+  force dut.fill_bit_plane=1'b1;
+  force dut.fill_gm=3'd2;
+  force dut.fill_artifact_mode=2'd0;
+  force dut.fill_left_css=1'b0;
+  force dut.fill_right_css=1'b1;
+  #1;
+  if(dut.rendered_left_border!==6'h0c||dut.rendered_right_border!==6'h3f)begin
+   $display("VDG row endpoint border colours are wrong");errors=errors+1;end
+  release dut.fill_compatibility;release dut.fill_bit_plane;
+  release dut.fill_gm;release dut.fill_artifact_mode;
+  release dut.fill_left_css;release dut.fill_right_css;
+
+  // Hires still clears its read during the horizontal border. VDG keeps
+  // the selected row border there even though no picture pixel is valid.
+  force dut.h_v0_r=1'b1;force dut.h_tag0_r=8'd7;
+  force dut.h_left_border0=6'h0c;force dut.h_right_border0=6'h3f;
+  hdmi_display_y=7;hdmi_picture_active=1;hdmi_display_valid=0;
+  compatibility_mode=0;
+  @(posedge hdmi_clk);#1;
+  if(hdmi_border_valid)begin
+   $display("hires border unexpectedly selected VDG row metadata");errors=errors+1;end
+  compatibility_mode=1;
+  @(posedge hdmi_clk);#1;
+  if(!hdmi_border_valid||hdmi_left_border!==6'h0c||hdmi_right_border!==6'h3f)begin
+   $display("VDG border metadata was lost outside picture aperture");errors=errors+1;end
+  hdmi_picture_active=0;
+  @(posedge hdmi_clk);#1;
+  if(hdmi_border_valid)begin
+   $display("VDG border metadata remained valid outside raster row");errors=errors+1;end
+  release dut.h_v0_r;release dut.h_tag0_r;
+  release dut.h_left_border0;release dut.h_right_border0;
+
+  compatibility_raster_y=0;compatibility_raster_byte=0;
+  compatibility_raster_css=0;compatibility_raster_write=1;
+  @(posedge clk);#1;compatibility_raster_write=0;
+  if(dut.compatibility_css_display_valid!==1'b0)begin
+   $display("partial VDG field became visible");errors=errors+1;end
+  compatibility_raster_write=1;
+  @(posedge clk);#1;compatibility_raster_write=0;
+  if(dut.compatibility_css_display_valid!==1'b1)begin
+   $display("complete VDG field was not published");errors=errors+1;end
+
+  // Vertical border history is committed only after a complete VDG field.
+  compatibility_border_y=0;compatibility_border_rgb=6'h0c;
+  compatibility_border_write=1;
+  @(posedge clk);#1;compatibility_border_write=0;
+  if(dut.compatibility_border_display_valid!==1'b0)begin
+   $display("partial VDG border field became visible");errors=errors+1;end
+  compatibility_border_y=240;compatibility_border_rgb=6'h3f;
+  compatibility_border_write=1;
+  @(posedge clk);#1;compatibility_border_write=0;
+  compatibility_border_right=1;compatibility_border_rgb=6'h0c;
+  compatibility_border_write=1;
+  @(posedge clk);#1;compatibility_border_write=0;
+  compatibility_border_right=0;compatibility_border_y=0;
+  compatibility_border_write=1;
+  @(posedge clk);#1;compatibility_border_write=0;
+  hdmi_border_raster_y=240;hdmi_frame_start=1;
+  repeat(4)@(posedge hdmi_clk);#1;hdmi_frame_start=0;
+  repeat(2)@(posedge hdmi_clk);#1;
+  if(!hdmi_vertical_border_valid||hdmi_vertical_left_border!==6'h3f||
+     hdmi_vertical_right_border!==6'h0c)begin
+   $display("completed VDG vertical border field was not retained");errors=errors+1;end
 
   if(errors==0)$display("tb_gime_scanline_buffer PASS");
   else $display("tb_gime_scanline_buffer FAIL: %0d",errors);

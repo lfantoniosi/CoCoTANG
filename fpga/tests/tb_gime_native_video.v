@@ -4,6 +4,7 @@ module tb_gime_native_video #(
 );
     reg clk=0,reset_n=0,video_50hz=0;
     wire hs_n,fs_n,hborder_irq_n,hblank,vblank;
+    wire compatibility_sample;
     integer errors=0;
     integer raster_ticks=0;
     integer frames=0;
@@ -13,12 +14,17 @@ module tb_gime_native_video #(
 
     gime_native_video #(.PAL_MACHINE(PAL_MACHINE)) dut(
         .clk(clk),.reset_n(reset_n),.video_50hz(video_50hz),
-        .active_height(8'd192),
+        .active_height(8'd192),.compatibility_mode(1'b0),
+        .compatibility_css(1'b0),
         .pixel_rgb(6'd0),.hs_n(hs_n),.fs_n(fs_n),
+        .compatibility_sample(compatibility_sample),
         .hborder_irq_n(hborder_irq_n),
         .hblank(hblank),.vblank(vblank),.red(),.green(),.blue());
 
     always @(posedge clk) begin
+        if(reset_n&&compatibility_sample)begin
+            $display("native hires emitted a VDG CSS sample");errors=errors+1;
+        end
         if (reset_n && dut.raster_tick) begin
             raster_ticks=raster_ticks+1;
             // Sequential outputs reflect the preceding dot here.

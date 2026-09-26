@@ -64,6 +64,14 @@ module coco3 #(
     input       [7:0] hdmi_prefetch_y,
     input             hdmi_prefetch_valid,
     output     [23:0] hdmi_pixel_data,
+    output      [5:0] hdmi_left_border_data,
+    output      [5:0] hdmi_right_border_data,
+    output            hdmi_border_valid,
+    output      [5:0] hdmi_vertical_left_border_data,
+    output      [5:0] hdmi_vertical_right_border_data,
+    output            hdmi_vertical_border_valid,
+    input             hdmi_frame_start,
+    input       [8:0] hdmi_border_raster_y,
     input             cvbs_read_clk,
     input       [9:0] cvbs_source_x,
     input       [7:0] cvbs_source_y,
@@ -281,6 +289,14 @@ module coco3 #(
     // CVBS read clocks; SDRAM fetch, tags and mode/address logic are shared.
     wire [7:0] debug_dma_next_y,debug_fill_y;
     wire [3:0] debug_scanline_state;
+    wire compatibility_raster_sample;
+    wire compatibility_raster_css;
+    wire [7:0] compatibility_raster_y;
+    wire [4:0] compatibility_raster_byte;
+    wire compatibility_border_sample;
+    wire compatibility_border_right;
+    wire [8:0] compatibility_border_y;
+    wire [5:0] compatibility_border_sample_rgb;
     gime_scanline_buffer #(.NATIVE_HDMI_640(NATIVE_HDMI_640)) scanlines (
         .clk(clk),.reset_n(core_reset_n),
         .bit_plane(effective_bit_plane), .hres(effective_hres),
@@ -295,6 +311,14 @@ module coco3 #(
         .compatibility_gm(compatibility_gm),
         .compatibility_sam_mode(sam_video_mode),
         .compatibility_css(pia1_effective[3]),
+        .compatibility_raster_write(compatibility_raster_sample&&compatibility_mode),
+        .compatibility_raster_y(compatibility_raster_y),
+        .compatibility_raster_byte(compatibility_raster_byte),
+        .compatibility_raster_css(compatibility_raster_css),
+        .compatibility_border_write(compatibility_border_sample),
+        .compatibility_border_right(compatibility_border_right),
+        .compatibility_border_y(compatibility_border_y),
+        .compatibility_border_rgb(compatibility_border_sample_rgb),
         .artifact_mode(artifact_mode),
         .blink(blink_divider[25]),
         .cpu_write_strobe(video_cpu_write_strobe),
@@ -304,6 +328,14 @@ module coco3 #(
         .hdmi_picture_active(hdmi_source_picture_active),
         .hdmi_prefetch_y(hdmi_prefetch_y),.hdmi_prefetch_valid(hdmi_prefetch_valid),
         .hdmi_pixel_data(hdmi_pixel_data),
+        .hdmi_left_border_data(hdmi_left_border_data),
+        .hdmi_right_border_data(hdmi_right_border_data),
+        .hdmi_border_valid(hdmi_border_valid),
+        .hdmi_vertical_left_border_data(hdmi_vertical_left_border_data),
+        .hdmi_vertical_right_border_data(hdmi_vertical_right_border_data),
+        .hdmi_vertical_border_valid(hdmi_vertical_border_valid),
+        .hdmi_frame_start(hdmi_frame_start),
+        .hdmi_border_raster_y(hdmi_border_raster_y),
         .cvbs_read_clk(cvbs_read_clk),.cvbs_read_x(cvbs_source_x),
         .cvbs_display_y(cvbs_source_y),.cvbs_display_valid(cvbs_source_valid),
         .cvbs_prefetch_y(cvbs_prefetch_y),.cvbs_prefetch_valid(cvbs_prefetch_valid),
@@ -324,11 +356,21 @@ module coco3 #(
     wire [8:0] debug_native_y;
     gime_native_video #(.PAL_MACHINE(PAL_MACHINE)) native_video(
         .clk(clk),.reset_n(core_reset_n),.video_50hz(video_50hz),
-        .active_height(active_height),
+        .active_height(active_height),.compatibility_mode(compatibility_mode),
+        .compatibility_css(pia1_effective[3]),
+        .compatibility_border_rgb(border_rgb),
         .pixel_rgb({hdmi_pixel_data[23:22],hdmi_pixel_data[15:14],
                     hdmi_pixel_data[7:6]}),.hs_n(hs_n),.fs_n(fs_n),
         .hborder_irq_n(hborder_irq_n),
         .hblank(hblank),.vblank(vblank),.debug_raster_y(debug_native_y),
+        .compatibility_sample(compatibility_raster_sample),
+        .compatibility_sample_css(compatibility_raster_css),
+        .compatibility_sample_y(compatibility_raster_y),
+        .compatibility_sample_byte(compatibility_raster_byte),
+        .compatibility_border_sample(compatibility_border_sample),
+        .compatibility_border_right(compatibility_border_right),
+        .compatibility_border_y(compatibility_border_y),
+        .compatibility_border_sample_rgb(compatibility_border_sample_rgb),
         .red(red),.green(green),.blue(blue));
 
     // Snapshot renderer/raster phase on each video-register write.  This is

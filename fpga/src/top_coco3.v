@@ -153,6 +153,11 @@ module top_coco3 #(
     wire [5:0] border_rgb,cvbs_pixel_data,cvbs_border_data;
     wire cvbs_border_valid;
     wire [23:0] hdmi_pixel_data;
+    wire [5:0] hdmi_left_border_data,hdmi_right_border_data;
+    wire hdmi_border_valid;
+    wire [5:0] hdmi_vertical_left_border_data,hdmi_vertical_right_border_data;
+    wire hdmi_vertical_border_valid,hdmi_frame_start;
+    wire [8:0] hdmi_border_raster_y;
     wire [7:0] native_red,native_green,native_blue;
     wire native_hblank,native_vblank;
     wire video_memory_request,video_memory_valid;
@@ -231,7 +236,15 @@ module top_coco3 #(
         .hdmi_source_picture_active(hdmi_source_picture_active),
         .hdmi_prefetch_y(hdmi_prefetch_y),
         .hdmi_prefetch_valid(hdmi_prefetch_valid),
-        .hdmi_pixel_data(hdmi_pixel_data),.cvbs_read_clk(clk135),
+        .hdmi_pixel_data(hdmi_pixel_data),
+        .hdmi_left_border_data(hdmi_left_border_data),
+        .hdmi_right_border_data(hdmi_right_border_data),
+        .hdmi_border_valid(hdmi_border_valid),.cvbs_read_clk(clk135),
+        .hdmi_vertical_left_border_data(hdmi_vertical_left_border_data),
+        .hdmi_vertical_right_border_data(hdmi_vertical_right_border_data),
+        .hdmi_vertical_border_valid(hdmi_vertical_border_valid),
+        .hdmi_frame_start(hdmi_frame_start),
+        .hdmi_border_raster_y(hdmi_border_raster_y),
         .cvbs_source_x(cvbs_source_x),.cvbs_source_y(cvbs_source_y),
         .cvbs_source_valid(cvbs_source_valid),
         .cvbs_prefetch_y(cvbs_prefetch_y),
@@ -597,10 +610,20 @@ module top_coco3 #(
         .video_50hz(video_50hz),
         .overlay_enable(overlay_visible),.active_height(active_height),
         .compatibility_mode(compatibility_video),
-        .border_rgb(visible_border_rgb),.pixel_data(visible_hdmi_pixel),
+        .border_rgb(visible_border_rgb),
+        .row_left_border_rgb(hdmi_left_border_data),
+        .row_right_border_rgb(hdmi_right_border_data),
+        .row_border_valid(compatibility_video&&!startup_video_blank&&hdmi_border_valid),
+        .vertical_left_border_rgb(hdmi_vertical_left_border_data),
+        .vertical_right_border_rgb(hdmi_vertical_right_border_data),
+        .vertical_border_valid(compatibility_video&&!startup_video_blank&&
+                               hdmi_vertical_border_valid),
+        .pixel_data(visible_hdmi_pixel),
         .source_x(hdmi_source_x),.source_y(hdmi_source_y),
         .source_valid(hdmi_source_valid),
         .source_picture_active(hdmi_source_picture_active),
+        .source_frame_start(hdmi_frame_start),
+        .source_border_raster_y(hdmi_border_raster_y),
         .prefetch_y(hdmi_prefetch_y),
         .prefetch_valid(hdmi_prefetch_valid),
         .active_video_50hz(hdmi_video_50hz),.tmds_clk_p(tmds_clk_p),

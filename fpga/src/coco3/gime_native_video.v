@@ -2,10 +2,20 @@ module gime_native_video #(
     parameter integer PAL_MACHINE = 0
 ) (
     input clk, input reset_n, input video_50hz, input [7:0] active_height,
+    input compatibility_mode, input compatibility_css,
+    input [5:0] compatibility_border_rgb,
     input [5:0] pixel_rgb,
-    output reg hs_n, output reg fs_n, output reg hborder_irq_n,
-    output reg hblank, output reg vblank,
+    output wire hs_n, output wire fs_n, output wire hborder_irq_n,
+    output wire hblank, output wire vblank,
     output [8:0] debug_raster_y,
+    output reg compatibility_sample,
+    output reg compatibility_sample_css,
+    output reg [7:0] compatibility_sample_y,
+    output reg [4:0] compatibility_sample_byte,
+    output reg compatibility_border_sample,
+    output reg compatibility_border_right,
+    output reg [8:0] compatibility_border_y,
+    output reg [5:0] compatibility_border_sample_rgb,
     output [7:0] red, output [7:0] green, output [7:0] blue
 );
     // 910 GIME dots occupy exactly two 858-dot 27 MHz HDMI lines.  With the
@@ -23,6 +33,8 @@ module gime_native_video #(
     reg raster_tick=0;
     reg [9:0] x=0;
     reg [8:0] y=0;
+    reg native_hs_n=1,native_fs_n=1,native_hborder_irq_n=1;
+    reg native_hblank=1,native_vblank=1;
     // The body is positioned inside the 240 visible raster lines, not the
     // complete 262.5-line field.  The omitted vertical-blank interval is
     // where HDMI is also outside its 480-line visible area.  Centering in
@@ -36,23 +48,51 @@ module gime_native_video #(
     wire [9:0] line_last_dot = PAL_MACHINE ? 10'd911 : 10'd909;
     wire [9:0] half_line_dot = PAL_MACHINE ? 10'd455 : 10'd454;
     wire [8:0] frame_last_line = video_50hz ? 9'd312 : 9'd262;
+    // The CoCo 3 hires path keeps the HDMI-locked 262.5-line raster above.
+    // VDG software counts slow E cycles from FS and needs complete 912-tick
+    // lines. Run that clock independently so switching to VDG never changes
+    // the native raster cadence or BOINK's border interrupts.
+    localparam [31:0] COMPATIBILITY_STEP = PAL_MACHINE ?
+        32'd566199971 : 32'd569408471;
+    reg [31:0] compatibility_accumulator=0;
+    wire [32:0] compatibility_sum=
+        {1'b0,compatibility_accumulator}+{1'b0,COMPATIBILITY_STEP};
+    reg compatibility_raster_tick=0;
+    reg [9:0] compatibility_x=0;
+    reg [8:0] compatibility_y=0;
+    reg [3:0] compatibility_sample_phase=0;
+    reg compatibility_hs_n=1,compatibility_fs_n=1;
+    reg compatibility_hborder_irq_n=1;
+    reg compatibility_hblank=1,compatibility_vblank=1;
+    wire [8:0] compatibility_top=top+9'd16;
+    wire [8:0] compatibility_bottom=
+        compatibility_top+{1'b0,active_height};
+    wire [8:0] compatibility_last_line=video_50hz?9'd311:9'd261;
+    localparam [9:0] COMPATIBILITY_SAMPLE_START=10'd230;
+    localparam [9:0] COMPATIBILITY_SAMPLE_END=10'd742;
+    assign hs_n=compatibility_mode?compatibility_hs_n:native_hs_n;
+    assign fs_n=compatibility_mode?compatibility_fs_n:native_fs_n;
+    assign hborder_irq_n=compatibility_mode?
+        compatibility_hborder_irq_n:native_hborder_irq_n;
+    assign hblank=compatibility_mode?compatibility_hblank:native_hblank;
+    assign vblank=compatibility_mode?compatibility_vblank:native_vblank;
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
             accumulator<=0; raster_tick<=0; x<=0; y<=0;
-            hs_n<=1; fs_n<=1;hborder_irq_n<=1;
-            hblank<=1; vblank<=1;
+            native_hs_n<=1; native_fs_n<=1;native_hborder_irq_n<=1;
+            native_hblank<=1; native_vblank<=1;
         end else begin
             accumulator<=sum[31:0];
             raster_tick<=sum[32];
             if (raster_tick) begin
-                hs_n<=x>=10'd64; fs_n<=y>=9'd3;
-                hblank<=x<10'd200 || x>=10'd840;
-                vblank<=y<top || y>=top+active_height;
+                native_hs_n<=x>=10'd64; native_fs_n<=y>=9'd3;
+                native_hblank<=x<10'd200 || x>=10'd840;
+                native_vblank<=y<top || y>=top+active_height;
                 // GIME interrupt bits 4/3 are border events, not the raw
                 // HSYNC/FSYNC pins. HBORD asserts one 1.79 MHz CPU cycle
                 // before the 640-dot body ends and releases at body start.
-                if(x==10'd830)hborder_irq_n<=1'b0;
-                else if(x==10'd200)hborder_irq_n<=1'b1;
+                if(x==10'd830)native_hborder_irq_n<=1'b0;
+                else if(x==10'd200)native_hborder_irq_n<=1'b1;
                 // A 480p frame is 525 HDMI lines, or 262.5 native line
                 // periods.  End the final native row after a half-line so
                 // FS/HBORD timing has the same frame cadence as scanout.
@@ -66,8 +106,78 @@ module gime_native_video #(
             end
         end
     end
+    always @(posedge clk or negedge reset_n) begin
+        if (!reset_n) begin
+            compatibility_accumulator<=0;
+            compatibility_raster_tick<=0;
+            compatibility_x<=0;compatibility_y<=0;
+            compatibility_hs_n<=1;compatibility_fs_n<=1;
+            compatibility_hborder_irq_n<=1;
+            compatibility_hblank<=1;compatibility_vblank<=1;
+            compatibility_sample<=0;compatibility_sample_css<=0;
+            compatibility_sample_y<=0;compatibility_sample_byte<=0;
+            compatibility_sample_phase<=0;
+            compatibility_border_sample<=0;
+            compatibility_border_right<=0;
+            compatibility_border_y<=0;
+            compatibility_border_sample_rgb<=0;
+        end else begin
+            compatibility_sample<=0;
+            compatibility_border_sample<=0;
+            compatibility_accumulator<=compatibility_sum[31:0];
+            compatibility_raster_tick<=compatibility_sum[32];
+            if (compatibility_raster_tick) begin
+                compatibility_hs_n<=compatibility_x>=10'd66;
+                compatibility_fs_n<=compatibility_y>=9'd3;
+                compatibility_hblank<=compatibility_x<10'd200 ||
+                                      compatibility_x>=10'd840;
+                compatibility_vblank<=compatibility_y<top ||
+                                      compatibility_y>=top+active_height;
+                if(compatibility_x==10'd830)
+                    compatibility_hborder_irq_n<=0;
+                else if(compatibility_x==10'd200)
+                    compatibility_hborder_irq_n<=1;
+                if(compatibility_mode&&
+                   (compatibility_x==10'd200||compatibility_x==10'd840))begin
+                    compatibility_border_sample<=1;
+                    compatibility_border_right<=compatibility_x==10'd840;
+                    compatibility_border_y<=compatibility_y;
+                    compatibility_border_sample_rgb<=compatibility_border_rgb;
+                end
+                if(compatibility_x==COMPATIBILITY_SAMPLE_START)begin
+                    compatibility_sample_phase<=0;
+                    compatibility_sample_byte<=0;
+                    if(compatibility_mode&&compatibility_y>=compatibility_top&&
+                       compatibility_y<compatibility_bottom)begin
+                        compatibility_sample<=1;
+                        compatibility_sample_css<=compatibility_css;
+                        compatibility_sample_y<=compatibility_y-compatibility_top;
+                    end
+                end else if(compatibility_x>COMPATIBILITY_SAMPLE_START&&
+                            compatibility_x<COMPATIBILITY_SAMPLE_END)begin
+                    if(compatibility_sample_phase==4'd15)begin
+                        compatibility_sample_phase<=0;
+                        compatibility_sample_byte<=
+                            compatibility_sample_byte+1'b1;
+                        if(compatibility_mode&&compatibility_y>=compatibility_top&&
+                           compatibility_y<compatibility_bottom)begin
+                            compatibility_sample<=1;
+                            compatibility_sample_css<=compatibility_css;
+                            compatibility_sample_y<=compatibility_y-compatibility_top;
+                        end
+                    end else compatibility_sample_phase<=
+                        compatibility_sample_phase+1'b1;
+                end
+                if(compatibility_x==10'd911)begin
+                    compatibility_x<=0;
+                    compatibility_y<=compatibility_y==compatibility_last_line?
+                                     0:compatibility_y+1'b1;
+                end else compatibility_x<=compatibility_x+1'b1;
+            end
+        end
+    end
     assign red={4{pixel_rgb[5:4]}};
     assign green={4{pixel_rgb[3:2]}};
     assign blue={4{pixel_rgb[1:0]}};
-    assign debug_raster_y=y;
+    assign debug_raster_y=compatibility_mode?compatibility_y:y;
 endmodule

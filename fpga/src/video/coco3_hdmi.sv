@@ -31,9 +31,14 @@ module coco3_hdmi #(
     input logic video_50hz,
     input logic [7:0] active_height,input logic compatibility_mode,
     input logic [5:0] border_rgb,
+    input logic [5:0] row_left_border_rgb,input logic [5:0] row_right_border_rgb,
+    input logic row_border_valid,
+    input logic [5:0] vertical_left_border_rgb,input logic [5:0] vertical_right_border_rgb,
+    input logic vertical_border_valid,
     input logic [23:0] pixel_data,
     output logic [9:0] source_x,output logic [7:0] source_y,
     output logic source_valid,output logic source_picture_active,
+    output logic source_frame_start,output logic [8:0] source_border_raster_y,
     output logic [7:0] prefetch_y,
     output logic prefetch_valid,
     output logic active_video_50hz,
@@ -113,6 +118,10 @@ module coco3_hdmi #(
         // borders.  Raster-time GIME writes happen there, and the scanline
         // cache must distinguish them from vertical-border frame setup.
         source_picture_active=(y>=top && y<top+doubled_height);
+        source_frame_start=(x==0 && y==0);
+        // The VDG raster's picture starts at top/2+15 (NTSC) or +16 (PAL).
+        // Preserve that offset in the vertical borders as well.
+        source_border_raster_y={1'b0,y[9:1]}+(active_50hz_s?9'd16:9'd15);
         // Native GIME can either retain all 640 dots for sharp 80-column
         // text, or use the aspect-correct RGB888 5:4 reduction. VDG and
         // artifact modes always use the centered 512-dot aperture. In the
@@ -167,7 +176,23 @@ module coco3_hdmi #(
     wire [23:0] expanded_border={{4{border_d[5:4]}},
                                  {4{border_d[3:2]}},
                                  {4{border_d[1:0]}}};
-    wire [23:0] selected_rgb=picture_d ? pixel_data : expanded_border;
+    // The line cache holds CSS at the first and last VDG bytes so a write
+    // in either border cannot recolour a row that was already rendered.
+    wire [5:0] row_border=(x<=picture_lead)?row_left_border_rgb:
+                                             row_right_border_rgb;
+    wire [23:0] expanded_row_border={{4{row_border[5:4]}},
+                                     {4{row_border[3:2]}},
+                                     {4{row_border[1:0]}}};
+    wire [5:0] vertical_border=(x<=picture_lead)?vertical_left_border_rgb:
+                                                 vertical_right_border_rgb;
+    wire [23:0] expanded_vertical_border={{4{vertical_border[5:4]}},
+                                          {4{vertical_border[3:2]}},
+                                          {4{vertical_border[1:0]}}};
+    wire [23:0] selected_rgb=picture_d ? pixel_data :
+        (compatibility_s&&source_picture_active&&row_border_valid?
+         expanded_row_border:
+         compatibility_s&&!source_picture_active&&vertical_border_valid?
+         expanded_vertical_border:expanded_border);
 
     // Full-precision MAME-compatible palettes. Tokenized artifact pixels are
     // expanded here so normal GIME video keeps its original RGB222 path.

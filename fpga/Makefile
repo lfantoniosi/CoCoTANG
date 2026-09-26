@@ -62,6 +62,8 @@ test:
 	vvp /private/tmp/cocotang_tb_gime_native_video
 	iverilog -g2012 -Ptb_gime_native_video.PAL_MACHINE=1 -o /private/tmp/cocotang_tb_gime_native_video_pal tests/tb_gime_native_video.v src/coco3/gime_native_video.v
 	vvp /private/tmp/cocotang_tb_gime_native_video_pal
+	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_compat_video tests/tb_gime_compat_video.v src/coco3/gime_native_video.v
+	vvp /private/tmp/cocotang_tb_gime_compat_video
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_registers tests/tb_gime_registers.v src/coco3/gime_registers.v
 	vvp /private/tmp/cocotang_tb_gime_registers
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_disto tests/tb_gime_disto.v src/coco3/gime_registers.v
