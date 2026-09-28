@@ -10,7 +10,8 @@ module tb_gime_compat_video;
 
  always #5 clk=!clk;
  gime_native_video dut(
-  .clk(clk),.reset_n(reset_n),.video_50hz(1'b0),
+  .clk(clk),.reset_n(reset_n),.video_50hz(1'b0),.bit_plane(1'b0),
+  .hdmi_frame_start(1'b0),.hdmi_active_50hz(1'b0),
   .active_height(8'd192),.compatibility_mode(1'b1),
   .compatibility_css(css),.pixel_rgb(6'd0),
   .hs_n(hs_n),.fs_n(fs_n),.hborder_irq_n(hborder_irq_n),

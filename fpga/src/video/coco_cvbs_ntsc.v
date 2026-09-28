@@ -607,10 +607,18 @@ module coco_cvbs_ntsc #(
             if (video_50hz_sync != video_50hz_active)
                 video_50hz_active <= video_50hz_sync;
             height_meta <= active_height;
+            // PAL 50 Hz hires HDMI starts one source row later so its
+            // prefetch follows HBORD. Keep analogue one row behind that
+            // producer; otherwise alternating fields can read a bank while
+            // the shared renderer replaces it. NTSC and VDG are unchanged.
             picture_top <= next_picture_top +
-                           (!compatibility_mode ? 9'd1 : 9'd0);
+                           (!compatibility_mode ?
+                            ((PAL_MACHINE && video_50hz_active) ? 9'd2 : 9'd1) :
+                            9'd0);
             picture_bottom <= next_picture_top +
-                              (!compatibility_mode ? 9'd1 : 9'd0) +
+                              (!compatibility_mode ?
+                               ((PAL_MACHINE && video_50hz_active) ? 9'd2 : 9'd1) :
+                               9'd0) +
                               {1'b0,height_meta};
             luma_level_135 <= luma_level;
             chroma_level_135 <= chroma_level;

@@ -22,6 +22,16 @@ module tb_pal_chroma;
   if(dut.h_total!==10'd864)begin
    $display("PAL 60Hz line total=%0d",dut.h_total);errors=errors+1;end
   release dut.video_50hz_active;
+  repeat(5)@(posedge clk135);#1;
+  if(dut.picture_top!==9'd67||dut.picture_bottom!==9'd259)begin
+   $display("PAL hires CVBS cache position %0d..%0d",
+            dut.picture_top,dut.picture_bottom);errors=errors+1;end
+  force dut.compatibility_mode=1'b1;
+  repeat(2)@(posedge clk135);#1;
+  if(dut.picture_top!==9'd65)begin
+   $display("PAL VDG CVBS position changed to %0d",dut.picture_top);
+   errors=errors+1;end
+  release dut.compatibility_mode;
   force dut.mod_burst=1'b1; force dut.mod_carrier=3'd0;
   force dut.mod_pal_odd=1'b0; #1;
   if(dut.mod_selected_chroma!==6)begin

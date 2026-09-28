@@ -41,6 +41,7 @@ module coco3 #(
     output     [22:0] video_memory_addr,
     output      [7:0] active_height,
     output            video_50hz,
+    output            native_bit_plane,
     output            compatibility_video,
     output            hs_n,
     output            fs_n,
@@ -71,6 +72,7 @@ module coco3 #(
     output      [5:0] hdmi_vertical_right_border_data,
     output            hdmi_vertical_border_valid,
     input             hdmi_frame_start,
+    input             hdmi_active_50hz,
     input       [8:0] hdmi_border_raster_y,
     input             cvbs_read_clk,
     input       [9:0] cvbs_source_x,
@@ -86,28 +88,44 @@ module coco3 #(
     output            mmu_task_debug,
     output            mmu_enabled_debug,
     output     [79:0] gime_register_debug,
+    output     [127:0] gime_trace_registers,
+    output             gime_trace_sample,
+    output     [8:0]   gime_trace_y,
+    output     [7:0]   gime_trace_active_line,
+    output     [1:0]   gime_trace_phase,
+    output     [7:0]   gime_trace_cache_y,
+    output             gime_trace_cache_valid,
+    output     [20:0]  gime_trace_cache_start,
+    output     [18:0]  gime_trace_dma_next_address,
+    output     [7:0]   gime_trace_dma_next_y,
+    output     [3:0]   gime_trace_dma_line,
     output     [95:0] mmu_register_debug,
     output reg [31:0] raster_debug
 );
     wire core_reset_n = reset_n && cpu_reset_n;
 
     wire fast_mode;
+    wire compatibility_mode;
+    wire [7:0] vmode;
+    reg effective_bit_plane = 1'b0;
     gime_timing #(.PAL_MACHINE(PAL_MACHINE)) timing (
         // E/Q must run while the physical CPU is held in RESET; register and
         // video state remain reset until cpu_reset_n is released.
-        .clk(clk), .reset_n(reset_n), .fast_mode(fast_mode), .e(e), .q(q),
+        .clk(clk), .reset_n(reset_n), .fast_mode(fast_mode),
+        // Boot-timing isolation: retain the original PAL CPU cadence in
+        // every mode while checking the external bus instability.
+        .pal_hires_60hz(1'b0),
+        .e(e), .q(q),
         .e_pin(e_pin), .q_pin(q_pin),
         .e_rise(e_rise), .e_fall(e_fall)
     );
 
-    wire [7:0] vmode;
     wire [7:0] vres;
     wire [5:0] border_color;
     wire [3:0] vertical_scroll;
     wire [15:0] video_offset;
     wire [7:0] horizontal_offset;
     wire [1:0] video_bank;
-    wire compatibility_mode;
     assign compatibility_video = compatibility_mode;
     wire [2:0] sam_video_mode;
     wire [6:0] sam_video_offset;
@@ -136,6 +154,7 @@ module coco3 #(
         .mmu_task_debug(mmu_task_debug),
         .mmu_enabled_debug(mmu_enabled_debug),
         .gime_register_debug(gime_register_debug),
+        .gime_trace_registers(gime_trace_registers),
         .mmu_register_debug(mmu_register_debug)
     );
 
@@ -193,7 +212,7 @@ module coco3 #(
         end
     endfunction
 
-    reg effective_bit_plane = 1'b0;
+    assign native_bit_plane = effective_bit_plane;
     reg [3:0] effective_hres = 4'd0;
     reg [1:0] effective_cres = 2'd0;
     reg [1:0] effective_lpf = 2'd0;
@@ -288,6 +307,7 @@ module coco3 #(
     // module mirrors only its two-line output RAM for the unrelated HDMI and
     // CVBS read clocks; SDRAM fetch, tags and mode/address logic are shared.
     wire [7:0] debug_dma_next_y,debug_fill_y;
+    assign gime_trace_dma_next_y=debug_dma_next_y;
     wire [3:0] debug_scanline_state;
     wire compatibility_raster_sample;
     wire compatibility_raster_css;
@@ -297,14 +317,18 @@ module coco3 #(
     wire compatibility_border_right;
     wire [8:0] compatibility_border_y;
     wire [5:0] compatibility_border_sample_rgb;
-    gime_scanline_buffer #(.NATIVE_HDMI_640(NATIVE_HDMI_640)) scanlines (
+    gime_scanline_buffer #(.NATIVE_HDMI_640(NATIVE_HDMI_640),
+        .PAL_MACHINE(PAL_MACHINE)) scanlines (
         .clk(clk),.reset_n(core_reset_n),
-        .bit_plane(effective_bit_plane), .hres(effective_hres),
-        .cres(effective_cres), .lines_per_row_code(effective_lines_per_row_code),
+        .bit_plane(effective_bit_plane),
+        .hres(effective_hres),
+        .cres(effective_cres),
+        .lines_per_row_code(effective_lines_per_row_code),
         .vertical_scroll(vertical_scroll),
         .screen_base(effective_screen_base),
         .video_bank(video_bank),
-        .horizontal_offset(horizontal_offset), .palettes(palettes),
+        .horizontal_offset(horizontal_offset),
+        .palettes(palettes),
         .border_rgb(border_rgb),
         .compatibility_mode(compatibility_mode),
         .compatibility_an_g(compatibility_an_g),
@@ -335,6 +359,7 @@ module coco3 #(
         .hdmi_vertical_right_border_data(hdmi_vertical_right_border_data),
         .hdmi_vertical_border_valid(hdmi_vertical_border_valid),
         .hdmi_frame_start(hdmi_frame_start),
+        .hdmi_active_50hz(hdmi_active_50hz),
         .hdmi_border_raster_y(hdmi_border_raster_y),
         .cvbs_read_clk(cvbs_read_clk),.cvbs_read_x(cvbs_source_x),
         .cvbs_display_y(cvbs_source_y),.cvbs_display_valid(cvbs_source_valid),
@@ -344,7 +369,12 @@ module coco3 #(
         .memory_request(video_memory_request),.memory_addr(video_memory_addr),
         .memory_data(video_memory_data32),.memory_valid(video_memory_valid),
         .debug_dma_next_y(debug_dma_next_y),.debug_fill_y(debug_fill_y),
-        .debug_state(debug_scanline_state)
+        .debug_state(debug_scanline_state),
+        .trace_cache_y(gime_trace_cache_y),
+        .trace_cache_valid(gime_trace_cache_valid),
+        .trace_cache_start(gime_trace_cache_start),
+        .trace_dma_next_address(gime_trace_dma_next_address),
+        .trace_dma_line(gime_trace_dma_line)
     );
 
     function [7:0] line_count;
@@ -354,8 +384,12 @@ module coco3 #(
     endfunction
     assign active_height=line_count(effective_lpf);
     wire [8:0] debug_native_y;
+    assign gime_trace_y=debug_native_y;
     gime_native_video #(.PAL_MACHINE(PAL_MACHINE)) native_video(
         .clk(clk),.reset_n(core_reset_n),.video_50hz(video_50hz),
+        .bit_plane(effective_bit_plane),
+        .hdmi_frame_start(hdmi_frame_start),
+        .hdmi_active_50hz(hdmi_active_50hz),
         .active_height(active_height),.compatibility_mode(compatibility_mode),
         .compatibility_css(pia1_effective[3]),
         .compatibility_border_rgb(border_rgb),
@@ -363,6 +397,9 @@ module coco3 #(
                     hdmi_pixel_data[7:6]}),.hs_n(hs_n),.fs_n(fs_n),
         .hborder_irq_n(hborder_irq_n),
         .hblank(hblank),.vblank(vblank),.debug_raster_y(debug_native_y),
+        .trace_line_sample(gime_trace_sample),
+        .trace_active_line(gime_trace_active_line),
+        .trace_phase(gime_trace_phase),
         .compatibility_sample(compatibility_raster_sample),
         .compatibility_sample_css(compatibility_raster_css),
         .compatibility_sample_y(compatibility_raster_y),

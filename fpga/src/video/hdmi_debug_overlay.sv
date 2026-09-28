@@ -6,7 +6,8 @@ module hdmi_debug_overlay #(
     parameter integer LOG_COUNT_WIDTH = 9,
     parameter integer LOG_PAGE_WIDTH = 2,
     parameter integer LOG_DEPTH = 512,
-    parameter integer EXTENDED_HEADER = 0
+    parameter integer EXTENDED_HEADER = 0,
+    parameter integer GIME_TRACE_MODE = 0
 ) (
     input  logic         pixel_clk,
     input  logic [9:0]   x,
@@ -20,6 +21,11 @@ module hdmi_debug_overlay #(
     input  logic [LOG_COUNT_WIDTH-1:0] log_count,
     input  logic [LOG_ADDR_WIDTH-1:0] log_base,
     input  logic [LOG_PAGE_WIDTH-1:0] log_page,
+    input  logic         gime_trace_arm,
+    input  logic [2:0]   gime_trace_page,
+    input  logic         gime_trace_sample,
+    input  logic [8:0]   gime_trace_y,
+    input  logic [198:0] gime_trace_data,
     input  logic [4:0]   debug_status,
     input  logic [3:0]   interrupt_status,
     input  logic [79:0]  gime_register_debug,
@@ -40,6 +46,48 @@ module hdmi_debug_overlay #(
     // event toggle cannot be used here because consecutive 108 MHz log writes
     // can occur before the 27 MHz pixel domain observes either edge.
     logic [47:0] display_memory [0:LOG_DEPTH-1];
+    // One frozen 263/313-line native field. S2 advances through six pages;
+    // wrapping to page zero arms capture of the next complete field.
+    logic [198:0] gime_field_memory [0:312];
+    logic gime_waiting=1'b1,gime_capturing=1'b0;
+    logic [8:0] gime_count=0;
+    wire gime_store=GIME_TRACE_MODE!=0 && !gime_trace_arm &&
+        gime_trace_sample && gime_trace_y<=9'd312 &&
+        ((gime_waiting && gime_trace_y==0) ||
+         (gime_capturing && gime_trace_y!=0));
+    // Keep the RAM write in one indexed statement so Gowin infers embedded
+    // dual-port memory instead of synthesizing a field of flip-flops.
+    always_ff @(posedge debug_clk)
+        if(gime_store)
+            gime_field_memory[gime_trace_y]<=gime_trace_data;
+    always_ff @(posedge debug_clk) begin
+        if(gime_trace_arm)begin
+            gime_waiting<=1'b1;
+            gime_capturing<=1'b0;
+            gime_count<=0;
+        end else if(GIME_TRACE_MODE!=0 && gime_trace_sample)begin
+            if(gime_waiting && gime_trace_y==0)begin
+                gime_count<=1;
+                gime_waiting<=1'b0;
+                gime_capturing<=1'b1;
+            end else if(gime_capturing)begin
+                if(gime_trace_y==0 || gime_trace_y>9'd312)
+                    gime_capturing<=1'b0;
+                else begin
+                    gime_count<=gime_trace_y+1'b1;
+                end
+            end
+        end
+    end
+    logic [8:0] gime_count_meta=0,gime_count_pixel=0;
+    logic [8:0] gime_trace_index;
+    logic [198:0] gime_entry=0;
+    always_ff @(posedge pixel_clk) begin
+        gime_count_meta<=gime_count;
+        gime_count_pixel<=gime_count_meta;
+        if(gime_trace_index<=9'd312)
+            gime_entry<=gime_field_memory[gime_trace_index];
+    end
     // Pipeline the logger output for a full 108 MHz cycle before writing the
     // embedded RAM.  Consecutive CPU cycles are far slower than this clock,
     // and the full-cycle path gives the large 8192-entry RAM safe margin.
@@ -145,6 +193,7 @@ module hdmi_debug_overlay #(
                 "I": glyph={5'b01110,5'b00100,5'b00100,5'b00100,5'b00100,5'b00100,5'b01110};
                 "L": glyph={5'b10000,5'b10000,5'b10000,5'b10000,5'b10000,5'b10000,5'b11111};
                 "M": glyph={5'b10001,5'b11011,5'b10101,5'b10101,5'b10001,5'b10001,5'b10001};
+                "N": glyph={5'b10001,5'b11001,5'b10101,5'b10011,5'b10001,5'b10001,5'b10001};
                 "O": glyph={5'b01110,5'b10001,5'b10001,5'b10001,5'b10001,5'b10001,5'b01110};
                 "P": glyph={5'b11110,5'b10001,5'b10001,5'b11110,5'b10000,5'b10000,5'b10000};
                 "Q": glyph={5'b01110,5'b10001,5'b10001,5'b10001,5'b10101,5'b10010,5'b01101};
@@ -152,7 +201,10 @@ module hdmi_debug_overlay #(
                 "S": glyph={5'b01111,5'b10000,5'b10000,5'b01110,5'b00001,5'b00001,5'b11110};
                 "T": glyph={5'b11111,5'b00100,5'b00100,5'b00100,5'b00100,5'b00100,5'b00100};
                 "U": glyph={5'b10001,5'b10001,5'b10001,5'b10001,5'b10001,5'b10001,5'b01110};
+                "V": glyph={5'b10001,5'b10001,5'b10001,5'b10001,5'b10001,5'b01010,5'b00100};
                 "W": glyph={5'b10001,5'b10001,5'b10001,5'b10101,5'b10101,5'b10101,5'b01010};
+                "X": glyph={5'b10001,5'b10001,5'b01010,5'b00100,5'b01010,5'b10001,5'b10001};
+                "Y": glyph={5'b10001,5'b10001,5'b01010,5'b00100,5'b00100,5'b00100,5'b00100};
                 ":": glyph={5'b00000,5'b00100,5'b00100,5'b00000,5'b00100,5'b00100,5'b00000};
                 "/": glyph={5'b00001,5'b00010,5'b00100,5'b01000,5'b10000,5'b00000,5'b00000};
                 "-": glyph={5'b00000,5'b00000,5'b00000,5'b11111,5'b00000,5'b00000,5'b00000};
@@ -174,6 +226,16 @@ module hdmi_debug_overlay #(
     logic [7:0] log_page_8;
     logic [3:0] status_mmu_index;
     logic [5:0] status_mmu_page;
+    logic [127:0] trace_regs;
+    logic [20:0] trace_cache_start;
+    logic [18:0] trace_dma_next;
+    logic [7:0] trace_cache_y,trace_dma_y,trace_active;
+    logic [3:0] trace_dma_line;
+    logic [1:0] trace_phase;
+    logic trace_cache_valid,trace_valid;
+    logic [3:0] trace_reg_index;
+    logic [7:0] trace_reg_byte;
+    logic [9:0] trace_decimal;
 
     localparam integer TRACE_FIRST_ROW = (EXTENDED_HEADER==2) ? 3 : 2;
     localparam integer TRACE_ROWS_PER_COLUMN =
@@ -184,6 +246,16 @@ module hdmi_debug_overlay #(
     always_comb begin
         character_column=x[9:3];
         character_row=y[8:3];
+        {trace_regs,trace_cache_start,trace_dma_next,trace_cache_y,
+         trace_dma_y,trace_active,trace_dma_line,trace_phase,
+         trace_cache_valid}=gime_entry;
+        gime_trace_index=(gime_trace_page*9'd57)+
+                         ({3'd0,y[8:3]}-9'd3);
+        trace_valid=character_row>=3 && gime_trace_index<gime_count_pixel &&
+                    gime_trace_index<=9'd312;
+        trace_reg_index=(character_column-7'd40)/3;
+        trace_reg_byte=trace_regs[127-trace_reg_index*8 -: 8];
+        trace_decimal={1'b0,gime_trace_index};
         glyph_column=x[2:0];
         glyph_row=y[2:0];
         in_panel=enable && x < 10'd720 && y < 10'd480;
@@ -205,7 +277,78 @@ module hdmi_debug_overlay #(
         status_mmu_index=0;
         status_mmu_page=0;
 
-        if (character_row == 0 && EXTENDED_HEADER != 0) begin
+        if(GIME_TRACE_MODE!=0)begin
+            if(character_row==0)begin
+                case(character_column)
+                    0:character="G";1:character="I";2:character="M";
+                    3:character="E";5:character="F";6:character="I";
+                    7:character="E";8:character="L";9:character="D";
+                    11:character="C";12:character="A";13:character="P";
+                    14:character=":";
+                    15:character=hex_char({3'd0,gime_count_pixel[8]});
+                    16:character=hex_char(gime_count_pixel[7:4]);
+                    17:character=hex_char(gime_count_pixel[3:0]);
+                    19:character="P";20:character=":";
+                    21:character=hex_char({1'b0,gime_trace_page});
+                    23:character="S";24:character="2";
+                    26:character="N";27:character="E";28:character="X";
+                    29:character="T";
+                    default: ;
+                endcase
+            end else if(character_row==1)begin
+                case(character_column)
+                    0:character="Y";4:character="P";
+                    6:character="A";7:character="C";8:character="T";
+                    10:character="C";11:character="Y";
+                    13:character="C";14:character="S";
+                    20:character="N";21:character="Y";
+                    23:character="D";24:character="M";
+                    29:character="R";31:character="V";
+                    40:character="9";41:character="0";
+                    default: ;
+                endcase
+            end else if(character_row==2)begin
+                if(character_column>=40 && character_column<88)begin
+                    trace_reg_index=(character_column-40)/3;
+                    character=(character_column-40)%3==0 ? "9" :
+                        (character_column-40)%3==1 ?
+                            hex_char(trace_reg_index) : " ";
+                end
+            end else if(trace_valid)begin
+                case(character_column)
+                    0:character="0"+(trace_decimal/100);
+                    1:character="0"+((trace_decimal/10)%10);
+                    2:character="0"+(trace_decimal%10);
+                    4:character=trace_phase==0?"S":trace_phase==2?"P":"B";
+                    6:character="0"+(trace_active/100);
+                    7:character="0"+((trace_active/10)%10);
+                    8:character="0"+(trace_active%10);
+                    10:character=hex_char(trace_cache_y[7:4]);
+                    11:character=hex_char(trace_cache_y[3:0]);
+                    13:character=hex_char({3'b0,trace_cache_start[20]});
+                    14:character=hex_char(trace_cache_start[19:16]);
+                    15:character=hex_char(trace_cache_start[15:12]);
+                    16:character=hex_char(trace_cache_start[11:8]);
+                    17:character=hex_char(trace_cache_start[7:4]);
+                    18:character=hex_char(trace_cache_start[3:0]);
+                    20:character=hex_char(trace_dma_y[7:4]);
+                    21:character=hex_char(trace_dma_y[3:0]);
+                    23:character=hex_char({1'b0,trace_dma_next[18:16]});
+                    24:character=hex_char(trace_dma_next[15:12]);
+                    25:character=hex_char(trace_dma_next[11:8]);
+                    26:character=hex_char(trace_dma_next[7:4]);
+                    27:character=hex_char(trace_dma_next[3:0]);
+                    29:character=hex_char(trace_dma_line);
+                    31:character=bit_char(trace_cache_valid);
+                    default:begin
+                        if(character_column>=40&&character_column<88)
+                            character=(character_column-40)%3==2?" ":
+                                hex_char((character_column-40)%3==0?
+                                    trace_reg_byte[7:4]:trace_reg_byte[3:0]);
+                    end
+                endcase
+            end
+        end else if (character_row == 0 && EXTENDED_HEADER != 0) begin
             case (character_column)
                 0:character="C"; 1:character="P"; 2:character="U";
                 4:character="B"; 5:character="U"; 6:character="S";

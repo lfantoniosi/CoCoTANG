@@ -6,6 +6,7 @@ module coco3_hdmi #(
     parameter integer LOG_PAGE_WIDTH=6,
     parameter integer LOG_DEPTH=4096,
     parameter integer ENABLE_DEBUG_OVERLAY=0,
+    parameter integer GIME_TRACE_MODE=0,
     parameter integer NATIVE_HDMI_640=1,
     parameter integer PAL_MACHINE=0
 ) (
@@ -16,6 +17,9 @@ module coco3_hdmi #(
     input logic [LOG_ADDR_WIDTH-1:0] log_base,
     input logic [LOG_COUNT_WIDTH-1:0] log_count,
     input logic [LOG_PAGE_WIDTH-1:0] log_page,
+    input logic gime_trace_arm,input logic [2:0] gime_trace_page,
+    input logic gime_trace_sample,input logic [8:0] gime_trace_y,
+    input logic [198:0] gime_trace_data,
     input logic [4:0] debug_status,input logic overlay_enable,
     input logic [3:0] interrupt_status,
     input logic [31:0] raster_debug,
@@ -29,6 +33,7 @@ module coco3_hdmi #(
     input logic [1:0] artifact_mode,
     input logic artifact_video_active,input logic artifact_css,
     input logic video_50hz,
+    input logic bit_plane,
     input logic [7:0] active_height,input logic compatibility_mode,
     input logic [5:0] border_rgb,
     input logic [5:0] row_left_border_rgb,input logic [5:0] row_right_border_rgb,
@@ -48,6 +53,7 @@ module coco3_hdmi #(
     logic [9:0] x,y;
     logic [7:0] height_m=8'd192,height_s=8'd192;
     logic compatibility_m=1'b1,compatibility_s=1'b1;
+    logic bit_plane_m=1'b0,bit_plane_s=1'b0;
     logic video_50hz_m=1'b0,video_50hz_s=1'b0;
     logic active_50hz_m=1'b0,active_50hz_s=1'b0;
     logic rom_done_m=0,rom_done_s=0,rom_pass_m=0,rom_pass_s=0;
@@ -67,6 +73,8 @@ module coco3_hdmi #(
         height_s<=height_m;
         compatibility_m<=compatibility_mode;
         compatibility_s<=compatibility_m;
+        bit_plane_m<=bit_plane;
+        bit_plane_s<=bit_plane_m;
         video_50hz_m<=video_50hz;
         video_50hz_s<=video_50hz_m;
         active_50hz_m<=active_video_50hz;
@@ -95,9 +103,15 @@ module coco3_hdmi #(
         // The line renderer prefetches N+1 while displaying N; this delay
         // places that prefetch after BOINK's HBORD handler for line N, so
         // FF98.LPR is sampled before the affected row begins rendering.
+        // PAL hires uses 576p, whose original centering put the prefetch
+        // only zero or half a GIME line behind the raster. Give PAL 50 Hz
+        // the same full-line delay as NTSC; VDG and NTSC retain their timing.
         top=active_50hz_s ?
-            (height_s==8'd225 ? 10'd63 :
-             height_s==8'd199 ? 10'd89 : 10'd96) :
+            (PAL_MACHINE!=0&&!compatibility_s ?
+             (height_s==8'd225 ? 10'd64 :
+              height_s==8'd199 ? 10'd90 : 10'd98) :
+             (height_s==8'd225 ? 10'd63 :
+              height_s==8'd199 ? 10'd89 : 10'd96)) :
             (height_s==8'd225 ? 10'd18 :
              height_s==8'd199 ? 10'd48 : 10'd52);
         // The GIME's 640-dot modes describe the same 4:3 display aperture as
@@ -142,8 +156,12 @@ module coco3_hdmi #(
         // line (about 63.5 us), which is enough for the renderer while making
         // the first visible row use the finalized frame state.
         prefetch_y=(y<top) ? 8'd0 : source_line[7:0]+1'b1;
-        prefetch_valid=(y<top) ? (y+2'd2>=top) :
-                       (y<top+doubled_height && source_line+1'b1<height_s);
+        prefetch_valid=((y<top) ? (y+2'd2>=top) :
+                       (y<top+doubled_height && source_line+1'b1<height_s)) &&
+                       // PAL 60 Hz bitmap rows begin after the GIME border
+                       // interrupt has latched the following raster mode.
+                       !(PAL_MACHINE!=0 && !active_50hz_s &&
+                         !compatibility_s && bit_plane_s && !y[0] && x<10'd320);
     end
 
     logic picture_d=0;
@@ -251,12 +269,17 @@ module coco3_hdmi #(
         hdmi_debug_overlay #(
             .LOG_ADDR_WIDTH(LOG_ADDR_WIDTH),.LOG_COUNT_WIDTH(LOG_COUNT_WIDTH),
             .LOG_PAGE_WIDTH(LOG_PAGE_WIDTH),.LOG_DEPTH(LOG_DEPTH),
-            .EXTENDED_HEADER(2)) overlay(
+            .EXTENDED_HEADER(2),.GIME_TRACE_MODE(GIME_TRACE_MODE)) overlay(
             .pixel_clk(pixel_clk),.x(x),.y(y),.enable(overlay_enable),
                 .debug_data({288'd0,raster_debug_s}),.debug_clk(debug_clk),.log_we(log_we),
             .log_addr(log_addr),.log_data(log_data),.log_count(log_count),
             .log_base(log_base),
             .log_page(log_page),.debug_status(debug_status),
+            .gime_trace_arm(gime_trace_arm),
+            .gime_trace_page(gime_trace_page),
+            .gime_trace_sample(gime_trace_sample),
+            .gime_trace_y(gime_trace_y),
+            .gime_trace_data(gime_trace_data),
             .interrupt_status(interrupt_s),
             .gime_register_debug(gime_register_s),
             .mmu_register_debug(mmu_register_s),

@@ -60,8 +60,14 @@ test:
 	vvp /private/tmp/cocotang_tb_gime_timing
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_native_video tests/tb_gime_native_video.v src/coco3/gime_native_video.v
 	vvp /private/tmp/cocotang_tb_gime_native_video
+	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_50_to_60_resync tests/tb_gime_50_to_60_resync.v src/coco3/gime_native_video.v
+	vvp /private/tmp/cocotang_tb_gime_50_to_60_resync
+	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_50_to_60_field_wrap tests/tb_gime_50_to_60_field_wrap.v src/coco3/gime_native_video.v
+	vvp /private/tmp/cocotang_tb_gime_50_to_60_field_wrap
 	iverilog -g2012 -Ptb_gime_native_video.PAL_MACHINE=1 -o /private/tmp/cocotang_tb_gime_native_video_pal tests/tb_gime_native_video.v src/coco3/gime_native_video.v
 	vvp /private/tmp/cocotang_tb_gime_native_video_pal
+	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_pal_60_mode_switch tests/tb_gime_pal_60_mode_switch.v src/coco3/gime_native_video.v
+	vvp /private/tmp/cocotang_tb_gime_pal_60_mode_switch
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_compat_video tests/tb_gime_compat_video.v src/coco3/gime_native_video.v
 	vvp /private/tmp/cocotang_tb_gime_compat_video
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_registers tests/tb_gime_registers.v src/coco3/gime_registers.v
@@ -78,12 +84,22 @@ test:
 	vvp /private/tmp/cocotang_tb_artifact_osd
 	iverilog -g2012 -o /private/tmp/cocotang_tb_hdmi_standard tests/tb_hdmi_video_standard.sv src/video/hdmi/hdmi.sv src/video/hdmi/tmds_channel.sv
 	vvp /private/tmp/cocotang_tb_hdmi_standard
+	iverilog -g2012 -s tb_coco3_hdmi_pal_alignment -o /private/tmp/cocotang_tb_coco3_hdmi_pal_alignment tests/tb_coco3_hdmi_pal_alignment.sv src/video/coco3_hdmi.sv src/video/artifact_mode_osd.sv
+	vvp /private/tmp/cocotang_tb_coco3_hdmi_pal_alignment
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_scanline tests/tb_gime_scanline_buffer.v src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
 	vvp /private/tmp/cocotang_tb_gime_scanline
+	iverilog -g2012 -Ptb_gime_scanline_buffer.PAL_MACHINE=1 -o /private/tmp/cocotang_tb_gime_scanline_pal tests/tb_gime_scanline_buffer.v src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
+	vvp /private/tmp/cocotang_tb_gime_scanline_pal
+	iverilog -g2012 -s tb_gime_handover_cache_trace -o /private/tmp/cocotang_tb_gime_handover_cache_trace tests/tb_gime_handover_cache_trace.v src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
+	vvp /private/tmp/cocotang_tb_gime_handover_cache_trace
+	iverilog -g2012 -s tb_gime_handover_cache_trace -Ptb_gime_handover_cache_trace.PAL_MACHINE=1 -o /private/tmp/cocotang_tb_gime_handover_cache_trace_pal tests/tb_gime_handover_cache_trace.v src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
+	vvp /private/tmp/cocotang_tb_gime_handover_cache_trace_pal
 	iverilog -g2012 -o /private/tmp/cocotang_tb_coco3_video_mux tests/tb_coco3_video_mux.v src/coco3/coco3.v src/coco3/gime_timing.v src/coco3/gime_registers.v src/coco3/gime_mode_debug.v src/coco3/gime_scanline_buffer.v src/coco3/gime_native_video.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
 	vvp /private/tmp/cocotang_tb_coco3_video_mux
 	iverilog -g2012 -o /private/tmp/cocotang_tb_hdmi_debug tests/tb_hdmi_debug_overlay.sv src/video/hdmi_debug_overlay.sv
 	vvp /private/tmp/cocotang_tb_hdmi_debug
+	iverilog -g2012 -s tb_gime_field_trace -o /private/tmp/cocotang_tb_gime_field_trace tests/tb_gime_field_trace.sv src/video/hdmi_debug_overlay.sv
+	vvp /private/tmp/cocotang_tb_gime_field_trace
 
 program: $(OUTPUT)
 	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(OUTPUT)"

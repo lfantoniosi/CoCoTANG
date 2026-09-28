@@ -1,7 +1,8 @@
 // Unified CoCo 3 scanline renderer. Mode decoding and row addressing follow
 // the MiSTer/Gary Becker CoCo3FPGA core, but no framebuffer is used.
 module gime_scanline_buffer #(
- parameter integer NATIVE_HDMI_640=1
+ parameter integer NATIVE_HDMI_640=1,
+ parameter integer PAL_MACHINE=0
 ) (
  input clk,input reset_n,input bit_plane,input [3:0] hres,input [1:0] cres,
  input [2:0] lines_per_row_code,input [3:0] vertical_scroll,
@@ -17,7 +18,8 @@ module gime_scanline_buffer #(
  input [1:0] artifact_mode,input blink,
  input cpu_write_strobe,input [20:0] cpu_write_addr,
  input hdmi_read_clk,input [9:0] hdmi_read_x,input [7:0] hdmi_display_y,
- input hdmi_frame_start,input [8:0] hdmi_border_raster_y,
+ input hdmi_frame_start,input hdmi_active_50hz,
+ input [8:0] hdmi_border_raster_y,
  input hdmi_display_valid,input hdmi_picture_active,
  input [7:0] hdmi_prefetch_y,input hdmi_prefetch_valid,
  output reg [23:0] hdmi_pixel_data,
@@ -33,7 +35,11 @@ module gime_scanline_buffer #(
  output reg memory_request,output reg [22:0] memory_addr,
  input [31:0] memory_data,input memory_valid,
  output [7:0] debug_dma_next_y,output [7:0] debug_fill_y,
- output [3:0] debug_state
+ output [3:0] debug_state,
+ output [7:0] trace_cache_y,output trace_cache_valid,
+ output [20:0] trace_cache_start,
+ output [18:0] trace_dma_next_address,
+ output [3:0] trace_dma_line
 );
  localparam [9:0] CANONICAL_WIDTH=10'd640;
 
@@ -444,6 +450,23 @@ module gime_scanline_buffer #(
   .color_index(artifact_color_index),.rgb(artifact_rgb));
 
  reg [3:0] decoded_index;reg decoded_pixel;reg [5:0] decoded_code;
+ reg [3:0] prepared_graphics_index=0;
+ wire [5:0] prepared_native_rgb=
+  palette_rgb(fill_palettes[prepared_graphics_index*6+:6]);
+ reg [3:0] following_graphics_index;
+ always @(*) begin
+  case(fill_cres)
+   0:following_graphics_index={3'b0,cached_byte[7-next_source_x[2:0]]};
+   1:case(next_source_x[1:0])
+    0:following_graphics_index={2'b0,cached_byte[7:6]};
+    1:following_graphics_index={2'b0,cached_byte[5:4]};
+    2:following_graphics_index={2'b0,cached_byte[3:2]};
+    default:following_graphics_index={2'b0,cached_byte[1:0]};
+   endcase
+   default:following_graphics_index=next_source_x[0]?
+    cached_byte[3:0]:cached_byte[7:4];
+  endcase
+ end
  reg semigraphics_pixel;reg inverse_character;reg [2:0] semigraphics_color;
  always @(*) begin
   case(fill_cres)
@@ -527,11 +550,10 @@ reg [1:0] frame_video_bank=0,last_video_bank=0;
  reg [7:0] dma_next_y=0;
  reg [18:0] dma_next_address=0;
  reg [3:0] dma_line_in_row=0;
- // A rendered raster captures its pixels and mode at fill start, but the
- // physical GIME tests the live LPR value when advancing to the following
- // raster.  Keep the completed descriptor until that following sequential
- // row is actually requested.  Anchoring the handoff to consumption avoids
- // losing it when speculative rendering finishes after an HDMI row edge.
+ // HBORD computes the completed row's advance, but VBORD applies it after
+ // early-left-border FF98 writes.  XRoar's PAL GIME suppresses that pending
+ // advance immediately when the new LPR is 7.  Keep the completed row's
+ // stride/counter descriptor, while testing the live LPR=7 suppression.
  reg dma_advance_pending=0;
  reg [18:0] dma_advance_base=0;
  reg [10:0] dma_advance_stride=0;
@@ -539,18 +561,48 @@ reg [1:0] frame_video_bank=0,last_video_bank=0;
  reg dma_advance_bit_plane=0,dma_advance_compatibility=0;
  reg [7:0] dma_advance_lpr=1;
 wire dma_advance_infinite=dma_advance_compatibility?
-  dma_advance_lpr==8'hff:lines_per_row_code==3'b111;
+  dma_advance_lpr==8'hff:
+  lines_per_row_code==3'b111;
 wire dma_advance_row=dma_advance_compatibility?
   dma_advance_glyph+1'b1>=dma_advance_lpr:
-  native_advance_row(lines_per_row_code,dma_advance_glyph);
+  PAL_MACHINE!=0 ?
+   ({4'd0,dma_advance_glyph}+8'd1>=dma_advance_lpr):
+   native_advance_row(lines_per_row_code,dma_advance_glyph);
+// XRoar applies the live PAL LPR at VBORD, after HBORD has counted the old
+// row.  LPR=7 suppresses the pending address step without resetting that
+// counter; LPR=0 forces the step and resets it, even after a held row.
+wire pal_native_dma=PAL_MACHINE!=0&&!dma_advance_compatibility;
+wire pal_live_hold=pal_native_dma&&lines_per_row_code==3'b111;
+wire pal_live_single=pal_native_dma&&lines_per_row_code==3'b000;
+wire dma_effective_advance=pal_live_single||
+                           (!pal_live_hold&&dma_advance_row);
 wire [18:0] advanced_dma_address=
-  (dma_advance_bit_plane&&dma_advance_infinite)?dma_advance_base:
-  dma_advance_row?(dma_advance_base+dma_advance_stride):dma_advance_base;
+  pal_live_hold ? dma_advance_base :
+  dma_advance_bit_plane&&dma_advance_infinite ? dma_advance_base :
+  dma_effective_advance ? (dma_advance_base+dma_advance_stride) :
+                          dma_advance_base;
 wire [3:0] advanced_dma_line=
-  (dma_advance_bit_plane&&dma_advance_infinite)||dma_advance_row?
-  4'd0:dma_advance_glyph+1'b1;
+  pal_live_hold ? dma_advance_glyph+1'b1 :
+  (dma_advance_bit_plane&&dma_advance_infinite)||dma_effective_advance ?
+  4'd0 : dma_advance_glyph+1'b1;
  reg upper_border_q=0;
- wire upper_border=hd_pv_s&&hd_p_s==0&&!hd_v_s;
+ reg hdmi_frame_meta=0,hdmi_frame_sync=0,hdmi_frame_prev=0;
+ reg upper_border_active=0;
+ reg upper_border_setup_abort=0;
+ reg [3:0] frame_initial_scroll=0;
+ reg [2:0] frame_initial_lpr=0;
+ wire hdmi_frame_rise=hdmi_frame_sync&&!hdmi_frame_prev;
+ // Track the entire upper border, not just the last source-row prefetch.
+ // VOFF/VSC setup writes can occur well before that narrow prefetch window.
+ wire upper_border=(upper_border_active&&!hd_pa_s)||
+                   (hd_pv_s&&hd_p_s==0&&!hd_v_s);
+ reg hdmi_50_meta=0,hdmi_50_sync=0,hdmi_50_prev=0;
+ wire hdmi_standard_changed=hdmi_50_sync!=hdmi_50_prev;
+ wire upper_border_setup_changed=upper_border&&
+   (!upper_border_q||screen_base!=frame_screen_base||
+    video_bank!=frame_video_bank||
+    vertical_scroll!=frame_initial_scroll||
+    lines_per_row_code!=frame_initial_lpr);
  // LPR is a raster control.  BOINK switches it to 111 to hold the current
  // DMA row and back to 000 to advance it.  It must be sampled for the next
  // fill, not treated as a mode change which aborts the renderer and flushes
@@ -569,6 +621,13 @@ reg configuration_pending=1'b1;
  assign debug_dma_next_y=dma_next_y;
  assign debug_fill_y=fill_y;
  assign debug_state=state[3:0];
+ assign trace_cache_y=hd_y_s;
+ assign trace_cache_valid=(h_valid0&&h_tag0==hd_y_s)||
+                          (h_valid1&&h_tag1==hd_y_s);
+ assign trace_cache_start=(h_valid0&&h_tag0==hd_y_s)?h_start0:
+                          (h_valid1&&h_tag1==hd_y_s)?h_start1:21'd0;
+ assign trace_dma_next_address=dma_next_address;
+ assign trace_dma_line=dma_line_in_row;
 
  // Keep the dual-clock line RAM write port independent of the renderer's
  // asynchronously-reset control process. Artifact pixels retain their MAME
@@ -649,11 +708,51 @@ reg configuration_pending=1'b1;
    h_pending<=0;c_pending<=0;coalesce_count<=0;
    fill_sequential<=0;dma_next_y<=0;dma_next_address<=0;
    dma_line_in_row<=0;dma_advance_pending<=0;upper_border_q<=0;
+   hdmi_frame_meta<=0;hdmi_frame_sync<=0;hdmi_frame_prev<=0;
+   upper_border_active<=0;upper_border_setup_abort<=0;
+   frame_initial_scroll<=0;frame_initial_lpr<=0;
+   hdmi_50_meta<=0;hdmi_50_sync<=0;hdmi_50_prev<=0;
    c_replacement_bank_q<=0;
    artifact_bit_write_pending<=0;
    fill_raster_css_valid<=0;
    compatibility_css_read_addr<=0;
   end else begin
+   hdmi_50_meta<=hdmi_active_50hz;
+   hdmi_50_sync<=hdmi_50_meta;
+   hdmi_50_prev<=hdmi_50_sync;
+   hdmi_frame_meta<=hdmi_frame_start;
+   hdmi_frame_sync<=hdmi_frame_meta;
+   hdmi_frame_prev<=hdmi_frame_sync;
+   if(hd_pa_s)upper_border_active<=0;
+   else if(hdmi_frame_rise)upper_border_active<=1;
+   // Register this abort decision so HDMI tag comparison and setup changes
+   // do not form a long combinational path through the renderer state mux.
+   upper_border_setup_abort<=upper_border_active&&upper_border_setup_changed;
+   if(hdmi_standard_changed||upper_border_setup_abort)begin
+    // A new field or a frame-setup write invalidates speculative row zero.
+    // Abort an in-flight fill too, or FINALIZE_LINE could publish a row
+    // rendered from the previous VOFF/VSC after the new setup was captured.
+    state<=IDLE;memory_request<=0;word_valid<=0;
+    h_valid0<=0;h_valid1<=0;
+    c_valid0<=0;c_valid1<=0;c_valid2<=0;
+    h_dirty0<=0;h_dirty1<=0;
+    c_dirty0<=0;c_dirty1<=0;c_dirty2<=0;
+    h_pending<=0;c_pending<=0;coalesce_count<=0;
+    h_next_bank<=0;c_next_bank<=0;
+    fill_sequential<=0;dma_next_y<=0;
+    dma_next_address<=screen_base;
+    dma_advance_pending<=0;
+    dma_line_in_row<=compatibility_mode||
+      native_lines_per_row(lines_per_row_code)==8'd1||
+      vertical_scroll>=native_lines_per_row(lines_per_row_code)?
+      4'd0:vertical_scroll;
+    frame_screen_base<=screen_base;frame_video_bank<=video_bank;
+    frame_initial_scroll<=vertical_scroll;
+    frame_initial_lpr<=lines_per_row_code;
+    upper_border_q<=upper_border;
+    configuration_pending<=1;
+    artifact_bit_write_pending<=0;
+   end else begin
    // Bank selection is consumed only after the seven-clock request
    // coalescing interval.  Register it here so synchronized CVBS scanout tags
    // do not feed the fill-bank register through the complete replacement
@@ -671,17 +770,17 @@ reg configuration_pending=1'b1;
    // combinational select path into all of the renderer state registers.
    if(configuration_diff)configuration_pending<=1'b1;
    // The GIME transfers VOFF into its running video address during vertical
-   // blank.  HDMI's upper border continuously requests logical row zero, so
-   // it provides a safe equivalent latch window without adding those border
-   // lines to the logical row number.
+   // blank.  Capture frame setup throughout the upper border, including
+   // before HDMI starts the row-zero prefetch.
    upper_border_q<=upper_border;
    if(upper_border)begin
     frame_screen_base<=screen_base;frame_video_bank<=video_bank;
    end
-   if(upper_border&&(!upper_border_q||screen_base!=frame_screen_base||
-                     video_bank!=frame_video_bank))begin
+   if(upper_border_setup_changed)begin
     dma_next_y<=0;dma_next_address<=screen_base;
     dma_advance_pending<=0;
+    frame_initial_scroll<=vertical_scroll;
+    frame_initial_lpr<=lines_per_row_code;
     dma_line_in_row<=compatibility_mode||
       native_lines_per_row(lines_per_row_code)==8'd1||
       vertical_scroll>=native_lines_per_row(lines_per_row_code)?
@@ -859,8 +958,19 @@ reg configuration_pending=1'b1;
       pixel_latched<=fill_border_rgb;
       hdmi_pixel_latched<=expand_rgb222(fill_border_rgb);
       state<=WRITE_PIXEL;
-     end else if(fill_bit_plane&&graphics_cache_valid&&graphics_cache_index==source_byte_index)
-      state<=DECODE_PIXEL;
+     end else if(fill_bit_plane&&graphics_cache_valid&&graphics_cache_index==source_byte_index)begin
+      // PAL native graphics requests start after raster-time FF98 writes.
+      // Save one state per repeated source byte to preserve the fill deadline.
+     if(PAL_MACHINE!=0&&!fill_compatibility)begin
+       color_index_latched<=decoded_index;
+       color_code_latched<=decoded_code;
+       // The preceding WRITE_PIXEL prepared this index.  Do not put source
+       // position decoding and palette selection on one 108 MHz path.
+       pixel_latched<=prepared_native_rgb;
+       hdmi_pixel_latched<=expand_rgb222(prepared_native_rgb);
+       state<=WRITE_PIXEL;
+      end else state<=DECODE_PIXEL;
+     end
      else if(!fill_bit_plane&&text_cache_valid&&
              text_cache_column==source_character_column)
       state<=DECODE_PIXEL;
@@ -925,6 +1035,8 @@ reg configuration_pending=1'b1;
      state<=WRITE_PIXEL;
     end
     WRITE_PIXEL:begin
+     if(PAL_MACHINE!=0&&!fill_compatibility&&fill_bit_plane)
+      prepared_graphics_index<=following_graphics_index;
      // Area-preserving 640 -> 512 horizontal filter for HDMI.  For every
      // five canonical pixels emit four samples at phases 0, 1.25, 2.5 and
      // 3.75.  CVBS retains the original 640-dot row.  This is a streaming
@@ -1029,6 +1141,7 @@ reg configuration_pending=1'b1;
     end
      default:state<=IDLE;
     endcase
+   end
    end
   end
  end

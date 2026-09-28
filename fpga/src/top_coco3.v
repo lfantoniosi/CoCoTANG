@@ -19,6 +19,7 @@ module top_coco3 #(
     // blocks omit both the capture logger/RAM and the HDMI debug overlay;
     // synthesis then removes the unused S2 capture-control cone as well.
     parameter integer ENABLE_BUS_LOGGER=0,
+    parameter integer ENABLE_GIME_TRACE=1,
     parameter integer DEBUG_OVERLAY=0,
     // 0/1: simultaneous S-Video and CVBS; 2: Y/Pb/Pr component;
     // 3: RGB with composite sync on green (Y=G/SoG, Pb=B, Pr=R).
@@ -196,7 +197,17 @@ module top_coco3 #(
     wire [5:0] mmu_task0_page_debug,mmu_task1_page_debug;
     wire mmu_task_debug,mmu_enabled_debug;
     wire [79:0] gime_register_debug;
+    wire [127:0] gime_trace_registers;
+    wire gime_trace_sample,gime_trace_cache_valid;
+    wire [8:0] gime_trace_y;
+    wire [7:0] gime_trace_active_line,gime_trace_cache_y,
+               gime_trace_dma_next_y;
+    wire [1:0] gime_trace_phase;
+    wire [20:0] gime_trace_cache_start;
+    wire [18:0] gime_trace_dma_next_address;
+    wire [3:0] gime_trace_dma_line;
     wire [95:0] mmu_register_debug;
+    wire native_bit_plane;
 
     // KEYINT and SERNT are inverted by the motherboard interface before they
     // reach the multiplexed FPGA inputs. Normalize both here so the GIME
@@ -207,7 +218,8 @@ module top_coco3 #(
     coco3 #(.NATIVE_HDMI_640(NATIVE_HDMI_640),.DISTO_2MB(DISTO_2MB),
         .PAL_MACHINE(PAL_MACHINE)) machine(
         .clk(clk108),.reset_n(board_reset_n),
-        .cpu_reset_n(cpu_release),.s2(1'b0),.artifact_mode(artifact_mode_video),
+        .cpu_reset_n(cpu_release),
+        .s2(1'b0),.artifact_mode(artifact_mode_video),
         .cpu_addr(address),
         .cpu_rw_n(rw_n),.cpu_data(cpu_write_data),
         .serint_n(gime_serint_n),.keyint_n(gime_keyint_n),.cart_n(mux_cart_n),
@@ -222,7 +234,7 @@ module top_coco3 #(
         .video_memory_valid(video_memory_valid),
         .video_memory_request(video_memory_request),
         .video_memory_addr(video_memory_addr),.active_height(active_height),
-        .video_50hz(video_50hz),
+        .video_50hz(video_50hz),.native_bit_plane(native_bit_plane),
         .compatibility_video(compatibility_video),
         .artifact_video_active(artifact_video_active),
         .artifact_css(artifact_css),
@@ -244,6 +256,7 @@ module top_coco3 #(
         .hdmi_vertical_right_border_data(hdmi_vertical_right_border_data),
         .hdmi_vertical_border_valid(hdmi_vertical_border_valid),
         .hdmi_frame_start(hdmi_frame_start),
+        .hdmi_active_50hz(hdmi_video_50hz),
         .hdmi_border_raster_y(hdmi_border_raster_y),
         .cvbs_source_x(cvbs_source_x),.cvbs_source_y(cvbs_source_y),
         .cvbs_source_valid(cvbs_source_valid),
@@ -256,6 +269,16 @@ module top_coco3 #(
         .mmu_task_debug(mmu_task_debug),
         .mmu_enabled_debug(mmu_enabled_debug),
         .gime_register_debug(gime_register_debug),
+        .gime_trace_registers(gime_trace_registers),
+        .gime_trace_sample(gime_trace_sample),.gime_trace_y(gime_trace_y),
+        .gime_trace_active_line(gime_trace_active_line),
+        .gime_trace_phase(gime_trace_phase),
+        .gime_trace_cache_y(gime_trace_cache_y),
+        .gime_trace_cache_valid(gime_trace_cache_valid),
+        .gime_trace_cache_start(gime_trace_cache_start),
+        .gime_trace_dma_next_address(gime_trace_dma_next_address),
+        .gime_trace_dma_next_y(gime_trace_dma_next_y),
+        .gime_trace_dma_line(gime_trace_dma_line),
         .mmu_register_debug(mmu_register_debug),
         .raster_debug(raster_debug));
 
@@ -519,14 +542,18 @@ module top_coco3 #(
     reg [20:0] s2_stable_count=0; reg [26:0] s2_hold_count=0;
     reg s2_long_handled=0; reg overlay_visible=(DEBUG_OVERLAY!=0);
     reg [LOG_PAGE_WIDTH-1:0] log_page=0;
+    reg [2:0] gime_trace_page=0;
+    reg gime_trace_arm=0;
     always @(posedge clk108 or negedge board_reset_n) begin
       if(!board_reset_n) begin
         s2_meta<=0;s2_sync<=0;s2_state<=0;s2_stable_count<=0;
         s2_hold_count<=0;s2_long_handled<=0;
         overlay_visible<=(DEBUG_OVERLAY!=0);log_page<=0;
+        gime_trace_page<=0;gime_trace_arm<=0;
         log_capture_active<=0;log_capture_clear<=0;
       end else begin
         log_capture_clear<=0;
+        gime_trace_arm<=0;
         if(log_marker_pulse) begin
           // Entry zero is already the marker; retain it and capture the 8191
           // bus observations that follow.
@@ -539,6 +566,11 @@ module top_coco3 #(
           if(s2_state && !s2_long_handled) begin
             if(s2_hold_count==27'd107999999) begin
               overlay_visible<=!overlay_visible;log_page<=0;
+              if(ENABLE_GIME_TRACE!=0 && ENABLE_BUS_LOGGER==0 &&
+                 !overlay_visible) begin
+                gime_trace_page<=0;
+                gime_trace_arm<=1;
+              end
               s2_long_handled<=1;
             end else s2_hold_count<=s2_hold_count+1'b1;
           end
@@ -547,7 +579,12 @@ module top_coco3 #(
           if(s2_sync) begin s2_hold_count<=0;s2_long_handled<=0; end
           else begin s2_hold_count<=0;
             if(!s2_long_handled) begin
-              if(overlay_visible)
+              if(ENABLE_GIME_TRACE!=0 && ENABLE_BUS_LOGGER==0) begin
+                if(gime_trace_page==3'd5)begin
+                  gime_trace_page<=0;
+                  gime_trace_arm<=1;
+                end else gime_trace_page<=gime_trace_page+1'b1;
+              end else if(overlay_visible)
                 log_page<=(log_page==LAST_PAGE)?0:log_page+1'b1;
               else begin
                 log_capture_clear<=1'b1;
@@ -583,13 +620,23 @@ module top_coco3 #(
     wire visible_cvbs_border_valid = !startup_video_blank && cvbs_border_valid;
     coco3_hdmi #(.LOG_ADDR_WIDTH(LOG_ADDR_WIDTH),
         .LOG_COUNT_WIDTH(LOG_COUNT_WIDTH),.LOG_PAGE_WIDTH(LOG_PAGE_WIDTH),
-        .LOG_DEPTH(LOG_DEPTH),.ENABLE_DEBUG_OVERLAY(ENABLE_BUS_LOGGER),
+        .LOG_DEPTH(LOG_DEPTH),
+        .ENABLE_DEBUG_OVERLAY(ENABLE_BUS_LOGGER||ENABLE_GIME_TRACE),
+        .GIME_TRACE_MODE(ENABLE_GIME_TRACE!=0&&ENABLE_BUS_LOGGER==0),
         .NATIVE_HDMI_640(NATIVE_HDMI_640),.PAL_MACHINE(PAL_MACHINE)) hdmi_output(
         .pixel_clk(clk27),.serial_clk(clk135),.reset(!board_reset_n),
         .audio_clk(pia1_audio_clk),.audio_pcm(pia1_pcm_sample),
         .debug_clk(clk108),.log_we(log_we),.log_addr(log_addr),
         .log_base(log_base),
         .log_data(log_data),.log_count(log_count),.log_page(log_page),
+        .gime_trace_arm(gime_trace_arm),
+        .gime_trace_page(gime_trace_page),
+        .gime_trace_sample(gime_trace_sample),
+        .gime_trace_y(gime_trace_y),
+        .gime_trace_data({gime_trace_registers,gime_trace_cache_start,
+            gime_trace_dma_next_address,gime_trace_cache_y,
+            gime_trace_dma_next_y,gime_trace_active_line,
+            gime_trace_dma_line,gime_trace_phase,gime_trace_cache_valid}),
         .debug_status({clocks_locked,filtered_mux_reset_n,mux_halt_n,
                        interrupt_inputs_idle,bus_ready_sync}),
         // Display asserted levels: KEYINT and SERNT are active-low inputs;
@@ -608,6 +655,7 @@ module top_coco3 #(
         .artifact_video_active(artifact_video_active),
         .artifact_css(artifact_css),
         .video_50hz(video_50hz),
+        .bit_plane(native_bit_plane),
         .overlay_enable(overlay_visible),.active_height(active_height),
         .compatibility_mode(compatibility_video),
         .border_rgb(visible_border_rgb),

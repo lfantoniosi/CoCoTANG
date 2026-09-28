@@ -3,7 +3,9 @@ module tb_gime_timing;
     reg clk=0;
     reg reset_n=0;
     reg fast_mode=0;
+    reg pal_hires_60hz=0;
     wire e,q,e_rise,e_fall;
+    wire pal_e,pal_q,pal_e_rise,pal_e_fall;
     integer clocks=0;
     integer previous_rise=0;
     integer interval=0;
@@ -12,7 +14,12 @@ module tb_gime_timing;
     always @(posedge clk) clocks=clocks+1;
 
     gime_timing dut(.clk(clk),.reset_n(reset_n),.fast_mode(fast_mode),
+        .pal_hires_60hz(1'b0),
         .e(e),.q(q),.e_rise(e_rise),.e_fall(e_fall));
+    gime_timing #(.PAL_MACHINE(1)) pal_dut(
+        .clk(clk),.reset_n(reset_n),.fast_mode(fast_mode),
+        .pal_hires_60hz(pal_hires_60hz),
+        .e(pal_e),.q(pal_q),.e_rise(pal_e_rise),.e_fall(pal_e_fall));
 
     task measure_cycle;
         input integer minimum;
@@ -35,6 +42,26 @@ module tb_gime_timing;
         repeat(4) @(posedge clk);
         reset_n=1;
         measure_cycle(59,62);
+        #1;
+        if(pal_dut.selected_step!==32'd1132399942)begin
+            $display("FAIL: PAL VDG/50 Hz clock changed");$fatal;
+        end
+        pal_hires_60hz=1;
+        #1;
+        if(pal_dut.selected_step!==32'd1133394148)begin
+            $display("FAIL: PAL hires/60 Hz fast clock not raster-locked");$fatal;
+        end
+        fast_mode=0;
+        #1;
+        if(pal_dut.selected_step!==32'd566697074 ||
+           dut.selected_step!==32'd569408471)begin
+            $display("FAIL: PAL hires/60 Hz slow clock or NTSC clock changed");$fatal;
+        end
+        pal_hires_60hz=0;
+        #1;
+        if(pal_dut.selected_step!==32'd566199971)begin
+            $display("FAIL: PAL VDG/50 Hz slow clock changed");$fatal;
+        end
         $display("tb_gime_timing PASS");
         $finish;
     end

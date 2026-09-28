@@ -28,6 +28,7 @@ module gime_registers #(
     output mmu_task_debug,
     output mmu_enabled_debug,
     output [79:0] gime_register_debug,
+    output [127:0] gime_trace_registers,
     output [95:0] mmu_register_debug
 );
     reg [7:0] init0, init1;
@@ -135,6 +136,13 @@ module gime_registers #(
     assign gime_register_debug={init0,init1,vmode,vres,
         {2'b00,border_color},{4'b0000,vertical_scroll},video_offset,
         horizontal_offset,{1'b0,sam_video_offset}};
+    // Byte-for-byte FF90..FF9F snapshot for the field logger. Read-only
+    // diagnostic fanout; it does not alter GIME register timing.
+    assign gime_trace_registers={init0,init1,{2'b00,irq_enable},
+        {2'b00,firq_enable},{4'b0000,timer_reload[11:8]},
+        timer_reload[7:0],8'h00,8'h00,vmode,vres,
+        {2'b00,border_color},{6'b000000,disto_video_bank},
+        {4'b0000,vertical_scroll},video_offset,horizontal_offset};
 
     genvar p;
     generate

@@ -57,6 +57,16 @@ module tb_hdmi_video_standard;
                      dut.frame_width,dut.screen_height,dut.frame_height);
             errors=errors+1;
         end
+        video_50hz=1'b0;
+        force dut.cx=10'd863;force dut.cy=10'd624;
+        @(posedge clk);#1;release dut.cx;release dut.cy;
+        #1;
+        if(dut.active_video_50hz!==1'b0||dut.frame_width!=858||
+           dut.frame_height!=525||dut.screen_height!=480)begin
+            $display("50-to-60 HDMI geometry stuck at %0d x %0d/%0d",
+                     dut.frame_width,dut.screen_height,dut.frame_height);
+            errors=errors+1;
+        end
         if(errors==0)$display("tb_hdmi_video_standard PASS");
         else $display("tb_hdmi_video_standard FAIL: %0d",errors);
         $finish;

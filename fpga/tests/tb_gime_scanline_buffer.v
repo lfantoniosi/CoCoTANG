@@ -1,5 +1,6 @@
 `timescale 1ns/1ps
 module tb_gime_scanline_buffer;
+ parameter integer PAL_MACHINE=0;
  reg clk=0,hdmi_clk=0,cvbs_clk=0,reset_n=0;
  reg [95:0] palettes=0;reg [31:0] memory_data=32'h1b1b1b1b;
  reg memory_valid=0;wire memory_request;wire [22:0] memory_addr;
@@ -7,8 +8,9 @@ module tb_gime_scanline_buffer;
  wire [5:0] hdmi_left_border,hdmi_right_border;wire hdmi_border_valid;
  wire [5:0] hdmi_vertical_left_border,hdmi_vertical_right_border;
  wire hdmi_vertical_border_valid;
- integer transactions=0,errors=0,i,timeout;
+ integer transactions=0,errors=0,i,timeout,raster;
  integer responder_delay=0;reg slow_memory=0;
+ integer slow_memory_extra=0;
  reg [1:0] responder_state=0;reg compatibility_mode=0,compatibility_an_g=1;
  reg [2:0] compatibility_gm=0,compatibility_sam_mode=0;
  reg compatibility_css=0;reg [18:0] signature_without_css=0;
@@ -21,13 +23,14 @@ module tb_gime_scanline_buffer;
  reg compatibility_border_write=0,compatibility_border_right=0;
  reg [8:0] compatibility_border_y=0,hdmi_border_raster_y=0;
  reg [5:0] compatibility_border_rgb=0;reg hdmi_frame_start=0;
+ reg hdmi_active_50hz=0;
  reg hdmi_prefetch_valid=1,cvbs_prefetch_valid=0;
  reg [7:0] hdmi_prefetch_y=0,cvbs_prefetch_y=0;
  reg hdmi_display_valid=0,hdmi_picture_active=0;reg [7:0] hdmi_display_y=0;
  reg [9:0] cvbs_display_x=0;reg [7:0] cvbs_display_y=0;
  reg cvbs_display_valid=0;
 
- gime_scanline_buffer dut(
+ gime_scanline_buffer #(.PAL_MACHINE(PAL_MACHINE)) dut(
   .clk(clk),.reset_n(reset_n),.bit_plane(bit_plane),.hres(hres),.cres(cres),
   .lines_per_row_code(lpr),.vertical_scroll(vertical_scroll),.screen_base(screen_base),
   .video_bank(video_bank),
@@ -57,6 +60,7 @@ module tb_gime_scanline_buffer;
   .hdmi_vertical_right_border_data(hdmi_vertical_right_border),
   .hdmi_vertical_border_valid(hdmi_vertical_border_valid),
   .hdmi_frame_start(hdmi_frame_start),
+  .hdmi_active_50hz(hdmi_active_50hz),
   .hdmi_border_raster_y(hdmi_border_raster_y),
   .cvbs_read_clk(cvbs_clk),.cvbs_read_x(cvbs_display_x),.cvbs_display_y(cvbs_display_y),
   .cvbs_display_valid(cvbs_display_valid),.cvbs_prefetch_y(cvbs_prefetch_y),
@@ -71,7 +75,7 @@ module tb_gime_scanline_buffer;
    // Seventy-five clocks per word is deliberately slower than the nominal
    // sixty-clock 1.79 MHz interleave cadence, covering SDRAM completion/drop
    // overhead while still requiring an 80-column row to meet its deadline.
-   responder_delay<=slow_memory?74:0;
+   responder_delay<=slow_memory?74+slow_memory_extra:0;
    if(memory_addr[1:0]!=0)begin $display("unaligned request %h",memory_addr);errors=errors+1;end
   end else if(responder_state==1&&responder_delay!=0)responder_delay<=responder_delay-1;
   else if(responder_state==1)begin memory_valid<=1;responder_state<=2;end
@@ -249,6 +253,30 @@ module tb_gime_scanline_buffer;
   if((dut.c_valid0&&dut.c_tag0==0 ? dut.cvbs_line0[4] : dut.cvbs_line1[4])!==mapped(6'd15))begin
    $display("native font bit order wrong: A pixel 4 is not foreground");errors=errors+1;end
   slow_memory=0;
+
+  if(PAL_MACHINE!=0)begin : pal_native_bitmap_deadline
+   // Requesting at HDMI dot 320 leaves 1408 pixel clocks until the next
+   // row begins (5632 renderer clocks), before its visible aperture. The
+   // PAL-only cached
+   // graphics fast path must finish a full 160-byte row before that point.
+   hdmi_prefetch_valid=0;cvbs_prefetch_valid=0;hdmi_display_valid=0;
+   // Exercise the PAL-only direct colour path with ten more stall clocks
+   // per SDRAM word than the already conservative 75-clock response.
+   bit_plane=1;hres=7;cres=1;lpr=0;slow_memory=1;
+   slow_memory_extra=10;
+   hdmi_prefetch_y=8'd16;repeat(8)@(posedge clk);
+   hdmi_prefetch_valid=1;timeout=0;
+   while(!((dut.h_valid0&&dut.h_tag0==16)||(dut.h_valid1&&dut.h_tag1==16))&&
+         timeout<6800)begin @(posedge clk);timeout=timeout+1;end
+   $display("PAL slow bitmap row completed in %0d clocks",timeout);
+   if(timeout>=5632)begin
+    $display("PAL bitmap prefetch missed the post-FF98 deadline: state=%d pending=%b y=%d dma=%d upper=%b change=%b",
+     dut.state,dut.h_pending,dut.h_pending_y,dut.dma_next_y,
+     dut.upper_border,dut.upper_border_setup_changed);
+    errors=errors+1;end
+   hdmi_prefetch_valid=0;slow_memory=0;slow_memory_extra=0;
+   repeat(8)@(posedge clk);
+  end
 
   // A timed HRES change belongs to the following raster.  The row already
   // being fetched has captured its old mode and must be allowed to finish;
@@ -493,9 +521,8 @@ module tb_gime_scanline_buffer;
    dut.memory_request=0;
   end
 
-  // FF98.LPR is sampled at raster boundaries.  In graphics mode 111 holds
-  // the current DMA row indefinitely; returning to 000 advances exactly one
-  // row.  Changing LPR must not discard an already rendered scanline.
+  // XRoar computes the row advance at HBORD, then applies it at VBORD after
+  // an early FF98 write.  A new LPR=7 suppresses the pending address step.
   begin : vertical_raster_effect
    reg valid0_before,valid1_before;
    valid0_before=dut.h_valid0;valid1_before=dut.h_valid1;
@@ -521,20 +548,20 @@ module tb_gime_scanline_buffer;
    release dut.fill_cvbs;release dut.fill_hdmi;release dut.out_x;release dut.state;
    if(dut.dma_next_y!=8'd11||!dut.dma_advance_pending)begin
     $display("completed raster did not queue DMA handoff");errors=errors+1;end
-   // Consume row 11 after the timed write.  Live infinite LPR must hold the
-   // previous address even though that raster captured one-line LPR.
+   // Consume row 11 after the timed write.  Live LPR=7 suppresses even the
+   // completed one-line row's pending address step.
    force dut.configuration_diff=1'b0;force dut.state=4'd0;
    force dut.h_pending=1'b1;force dut.h_pending_y=8'd11;
    force dut.coalesce_count=3'd7;
    @(posedge clk);#1;
    release dut.coalesce_count;release dut.h_pending_y;release dut.h_pending;
    release dut.state;release dut.configuration_diff;
-   if(dut.fill_base!=19'h01000||dut.row_remainder!=0||
+   if(dut.fill_base!=19'h01000||
+      dut.row_remainder!=(PAL_MACHINE!=0?9'd1:9'd0)||
       dut.dma_advance_pending)begin
-    $display("live infinite LPR did not hold next DMA row: base=%h line=%0d pending=%b",
+    $display("LPR 0->7 DMA handoff wrong: base=%h line=%0d pending=%b",
       dut.fill_base,dut.row_remainder,dut.dma_advance_pending);errors=errors+1;end
-   // The inverse transition likewise takes effect on the next prefetched
-   // row, not the infinite-LPR row already in progress.
+   // A new PAL LPR=0 forces the VBORD step after the old held row.
    force dut.state=5'd7;force dut.out_x=10'd639;
    force dut.fill_hdmi=1'b0;force dut.fill_cvbs=1'b0;
    force dut.fill_sequential=1'b1;force dut.fill_y=8'd11;
@@ -557,7 +584,7 @@ module tb_gime_scanline_buffer;
    release dut.state;release dut.configuration_diff;
    if(dut.fill_base!=19'h010a0||dut.row_remainder!=0||
       dut.dma_advance_pending)begin
-    $display("live one-line LPR did not advance next DMA row: base=%h line=%0d pending=%b",
+    $display("LPR 7->0 DMA handoff wrong: base=%h line=%0d pending=%b",
       dut.fill_base,dut.row_remainder,dut.dma_advance_pending);errors=errors+1;end
   end
 
@@ -662,6 +689,147 @@ module tb_gime_scanline_buffer;
   if(!hdmi_vertical_border_valid||hdmi_vertical_left_border!==6'h3f||
      hdmi_vertical_right_border!==6'h0c)begin
    $display("completed VDG vertical border field was not retained");errors=errors+1;end
+
+  if(PAL_MACHINE!=0)begin : boink_raster_stream
+   // BOINK on XRoar PAL 60 Hz writes FF98=$87 at frame line 1, then $80
+   // at frame line 95, $87 at line 190, and $80 at line 246.  The picture
+   // starts at frame line 26, so these are active rows 69, 164, and 220.
+   // FF9D:FF9E=$0808 selects $4040 for this frame.
+   @(negedge clk);
+   reset_n=0;hdmi_prefetch_valid=0;hdmi_display_valid=0;
+   hdmi_picture_active=0;compatibility_mode=0;bit_plane=1;
+   hres=7;cres=2;lpr=7;screen_base=19'h04040;video_bank=0;
+   horizontal_offset=8'h2f;slow_memory=1;responder_state=0;
+   repeat(5)@(negedge clk);reset_n=1;
+   hdmi_prefetch_y=0;hdmi_prefetch_valid=1;
+   timeout=0;
+   while(!((dut.h_valid0&&dut.h_tag0==0)||(dut.h_valid1&&dut.h_tag1==0))&&
+         timeout<6800)begin @(posedge clk);timeout=timeout+1;end
+   if(timeout>=6800)begin
+    $display("PAL BOINK first row missed deadline");errors=errors+1;end
+   for(raster=0;raster<224;raster=raster+1)begin
+    hdmi_display_y=raster[7:0];hdmi_display_valid=1;
+    hdmi_picture_active=1;hdmi_prefetch_y=raster[7:0]+1'b1;
+    hdmi_prefetch_valid=0;
+    repeat(1136)@(posedge clk);
+    if(raster==68)lpr=0;
+    if(raster==163)lpr=7;
+    if(raster==219)lpr=0;
+    repeat(144)@(posedge clk);
+    hdmi_prefetch_valid=1;
+    repeat(5632)@(posedge clk);
+    if(!((dut.h_valid0&&dut.h_tag0==raster+1)||
+         (dut.h_valid1&&dut.h_tag1==raster+1)))begin
+     $display("PAL BOINK missing row %0d, tags %0d/%0d state %0d",
+              raster+1,dut.h_tag0,dut.h_tag1,dut.state);
+     errors=errors+1;
+    end
+    if(raster==67 &&
+       !((dut.h_valid0&&dut.h_tag0==68&&dut.h_start0[18:0]==19'h04040)||
+         (dut.h_valid1&&dut.h_tag1==68&&dut.h_start1[18:0]==19'h04040)))begin
+     $display("PAL BOINK initial FF98 hold did not retain $4040");
+     errors=errors+1;
+    end
+    if(raster==68 &&
+       !((dut.h_valid0&&dut.h_tag0==69&&dut.h_start0[18:0]==19'h040e0)||
+         (dut.h_valid1&&dut.h_tag1==69&&dut.h_start1[18:0]==19'h040e0)))begin
+     $display("PAL BOINK FF98 release missed the VBORD address step");
+     errors=errors+1;
+    end
+    if(raster==163 &&
+       !((dut.h_valid0&&dut.h_tag0==164&&dut.h_start0[18:0]==19'h07ba0)||
+         (dut.h_valid1&&dut.h_tag1==164&&dut.h_start1[18:0]==19'h07ba0)))begin
+     $display("PAL BOINK FF98 hold did not keep GIME address $7BA0");
+     errors=errors+1;
+    end
+    if(raster==218 &&
+       !((dut.h_valid0&&dut.h_tag0==219&&dut.h_start0[18:0]==19'h07ba0)||
+         (dut.h_valid1&&dut.h_tag1==219&&dut.h_start1[18:0]==19'h07ba0)))begin
+     $display("PAL BOINK long FF98 hold lost GIME address $7BA0");
+     errors=errors+1;
+    end
+    if(raster==219 &&
+       !((dut.h_valid0&&dut.h_tag0==220&&dut.h_start0[18:0]==19'h07c40)||
+         (dut.h_valid1&&dut.h_tag1==220&&dut.h_start1[18:0]==19'h07c40)))begin
+     $display("PAL BOINK FF98 release missed the VBORD address step");
+     errors=errors+1;
+    end
+   end
+  end
+
+  // A row-zero tag from the old HDMI standard must not make the first row
+  // of the new field look cached; the running DMA chain must restart too.
+  @(negedge clk);
+  hdmi_prefetch_valid=0;hdmi_display_valid=0;hdmi_picture_active=0;
+  repeat(4) @(negedge clk);
+  for(i=0;i<2;i=i+1)begin
+   dut.state=0;dut.configuration_pending=0;
+   dut.mode_signature=dut.live_signature;
+   dut.last_screen_base=dut.frame_screen_base;
+   dut.last_video_bank=dut.frame_video_bank;
+   dut.h_valid0=1;dut.h_tag0=0;
+   dut.c_valid0=1;dut.c_tag0=0;
+   dut.dma_next_y=8'd47;dut.dma_next_address=19'h12345;
+   hdmi_active_50hz=!hdmi_active_50hz;
+   repeat(2) @(negedge clk);
+   if(!dut.h_valid0||!dut.c_valid0)begin
+    $display("standard-change cache test lost tags before the edge");
+    errors=errors+1;
+   end
+   repeat(3) @(negedge clk);
+   if(dut.h_valid0||dut.h_valid1||dut.c_valid0||dut.c_valid1||
+      dut.c_valid2||dut.dma_next_y!=0||
+      dut.dma_next_address!=screen_base)begin
+    $display("standard-change cache/DMA reset failed on flip %0d",i);
+    errors=errors+1;
+   end
+  end
+
+  // BOINK can write VOFF/VSC early in vertical blank, before row zero is
+  // requested.  Those values must still become the next field's DMA origin.
+  @(negedge clk);compatibility_mode=0;bit_plane=1;
+  hdmi_picture_active=0;hdmi_frame_start=1;
+  repeat(4) @(negedge clk);hdmi_frame_start=0;
+  repeat(4) @(negedge clk);
+  if(!dut.upper_border_active)begin
+   $display("HDMI upper-border window did not open");errors=errors+1;
+  end
+  screen_base=19'h12340;lpr=3'd3;vertical_scroll=3;
+  repeat(4) @(negedge clk);
+  if(dut.frame_screen_base!=19'h12340||
+     dut.dma_next_address!=19'h12340||dut.dma_line_in_row!=3)begin
+   $display("early upper-border VOFF/VSC was not captured: base=%h dma=%h line=%d upper=%b state=%d",
+    dut.frame_screen_base,dut.dma_next_address,dut.dma_line_in_row,dut.upper_border,dut.state);errors=errors+1;
+  end
+  vertical_scroll=5;
+  repeat(4) @(negedge clk);
+  if(dut.dma_line_in_row!=5)begin
+   $display("later upper-border VSC was not captured");errors=errors+1;
+  end
+  dut.state=6;dut.memory_request=1;
+  dut.h_valid0=1;dut.h_tag0=0;
+  screen_base=19'h12380;
+  repeat(4) @(negedge clk);
+  if(dut.state!=0||dut.memory_request||dut.h_valid0||
+     dut.dma_next_address!=19'h12380)begin
+   $display("upper-border VOFF write did not cancel stale row-zero fill");
+   errors=errors+1;
+  end
+  hdmi_prefetch_y=0;hdmi_prefetch_valid=1;
+  wait_hdmi_line();
+  if(!((dut.h_valid0&&dut.h_tag0==0&&dut.h_start0[18:0]==19'h12380)||
+       (dut.h_valid1&&dut.h_tag1==0&&dut.h_start1[18:0]==19'h12380)))begin
+   $display("row zero fetched from old VOFF after setup change");
+   errors=errors+1;
+  end
+  hdmi_prefetch_valid=0;
+  hdmi_picture_active=1;
+  repeat(4) @(negedge clk);
+  screen_base=19'h23450;
+  repeat(4) @(negedge clk);
+  if(dut.frame_screen_base!=19'h12380)begin
+   $display("VOFF changed after picture began");errors=errors+1;
+  end
 
   if(errors==0)$display("tb_gime_scanline_buffer PASS");
   else $display("tb_gime_scanline_buffer FAIL: %0d",errors);

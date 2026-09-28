@@ -51,6 +51,17 @@ module coco3_memory #(
     reg [22:0] pending_addr=0;
     reg [7:0] pending_wdata=0;
     reg [2:0] read_hold=0;
+    // Keep the pending-address tag comparison out of one long carry chain.
+    // These independent chunks are a combinational identity of the full
+    // equality test; no CPU transaction timing or pipeline stage changes.
+    (* syn_keep = "true" *) wire [5:0] pending_addr_equal_parts;
+    assign pending_addr_equal_parts[0]=pending_addr[3:0]==selected_addr_pipe[3:0];
+    assign pending_addr_equal_parts[1]=pending_addr[7:4]==selected_addr_pipe[7:4];
+    assign pending_addr_equal_parts[2]=pending_addr[11:8]==selected_addr_pipe[11:8];
+    assign pending_addr_equal_parts[3]=pending_addr[15:12]==selected_addr_pipe[15:12];
+    assign pending_addr_equal_parts[4]=pending_addr[19:16]==selected_addr_pipe[19:16];
+    assign pending_addr_equal_parts[5]=pending_addr[22:20]==selected_addr_pipe[22:20];
+    wire pending_addr_matches_selected=&pending_addr_equal_parts;
 
     wire snapshot_response_ready = pipe_read &&
         ((pipe_rom && rom_read_addr_tag == selected_addr_pipe[14:0]) ||
@@ -62,7 +73,7 @@ module coco3_memory #(
     wire selected_read_in_flight =
         (cpu_req && !cpu_wr && request_addr == selected_addr_pipe) ||
         (pending_valid && !pending_wr &&
-         pending_addr == selected_addr_pipe);
+         pending_addr_matches_selected);
 
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
@@ -126,7 +137,7 @@ module coco3_memory #(
                     end else if (snapshot_response_ready) begin
                         response_valid<=1;
                         if (pending_valid && !pending_wr &&
-                            pending_addr == selected_addr_pipe)
+                            pending_addr_matches_selected)
                             pending_valid<=0;
                     end else if (!selected_read_in_flight) begin
                         response_valid<=0; pending_wr<=0;
