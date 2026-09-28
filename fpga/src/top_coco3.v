@@ -30,13 +30,6 @@ module top_coco3 #(
     // 0: native GIME HDMI is aspect-correct 512-dot RGB888-filtered output.
     parameter integer NATIVE_HDMI_640=1,
     parameter integer DISTO_2MB=1,
-    // Fixed motherboard identity. FF98.H50 may change frame cadence, but it
-    // cannot change the crystal-derived CPU clock or analogue colour family.
-`ifdef COCOTANG_PAL_SOURCE
-    parameter integer PAL_MACHINE=1,
-`else
-    parameter integer PAL_MACHINE=0,
-`endif
     // Glenside task-file occupies IDE_BASE..IDE_BASE+$0f; $FF50 is standard.
     parameter integer ENABLE_GLENSIDE_IDE=1,
     parameter [15:0] IDE_BASE=16'hff50
@@ -215,8 +208,7 @@ module top_coco3 #(
     wire gime_keyint_n=!mux_keyint_n;
     wire gime_serint_n=!mux_sernt_n;
 
-    coco3 #(.NATIVE_HDMI_640(NATIVE_HDMI_640),.DISTO_2MB(DISTO_2MB),
-        .PAL_MACHINE(PAL_MACHINE)) machine(
+    coco3 #(.NATIVE_HDMI_640(NATIVE_HDMI_640),.DISTO_2MB(DISTO_2MB)) machine(
         .clk(clk108),.reset_n(board_reset_n),
         .cpu_reset_n(cpu_release),
         .s2(1'b0),.artifact_mode(artifact_mode_video),
@@ -414,8 +406,7 @@ module top_coco3 #(
     // sample edge without extending ownership into the following CPU cycle.
     // Retain an IDE read for one 108 MHz clock after E falls.  The physical
     // 6809 samples at that edge; releasing the transceiver on the same FPGA
-    // clock gave essentially zero hold time and became phase-sensitive when
-    // the PAL E/Q NCO ratio was selected.
+    // clock gave essentially zero hold time and became phase-sensitive.
     reg ide_read_hold=1'b0;
     reg [7:0] ide_read_latched=8'hff;
     always @(posedge clk108 or negedge board_reset_n) begin
@@ -623,7 +614,7 @@ module top_coco3 #(
         .LOG_DEPTH(LOG_DEPTH),
         .ENABLE_DEBUG_OVERLAY(ENABLE_BUS_LOGGER||ENABLE_GIME_TRACE),
         .GIME_TRACE_MODE(ENABLE_GIME_TRACE!=0&&ENABLE_BUS_LOGGER==0),
-        .NATIVE_HDMI_640(NATIVE_HDMI_640),.PAL_MACHINE(PAL_MACHINE)) hdmi_output(
+        .NATIVE_HDMI_640(NATIVE_HDMI_640)) hdmi_output(
         .pixel_clk(clk27),.serial_clk(clk135),.reset(!board_reset_n),
         .audio_clk(pia1_audio_clk),.audio_pcm(pia1_pcm_sample),
         .debug_clk(clk108),.log_we(log_we),.log_addr(log_addr),
@@ -698,7 +689,6 @@ module top_coco3 #(
         end
     end
     coco_cvbs_ntsc #(.STREAMING_INPUT(0),.CANONICAL_640_INPUT(1),
-        .PAL_MACHINE(PAL_MACHINE),
         .RGB_SOG_OUTPUT(ANALOG_VIDEO_MODE==3)) analog_encoder(
         // Start on the same board reset as HDMI.  cpu_release is aligned to
         // the CoCo bus, not to video, and made the CVBS consumer enter the

@@ -5,8 +5,6 @@ module tb_hdmi_video_standard;
     logic video_50hz=0;
     logic [9:0] x,y;
     logic [9:0] tmds[2:0];
-    logic [9:0] pal_x,pal_y;
-    logic [9:0] pal_tmds[2:0];
     logic [15:0] audio[1:0];
     integer errors=0;
 
@@ -22,14 +20,6 @@ module tb_hdmi_video_standard;
         .frame_height(),.screen_width(),.screen_height(),
            .tmds_internal(tmds));
 
-    hdmi #(.VIDEO_ID_CODE(2),.DYNAMIC_480_576(1),.PAL_MACHINE(1),
-           .DVI_OUTPUT(1'b1),.VIDEO_REFRESH_RATE(59.94),
-           .AUDIO_RATE(48000),.AUDIO_BIT_WIDTH(16)) pal_dut(
-        .clk_pixel_x5(clk),.clk_pixel(clk),.clk_audio(clk),
-        .video_50hz(1'b0),.reset(reset),.rgb(24'd0),
-        .audio_sample_word(audio),.cx(pal_x),.cy(pal_y),.frame_width(),
-        .frame_height(),.screen_width(),.screen_height(),
-        .tmds_internal(pal_tmds));
 
     initial begin
         repeat(2)@(posedge clk);reset=0;#1;
@@ -37,13 +27,6 @@ module tb_hdmi_video_standard;
            dut.screen_height!=480)begin
             $display("initial HDMI geometry %0d x %0d/%0d",
                      dut.frame_width,dut.screen_height,dut.frame_height);
-            errors=errors+1;
-        end
-        if(pal_dut.frame_width!=864||pal_dut.frame_height!=525||
-           pal_dut.screen_height!=480)begin
-            $display("PAL 60Hz HDMI geometry %0d x %0d/%0d",
-                     pal_dut.frame_width,pal_dut.screen_height,
-                     pal_dut.frame_height);
             errors=errors+1;
         end
         video_50hz=1'b1;

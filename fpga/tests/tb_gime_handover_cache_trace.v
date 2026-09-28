@@ -4,7 +4,6 @@
 // requests, not the physical HDMI/native raster timing; it verifies the
 // cache's published row starts and first physical SDRAM reads.
 module tb_gime_handover_cache_trace;
- parameter integer PAL_MACHINE=0;
  reg clk=0,hdmi_clk=0,cvbs_clk=0,reset_n=0;
  always #5 clk=~clk;
  always #18.5 hdmi_clk=~hdmi_clk;
@@ -31,7 +30,7 @@ module tb_gime_handover_cache_trace;
  wire [23:0] hdmi_pixel;
  wire [5:0] cvbs_pixel;
 
- gime_scanline_buffer #(.PAL_MACHINE(PAL_MACHINE)) dut(
+ gime_scanline_buffer dut(
   .clk(clk),.reset_n(reset_n),.bit_plane(1'b1),.hres(4'd7),.cres(2'd2),
   .lines_per_row_code(lpr),.vertical_scroll(vertical_scroll),
   .screen_base(screen_base),.video_bank(2'd0),

@@ -7,7 +7,6 @@
 module coco_cvbs_ntsc #(
     parameter integer STREAMING_INPUT = 0,
     parameter integer CANONICAL_640_INPUT = 0,
-    parameter integer PAL_MACHINE = 0,
     // Reuse the component DACs as RGB with negative composite sync on green.
     // The component HAT then needs no component changes: Y=G/SoG, Pb=B,
     // and Pr=R.
@@ -50,17 +49,13 @@ module coco_cvbs_ntsc #(
     // Calibrated burst window from the proven NTSCVideo implementation.
     localparam [9:0] BURST_START    = 10'd72;
     // Keep analogue scanout locked to the HDMI-mastered shared line cache.
-    // A PAL motherboard keeps its 912-dot/114-cycle horizontal period in
-    // both FF98 frame-rate modes. Its short frame therefore uses 864 output
-    // samples too; only the field length changes between 262.5 and 312.5.
-    wire pal_line_timing = PAL_MACHINE || video_50hz_active;
-    wire [9:0] h_total = pal_line_timing ? 10'd864 : 10'd858;
-    wire [9:0] burst_end = pal_line_timing ? 10'd108 : 10'd106;
+    wire [9:0] h_total = video_50hz_active ? 10'd864 : 10'd858;
+    wire [9:0] burst_end = video_50hz_active ? 10'd108 : 10'd106;
     // A framebuffer scales the 256 source pixels to 512 samples.  A live VDG
     // stream instead occupies its native 256/455 share of the 858-sample
     // line, or approximately 483 samples.
     wire picture_high_resolution = high_resolution && !compatibility_mode;
-    wire [9:0] standard_shift = pal_line_timing ? 10'd3 : 10'd0;
+    wire [9:0] standard_shift = video_50hz_active ? 10'd3 : 10'd0;
     wire [9:0] picture_left  = (picture_high_resolution ? 10'd158 :
                                STREAMING_INPUT ? 10'd271 : 10'd222) +
                                standard_shift;
@@ -83,10 +78,6 @@ module coco_cvbs_ntsc #(
     // Explicit field parity: zero is the 262-line short field and one is the
     // 263-line long field.
     (* keep = "true" *) reg field_odd = 1'b0;
-    // PAL V-switch parity is continuous across field boundaries.  Resetting
-    // it from v_line[0] alone is wrong after every 313-line field and makes
-    // alternate colour frames present the opposite burst sequence.
-    reg pal_line_parity = 1'b0;
     // Center the picture in the analog field. The counter begins 17 lines
     // ahead by the same V_PHASE_OFFSET, so logical row zero is still consumed
     // when HDMI produces it for the shared two-line GIME cache.
@@ -126,7 +117,6 @@ module coco_cvbs_ntsc #(
     reg [3:0] sample_phase = 4'd0;
     reg [9:0] h_sample = 10'd0;
     reg [8:0] v_line = 9'd0;
-    wire pal_line_odd = v_line[0] ^ pal_line_parity;
     wire [8:0] field_last_line = video_50hz_active ?
         (field_odd ? 9'd312 : 9'd311) :
         (field_odd ? 9'd262 : 9'd261);
@@ -179,12 +169,7 @@ module coco_cvbs_ntsc #(
     // cycle per 858-sample scan line.
     reg [8:0] carrier_fraction = 9'd0;
     reg [2:0] carrier_octant = 3'd0;
-    reg [31:0] pal_carrier_phase = 32'd0;
-    // Independent PAL colour oscillator. Its relationship to the authentic
-    // machine raster is handled separately from this HDMI-locked scanout.
-    localparam [31:0] PAL_CARRIER_STEP = 32'd141053685;
-    wire [2:0] carrier_phase = PAL_MACHINE ?
-        pal_carrier_phase[31:29] : carrier_octant;
+    wire [2:0] carrier_phase = carrier_octant;
 
     function signed [5:0] chroma8;
         input [2:0] phase;
@@ -400,7 +385,6 @@ module coco_cvbs_ntsc #(
     reg mod_burst = 1'b0;
     reg mod_picture = 1'b0;
     reg [2:0] mod_carrier = 3'd0;
-    reg mod_pal_odd = 1'b0;
     reg [5:0] mod_luma = LEVEL_BLANK;
     reg [6:0] mod_luma_q2 = LUMA_BLANK_Q2;
     reg signed [10:0] mod_x4 = 11'sd0;
@@ -410,38 +394,20 @@ module coco_cvbs_ntsc #(
     reg signed [7:0] mod_component_x = 8'sd0;
     reg signed [7:0] mod_component_y = 8'sd0;
 
-    wire signed [10:0] pal_y4 = (PAL_MACHINE && mod_pal_odd) ?
-                                -mod_y4 : mod_y4;
-    wire signed [10:0] pal_sum3 = (PAL_MACHINE && mod_pal_odd) ?
-                                  mod_difference3 : mod_sum3;
-    wire signed [10:0] pal_difference3 = (PAL_MACHINE && mod_pal_odd) ?
-                                         mod_sum3 : mod_difference3;
     wire signed [5:0] mod_picture_chroma =
-        rgb_chroma(mod_x4,pal_y4,pal_sum3,pal_difference3,mod_carrier);
+        rgb_chroma(mod_x4,mod_y4,mod_sum3,mod_difference3,mod_carrier);
     wire signed [5:0] mod_svideo_picture_chroma =
-        rgb_chroma(mod_x4,pal_y4,pal_sum3,pal_difference3,
+        rgb_chroma(mod_x4,mod_y4,mod_sum3,mod_difference3,
                    mod_carrier + 3'd1);
-    wire signed [5:0] mod_svideo_burst_chroma =
-        chroma8(mod_carrier + (mod_pal_odd ? 3'd5 : 3'd3) + 3'd5,
-                2'd3);
     wire signed [5:0] mod_burst_chroma =
-        chroma8(mod_carrier + (PAL_MACHINE ?
-            // Normal V uses the +135-degree burst; the line on which V is
-            // inverted uses -135 degrees.  Reversing this pairing preserves
-            // blue/U but inverts the decoded red/green axis.
-            (mod_pal_odd ? 3'd5 : 3'd3) : 3'd4),2'd3);
-    // Australian PAL-B/G needs a 4.43361875-MHz swinging burst near 0.3 V.
-    // The four-code NTSC-calibrated burst is too small after the 4.43-MHz
-    // transistor path and can fall below the monitor's colour killer.
+        chroma8(mod_carrier + 3'd4,2'd3);
     wire signed [5:0] mod_selected_chroma = mod_burst ?
-        (PAL_MACHINE ? (mod_burst_chroma <<< 1) : mod_burst_chroma) :
-        mod_picture_chroma;
+        mod_burst_chroma : mod_picture_chroma;
 
     reg level_sync = 1'b1;
     reg level_burst = 1'b0;
     reg level_picture = 1'b0;
     reg [2:0] level_carrier = 3'd0;
-    reg level_pal_odd = 1'b0;
     reg [5:0] level_luma = LEVEL_BLANK;
     reg [6:0] level_luma_q2 = LUMA_BLANK_Q2;
     reg signed [5:0] level_chroma = 6'sd0;
@@ -471,12 +437,9 @@ module coco_cvbs_ntsc #(
     // active-picture chroma must use the same polarity.  Advance picture hue
     // by one 45-degree carrier octant to compensate the measured analogue
     // rotation.  The corrected Q8 emitter follower still attenuates picture
-    // chroma.  NTSC retains the calibrated x4 gain; PAL uses x3 because its
-    // x2 swinging burst otherwise leaves deep-blue picture chroma close to
-    // clipping and produces visible black/blue dot crawl in the monitor.
+    // chroma with the calibrated x4 gain.
     wire signed [7:0] svideo_chroma_extended = level_svideo_chroma;
-    wire signed [7:0] svideo_picture_chroma = PAL_MACHINE ?
-        -(svideo_chroma_extended + (svideo_chroma_extended <<< 1)) :
+    wire signed [7:0] svideo_picture_chroma =
         -(svideo_chroma_extended <<< 2);
 
     wire [6:0] selected_luma_level_q2 = (FORCE_LUMA_LEVEL >= 0) ?
@@ -496,8 +459,7 @@ module coco_cvbs_ntsc #(
     // The receiver derives hue and saturation from the picture-to-burst ratio.
     wire [5:0] chroma_level = level_picture ?
         add_level_wide(CHROMA_CENTER,svideo_picture_chroma) :
-        level_burst ? add_level(CHROMA_CENTER,
-            PAL_MACHINE ? level_svideo_chroma : level_chroma) :
+        level_burst ? add_level(CHROMA_CENTER,level_chroma) :
         CHROMA_CENTER;
     wire [5:0] composite_level = level_sync ? LEVEL_SYNC :
         level_burst ? add_level(LEVEL_BLANK,level_chroma) :
@@ -514,13 +476,6 @@ module coco_cvbs_ntsc #(
     reg [6:0] component_pr_level_135 = 7'd64;
     reg chroma_burst_135 = 1'b0;
     reg chroma_burst_bit_135 = 1'b0;
-    // S-Video picture chroma uses the board-calibrated +1-octant rotation
-    // followed by inversion (+4 octants). Apply that same total rotation to
-    // PAL's 135/225-degree swinging burst so burst and picture share a phase
-    // reference at the connector.
-    wire [2:0] pal_svideo_burst_phase = level_carrier +
-                                        (level_pal_odd ? 3'd5 : 3'd3) +
-                                        3'd5;
 
     always @(posedge clk135) begin
         if (!reset_n) begin
@@ -536,10 +491,8 @@ module coco_cvbs_ntsc #(
             h_sample <= 10'd0;
             v_line <= V_PHASE_OFFSET;
             field_odd <= 1'b0;
-            pal_line_parity <= V_PHASE_OFFSET[0];
             carrier_fraction <= 9'd0;
             carrier_octant <= 3'd0;
-            pal_carrier_phase <= 32'd0;
             source_sync <= 1'b1;
             source_burst <= 1'b0;
             source_picture <= 1'b0;
@@ -576,7 +529,6 @@ module coco_cvbs_ntsc #(
             mod_burst <= 1'b0;
             mod_picture <= 1'b0;
             mod_carrier <= 3'd0;
-            mod_pal_odd <= 1'b0;
             mod_luma <= LEVEL_BLANK;
             mod_luma_q2 <= LUMA_BLANK_Q2;
             mod_x4 <= 11'sd0;
@@ -589,7 +541,6 @@ module coco_cvbs_ntsc #(
             level_burst <= 1'b0;
             level_picture <= 1'b0;
             level_carrier <= 3'd0;
-            level_pal_odd <= 1'b0;
             level_luma <= LEVEL_BLANK;
             level_luma_q2 <= LUMA_BLANK_Q2;
             level_chroma <= 6'sd0;
@@ -607,18 +558,10 @@ module coco_cvbs_ntsc #(
             if (video_50hz_sync != video_50hz_active)
                 video_50hz_active <= video_50hz_sync;
             height_meta <= active_height;
-            // PAL 50 Hz hires HDMI starts one source row later so its
-            // prefetch follows HBORD. Keep analogue one row behind that
-            // producer; otherwise alternating fields can read a bank while
-            // the shared renderer replaces it. NTSC and VDG are unchanged.
             picture_top <= next_picture_top +
-                           (!compatibility_mode ?
-                            ((PAL_MACHINE && video_50hz_active) ? 9'd2 : 9'd1) :
-                            9'd0);
+                           (!compatibility_mode ? 9'd1 : 9'd0);
             picture_bottom <= next_picture_top +
-                              (!compatibility_mode ?
-                               ((PAL_MACHINE && video_50hz_active) ? 9'd2 : 9'd1) :
-                               9'd0) +
+                              (!compatibility_mode ? 9'd1 : 9'd0) +
                               {1'b0,height_meta};
             luma_level_135 <= luma_level;
             chroma_level_135 <= chroma_level;
@@ -626,12 +569,7 @@ module coco_cvbs_ntsc #(
             component_pb_level_135 <= component_pb_level;
             component_pr_level_135 <= component_pr_level;
             chroma_burst_135 <= level_burst;
-            // S-Video's shaped one-bit burst must preserve PAL's +/-45-degree
-            // line alternation.  The raw carrier MSB generated a fixed-phase
-            // burst, so a PAL decoder rejected both it and the alternating V.
-            chroma_burst_bit_135 <= PAL_MACHINE ?
-                                    ~pal_svideo_burst_phase[2] :
-                                    ~level_carrier[2];
+            chroma_burst_bit_135 <= ~level_carrier[2];
 
             // Keep one immutable border colour for the complete analogue
             // scanline. The cached picture emerges two physical scanlines
@@ -683,7 +621,6 @@ module coco_cvbs_ntsc #(
             mod_burst <= encoder_burst;
             mod_picture <= encoder_picture;
             mod_carrier <= encoder_carrier;
-            mod_pal_odd <= pal_line_odd;
             mod_rgb <= encoder_rgb;
             mod_luma <= LEVEL_BLANK + encoder_luma_sum[10:6];
             mod_luma_q2 <= LUMA_BLANK_Q2 + encoder_y_picture_excursion;
@@ -702,16 +639,10 @@ module coco_cvbs_ntsc #(
             level_burst <= mod_burst;
             level_picture <= mod_picture;
             level_carrier <= mod_carrier;
-            level_pal_odd <= mod_pal_odd;
             level_luma <= mod_luma > LEVEL_WHITE ? LEVEL_WHITE : mod_luma;
             level_luma_q2 <= mod_luma_q2;
             level_chroma <= mod_selected_chroma;
-            // PAL S-Video burst must undergo the same +225-degree board-path
-            // transformation as picture chroma.  Composite has its own burst
-            // path and is deliberately unaffected.
-            level_svideo_chroma <= (PAL_MACHINE && mod_burst) ?
-                (mod_svideo_burst_chroma <<< 1) :
-                mod_svideo_picture_chroma;
+            level_svideo_chroma <= mod_svideo_picture_chroma;
 
             if (carrier_fraction >= 9'd338) begin
                 carrier_fraction <= carrier_fraction - 9'd338;
@@ -719,7 +650,6 @@ module coco_cvbs_ntsc #(
             end else begin
                 carrier_fraction <= carrier_fraction + 9'd91;
             end
-            pal_carrier_phase <= pal_carrier_phase + PAL_CARRIER_STEP;
 
             // The input is HDMI's frame-committed standard.  Re-establish
             // the intentional 17-line phase lead exactly when that standard
@@ -731,18 +661,12 @@ module coco_cvbs_ntsc #(
                 h_sample <= 10'd0;
                 v_line <= V_PHASE_OFFSET;
                 field_odd <= 1'b0;
-                pal_line_parity <= V_PHASE_OFFSET[0];
             end else if(sample_phase == 4'd9) begin
                 sample_phase <= 4'd0;
                 if (h_sample == line_last_sample) begin
                     h_sample <= 10'd0;
                     if (v_line == field_last_line) begin
                         v_line <= 9'd0;
-                        // The long field contains an odd number of complete
-                        // lines, so logical line parity must invert when it
-                        // wraps.  The short field contains an even number.
-                        if (field_odd)
-                            pal_line_parity <= ~pal_line_parity;
                         field_odd <= ~field_odd;
                     end else
                         v_line <= v_line + 1'b1;
@@ -872,12 +796,8 @@ module coco_cvbs_ntsc #(
                 luma_phase_lfsr <= {luma_phase_lfsr[14:0],
                                     luma_phase_feedback};
             luma_out_reg <= luma_sigma[7];
-            // The sparse-XOR burst shaper is an NTSC-only analogue-level
-            // workaround.  Its free-running 33.75-MHz pattern is not phase
-            // coherent with PAL's 4.433618-MHz NCO and corrupts the swinging
-            // burst reference.  In PAL, send burst through the same sigma-
-            // delta path as picture chroma so phase remains continuous.
-            chroma_out_reg <= (chroma_burst_270 && !PAL_MACHINE) ?
+            // Use the calibrated sparse-XOR burst shaper for NTSC.
+            chroma_out_reg <= chroma_burst_270 ?
                               shaped_burst_bit : chroma_sigma[5];
             cvbs_out_reg <= cvbs_sigma[5];
             component_pb_out_reg <= component_pb_sigma[7];

@@ -7,8 +7,7 @@ module coco3_hdmi #(
     parameter integer LOG_DEPTH=4096,
     parameter integer ENABLE_DEBUG_OVERLAY=0,
     parameter integer GIME_TRACE_MODE=0,
-    parameter integer NATIVE_HDMI_640=1,
-    parameter integer PAL_MACHINE=0
+    parameter integer NATIVE_HDMI_640=1
 ) (
     input logic pixel_clk,input logic serial_clk,
     input logic audio_clk,input logic [15:0] audio_pcm,input logic reset,
@@ -103,15 +102,9 @@ module coco3_hdmi #(
         // The line renderer prefetches N+1 while displaying N; this delay
         // places that prefetch after BOINK's HBORD handler for line N, so
         // FF98.LPR is sampled before the affected row begins rendering.
-        // PAL hires uses 576p, whose original centering put the prefetch
-        // only zero or half a GIME line behind the raster. Give PAL 50 Hz
-        // the same full-line delay as NTSC; VDG and NTSC retain their timing.
         top=active_50hz_s ?
-            (PAL_MACHINE!=0&&!compatibility_s ?
-             (height_s==8'd225 ? 10'd64 :
-              height_s==8'd199 ? 10'd90 : 10'd98) :
-             (height_s==8'd225 ? 10'd63 :
-              height_s==8'd199 ? 10'd89 : 10'd96)) :
+            (height_s==8'd225 ? 10'd63 :
+             height_s==8'd199 ? 10'd89 : 10'd96) :
             (height_s==8'd225 ? 10'd18 :
              height_s==8'd199 ? 10'd48 : 10'd52);
         // The GIME's 640-dot modes describe the same 4:3 display aperture as
@@ -133,7 +126,7 @@ module coco3_hdmi #(
         // cache must distinguish them from vertical-border frame setup.
         source_picture_active=(y>=top && y<top+doubled_height);
         source_frame_start=(x==0 && y==0);
-        // The VDG raster's picture starts at top/2+15 (NTSC) or +16 (PAL).
+        // The VDG raster's picture starts at top/2+15 (60 Hz) or +16 (50 Hz).
         // Preserve that offset in the vertical borders as well.
         source_border_raster_y={1'b0,y[9:1]}+(active_50hz_s?9'd16:9'd15);
         // Native GIME can either retain all 640 dots for sharp 80-column
@@ -156,12 +149,8 @@ module coco3_hdmi #(
         // line (about 63.5 us), which is enough for the renderer while making
         // the first visible row use the finalized frame state.
         prefetch_y=(y<top) ? 8'd0 : source_line[7:0]+1'b1;
-        prefetch_valid=((y<top) ? (y+2'd2>=top) :
-                       (y<top+doubled_height && source_line+1'b1<height_s)) &&
-                       // PAL 60 Hz bitmap rows begin after the GIME border
-                       // interrupt has latched the following raster mode.
-                       !(PAL_MACHINE!=0 && !active_50hz_s &&
-                         !compatibility_s && bit_plane_s && !y[0] && x<10'd320);
+        prefetch_valid=(y<top) ? (y+2'd2>=top) :
+                       (y<top+doubled_height && source_line+1'b1<height_s);
     end
 
     logic picture_d=0;
@@ -175,7 +164,6 @@ module coco3_hdmi #(
     // attached to the same immutable framebuffer scanline.
     logic [5:0] border_row_current=0;
     logic [5:0] border_row_delayed=0;
-    logic [5:0] border_d=0;
     logic artifact_active_m=0,artifact_active_s=0;
     logic artifact_css_m=0,artifact_css_s=0;
     logic [23:0] stream_rgb,debug_rgb,rgb;
@@ -189,11 +177,16 @@ module coco3_hdmi #(
             border_row_delayed<=border_row_current;
             border_row_current<=border_rgb;
         end
-        border_d<=border_row_delayed;
     end
-    wire [23:0] expanded_border={{4{border_d[5:4]}},
-                                 {4{border_d[3:2]}},
-                                 {4{border_d[1:0]}}};
+    // The HDMI encoder samples RGB on the same edge that advances the border
+    // row registers. At x=0 it would see the old delayed value, so bypass
+    // that one pixel with the current row. The remaining pixels use the
+    // newly updated delayed register.
+    wire [5:0] scanline_border=(x==0 && !y[0]) ?
+                               border_row_current : border_row_delayed;
+    wire [23:0] expanded_border={{4{scanline_border[5:4]}},
+                                 {4{scanline_border[3:2]}},
+                                 {4{scanline_border[1:0]}}};
     // The line cache holds CSS at the first and last VDG bytes so a write
     // in either border cannot recolour a row that was already rendered.
     wire [5:0] row_border=(x<=picture_lead)?row_left_border_rgb:
@@ -301,8 +294,7 @@ module coco3_hdmi #(
     logic [15:0] audio_samples[1:0];
     assign audio_samples[0]=audio_pcm; assign audio_samples[1]=audio_pcm;
     logic [9:0] tmds_internal[2:0];
-    hdmi #(.VIDEO_ID_CODE(2),.DYNAMIC_480_576(1),
-           .PAL_MACHINE(PAL_MACHINE),.DVI_OUTPUT(1'b0),
+    hdmi #(.VIDEO_ID_CODE(2),.DYNAMIC_480_576(1),.DVI_OUTPUT(1'b0),
            .VIDEO_REFRESH_RATE(59.94),
            .AUDIO_RATE(48000),.AUDIO_BIT_WIDTH(16),.NUM_CHANNELS(3),
            .START_X(0),.START_Y(0)) encoder(

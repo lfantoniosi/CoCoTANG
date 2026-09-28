@@ -1,8 +1,7 @@
 // Unified CoCo 3 scanline renderer. Mode decoding and row addressing follow
 // the MiSTer/Gary Becker CoCo3FPGA core, but no framebuffer is used.
 module gime_scanline_buffer #(
- parameter integer NATIVE_HDMI_640=1,
- parameter integer PAL_MACHINE=0
+ parameter integer NATIVE_HDMI_640=1
 ) (
  input clk,input reset_n,input bit_plane,input [3:0] hres,input [1:0] cres,
  input [2:0] lines_per_row_code,input [3:0] vertical_scroll,
@@ -450,23 +449,6 @@ module gime_scanline_buffer #(
   .color_index(artifact_color_index),.rgb(artifact_rgb));
 
  reg [3:0] decoded_index;reg decoded_pixel;reg [5:0] decoded_code;
- reg [3:0] prepared_graphics_index=0;
- wire [5:0] prepared_native_rgb=
-  palette_rgb(fill_palettes[prepared_graphics_index*6+:6]);
- reg [3:0] following_graphics_index;
- always @(*) begin
-  case(fill_cres)
-   0:following_graphics_index={3'b0,cached_byte[7-next_source_x[2:0]]};
-   1:case(next_source_x[1:0])
-    0:following_graphics_index={2'b0,cached_byte[7:6]};
-    1:following_graphics_index={2'b0,cached_byte[5:4]};
-    2:following_graphics_index={2'b0,cached_byte[3:2]};
-    default:following_graphics_index={2'b0,cached_byte[1:0]};
-   endcase
-   default:following_graphics_index=next_source_x[0]?
-    cached_byte[3:0]:cached_byte[7:4];
-  endcase
- end
  reg semigraphics_pixel;reg inverse_character;reg [2:0] semigraphics_color;
  always @(*) begin
   case(fill_cres)
@@ -551,9 +533,7 @@ reg [1:0] frame_video_bank=0,last_video_bank=0;
  reg [18:0] dma_next_address=0;
  reg [3:0] dma_line_in_row=0;
  // HBORD computes the completed row's advance, but VBORD applies it after
- // early-left-border FF98 writes.  XRoar's PAL GIME suppresses that pending
- // advance immediately when the new LPR is 7.  Keep the completed row's
- // stride/counter descriptor, while testing the live LPR=7 suppression.
+ // early-left-border FF98 writes.
  reg dma_advance_pending=0;
  reg [18:0] dma_advance_base=0;
  reg [10:0] dma_advance_stride=0;
@@ -565,25 +545,13 @@ wire dma_advance_infinite=dma_advance_compatibility?
   lines_per_row_code==3'b111;
 wire dma_advance_row=dma_advance_compatibility?
   dma_advance_glyph+1'b1>=dma_advance_lpr:
-  PAL_MACHINE!=0 ?
-   ({4'd0,dma_advance_glyph}+8'd1>=dma_advance_lpr):
    native_advance_row(lines_per_row_code,dma_advance_glyph);
-// XRoar applies the live PAL LPR at VBORD, after HBORD has counted the old
-// row.  LPR=7 suppresses the pending address step without resetting that
-// counter; LPR=0 forces the step and resets it, even after a held row.
-wire pal_native_dma=PAL_MACHINE!=0&&!dma_advance_compatibility;
-wire pal_live_hold=pal_native_dma&&lines_per_row_code==3'b111;
-wire pal_live_single=pal_native_dma&&lines_per_row_code==3'b000;
-wire dma_effective_advance=pal_live_single||
-                           (!pal_live_hold&&dma_advance_row);
 wire [18:0] advanced_dma_address=
-  pal_live_hold ? dma_advance_base :
   dma_advance_bit_plane&&dma_advance_infinite ? dma_advance_base :
-  dma_effective_advance ? (dma_advance_base+dma_advance_stride) :
+  dma_advance_row ? (dma_advance_base+dma_advance_stride) :
                           dma_advance_base;
 wire [3:0] advanced_dma_line=
-  pal_live_hold ? dma_advance_glyph+1'b1 :
-  (dma_advance_bit_plane&&dma_advance_infinite)||dma_effective_advance ?
+  (dma_advance_bit_plane&&dma_advance_infinite)||dma_advance_row ?
   4'd0 : dma_advance_glyph+1'b1;
  reg upper_border_q=0;
  reg hdmi_frame_meta=0,hdmi_frame_sync=0,hdmi_frame_prev=0;
@@ -959,17 +927,7 @@ reg configuration_pending=1'b1;
       hdmi_pixel_latched<=expand_rgb222(fill_border_rgb);
       state<=WRITE_PIXEL;
      end else if(fill_bit_plane&&graphics_cache_valid&&graphics_cache_index==source_byte_index)begin
-      // PAL native graphics requests start after raster-time FF98 writes.
-      // Save one state per repeated source byte to preserve the fill deadline.
-     if(PAL_MACHINE!=0&&!fill_compatibility)begin
-       color_index_latched<=decoded_index;
-       color_code_latched<=decoded_code;
-       // The preceding WRITE_PIXEL prepared this index.  Do not put source
-       // position decoding and palette selection on one 108 MHz path.
-       pixel_latched<=prepared_native_rgb;
-       hdmi_pixel_latched<=expand_rgb222(prepared_native_rgb);
-       state<=WRITE_PIXEL;
-      end else state<=DECODE_PIXEL;
+      state<=DECODE_PIXEL;
      end
      else if(!fill_bit_plane&&text_cache_valid&&
              text_cache_column==source_character_column)
@@ -1035,8 +993,6 @@ reg configuration_pending=1'b1;
      state<=WRITE_PIXEL;
     end
     WRITE_PIXEL:begin
-     if(PAL_MACHINE!=0&&!fill_compatibility&&fill_bit_plane)
-      prepared_graphics_index<=following_graphics_index;
      // Area-preserving 640 -> 512 horizontal filter for HDMI.  For every
      // five canonical pixels emit four samples at phases 0, 1.25, 2.5 and
      // 3.75.  CVBS retains the original 640-dot row.  This is a streaming

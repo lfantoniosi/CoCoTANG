@@ -1,9 +1,7 @@
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 PROJECT := $(ROOT)/CoCoTANG.gprj
-PAL_PROJECT := $(ROOT)/CoCoTANG_PAL.gprj
 BUILD_TCL := $(ROOT)/scripts/build.tcl
 OUTPUT := $(ROOT)/impl/pnr/CoCoTANG.fs
-PAL_OUTPUT := $(ROOT)/impl/pnr/CoCoTANG_PAL.fs
 
 ifeq ($(shell uname -s),Darwin)
 GOWIN_IDE ?= /Applications/GowinIDE.app/Contents/Resources/Gowin_EDA/IDE
@@ -19,17 +17,12 @@ PROGRAMMER_BOARD ?= tangnano20k
 ROM_OFFSET ?= 1048576
 
 .DEFAULT_GOAL := build
-.PHONY: build rebuild pal-build pal-rebuild test program reprogram pal-program pal-reprogram rom pal-rom check-tools
+.PHONY: build rebuild test program reprogram rom check-tools
 
 build: $(OUTPUT)
 
 rebuild: check-tools
 	$(call run-gowin,CoCoTANG.gprj,top_coco3,CoCoTANG)
-
-pal-build: $(PAL_OUTPUT)
-
-pal-rebuild: check-tools
-	$(call run-gowin,CoCoTANG_PAL.gprj,top_coco3,CoCoTANG_PAL)
 
 test:
 	iverilog -g2012 -o /private/tmp/cocotang_tb_sd_spi tests/tb_sd_spi_block.v src/storage/sd_spi_block.v
@@ -44,8 +37,6 @@ test:
 	vvp /private/tmp/cocotang_tb_cvbs
 	iverilog -g2012 -o /private/tmp/cocotang_tb_rgb_sog tests/tb_rgb_sog.v src/video/coco_cvbs_ntsc.v
 	vvp /private/tmp/cocotang_tb_rgb_sog
-	iverilog -g2012 -o /private/tmp/cocotang_tb_pal_chroma tests/tb_pal_chroma.v src/video/coco_cvbs_ntsc.v
-	vvp /private/tmp/cocotang_tb_pal_chroma
 	iverilog -g2012 -o /private/tmp/cocotang_tb_fill tests/tb_sdram_test_fill.v src/memory/sdram_test_fill.v
 	vvp /private/tmp/cocotang_tb_fill
 	iverilog -g2012 -o /private/tmp/cocotang_tb_startup_test tests/tb_coco_sdram_startup_test.v src/memory/coco_sdram_startup_test.v
@@ -64,10 +55,6 @@ test:
 	vvp /private/tmp/cocotang_tb_gime_50_to_60_resync
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_50_to_60_field_wrap tests/tb_gime_50_to_60_field_wrap.v src/coco3/gime_native_video.v
 	vvp /private/tmp/cocotang_tb_gime_50_to_60_field_wrap
-	iverilog -g2012 -Ptb_gime_native_video.PAL_MACHINE=1 -o /private/tmp/cocotang_tb_gime_native_video_pal tests/tb_gime_native_video.v src/coco3/gime_native_video.v
-	vvp /private/tmp/cocotang_tb_gime_native_video_pal
-	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_pal_60_mode_switch tests/tb_gime_pal_60_mode_switch.v src/coco3/gime_native_video.v
-	vvp /private/tmp/cocotang_tb_gime_pal_60_mode_switch
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_compat_video tests/tb_gime_compat_video.v src/coco3/gime_native_video.v
 	vvp /private/tmp/cocotang_tb_gime_compat_video
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_registers tests/tb_gime_registers.v src/coco3/gime_registers.v
@@ -84,16 +71,12 @@ test:
 	vvp /private/tmp/cocotang_tb_artifact_osd
 	iverilog -g2012 -o /private/tmp/cocotang_tb_hdmi_standard tests/tb_hdmi_video_standard.sv src/video/hdmi/hdmi.sv src/video/hdmi/tmds_channel.sv
 	vvp /private/tmp/cocotang_tb_hdmi_standard
-	iverilog -g2012 -s tb_coco3_hdmi_pal_alignment -o /private/tmp/cocotang_tb_coco3_hdmi_pal_alignment tests/tb_coco3_hdmi_pal_alignment.sv src/video/coco3_hdmi.sv src/video/artifact_mode_osd.sv
-	vvp /private/tmp/cocotang_tb_coco3_hdmi_pal_alignment
+	iverilog -g2012 -s tb_coco3_hdmi_border_handoff -o /private/tmp/cocotang_tb_hdmi_border tests/tb_coco3_hdmi_border_handoff.sv src/video/coco3_hdmi.sv src/video/artifact_mode_osd.sv
+	vvp /private/tmp/cocotang_tb_hdmi_border
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_scanline tests/tb_gime_scanline_buffer.v src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
 	vvp /private/tmp/cocotang_tb_gime_scanline
-	iverilog -g2012 -Ptb_gime_scanline_buffer.PAL_MACHINE=1 -o /private/tmp/cocotang_tb_gime_scanline_pal tests/tb_gime_scanline_buffer.v src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
-	vvp /private/tmp/cocotang_tb_gime_scanline_pal
 	iverilog -g2012 -s tb_gime_handover_cache_trace -o /private/tmp/cocotang_tb_gime_handover_cache_trace tests/tb_gime_handover_cache_trace.v src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
 	vvp /private/tmp/cocotang_tb_gime_handover_cache_trace
-	iverilog -g2012 -s tb_gime_handover_cache_trace -Ptb_gime_handover_cache_trace.PAL_MACHINE=1 -o /private/tmp/cocotang_tb_gime_handover_cache_trace_pal tests/tb_gime_handover_cache_trace.v src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
-	vvp /private/tmp/cocotang_tb_gime_handover_cache_trace_pal
 	iverilog -g2012 -o /private/tmp/cocotang_tb_coco3_video_mux tests/tb_coco3_video_mux.v src/coco3/coco3.v src/coco3/gime_timing.v src/coco3/gime_registers.v src/coco3/gime_mode_debug.v src/coco3/gime_scanline_buffer.v src/coco3/gime_native_video.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
 	vvp /private/tmp/cocotang_tb_coco3_video_mux
 	iverilog -g2012 -o /private/tmp/cocotang_tb_hdmi_debug tests/tb_hdmi_debug_overlay.sv src/video/hdmi_debug_overlay.sv
@@ -107,17 +90,7 @@ program: $(OUTPUT)
 reprogram:
 	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(OUTPUT)"
 
-pal-program: $(PAL_OUTPUT)
-	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(PAL_OUTPUT)"
-
-pal-reprogram:
-	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(PAL_OUTPUT)"
-
 rom: roms/coco3.rom
-	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f --external-flash \
-	 -o "$(ROM_OFFSET)" "$<"
-
-pal-rom: roms/coco3p.rom
 	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f --external-flash \
 	 -o "$(ROM_OFFSET)" "$<"
 
@@ -132,6 +105,3 @@ endef
 
 $(OUTPUT): $(PROJECT) $(BUILD_TCL) $(shell find src -type f) | check-tools
 	$(call run-gowin,CoCoTANG.gprj,top_coco3,CoCoTANG)
-
-$(PAL_OUTPUT): $(PAL_PROJECT) $(BUILD_TCL) $(shell find src -type f) | check-tools
-	$(call run-gowin,CoCoTANG_PAL.gprj,top_coco3,CoCoTANG_PAL)

@@ -1,7 +1,5 @@
 `timescale 1ns/1ps
-module tb_gime_native_video #(
-    parameter integer PAL_MACHINE=0
-);
+module tb_gime_native_video;
     reg clk=0,reset_n=0,video_50hz=0,bit_plane=0;
     wire hs_n,fs_n,hborder_irq_n,hblank,vblank;
     wire compatibility_sample;
@@ -12,7 +10,7 @@ module tb_gime_native_video #(
 
     always #5 clk=!clk;
 
-    gime_native_video #(.PAL_MACHINE(PAL_MACHINE)) dut(
+    gime_native_video dut(
         .clk(clk),.reset_n(reset_n),.video_50hz(video_50hz),
         .bit_plane(bit_plane),.hdmi_frame_start(1'b0),
         .hdmi_active_50hz(1'b0),
@@ -34,11 +32,8 @@ module tb_gime_native_video #(
                 saw_hborder_at_830=1;
             if (dut.y==dut.frame_last_line && dut.x==dut.half_line_dot) begin
                 frames=frames+1;
-                if ((!video_50hz && raster_ticks!=
-                     (PAL_MACHINE && !bit_plane ? 239400 :
-                      PAL_MACHINE ? 237737 :
-                      238875)) ||
-                    (video_50hz && raster_ticks!=(PAL_MACHINE ? 285000 : 284375))) begin
+                if ((!video_50hz && raster_ticks!=238875) ||
+                    (video_50hz && raster_ticks!=284375)) begin
                     $display("native frame %0d h50=%0d bp=%0d was %0d dots",
                              frames,video_50hz,bit_plane,raster_ticks);
                     errors=errors+1;
@@ -69,12 +64,8 @@ module tb_gime_native_video #(
         repeat(3) @(posedge clk);
         reset_n=1;
         #1;
-        if (PAL_MACHINE && dut.RASTER_STEP!=32'd566697074) begin
-            $display("PAL cache raster is not locked to 576p");
-            errors=errors+1;
-        end
-        if (dut.native_top!=9'd25) begin
-            $display("192-line body top was %0d, expected 25",dut.native_top);
+        if (dut.native_top!=9'd24) begin
+            $display("192-line body top was %0d, expected 24",dut.native_top);
             errors=errors+1;
         end
         force dut.active_height=8'd225; #1;
@@ -90,7 +81,7 @@ module tb_gime_native_video #(
             errors=errors+1;
         end
         video_50hz=1'b0;
-        // PAL text, two HDMI-anchored PAL bitmap fields and 50 Hz.
+        // Native text, bitmap fields and 50 Hz.
         repeat(8500000) @(posedge clk);
         $display("tb_gime_native_video timeout");
         $finish;

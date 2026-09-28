@@ -53,10 +53,6 @@ module tb_coco3_video_mux;
         repeat(4) @(posedge clk);
         reset_n=1; cpu_reset_n=1; hdmi_source_valid=1;
         repeat(3) @(posedge clk); #1;
-        if(dut.timing.pal_hires_60hz)begin
-            $display("native text incorrectly selected PAL bitmap CPU cadence");
-            errors=errors+1;
-        end
         wait(video_memory_request);
         held_addr=video_memory_addr;
         // An interleaved SDRAM slot may arrive many clocks after selection.
@@ -118,23 +114,12 @@ module tb_coco3_video_mux;
                      dut.effective_lines_per_row_code,dut.sam_video_mode);
             errors=errors+1;
         end
-        if(dut.timing.pal_hires_60hz)begin
-            $display("compatibility graphics selected PAL bitmap CPU cadence");
-            errors=errors+1;
-        end
         cpu_addr=16'hff90; cpu_data=8'h40; cpu_rw_n=0;
         wait_bus_write();
         cpu_addr=16'hff98; cpu_data=8'h80;
         wait_bus_write();
         cpu_rw_n=1;
         repeat(3) @(posedge clk); #1;
-        // The experimental PAL bitmap CPU NCO remains disabled until the
-        // boot/LOADM instability is resolved. Video timing changes must not
-        // silently turn it back on.
-        if(dut.timing.pal_hires_60hz)begin
-            $display("native bitmap changed the boot-isolated CPU cadence");
-            errors=errors+1;
-        end
         if(errors==0) $display("tb_coco3_video_mux PASS");
         else $display("tb_coco3_video_mux FAIL: %0d",errors);
         $finish;

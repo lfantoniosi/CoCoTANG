@@ -21,13 +21,11 @@ remain in the computer.
 ## ROM and memory
 
 At startup the CPU remains halted until the clocks, SDRAM initialization, and
-ROM load have completed. `roms/coco3.rom` and `roms/coco3p.rom` are the 32 KiB
-NTSC and PAL CoCo 3 ROM images stored in module flash at offset `0x100000`.
-Program the ROM matching the machine-standard bitstream with:
+ROM load have completed. `roms/coco3.rom` is the 32 KiB CoCo 3 ROM image
+stored in module flash at offset `0x100000`. Program it with:
 
 ```sh
 make rom
-make pal-rom
 ```
 
 ## Video
@@ -51,12 +49,10 @@ HDMI can use sharp 640-dot native output (`NATIVE_HDMI_640=1`) or an
 aspect-correct 512-dot filtered image. Compatibility modes retain the CoCo 3
 GIME's MC6847-compatible character and artifact-color behavior.
 
-`PAL_MACHINE` is the fixed motherboard-standard build flag in `top_coco3`.
-The normal targets leave it at `0` for the 28.63636 MHz NTSC machine. The
-`pal-build`/`pal-rebuild` targets use `CoCoTANG_PAL.gprj`, which fixes it at
-`1` for the 28.475 MHz PAL machine. This flag selects the crystal-derived E/Q timing and immutable
-analogue colour family. At runtime, VMODE `$FF98` bit 3 (H50) selects 60- or
-50-Hz vertical timing without changing those machine clocks. HDMI follows
+The build uses NTSC-machine CPU and video timing. At runtime, VMODE `$FF98`
+bit 3 (H50) selects 60- or 50-Hz vertical timing without changing the CPU
+clock. The 50-Hz path retains NTSC-machine timing and colour encoding while
+using a 625-line output raster. HDMI follows
 H50 using 720x480p59.94 or 720x576p50 respectively.
 
 ## Glenside IDE / TF card
@@ -83,9 +79,7 @@ With Gowin EDA and `openFPGALoader` installed:
 ```sh
 make test       # RTL regression suite
 make rebuild    # clean synthesis, place-and-route, and bitstream
-make pal-rebuild # same for a PAL motherboard; produces CoCoTANG_PAL.fs
 make program    # build if needed and program SRAM
-make pal-program # build/program the PAL-machine bitstream
 make reprogram  # program the existing bitstream
 ```
 

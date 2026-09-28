@@ -1,6 +1,4 @@
-module gime_native_video #(
-    parameter integer PAL_MACHINE = 0
-) (
+module gime_native_video (
     input clk, input reset_n, input video_50hz, input bit_plane,
     input hdmi_frame_start, input hdmi_active_50hz,
     input [7:0] active_height,
@@ -27,12 +25,7 @@ module gime_native_video #(
     // 108 MHz system clock the native dot-rate ratio is therefore 35/264.
     // Keeping that exact relationship prevents the CPU-visible raster IRQs
     // from walking horizontally through the independently scanned picture.
-    // The physical PAL CoCo uses 28.475 MHz / 2 here (about 15.611 kHz), but
-    // this renderer currently shares rows with exact-50-Hz HDMI. Keep the
-    // producer on the 14.250 MHz cache cadence until PAL has its own renderer;
-    // otherwise the consumers separate and component/CVBS blank.
-    localparam [31:0] RASTER_STEP = PAL_MACHINE ?
-        32'd566697074 : 32'd569408543;
+    localparam [31:0] RASTER_STEP = 32'd569408543;
     reg [31:0] accumulator=0;
     wire [32:0] sum={1'b0,accumulator}+{1'b0,RASTER_STEP};
     reg raster_tick=0;
@@ -49,21 +42,8 @@ module gime_native_video #(
         (active_height==8'd225 ? 9'd31 :
          active_height==8'd199 ? 9'd44 : 9'd48) :
         (active_height==8'd225 ? 9'd8 :
-         active_height==8'd199 ? 9'd23 : 9'd25);
-    // Keep the existing PAL-adapted 14.25 MHz dot clock and NTSC's 262.5
-    // lines in FF98's 60 Hz bitmap mode.  Two 858-dot HDMI lines last
-    // 905 2/3 native dots, so repeat 906/906/905-dot lines.  A 452-dot
-    // final half-line is half a dot short per field; the HDMI frame pulse
-    // corrects that at the border, avoiding any long-term phase walk.
-    // Text and 50 Hz retain their established
-    // PAL cadence so boot/menu timing is unchanged.
-    wire pal_60_bitmap = PAL_MACHINE && !video_50hz &&
-                         !compatibility_mode && bit_plane;
-    // XRoar's measured 60 Hz GIME border begins 18 lines after the
-    // HDMI-visible raster origin: active starts at 43/41/26 for
-    // 192/199/225 lines, versus the scanout's 25/23/8.  Keep the picture
-    // where it is on HDMI, but move FS/VBORD earlier by this amount.
-    wire [8:0] native_top = pal_60_bitmap ? live_top+9'd18 : live_top;
+         active_height==8'd199 ? 9'd23 : 9'd24);
+    wire [8:0] native_top = live_top;
     wire [8:0] native_bottom=native_top+active_height;
     // Capture after FF98 writes made early in HBORD (BOINK writes at dot 71),
     // at the same left-border point used by XRoar's field trace.
@@ -73,7 +53,6 @@ module gime_native_video #(
         y<native_bottom ? y-native_top : y-native_bottom;
     assign trace_phase=y<9'd7 ? 2'd0 :
         y>=native_top && y<native_bottom ? 2'd2 : 2'd1;
-    reg [1:0] pal_60_line_phase=0;
     reg hdmi_frame_meta=0,hdmi_frame_sync=0,hdmi_frame_prev=0;
     reg hdmi_50_meta=0,hdmi_50_sync=0;
     reg video_50hz_prev=0,standard_60_resync_pending=0;
@@ -85,15 +64,8 @@ module gime_native_video #(
     reg [9:0] standard_60_phase_x=0;
     reg [8:0] standard_60_phase_y=0;
     wire hdmi_frame_rise=hdmi_frame_sync&&!hdmi_frame_prev;
-    wire [9:0] line_last_dot = (PAL_MACHINE && !pal_60_bitmap) ?
-                                10'd911 :
-                                pal_60_bitmap ?
-                                (pal_60_line_phase==2'd2 ? 10'd904 : 10'd905) :
-                                10'd909;
-    wire [9:0] half_line_dot = (PAL_MACHINE && !pal_60_bitmap) ?
-                                10'd455 :
-                                pal_60_bitmap ? 10'd451 :
-                                10'd454;
+    wire [9:0] line_last_dot = 10'd909;
+    wire [9:0] half_line_dot = 10'd454;
     // H50 may change at any point in the field.  Keep the current field's
     // terminal until it wraps; using the live register here can make the
     // terminal unreachable when 50 Hz is cleared below line 262.
@@ -103,8 +75,7 @@ module gime_native_video #(
     // VDG software counts slow E cycles from FS and needs complete 912-tick
     // lines. Run that clock independently so switching to VDG never changes
     // the native raster cadence or BOINK's border interrupts.
-    localparam [31:0] COMPATIBILITY_STEP = PAL_MACHINE ?
-        32'd566199971 : 32'd569408471;
+    localparam [31:0] COMPATIBILITY_STEP = 32'd569408471;
     reg [31:0] compatibility_accumulator=0;
     wire [32:0] compatibility_sum=
         {1'b0,compatibility_accumulator}+{1'b0,COMPATIBILITY_STEP};
@@ -133,7 +104,6 @@ module gime_native_video #(
         if (!reset_n) begin
             accumulator<=0; raster_tick<=0; x<=0; y<=0;
             native_field_50hz<=0;
-            pal_60_line_phase<=0;
             hdmi_frame_meta<=0;hdmi_frame_sync<=0;hdmi_frame_prev<=0;
             hdmi_50_meta<=0;hdmi_50_sync<=0;
             video_50hz_prev<=0;standard_60_resync_pending<=0;
@@ -148,29 +118,17 @@ module gime_native_video #(
             hdmi_50_meta<=hdmi_active_50hz;
             hdmi_50_sync<=hdmi_50_meta;
             video_50hz_prev<=video_50hz;
-            if(PAL_MACHINE==0)begin
-                if(video_50hz)standard_50_seen<=1'b1;
-                if(hdmi_frame_rise&&!video_50hz&&!standard_50_seen)begin
-                    standard_60_phase_x<=x;
-                    standard_60_phase_y<=y;
-                    standard_60_phase_valid<=1'b1;
-                end
+            if(video_50hz)standard_50_seen<=1'b1;
+            if(hdmi_frame_rise&&!video_50hz&&!standard_50_seen)begin
+                standard_60_phase_x<=x;
+                standard_60_phase_y<=y;
+                standard_60_phase_valid<=1'b1;
             end
-            if(PAL_MACHINE==0&&video_50hz_prev&&!video_50hz)
+            if(video_50hz_prev&&!video_50hz)
                 standard_60_resync_pending<=1'b1;
             accumulator<=sum[31:0];
             raster_tick<=sum[32];
-            // PAL text and bitmap have different frame lengths.  Align only
-            // bitmap fields to HDMI's origin.  Keep the GIME two raster
-            // line ahead of scanout.  This was the last PAL build that
-            // reliably loaded BOINK; a second line of lead moved the
-            // placement enough to expose marginal external bus timing.
-            // The pulse is synchronized from the 27 MHz scanout clock.
-            if(pal_60_bitmap&&hdmi_frame_rise)begin
-                x<=0;y<=9'd18;
-                native_field_50hz<=1'b0;
-                pal_60_line_phase<=2'd1;
-            end else if(PAL_MACHINE==0&&standard_60_resync_pending&&
+            if(standard_60_resync_pending&&
                         !video_50hz&&!hdmi_50_sync&&hdmi_frame_rise)begin
                 // Finish the 50 Hz field using its latched terminal, then
                 // realign this independent raster to the first 480p field.
@@ -199,13 +157,6 @@ module gime_native_video #(
                     y<=y==frame_last_line ? 0 : y+1'b1;
                     if (y==frame_last_line) begin
                         native_field_50hz<=video_50hz;
-                        pal_60_line_phase<=0;
-                    end else if (pal_60_bitmap) begin
-                        pal_60_line_phase<=
-                            pal_60_line_phase==2'd2 ? 2'd0 :
-                            pal_60_line_phase+1'b1;
-                    end else begin
-                        pal_60_line_phase<=0;
                     end
                 end else x<=x+1'b1;
             end

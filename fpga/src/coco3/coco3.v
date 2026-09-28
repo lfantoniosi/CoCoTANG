@@ -4,8 +4,7 @@
 module coco3 #(
     parameter integer DEBUG_S2_VIDEO_MODE = 0,
     parameter integer NATIVE_HDMI_640 = 1,
-    parameter integer DISTO_2MB = 0,
-    parameter integer PAL_MACHINE = 0
+    parameter integer DISTO_2MB = 0
 ) (
     input             clk,
     input             reset_n,
@@ -108,13 +107,10 @@ module coco3 #(
     wire compatibility_mode;
     wire [7:0] vmode;
     reg effective_bit_plane = 1'b0;
-    gime_timing #(.PAL_MACHINE(PAL_MACHINE)) timing (
+    gime_timing timing (
         // E/Q must run while the physical CPU is held in RESET; register and
         // video state remain reset until cpu_reset_n is released.
         .clk(clk), .reset_n(reset_n), .fast_mode(fast_mode),
-        // Boot-timing isolation: retain the original PAL CPU cadence in
-        // every mode while checking the external bus instability.
-        .pal_hires_60hz(1'b0),
         .e(e), .q(q),
         .e_pin(e_pin), .q_pin(q_pin),
         .e_rise(e_rise), .e_fall(e_fall)
@@ -317,8 +313,7 @@ module coco3 #(
     wire compatibility_border_right;
     wire [8:0] compatibility_border_y;
     wire [5:0] compatibility_border_sample_rgb;
-    gime_scanline_buffer #(.NATIVE_HDMI_640(NATIVE_HDMI_640),
-        .PAL_MACHINE(PAL_MACHINE)) scanlines (
+    gime_scanline_buffer #(.NATIVE_HDMI_640(NATIVE_HDMI_640)) scanlines (
         .clk(clk),.reset_n(core_reset_n),
         .bit_plane(effective_bit_plane),
         .hres(effective_hres),
@@ -385,7 +380,7 @@ module coco3 #(
     assign active_height=line_count(effective_lpf);
     wire [8:0] debug_native_y;
     assign gime_trace_y=debug_native_y;
-    gime_native_video #(.PAL_MACHINE(PAL_MACHINE)) native_video(
+    gime_native_video native_video(
         .clk(clk),.reset_n(core_reset_n),.video_50hz(video_50hz),
         .bit_plane(effective_bit_plane),
         .hdmi_frame_start(hdmi_frame_start),

@@ -727,7 +727,7 @@
     "last_paths": {
       "idf": "",
       "netlist": "",
-      "plot": "",
+      "plot": "gerber",
       "specctra_dsn": "CoCoTANG.dsn",
       "step": "",
       "vrml": ""
@@ -899,7 +899,7 @@
         "uuid": "975e10be-2eb6-4f70-aa39-19e0743e473f"
       }
     ],
-    "used_designators": "RV1,R1,R3-39,C1-33,#PWR1-139,D1-3,Q1-12,U1-12,J1-30",
+    "used_designators": "H1-5,RV1,JP1,R1,R3-39,C1-34,#PWR1-142,D1-3,Q1-12,U1-12,J1-30",
     "variants": []
   },
   "sheets": [
