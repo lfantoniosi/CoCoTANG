@@ -271,10 +271,28 @@ module gime_scanline_buffer #(
                   (h_keep_tag1&&c_tag2==h_tag1)||
                   (cv_line_active&&((c_tag2==cv_active_y)||
                                     (cv_pv_s&&c_tag2==cv_p_s)));
- wire [1:0] c_replacement_bank=!c_valid0?2'd0:!c_valid1?2'd1:!c_valid2?2'd2:
-  (cv_line_active&&c_valid0&&c_tag0==cv_active_y&&c_next_bank==2'd0)?2'd1:
-  (cv_line_active&&c_valid1&&c_tag1==cv_active_y&&c_next_bank==2'd1)?2'd2:
-  (cv_line_active&&c_valid2&&c_tag2==cv_active_y&&c_next_bank==2'd2)?2'd0:c_next_bank;
+ // The HDMI producer will not re-render a row still held in its own cache.
+ // Evicting that row from the analogue mirror makes a later CVBS read blank,
+ // even though HDMI remains correct. Prefer a bank not held by either output,
+ // rotating the preference to spread writes across the three RAMs.
+ wire c_free0=!c_valid0||!c_keep_tag0;
+ wire c_free1=!c_valid1||!c_keep_tag1;
+ wire c_free2=!c_valid2||!c_keep_tag2;
+ reg [1:0] c_replacement_bank=0;
+ always @* begin
+  if(!c_valid0)c_replacement_bank=2'd0;
+  else if(!c_valid1)c_replacement_bank=2'd1;
+  else if(!c_valid2)c_replacement_bank=2'd2;
+  else case(c_next_bank)
+   2'd0:c_replacement_bank=c_free0?2'd0:c_free1?2'd1:
+                            c_free2?2'd2:2'd0;
+   2'd1:c_replacement_bank=c_free1?2'd1:c_free2?2'd2:
+                            c_free0?2'd0:2'd1;
+   2'd2:c_replacement_bank=c_free2?2'd2:c_free0?2'd0:
+                            c_free1?2'd1:2'd2;
+   default:c_replacement_bank=2'd0;
+  endcase
+ end
  reg [1:0] c_replacement_bank_q=0;
  reg h_pending=0,c_pending=0;reg [7:0] h_pending_y=0,c_pending_y=0;
  reg [2:0] coalesce_count=0;

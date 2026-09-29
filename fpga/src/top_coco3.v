@@ -23,7 +23,7 @@ module top_coco3 #(
     parameter integer DEBUG_OVERLAY=0,
     // 0/1: simultaneous S-Video and CVBS; 2: Y/Pb/Pr component;
     // 3: RGB with composite sync on green (Y=G/SoG, Pb=B, Pr=R).
-    parameter integer ANALOG_VIDEO_MODE=3,
+    parameter integer ANALOG_VIDEO_MODE=0,
     // 0=OFF, 1=ON (blue/orange), 2=REVERSE (orange/blue).
     parameter [1:0] INITIAL_ARTIFACT_MODE=2'd1,
     // 1: native GIME HDMI is a sharp 640-dot 1:1 image (wider than 4:3).

@@ -337,6 +337,19 @@ module tb_gime_scanline_buffer;
   force dut.c_next_bank=0;#1;
   if(dut.c_replacement_bank==0)begin
    $display("CVBS blanking replacement selected active row");errors=errors+1;end
+  // HDMI owns the render and does not re-render a tag which still exists in
+  // its own cache. The analogue mirror must therefore not evict HDMI's
+  // current row merely because its round-robin pointer names that bank.
+  force dut.h_valid0=1;force dut.h_tag0=8'd10;
+  force dut.h_valid1=0;
+  force dut.hd_pa_s=1;force dut.hd_y_s=8'd10;
+  force dut.hd_pv_s=1;force dut.hd_p_s=8'd12;
+  force dut.c_next_bank=1;#1;
+  if(dut.c_replacement_bank!=2)begin
+   $display("CVBS replacement evicted HDMI-retained row instead of free row");
+   errors=errors+1;end
+  release dut.hd_p_s;release dut.hd_pv_s;release dut.hd_y_s;release dut.hd_pa_s;
+  release dut.h_tag0;release dut.h_valid0;release dut.h_valid1;
   release dut.c_next_bank;release dut.cv_p_s;release dut.cv_pv_s;release dut.cv_v_s;
   release dut.c_tag2;release dut.c_tag1;release dut.c_tag0;
   release dut.c_valid2;release dut.c_valid1;release dut.c_valid0;
