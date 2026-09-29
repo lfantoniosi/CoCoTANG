@@ -26,6 +26,9 @@ module coco_cvbs_ntsc #(
     input  wire [5:0]  border_rgb,
     input  wire [5:0]  row_border_rgb,
     input  wire        row_border_valid,
+    input  wire [5:0]  vertical_left_border_rgb,
+    input  wire [5:0]  vertical_right_border_rgb,
+    input  wire        vertical_border_valid,
     input  wire [7:0]  active_height,
     output wire [15:0] framebuffer_addr,
     output wire [9:0]  source_x,
@@ -33,6 +36,7 @@ module coco_cvbs_ntsc #(
     output wire        source_valid,
     output wire [7:0]  prefetch_y,
     output wire        prefetch_valid,
+    output wire [8:0]  border_raster_y,
     output wire        luma_out,
     output wire        chroma_out,
     output wire        cvbs_out,
@@ -101,6 +105,11 @@ module coco_cvbs_ntsc #(
     // Updated beside picture_top below; use the registered boundary instead
     // of rebuilding this adder in every source-valid comparison.
     wire [8:0] field_picture_bottom = picture_bottom;
+    // Map this analogue field onto the VDG raster that captured the
+    // compatibility vertical-border colours. The analogue picture starts
+    // 1..3 lines after the corresponding VDG picture, depending on mode.
+    wire [8:0] compatibility_raster_lag = video_50hz_active ? 9'd1 :
+        (height_meta == 8'd192 ? 9'd3 : 9'd2);
     wire [8:0] border_top = field_picture_top >= 9'd27 ?
                             field_picture_top - 9'd27 : 9'd0;
 
@@ -117,6 +126,8 @@ module coco_cvbs_ntsc #(
     reg [3:0] sample_phase = 4'd0;
     reg [9:0] h_sample = 10'd0;
     reg [8:0] v_line = 9'd0;
+    assign border_raster_y = v_line >= compatibility_raster_lag ?
+                             v_line-compatibility_raster_lag : 9'd0;
     wire [8:0] field_last_line = video_50hz_active ?
         (field_odd ? 9'd312 : 9'd311) :
         (field_odd ? 9'd262 : 9'd261);
@@ -277,8 +288,8 @@ module coco_cvbs_ntsc #(
             case (channel)
                 2'd0: rgb_blue_picture_level = 7'd0;
                 2'd1: rgb_blue_picture_level = 7'd42;
-                2'd2: rgb_blue_picture_level = 7'd80;
-                default: rgb_blue_picture_level = 7'd106;
+                2'd2: rgb_blue_picture_level = 7'd74;
+                default: rgb_blue_picture_level = 7'd96;
             endcase
         end
     endfunction
@@ -326,6 +337,7 @@ module coco_cvbs_ntsc #(
     reg source_burst = 1'b0;
     reg source_picture = 1'b0;
     reg source_active = 1'b0;
+    reg source_body = 1'b0;
     reg [2:0] source_carrier = 3'd0;
     reg source_sample_tick = 1'b0;
 
@@ -497,6 +509,7 @@ module coco_cvbs_ntsc #(
             source_burst <= 1'b0;
             source_picture <= 1'b0;
             source_active <= 1'b0;
+            source_body <= 1'b0;
             source_carrier <= 3'd0;
             source_sample_tick <= 1'b0;
             pixel_sync <= 1'b1;
@@ -586,6 +599,8 @@ module coco_cvbs_ntsc #(
             source_burst <= in_burst;
             source_picture <= in_vdg_window;
             source_active <= in_picture;
+            source_body <= (v_line >= field_picture_top) &&
+                           (v_line < field_picture_bottom);
             source_carrier <= carrier_phase;
             source_sample_tick <= (sample_phase == 4'd0);
 
@@ -596,7 +611,11 @@ module coco_cvbs_ntsc #(
             pixel_picture <= source_picture;
             pixel_carrier <= source_carrier;
             pixel_sample_tick <= source_sample_tick;
-            border_sample <= row_border_valid ? row_border_rgb : border_row_delay2;
+            border_sample <= source_body && row_border_valid ? row_border_rgb :
+                compatibility_mode && !source_body && vertical_border_valid ?
+                (h_sample < picture_left ? vertical_left_border_rgb :
+                                           vertical_right_border_rgb) :
+                border_row_delay2;
             pixel_rgb <= source_active ? framebuffer_data : border_sample;
 
             encoder_sync <= pixel_sync;

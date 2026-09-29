@@ -10,10 +10,14 @@ module tb_coco_cvbs_ntsc;
     reg [5:0] border_rgb = 6'b001100;
     reg [5:0] row_border_rgb = 6'b001100;
     reg row_border_valid = 1'b0;
+    reg [5:0] vertical_left_border_rgb = 6'h3f;
+    reg [5:0] vertical_right_border_rgb = 6'h3f;
+    reg vertical_border_valid = 1'b1;
     wire [15:0] framebuffer_addr;
     wire [9:0] source_x;
     wire [7:0] source_y,prefetch_y;
     wire source_valid,prefetch_valid;
+    wire [8:0] border_raster_y;
     wire luma_out, chroma_out, cvbs_out,component_pb_out,component_pr_out;
     integer errors = 0;
     integer ones;
@@ -28,10 +32,14 @@ module tb_coco_cvbs_ntsc;
         .compatibility_mode(compatibility_mode),
         .framebuffer_data(framebuffer_data),.border_rgb(border_rgb),
         .row_border_rgb(row_border_rgb),.row_border_valid(row_border_valid),
+        .vertical_left_border_rgb(vertical_left_border_rgb),
+        .vertical_right_border_rgb(vertical_right_border_rgb),
+        .vertical_border_valid(vertical_border_valid),
         .active_height(8'd192),
         .framebuffer_addr(framebuffer_addr),
         .source_x(source_x),.source_y(source_y),.source_valid(source_valid),
         .prefetch_y(prefetch_y),.prefetch_valid(prefetch_valid),
+        .border_raster_y(border_raster_y),
         .luma_out(luma_out),.chroma_out(chroma_out),.cvbs_out(cvbs_out),
         .component_pb_out(component_pb_out),.component_pr_out(component_pr_out));
 
@@ -84,6 +92,16 @@ module tb_coco_cvbs_ntsc;
         seek(10'd733,9'd234);
         if (!source_valid || source_x != 10'd638 || source_y != 8'd191) begin
             $display("VDG last pixel: %0d,%0d",source_x,source_y); errors = errors + 1; end
+        // The first lower-border line must take the captured VDG raster
+        // border, even if an old picture-cache row is still marked valid.
+        row_border_valid = 1'b1;
+        row_border_rgb = 6'h0c;
+        seek(10'd222,9'd235);
+        repeat (4) @(posedge clk135); #1;
+        if (border_raster_y != 9'd232 || dut.pixel_rgb !== 6'h3f) begin
+            $display("compatibility lower border: raster=%0d rgb=%h",
+                     border_raster_y,dut.pixel_rgb); errors = errors + 1; end
+        row_border_valid = 1'b0;
 
         high_resolution = 1'b1;
         compatibility_mode = 1'b0;

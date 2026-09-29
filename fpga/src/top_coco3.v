@@ -19,7 +19,7 @@ module top_coco3 #(
     // blocks omit both the capture logger/RAM and the HDMI debug overlay;
     // synthesis then removes the unused S2 capture-control cone as well.
     parameter integer ENABLE_BUS_LOGGER=0,
-    parameter integer ENABLE_GIME_TRACE=1,
+    parameter integer ENABLE_GIME_TRACE=0,
     parameter integer DEBUG_OVERLAY=0,
     // 0/1: simultaneous S-Video and CVBS; 2: Y/Pb/Pr component;
     // 3: RGB with composite sync on green (Y=G/SoG, Pb=B, Pr=R).
@@ -143,6 +143,10 @@ module top_coco3 #(
     wire artifact_video_active,artifact_css;
     wire [5:0] border_rgb,cvbs_pixel_data,cvbs_border_data;
     wire cvbs_border_valid;
+    wire [5:0] cvbs_vertical_left_border_data;
+    wire [5:0] cvbs_vertical_right_border_data;
+    wire cvbs_vertical_border_valid;
+    wire [8:0] cvbs_border_raster_y;
     wire [23:0] hdmi_pixel_data;
     wire [5:0] hdmi_left_border_data,hdmi_right_border_data;
     wire hdmi_border_valid;
@@ -251,8 +255,12 @@ module top_coco3 #(
         .cvbs_source_valid(cvbs_source_valid),
         .cvbs_prefetch_y(cvbs_prefetch_y),
         .cvbs_prefetch_valid(cvbs_prefetch_valid),
+        .cvbs_border_raster_y(cvbs_border_raster_y),
         .cvbs_pixel_data(cvbs_pixel_data),.cvbs_border_data(cvbs_border_data),
         .cvbs_border_valid(cvbs_border_valid),
+        .cvbs_vertical_left_border_data(cvbs_vertical_left_border_data),
+        .cvbs_vertical_right_border_data(cvbs_vertical_right_border_data),
+        .cvbs_vertical_border_valid(cvbs_vertical_border_valid),
         .mmu_task0_page_debug(mmu_task0_page_debug),
         .mmu_task1_page_debug(mmu_task1_page_debug),
         .mmu_task_debug(mmu_task_debug),
@@ -694,11 +702,17 @@ module top_coco3 #(
         .high_resolution(1'b1),.compatibility_mode(compatibility_video),
         .framebuffer_data(visible_cvbs_pixel),
         .border_rgb(visible_border_rgb),.row_border_rgb(visible_cvbs_border),
-        .row_border_valid(visible_cvbs_border_valid),.active_height(active_height),
+        .row_border_valid(visible_cvbs_border_valid),
+        .vertical_left_border_rgb(cvbs_vertical_left_border_data),
+        .vertical_right_border_rgb(cvbs_vertical_right_border_data),
+        .vertical_border_valid(compatibility_video&&!startup_video_blank&&
+                               cvbs_vertical_border_valid),
+        .active_height(active_height),
         .framebuffer_addr(unused_cvbs_framebuffer_addr),
         .source_x(cvbs_source_x_raw),.source_y(cvbs_source_y_raw),
         .source_valid(cvbs_source_valid_raw),.prefetch_y(cvbs_prefetch_y_raw),
-        .prefetch_valid(cvbs_prefetch_valid_raw),.luma_out(analog_luma),
+        .prefetch_valid(cvbs_prefetch_valid_raw),
+        .border_raster_y(cvbs_border_raster_y),.luma_out(analog_luma),
         .chroma_out(analog_chroma),.cvbs_out(analog_cvbs),
         .component_pb_out(analog_component_pb),
         .component_pr_out(analog_component_pr));

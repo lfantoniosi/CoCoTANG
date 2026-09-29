@@ -12,27 +12,27 @@
   <Part Number>: GW2AR-LV18QN88C8/I7
   <Device>: GW2AR-18
   <Device Version>: C
-  <Created Time>:Mon Sep 28 17:19:03 2026
+  <Created Time>:Mon Sep 28 21:37:45 2026
 
 
 2. PnR Details
 
   Running placement:
-    Placement Phase 0: CPU time = 0h 0m 0.465s, Elapsed time = 0h 0m 0.465s
-    Placement Phase 1: CPU time = 0h 0m 0.101s, Elapsed time = 0h 0m 0.101s
-    Placement Phase 2: CPU time = 0h 0m 1s, Elapsed time = 0h 0m 1s
-    Placement Phase 3: CPU time = 0h 0m 1s, Elapsed time = 0h 0m 1s
-    Total Placement: CPU time = 0h 0m 3s, Elapsed time = 0h 0m 3s
+    Placement Phase 0: CPU time = 0h 0m 0.42s, Elapsed time = 0h 0m 0.42s
+    Placement Phase 1: CPU time = 0h 0m 0.097s, Elapsed time = 0h 0m 0.097s
+    Placement Phase 2: CPU time = 0h 0m 0.968s, Elapsed time = 0h 0m 0.968s
+    Placement Phase 3: CPU time = 0h 0m 0.71s, Elapsed time = 0h 0m 0.71s
+    Total Placement: CPU time = 0h 0m 2s, Elapsed time = 0h 0m 2s
  Running routing:
     Routing Phase 0: CPU time = 0h 0m 0.001s, Elapsed time = 0h 0m 0.001s
-    Routing Phase 1: CPU time = 0h 0m 0.957s, Elapsed time = 0h 0m 0.957s
+    Routing Phase 1: CPU time = 0h 0m 0.849s, Elapsed time = 0h 0m 0.849s
     Routing Phase 2: CPU time = 0h 0m 4s, Elapsed time = 0h 0m 4s
     Routing Phase 3: CPU time = 0h 0m 0s, Elapsed time = 0h 0m 0s
     Total Routing: CPU time = 0h 0m 5s, Elapsed time = 0h 0m 5s
  Generate output files:
-    CPU time = 0h 0m 0.779s, Elapsed time = 0h 0m 0.78s
+    CPU time = 0h 0m 0.729s, Elapsed time = 0h 0m 0.73s
 
- Total Time and Memory Usage: CPU time = 0h 0m 9s, Elapsed time = 0h 0m 9s, Peak memory usage = 494MB
+ Total Time and Memory Usage: CPU time = 0h 0m 7s, Elapsed time = 0h 0m 7s, Peak memory usage = 473MB
 
 
 3. Resource Usage Summary
@@ -40,31 +40,29 @@
   --------------------------------------------------------------------------------
   Resources                   | Usage                               | Utilization
   --------------------------------------------------------------------------------
-  Logic                       | 8089/20736                          |  39%
-    --LUT,ALU,ROM16           | 7987(6888 LUT, 1099 ALU, 0 ROM16)   | -
-    --SSRAM(RAM16)            | 17                                  | -
-  Register                    | 4221/15915                          |  27%
+  Logic                       | 7166/20736                          |  35%
+    --LUT,ALU,ROM16           | 7082(6025 LUT, 1057 ALU, 0 ROM16)   | -
+    --SSRAM(RAM16)            | 14                                  | -
+  Register                    | 4083/15915                          |  26%
     --Logic Register as Latch | 0/15552                             |  0%
-    --Logic Register as FF    | 4161/15552                          |  27%
+    --Logic Register as FF    | 4024/15552                          |  26%
     --I/O Register as Latch   | 0/363                               |  0%
-    --I/O Register as FF      | 60/363                              |  17%
-  CLS                         | 5762/10368                          |  56%
+    --I/O Register as FF      | 59/363                              |  17%
+  CLS                         | 5179/10368                          |  50%
   I/O Port                    | 53/66                               |  81%
-  I/O Buf                     | 49                                  | -
-    --Input Buf               | 12                                  | -
+  I/O Buf                     | 48                                  | -
+    --Input Buf               | 11                                  | -
     --Output Buf              | 28                                  | -
     --Inout Buf               | 9                                   | -
   IOLOGIC                     | 22/121                              | 19%
     --IDDR                    | 8
     --ODDR                    | 8
     --OSER10                  | 3
-  BSRAM                       | 35/46                               | 77%
-    --SDPB                    | 26
-    --SDPX9B                  | 6
+  BSRAM                       | 31/46                               | 68%
+    --SDPB                    | 28
     --DPB                     | 1
     --pROM                    | 2
-  DSP                         | 1.25/24                             | 6%
-    --MULT9X9                 | 1
+  DSP                         | 1/24                                | 5%
     --MULTADDALU18X18         | 1
   ================================================================================
 
@@ -92,7 +90,7 @@
   Clock Resource| Usage         | Utilization 
   ------------------------------------------
   PRIMARY       | 7/8           | 88%
-  LW            | 7/8           | 88%
+  LW            | 8/8           | 100%
   GCLK_PIN      | 3/5           | 60%
   CLKDIV        | 1/8           | 13%
   rPLL          | 2/2           | 100%
@@ -104,16 +102,17 @@
   -------------------------------------------
   Signal         | Global Clock   | Location
   -------------------------------------------
-  clkin_d        | PRIMARY        |  TR BR BL
-  clk27          | PRIMARY        |  TR TL BR BL
+  clkin_d        | PRIMARY        |  BR BL
+  clk27          | PRIMARY        |  TL BR BL
   clk108         | PRIMARY        |  TR TL BR BL
   O_sdram_clk_d  | PRIMARY        |  TR
-  clk270         | PRIMARY        |  TR TL BR BL
+  clk270         | PRIMARY        |  TR BR BL
   clk135         | PRIMARY        |  TR TL BR BL
   pia1_audio_clk | PRIMARY        |  TR BR
-  n838_6         | LW             |  -
-  sdram_reset_n  | LW             |  -
-  system_ready   | LW             |  -
+  board_reset_n_Z| LW             |  -
+  compatibility_video| LW             |  -
+  sdram_reset_n_Z| LW             |  -
+  system_ready_Z | LW             |  -
   machine/n689_5 | LW             |  -
   machine/fill_border_rgb_3_20| LW             |  -
   machine/scanlines/artifact_shift_260_7| LW             |  -

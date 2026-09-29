@@ -7,6 +7,8 @@ module tb_gime_scanline_buffer;
  wire [5:0] hdmi_left_border,hdmi_right_border;wire hdmi_border_valid;
  wire [5:0] hdmi_vertical_left_border,hdmi_vertical_right_border;
  wire hdmi_vertical_border_valid;
+ wire [5:0] cvbs_vertical_left_border,cvbs_vertical_right_border;
+ wire cvbs_vertical_border_valid;
  integer transactions=0,errors=0,i,timeout,raster;
  integer responder_delay=0;reg slow_memory=0;
  integer slow_memory_extra=0;
@@ -21,6 +23,7 @@ module tb_gime_scanline_buffer;
  reg [4:0] compatibility_raster_byte=0;reg compatibility_raster_css=0;
  reg compatibility_border_write=0,compatibility_border_right=0;
  reg [8:0] compatibility_border_y=0,hdmi_border_raster_y=0;
+ reg [8:0] cvbs_border_raster_y=0;
  reg [5:0] compatibility_border_rgb=0;reg hdmi_frame_start=0;
  reg hdmi_active_50hz=0;
  reg hdmi_prefetch_valid=1,cvbs_prefetch_valid=0;
@@ -63,7 +66,12 @@ module tb_gime_scanline_buffer;
   .hdmi_border_raster_y(hdmi_border_raster_y),
   .cvbs_read_clk(cvbs_clk),.cvbs_read_x(cvbs_display_x),.cvbs_display_y(cvbs_display_y),
   .cvbs_display_valid(cvbs_display_valid),.cvbs_prefetch_y(cvbs_prefetch_y),
-  .cvbs_prefetch_valid(cvbs_prefetch_valid),.cvbs_pixel_data(cvbs_pixel),
+  .cvbs_prefetch_valid(cvbs_prefetch_valid),
+  .cvbs_border_raster_y(cvbs_border_raster_y),
+  .cvbs_pixel_data(cvbs_pixel),
+  .cvbs_vertical_left_border_data(cvbs_vertical_left_border),
+  .cvbs_vertical_right_border_data(cvbs_vertical_right_border),
+  .cvbs_vertical_border_valid(cvbs_vertical_border_valid),
   .memory_request(memory_request),.memory_addr(memory_addr),
   .memory_data(memory_data),.memory_valid(memory_valid));
 
@@ -669,11 +677,16 @@ module tb_gime_scanline_buffer;
   compatibility_border_write=1;
   @(posedge clk);#1;compatibility_border_write=0;
   hdmi_border_raster_y=240;hdmi_frame_start=1;
+  cvbs_border_raster_y=240;
   repeat(4)@(posedge hdmi_clk);#1;hdmi_frame_start=0;
   repeat(2)@(posedge hdmi_clk);#1;
   if(!hdmi_vertical_border_valid||hdmi_vertical_left_border!==6'h3f||
      hdmi_vertical_right_border!==6'h0c)begin
    $display("completed VDG vertical border field was not retained");errors=errors+1;end
+  repeat(3)@(posedge cvbs_clk);#1;
+  if(!cvbs_vertical_border_valid||cvbs_vertical_left_border!==6'h3f||
+     cvbs_vertical_right_border!==6'h0c)begin
+   $display("analogue VDG vertical border differs from HDMI");errors=errors+1;end
 
 
   // A row-zero tag from the old HDMI standard must not make the first row

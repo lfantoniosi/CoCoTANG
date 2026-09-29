@@ -27,8 +27,12 @@ module gime_scanline_buffer (
  output reg hdmi_vertical_border_valid,
  input cvbs_read_clk,input [9:0] cvbs_read_x,input [7:0] cvbs_display_y,
  input cvbs_display_valid,input [7:0] cvbs_prefetch_y,input cvbs_prefetch_valid,
+ input [8:0] cvbs_border_raster_y,
  output reg [5:0] cvbs_pixel_data,output reg [5:0] cvbs_border_data,
  output reg cvbs_border_valid,
+ output reg [5:0] cvbs_vertical_left_border_data,
+ output reg [5:0] cvbs_vertical_right_border_data,
+ output reg cvbs_vertical_border_valid,
  output reg memory_request,output reg [22:0] memory_addr,
  input [31:0] memory_data,input memory_valid,
  output [7:0] debug_dma_next_y,output [7:0] debug_fill_y,
@@ -319,6 +323,9 @@ module gime_scanline_buffer (
   hdmi_vertical_left_border_data=0;
   hdmi_vertical_right_border_data=0;
   hdmi_vertical_border_valid=0;
+  cvbs_vertical_left_border_data=0;
+  cvbs_vertical_right_border_data=0;
+  cvbs_vertical_border_valid=0;
  end
 
  // One captured CSS bit per VDG source byte. The physical raster samples
@@ -1101,6 +1108,22 @@ reg configuration_pending=1'b1;
   hdmi_vertical_right_border_data<=compatibility_border_right_rgb[
        {border_bank_for_read,hdmi_border_raster_y}];
   hdmi_vertical_border_valid<=compatibility_mode&&border_valid_for_read;
+ end
+ // The analogue border is not a picture-cache row. Read the same captured
+ // VDG raster colours used by HDMI, rather than falling back to a live FF22
+ // value at the picture-to-bottom-border transition.
+ reg cvbs_border_bank_m=0,cvbs_border_bank_s=0;
+ reg cvbs_border_valid_m=0,cvbs_border_valid_s=0;
+ always @(posedge cvbs_read_clk)begin
+  cvbs_border_bank_m<=compatibility_border_display_bank;
+  cvbs_border_bank_s<=cvbs_border_bank_m;
+  cvbs_border_valid_m<=compatibility_border_display_valid;
+  cvbs_border_valid_s<=cvbs_border_valid_m;
+  cvbs_vertical_left_border_data<=compatibility_border_left[
+       {cvbs_border_bank_s,cvbs_border_raster_y}];
+  cvbs_vertical_right_border_data<=compatibility_border_right_rgb[
+       {cvbs_border_bank_s,cvbs_border_raster_y}];
+  cvbs_vertical_border_valid<=compatibility_mode&&cvbs_border_valid_s;
  end
  reg h_v0_m=0,h_v0_r=0,h_v1_m=0,h_v1_r=0;
  reg h_read_bank=0,h_read_valid=0;

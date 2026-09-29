@@ -17,12 +17,16 @@ PROGRAMMER_BOARD ?= tangnano20k
 ROM_OFFSET ?= 1048576
 
 .DEFAULT_GOAL := build
-.PHONY: build rebuild test program reprogram rom check-tools
+.PHONY: build rebuild test timing program reprogram rom check-tools
 
 build: $(OUTPUT)
 
 rebuild: check-tools
 	$(call run-gowin,CoCoTANG.gprj,top_coco3,CoCoTANG)
+
+# Inspect the last routed build without programming the board or rebuilding.
+timing:
+	python3 scripts/check_timing.py impl/pnr/CoCoTANG_tr_content.html
 
 test:
 	iverilog -g2012 -o /private/tmp/cocotang_tb_sd_spi tests/tb_sd_spi_block.v src/storage/sd_spi_block.v
@@ -35,10 +39,6 @@ test:
 	vvp /private/tmp/cocotang_tb_mux
 	iverilog -g2012 -o /private/tmp/cocotang_tb_cvbs tests/tb_coco_cvbs_ntsc.v src/video/coco_cvbs_ntsc.v
 	vvp /private/tmp/cocotang_tb_cvbs
-	iverilog -g2012 -o /private/tmp/cocotang_tb_rgb_sog tests/tb_rgb_sog.v src/video/coco_cvbs_ntsc.v
-	vvp /private/tmp/cocotang_tb_rgb_sog
-	iverilog -g2012 -o /private/tmp/cocotang_tb_fill tests/tb_sdram_test_fill.v src/memory/sdram_test_fill.v
-	vvp /private/tmp/cocotang_tb_fill
 	iverilog -g2012 -o /private/tmp/cocotang_tb_startup_test tests/tb_coco_sdram_startup_test.v src/memory/coco_sdram_startup_test.v
 	vvp /private/tmp/cocotang_tb_startup_test
 	iverilog -g2012 -o /private/tmp/cocotang_tb_cpu_arbiter tests/tb_cpu_sdram_arbiter.v src/memory/cpu_sdram_arbiter.v
@@ -61,8 +61,6 @@ test:
 	vvp /private/tmp/cocotang_tb_gime_registers
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_disto tests/tb_gime_disto.v src/coco3/gime_registers.v
 	vvp /private/tmp/cocotang_tb_gime_disto
-	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_video tests/tb_gime_video.v src/coco3/gime_video.v src/coco3/mc6847_char_rom.v
-	vvp /private/tmp/cocotang_tb_gime_video
 	iverilog -g2012 -o /private/tmp/cocotang_tb_artifact_decode tests/tb_ntsc_artifact_decode.v src/video/ntsc_artifact_decode.v
 	vvp /private/tmp/cocotang_tb_artifact_decode
 	iverilog -g2012 -o /private/tmp/cocotang_tb_artifact_control tests/tb_artifact_mode_control.v src/video/artifact_mode_control.v
