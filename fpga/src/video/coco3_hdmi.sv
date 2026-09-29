@@ -1,13 +1,12 @@
-// 720x480 DVI scanout for the CoCo 3 line cache. Native GIME lines may retain
-// all 640 dots or use an aspect-correct 512-dot RGB888 reduction.
+// 720x480 DVI scanout for the CoCo 3 line cache. Native GIME lines retain
+// all 640 dots; compatibility modes use the centered 512-dot aperture.
 module coco3_hdmi #(
     parameter integer LOG_ADDR_WIDTH=12,
     parameter integer LOG_COUNT_WIDTH=13,
     parameter integer LOG_PAGE_WIDTH=6,
     parameter integer LOG_DEPTH=4096,
     parameter integer ENABLE_DEBUG_OVERLAY=0,
-    parameter integer GIME_TRACE_MODE=0,
-    parameter integer NATIVE_HDMI_640=1
+    parameter integer GIME_TRACE_MODE=0
 ) (
     input logic pixel_clk,input logic serial_clk,
     input logic audio_clk,input logic [15:0] audio_pcm,input logic reset,
@@ -107,10 +106,7 @@ module coco3_hdmi #(
              height_s==8'd199 ? 10'd89 : 10'd96) :
             (height_s==8'd225 ? 10'd18 :
              height_s==8'd199 ? 10'd48 : 10'd52);
-        // The GIME's 640-dot modes describe the same 4:3 display aperture as
-        // its 256-dot modes. Resample every mode into 512x(2*LPF) rather than
-        // exposing the CRT's non-square 640-dot sampling as square HDMI pixels.
-        picture_width=(NATIVE_HDMI_640!=0&&!compatibility_s)?10'd640:10'd512;
+        picture_width=compatibility_s?10'd512:10'd640;
         // Two clocks of scanline-RAM addressing/output latency.
         picture_lead=((10'd720-picture_width)>>1)-2'd2;
         picture_x=(x>=picture_lead)?x-picture_lead:10'd0;
@@ -129,11 +125,9 @@ module coco3_hdmi #(
         // The VDG raster's picture starts at top/2+15 (60 Hz) or +16 (50 Hz).
         // Preserve that offset in the vertical borders as well.
         source_border_raster_y={1'b0,y[9:1]}+(active_50hz_s?9'd16:9'd15);
-        // Native GIME can either retain all 640 dots for sharp 80-column
-        // text, or use the aspect-correct RGB888 5:4 reduction. VDG and
-        // artifact modes always use the centered 512-dot aperture. In the
-        // 640 configuration ordinary VDG pixels use exact 2x/4x/8x point
-        // replication; artifact pixels retain their composite phase decode.
+        // Native GIME retains all 640 dots. VDG and artifact modes use the
+        // centered 512-dot aperture; ordinary VDG pixels use exact
+        // 2x/4x/8x replication and artifact pixels keep composite decoding.
         source_x=source_valid ? picture_x : 10'd0;
         source_y=source_line[7:0];
         // The ping-pong scan doubler starts producing the next source line

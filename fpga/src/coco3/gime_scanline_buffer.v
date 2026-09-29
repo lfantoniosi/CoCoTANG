@@ -1,8 +1,6 @@
 // Unified CoCo 3 scanline renderer. Mode decoding and row addressing follow
 // the MiSTer/Gary Becker CoCo3FPGA core, but no framebuffer is used.
-module gime_scanline_buffer #(
- parameter integer NATIVE_HDMI_640=1
-) (
+module gime_scanline_buffer (
  input clk,input reset_n,input bit_plane,input [3:0] hres,input [1:0] cres,
  input [2:0] lines_per_row_code,input [3:0] vertical_scroll,
  input [18:0] screen_base,input [1:0] video_bank,
@@ -154,22 +152,6 @@ module gime_scanline_buffer #(
   input [5:0] color;
   begin expand_rgb222={{4{color[5:4]}},{4{color[3:2]}},{4{color[1:0]}}};end
  endfunction
- function [23:0] blend_quarters;
-  input [23:0] left;
-  input [23:0] right;
-  input [1:0] right_weight;
-  reg [9:0] r_sum,g_sum,b_sum;
-  begin
-   // Keep the fractional coverage produced by the 640-to-512 reduction.
-   // Quantizing this result back to RGB222 made one-dot black text vanish
-   // into grey backgrounds.
-   r_sum=left[23:16]*(4-right_weight)+right[23:16]*right_weight+2;
-   g_sum=left[15:8]*(4-right_weight)+right[15:8]*right_weight+2;
-   b_sum=left[7:0]*(4-right_weight)+right[7:0]*right_weight+2;
-   blend_quarters={r_sum[9:2],g_sum[9:2],b_sum[9:2]};
-  end
- endfunction
-
  wire [9:0] native_graphics_bytes=graphics_row_bytes(hres);
  wire [7:0] native_columns=text_columns(hres);
  wire native_attributes=!bit_plane&&cres[0];
@@ -319,7 +301,6 @@ module gime_scanline_buffer #(
  reg [11:0] source_byte_index=0;
  reg [7:0] source_character_column=0;
  reg [9:0] hdmi_out_x=0;reg [2:0] hdmi_filter_phase=0;
- reg [23:0] hdmi_filter_previous=0;
  reg [255:0] artifact_bits=0;
  reg [260:0] artifact_shift=0;
  reg artifact_bit_write_pending=0;
@@ -634,31 +615,15 @@ reg configuration_pending=1'b1;
  reg [9:0] cvbs_write_x=0;
  reg [5:0] cvbs_write_data=0;
  always @(posedge clk) begin
-  // The renderer first registers a complete write command.  Keeping the
-  // RGB expansion/artifact selection and 640-to-512 blend on this side of
-  // the register gives the inferred line RAM a short, timing-safe data path.
+  // The renderer first registers a complete write command so the inferred
+  // line RAM has a short, timing-safe data path.
   hdmi_write_pending<=0;
   cvbs_write_pending<=0;
   if(renderer_write)begin
    if(fill_hdmi)begin
-    if((NATIVE_HDMI_640!=0&&!fill_compatibility)||
-       (NATIVE_HDMI_640!=0&&fill_compatibility&&!renderer_artifact)||
-       hdmi_filter_phase==0||
-       (renderer_artifact&&hdmi_filter_phase!=1))begin
+    if(!renderer_artifact||hdmi_filter_phase!=1)begin
      hdmi_write_pending<=1;
      hdmi_write_data<=renderer_hdmi_pixel;
-    end else if(hdmi_filter_phase==2)begin
-     hdmi_write_pending<=1;
-     hdmi_write_data<=blend_quarters(hdmi_filter_previous,
-                                     renderer_hdmi_pixel,2'd1);
-    end else if(hdmi_filter_phase==3)begin
-     hdmi_write_pending<=1;
-     hdmi_write_data<=blend_quarters(hdmi_filter_previous,
-                                     renderer_hdmi_pixel,2'd2);
-    end else if(hdmi_filter_phase==4)begin
-     hdmi_write_pending<=1;
-     hdmi_write_data<=blend_quarters(hdmi_filter_previous,
-                                     renderer_hdmi_pixel,2'd3);
     end
     hdmi_write_bank<=fill_h_bank;
     hdmi_write_x<=hdmi_out_x;
@@ -933,7 +898,7 @@ reg configuration_pending=1'b1;
       fill_left_css<=fill_css;fill_right_css<=fill_css;
      end
      scale_phase<=0;hdmi_out_x<=0;hdmi_filter_phase<=0;
-     hdmi_filter_previous<=0;state<=LINE_ADDRESS;end
+     state<=LINE_ADDRESS;end
     LINE_ADDRESS:begin line_address<=fill_base+row_address;
      state<=PIXEL_ADDRESS;end
     PIXEL_ADDRESS:begin
@@ -1011,14 +976,11 @@ reg configuration_pending=1'b1;
      state<=WRITE_PIXEL;
     end
     WRITE_PIXEL:begin
-     // Area-preserving 640 -> 512 horizontal filter for HDMI.  For every
-     // five canonical pixels emit four samples at phases 0, 1.25, 2.5 and
-     // 3.75.  CVBS retains the original 640-dot row.  This is a streaming
-     // operation performed while the row is rendered, not a framebuffer.
-     if(fill_hdmi&&((NATIVE_HDMI_640!=0&&!fill_compatibility)||
-                    hdmi_filter_phase!=1))
+     // Native GIME keeps all 640 pixels. Compatibility video still occupies
+     // the 512-dot HDMI aperture, so its five canonical positions advance
+     // the output address four times.
+     if(fill_hdmi&&(!fill_compatibility||hdmi_filter_phase!=1))
       hdmi_out_x<=hdmi_out_x+1'b1;
-     hdmi_filter_previous<=renderer_hdmi_pixel;
      hdmi_filter_phase<=(hdmi_filter_phase==4)?0:hdmi_filter_phase+1'b1;
      if(out_x==CANONICAL_WIDTH-1'b1)begin
       if(artifact_active)begin
@@ -1027,7 +989,7 @@ reg configuration_pending=1'b1;
        artifact_shift<={3'b111,color_index_latched[0],
                         artifact_bits[254:0],2'b11};
        out_x<=0;source_x<=0;scale_phase<=0;hdmi_out_x<=0;
-       hdmi_filter_phase<=0;hdmi_filter_previous<=0;
+       hdmi_filter_phase<=0;
        state<=ARTIFACT_DECODE;
       end else state<=FINALIZE_LINE;
      end else begin
@@ -1052,7 +1014,6 @@ reg configuration_pending=1'b1;
     ARTIFACT_WRITE:begin
      if(fill_hdmi&&hdmi_filter_phase!=1)
       hdmi_out_x<=hdmi_out_x+1'b1;
-     hdmi_filter_previous<=renderer_hdmi_pixel;
      hdmi_filter_phase<=(hdmi_filter_phase==4)?0:hdmi_filter_phase+1'b1;
      if(out_x==CANONICAL_WIDTH-1'b1)state<=FINALIZE_LINE;
      else begin

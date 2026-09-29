@@ -266,7 +266,7 @@ module coco_cvbs_ntsc #(
                 2'd0: rgb_red_picture_level = 7'd0;
                 2'd1: rgb_red_picture_level = 7'd42;
                 2'd2: rgb_red_picture_level = 7'd74;
-                default: rgb_red_picture_level = 7'd104;
+                default: rgb_red_picture_level = 7'd96;
             endcase
         end
     endfunction
@@ -278,7 +278,7 @@ module coco_cvbs_ntsc #(
                 2'd0: rgb_blue_picture_level = 7'd0;
                 2'd1: rgb_blue_picture_level = 7'd42;
                 2'd2: rgb_blue_picture_level = 7'd80;
-                default: rgb_blue_picture_level = 7'd116;
+                default: rgb_blue_picture_level = 7'd106;
             endcase
         end
     endfunction

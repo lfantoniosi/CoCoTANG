@@ -23,12 +23,9 @@ module top_coco3 #(
     parameter integer DEBUG_OVERLAY=0,
     // 0/1: simultaneous S-Video and CVBS; 2: Y/Pb/Pr component;
     // 3: RGB with composite sync on green (Y=G/SoG, Pb=B, Pr=R).
-    parameter integer ANALOG_VIDEO_MODE=0,
+    parameter integer ANALOG_VIDEO_MODE=3,
     // 0=OFF, 1=ON (blue/orange), 2=REVERSE (orange/blue).
     parameter [1:0] INITIAL_ARTIFACT_MODE=2'd1,
-    // 1: native GIME HDMI is a sharp 640-dot 1:1 image (wider than 4:3).
-    // 0: native GIME HDMI is aspect-correct 512-dot RGB888-filtered output.
-    parameter integer NATIVE_HDMI_640=1,
     parameter integer DISTO_2MB=1,
     // Glenside task-file occupies IDE_BASE..IDE_BASE+$0f; $FF50 is standard.
     parameter integer ENABLE_GLENSIDE_IDE=1,
@@ -208,7 +205,7 @@ module top_coco3 #(
     wire gime_keyint_n=!mux_keyint_n;
     wire gime_serint_n=!mux_sernt_n;
 
-    coco3 #(.NATIVE_HDMI_640(NATIVE_HDMI_640),.DISTO_2MB(DISTO_2MB)) machine(
+    coco3 #(.DISTO_2MB(DISTO_2MB)) machine(
         .clk(clk108),.reset_n(board_reset_n),
         .cpu_reset_n(cpu_release),
         .s2(1'b0),.artifact_mode(artifact_mode_video),
@@ -613,8 +610,7 @@ module top_coco3 #(
         .LOG_COUNT_WIDTH(LOG_COUNT_WIDTH),.LOG_PAGE_WIDTH(LOG_PAGE_WIDTH),
         .LOG_DEPTH(LOG_DEPTH),
         .ENABLE_DEBUG_OVERLAY(ENABLE_BUS_LOGGER||ENABLE_GIME_TRACE),
-        .GIME_TRACE_MODE(ENABLE_GIME_TRACE!=0&&ENABLE_BUS_LOGGER==0),
-        .NATIVE_HDMI_640(NATIVE_HDMI_640)) hdmi_output(
+        .GIME_TRACE_MODE(ENABLE_GIME_TRACE!=0&&ENABLE_BUS_LOGGER==0)) hdmi_output(
         .pixel_clk(clk27),.serial_clk(clk135),.reset(!board_reset_n),
         .audio_clk(pia1_audio_clk),.audio_pcm(pia1_pcm_sample),
         .debug_clk(clk108),.log_we(log_we),.log_addr(log_addr),

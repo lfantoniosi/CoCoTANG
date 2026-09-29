@@ -45,8 +45,7 @@ and 470 pF output capacitors are retained. Measured CRT calibration uses
 independent nonlinear transfer curves for red, green, and blue. Green includes
 the 40-code pedestal required for negative composite sync.
 
-HDMI can use sharp 640-dot native output (`NATIVE_HDMI_640=1`) or an
-aspect-correct 512-dot filtered image. Compatibility modes retain the CoCo 3
+HDMI uses sharp 640-dot native output. Compatibility modes retain the CoCo 3
 GIME's MC6847-compatible character and artifact-color behavior.
 
 The build uses NTSC-machine CPU and video timing. At runtime, VMODE `$FF98`

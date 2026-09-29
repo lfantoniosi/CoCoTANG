@@ -107,12 +107,6 @@ module tb_gime_scanline_buffer;
      (dut.h_valid0?dut.hdmi_line0[2]:dut.hdmi_line1[2])!==24'h005500||
      (dut.h_valid0?dut.hdmi_line0[3]:dut.hdmi_line1[3])!==24'h005555)begin
    $display("HDMI native 640-dot RGB888 path is wrong");errors=errors+1;end
-  // Aspect-correct builds use the same cache with full-precision coverage.
-  // A 25% black contribution over RGB222 grey must become $808080 rather
-  // than rounding back to grey as the old RGB222 filter did.
-  if(dut.blend_quarters(24'haaaaaa,24'h000000,2'd1)!==24'h808080)begin
-   $display("HDMI RGB888 filter lost fractional coverage");errors=errors+1;end
-
   // Native even-HRES rows use the GIME's narrow 512-dot aperture; odd-HRES
   // rows use the full 640 dots.  This distinction is required by raster
   // demos which alternate 256- and 320-pixel modes between scanlines.
@@ -192,7 +186,10 @@ module tb_gime_scanline_buffer;
     errors=errors+1;i=8;end
   if((dut.h_valid0&&dut.h_tag0==0 ? dut.hdmi_line0[8] : dut.hdmi_line1[8])
       !==dut.expand_rgb222(mapped(6'd2)))begin
-   $display("SG4 HDMI exact 2x boundary is wrong");errors=errors+1;end
+   $display("SG4 HDMI exact 2x boundary is wrong: %h expected %h bank=%b tags=%0d/%0d",
+    dut.h_valid0&&dut.h_tag0==0 ? dut.hdmi_line0[8] : dut.hdmi_line1[8],
+    dut.expand_rgb222(mapped(6'd2)),dut.h_valid0,dut.h_tag0,dut.h_tag1);
+   errors=errors+1;end
 
   // Mega-Bug selects 128x96 SAM addressing.  Compatibility DMA geometry is
   // controlled by SAM V0:V2, independently of the PIA GM decode.  A stale or

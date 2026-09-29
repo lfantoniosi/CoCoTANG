@@ -3,7 +3,6 @@
 // provided by the board top level.
 module coco3 #(
     parameter integer DEBUG_S2_VIDEO_MODE = 0,
-    parameter integer NATIVE_HDMI_640 = 1,
     parameter integer DISTO_2MB = 0
 ) (
     input             clk,
@@ -313,7 +312,7 @@ module coco3 #(
     wire compatibility_border_right;
     wire [8:0] compatibility_border_y;
     wire [5:0] compatibility_border_sample_rgb;
-    gime_scanline_buffer #(.NATIVE_HDMI_640(NATIVE_HDMI_640)) scanlines (
+    gime_scanline_buffer scanlines (
         .clk(clk),.reset_n(core_reset_n),
         .bit_plane(effective_bit_plane),
         .hres(effective_hres),
