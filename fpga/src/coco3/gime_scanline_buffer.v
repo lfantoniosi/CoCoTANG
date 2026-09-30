@@ -29,6 +29,7 @@ module gime_scanline_buffer (
  input cvbs_display_valid,input [7:0] cvbs_prefetch_y,input cvbs_prefetch_valid,
  input [8:0] cvbs_border_raster_y,
  output reg [5:0] cvbs_pixel_data,output reg [5:0] cvbs_border_data,
+ output reg [5:0] cvbs_right_border_data,
  output reg cvbs_border_valid,
  output reg [5:0] cvbs_vertical_left_border_data,
  output reg [5:0] cvbs_vertical_right_border_data,
@@ -192,6 +193,7 @@ module gime_scanline_buffer (
  reg [5:0] h_left_border0=0,h_left_border1=0;
  reg [5:0] h_right_border0=0,h_right_border1=0;
  reg [5:0] c_border0=0,c_border1=0,c_border2=0;
+ reg [5:0] c_right_border0=0,c_right_border1=0,c_right_border2=0;
  reg h_next_bank=0;
  reg [1:0] c_next_bank=0;
 
@@ -261,9 +263,18 @@ module gime_scanline_buffer (
  // Evicting that row from the analogue mirror makes a later CVBS read blank,
  // even though HDMI remains correct. Prefer a bank not held by either output,
  // rotating the preference to spread writes across the three RAMs.
- wire c_free0=!c_valid0||!c_keep_tag0;
- wire c_free1=!c_valid1||!c_keep_tag1;
- wire c_free2=!c_valid2||!c_keep_tag2;
+ // Requests are coalesced for seven clocks. Pipeline the cross-clock tag
+ // comparisons before the replacement priority mux; their choice still
+ // settles before the request can start a fill.
+ reg c_keep_tag0_q=0,c_keep_tag1_q=0,c_keep_tag2_q=0;
+ always @(posedge clk)begin
+  c_keep_tag0_q<=c_keep_tag0;
+  c_keep_tag1_q<=c_keep_tag1;
+  c_keep_tag2_q<=c_keep_tag2;
+ end
+ wire c_free0=!c_valid0||!c_keep_tag0_q;
+ wire c_free1=!c_valid1||!c_keep_tag1_q;
+ wire c_free2=!c_valid2||!c_keep_tag2_q;
  reg [1:0] c_replacement_bank=0;
  always @* begin
   if(!c_valid0)c_replacement_bank=2'd0;
@@ -326,6 +337,7 @@ module gime_scanline_buffer (
   cvbs_vertical_left_border_data=0;
   cvbs_vertical_right_border_data=0;
   cvbs_vertical_border_valid=0;
+  cvbs_right_border_data=0;
  end
 
  // One captured CSS bit per VDG source byte. The physical raster samples
@@ -1035,17 +1047,13 @@ reg configuration_pending=1'b1;
     FINALIZE_LINE:begin
       if(fill_hdmi)begin
        if(fill_h_bank)begin h_tag1<=fill_y;h_start1<={fill_video_bank,line_address};h_bytes1<=fill_row_bytes;
-        if(fill_compatibility)begin
-         h_left_border1<=rendered_left_border;
-         h_right_border1<=rendered_right_border;
-        end
+        h_left_border1<=rendered_left_border;
+        h_right_border1<=rendered_right_border;
         h_valid1<=1;h_dirty1<=fill_dirty;
         if(h_valid0&&h_tag0==fill_y)begin h_valid0<=0;h_dirty0<=0;end end
        else begin h_tag0<=fill_y;h_start0<={fill_video_bank,line_address};h_bytes0<=fill_row_bytes;
-        if(fill_compatibility)begin
-         h_left_border0<=rendered_left_border;
-         h_right_border0<=rendered_right_border;
-        end
+        h_left_border0<=rendered_left_border;
+        h_right_border0<=rendered_right_border;
         h_valid0<=1;h_dirty0<=fill_dirty;
         if(h_valid1&&h_tag1==fill_y)begin h_valid1<=0;h_dirty1<=0;end end
        h_next_bank<=!fill_h_bank;
@@ -1054,16 +1062,19 @@ reg configuration_pending=1'b1;
        case(fill_c_bank)
         2'd0:begin c_tag0<=fill_y;c_start0<={fill_video_bank,line_address};c_bytes0<=fill_row_bytes;
          c_border0<=rendered_left_border;
+         c_right_border0<=rendered_right_border;
          c_valid0<=1;c_dirty0<=fill_dirty;
          if(c_valid1&&c_tag1==fill_y)begin c_valid1<=0;c_dirty1<=0;end
          if(c_valid2&&c_tag2==fill_y)begin c_valid2<=0;c_dirty2<=0;end end
         2'd1:begin c_tag1<=fill_y;c_start1<={fill_video_bank,line_address};c_bytes1<=fill_row_bytes;
          c_border1<=rendered_left_border;
+         c_right_border1<=rendered_right_border;
          c_valid1<=1;c_dirty1<=fill_dirty;
          if(c_valid0&&c_tag0==fill_y)begin c_valid0<=0;c_dirty0<=0;end
          if(c_valid2&&c_tag2==fill_y)begin c_valid2<=0;c_dirty2<=0;end end
         default:begin c_tag2<=fill_y;c_start2<={fill_video_bank,line_address};c_bytes2<=fill_row_bytes;
          c_border2<=rendered_left_border;
+         c_right_border2<=rendered_right_border;
          c_valid2<=1;c_dirty2<=fill_dirty;
          if(c_valid0&&c_tag0==fill_y)begin c_valid0<=0;c_dirty0<=0;end
          if(c_valid1&&c_tag1==fill_y)begin c_valid1<=0;c_dirty1<=0;end end
@@ -1132,8 +1143,10 @@ reg configuration_pending=1'b1;
   h_read_addr<=hdmi_read_x;
   h_tag0_m<=h_tag0;h_tag0_r<=h_tag0_m;h_tag1_m<=h_tag1;h_tag1_r<=h_tag1_m;
   h_v0_m<=h_valid0;h_v0_r<=h_v0_m;h_v1_m<=h_valid1;h_v1_r<=h_v1_m;
-  if((compatibility_mode&&!hdmi_picture_active)||
-     (!compatibility_mode&&!hdmi_display_valid))begin
+  // A committed cache entry is the complete logical raster: its rendered
+  // pixels and both border endpoints were captured by the same fill. Select
+  // it in the left border, then hold that bank through the entire scanline.
+  if(!hdmi_picture_active)begin
    h_read_valid<=0;hdmi_pixel_data<=0;hdmi_border_valid<=0;end
   else if(hdmi_read_x==0)begin
    // Select once at the physical scanline boundary.  A fill which completes
@@ -1141,21 +1154,19 @@ reg configuration_pending=1'b1;
    // preventing the characteristic black-left/valid-right half line.
    if(h_v0_r&&h_tag0_r==hdmi_display_y)begin
     h_read_bank<=0;h_read_valid<=1;hdmi_pixel_data<=hdmi_line0[h_read_addr];
-    if(compatibility_mode)begin
-     hdmi_left_border_data<=h_left_border0;
-     hdmi_right_border_data<=h_right_border0;hdmi_border_valid<=1;
-    end
+    hdmi_left_border_data<=h_left_border0;
+    hdmi_right_border_data<=h_right_border0;hdmi_border_valid<=1;
    end
    else if(h_v1_r&&h_tag1_r==hdmi_display_y)begin
     h_read_bank<=1;h_read_valid<=1;hdmi_pixel_data<=hdmi_line1[h_read_addr];
-    if(compatibility_mode)begin
-     hdmi_left_border_data<=h_left_border1;
-     hdmi_right_border_data<=h_right_border1;hdmi_border_valid<=1;
-    end
+    hdmi_left_border_data<=h_left_border1;
+    hdmi_right_border_data<=h_right_border1;hdmi_border_valid<=1;
    end
    else begin h_read_valid<=0;hdmi_pixel_data<=0;hdmi_border_valid<=0;end
   end else if(!hdmi_display_valid)begin
-   h_read_valid<=0;hdmi_pixel_data<=0;
+   // Border samples still belong to this row, even when the picture pixel
+   // RAM is masked by the output timing generator.
+   hdmi_pixel_data<=0;
   end else if(h_read_valid)begin
    if(h_read_bank)hdmi_pixel_data<=hdmi_line1[h_read_addr];
    else hdmi_pixel_data<=hdmi_line0[h_read_addr];
@@ -1181,7 +1192,8 @@ reg configuration_pending=1'b1;
   // whether the encoder uses it. This keeps tag comparison off the register
   // enable path without changing the selected row's border colour.
   if(!cvbs_display_valid||cvbs_read_x==0)
-   cvbs_border_data<=c_border0;
+   begin cvbs_border_data<=c_border0;
+         cvbs_right_border_data<=c_right_border0;end
   if(!cvbs_display_valid)begin
    // source_y is already the upcoming row throughout horizontal blank.
    // Select its bank and preload pixel zero while the encoder is still
@@ -1189,25 +1201,31 @@ reg configuration_pending=1'b1;
    // border/row into the left edge of the active component/CVBS picture.
    if(c_v0_r&&c_tag0_r==cvbs_display_y)begin
     c_read_bank<=0;c_read_valid<=1;cvbs_pixel_data<=cvbs_line0[c_read_addr];
-    cvbs_border_data<=c_border0;cvbs_border_valid<=1;end
+    cvbs_border_data<=c_border0;cvbs_right_border_data<=c_right_border0;
+    cvbs_border_valid<=1;end
    else if(c_v1_r&&c_tag1_r==cvbs_display_y)begin
     c_read_bank<=1;c_read_valid<=1;cvbs_pixel_data<=cvbs_line1[c_read_addr];
-    cvbs_border_data<=c_border1;cvbs_border_valid<=1;end
+    cvbs_border_data<=c_border1;cvbs_right_border_data<=c_right_border1;
+    cvbs_border_valid<=1;end
    else if(c_v2_r&&c_tag2_r==cvbs_display_y)begin
     c_read_bank<=2;c_read_valid<=1;cvbs_pixel_data<=cvbs_line2[c_read_addr];
-    cvbs_border_data<=c_border2;cvbs_border_valid<=1;end
+    cvbs_border_data<=c_border2;cvbs_right_border_data<=c_right_border2;
+    cvbs_border_valid<=1;end
    else begin c_read_valid<=0;cvbs_pixel_data<=0;cvbs_border_valid<=0;end
   end
   else if(cvbs_read_x==0)begin
    if(c_v0_r&&c_tag0_r==cvbs_display_y)begin
     c_read_bank<=0;c_read_valid<=1;cvbs_pixel_data<=cvbs_line0[c_read_addr];
-    cvbs_border_data<=c_border0;cvbs_border_valid<=1;end
+    cvbs_border_data<=c_border0;cvbs_right_border_data<=c_right_border0;
+    cvbs_border_valid<=1;end
    else if(c_v1_r&&c_tag1_r==cvbs_display_y)begin
     c_read_bank<=1;c_read_valid<=1;cvbs_pixel_data<=cvbs_line1[c_read_addr];
-    cvbs_border_data<=c_border1;cvbs_border_valid<=1;end
+    cvbs_border_data<=c_border1;cvbs_right_border_data<=c_right_border1;
+    cvbs_border_valid<=1;end
    else if(c_v2_r&&c_tag2_r==cvbs_display_y)begin
     c_read_bank<=2;c_read_valid<=1;cvbs_pixel_data<=cvbs_line2[c_read_addr];
-    cvbs_border_data<=c_border2;cvbs_border_valid<=1;end
+    cvbs_border_data<=c_border2;cvbs_right_border_data<=c_right_border2;
+    cvbs_border_valid<=1;end
    else begin c_read_valid<=0;cvbs_pixel_data<=0;cvbs_border_valid<=0;end
   end else if(c_read_valid)begin
    case(c_read_bank)

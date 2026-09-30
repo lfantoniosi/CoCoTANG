@@ -2,6 +2,7 @@
 module tb_coco3_hdmi_border_handoff;
     logic clk=0;
     logic [5:0] border_rgb=6'h15;
+    logic row_border_valid=0;
     always #5 clk=~clk;
 
     coco3_hdmi dut(
@@ -10,8 +11,8 @@ module tb_coco3_hdmi_border_handoff;
         .compatibility_mode(1'b0),.border_rgb(border_rgb),
         .artifact_mode(2'd0),.artifact_video_active(1'b0),
         .artifact_css(1'b0),.overlay_enable(1'b0),
-        .row_left_border_rgb(6'd0),.row_right_border_rgb(6'd0),
-        .row_border_valid(1'b0),.vertical_left_border_rgb(6'd0),
+        .row_left_border_rgb(6'h0c),.row_right_border_rgb(6'h3f),
+        .row_border_valid(row_border_valid),.vertical_left_border_rgb(6'd0),
         .vertical_right_border_rgb(6'd0),.vertical_border_valid(1'b0),
         .pixel_data(24'd0));
 
@@ -37,6 +38,15 @@ module tb_coco3_hdmi_border_handoff;
         @(posedge clk); #1;
         if (dut.encoder.sampled_rgb!==24'haaaaaa)
             $fatal(1,"following row did not receive the new colour");
+        row_border_valid=1;
+        force dut.y=10'd52;
+        @(posedge clk); #1;
+        if (dut.encoder.sampled_rgb!==24'h00ff00)
+            $fatal(1,"native picture left border ignored its cached row");
+        force dut.x=10'd700;
+        @(posedge clk); #1;
+        if (dut.encoder.sampled_rgb!==24'hffffff)
+            $fatal(1,"native picture right border ignored its cached row");
         $display("tb_coco3_hdmi_border_handoff PASS");
         $finish;
     end

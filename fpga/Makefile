@@ -73,6 +73,8 @@ test:
 	vvp /private/tmp/cocotang_tb_hdmi_border
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_scanline tests/tb_gime_scanline_buffer.v src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
 	vvp /private/tmp/cocotang_tb_gime_scanline
+	iverilog -g2012 -s tb_gime_cached_scanline -o /private/tmp/cocotang_tb_cached_scanline tests/tb_gime_cached_scanline.v src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
+	vvp /private/tmp/cocotang_tb_cached_scanline
 	iverilog -g2012 -s tb_gime_handover_cache_trace -o /private/tmp/cocotang_tb_gime_handover_cache_trace tests/tb_gime_handover_cache_trace.v src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
 	vvp /private/tmp/cocotang_tb_gime_handover_cache_trace
 	iverilog -g2012 -o /private/tmp/cocotang_tb_coco3_video_mux tests/tb_coco3_video_mux.v src/coco3/coco3.v src/coco3/gime_timing.v src/coco3/gime_registers.v src/coco3/gime_mode_debug.v src/coco3/gime_scanline_buffer.v src/coco3/gime_native_video.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v

@@ -25,6 +25,7 @@ module coco_cvbs_ntsc #(
     input  wire [5:0]  framebuffer_data,
     input  wire [5:0]  border_rgb,
     input  wire [5:0]  row_border_rgb,
+    input  wire [5:0]  row_right_border_rgb,
     input  wire        row_border_valid,
     input  wire [5:0]  vertical_left_border_rgb,
     input  wire [5:0]  vertical_right_border_rgb,
@@ -108,8 +109,7 @@ module coco_cvbs_ntsc #(
     // Map this analogue field onto the VDG raster that captured the
     // compatibility vertical-border colours. The analogue picture starts
     // 1..3 lines after the corresponding VDG picture, depending on mode.
-    wire [8:0] compatibility_raster_lag = video_50hz_active ? 9'd1 :
-        (height_meta == 8'd192 ? 9'd3 : 9'd2);
+    reg [8:0] compatibility_raster_lag = 9'd3;
     wire [8:0] border_top = field_picture_top >= 9'd27 ?
                             field_picture_top - 9'd27 : 9'd0;
 
@@ -126,8 +126,10 @@ module coco_cvbs_ntsc #(
     reg [3:0] sample_phase = 4'd0;
     reg [9:0] h_sample = 10'd0;
     reg [8:0] v_line = 9'd0;
-    assign border_raster_y = v_line >= compatibility_raster_lag ?
-                             v_line-compatibility_raster_lag : 9'd0;
+    // The vertical-border RAM is read a stage later. Register its raster
+    // address so the field-standard mux is not on the 135-MHz colour path.
+    reg [8:0] border_raster_y_q = 9'd0;
+    assign border_raster_y = border_raster_y_q;
     wire [8:0] field_last_line = video_50hz_active ?
         (field_odd ? 9'd312 : 9'd311) :
         (field_odd ? 9'd262 : 9'd261);
@@ -498,6 +500,7 @@ module coco_cvbs_ntsc #(
             video_50hz_meta <= 1'b0;
             video_50hz_sync <= 1'b0;
             video_50hz_active <= 1'b0;
+            border_raster_y_q <= 9'd0;
             // Offset the progressive analog raster without changing the time
             // at which logical row zero meets HDMI's shared line cache.
             h_sample <= 10'd0;
@@ -571,6 +574,10 @@ module coco_cvbs_ntsc #(
             if (video_50hz_sync != video_50hz_active)
                 video_50hz_active <= video_50hz_sync;
             height_meta <= active_height;
+            compatibility_raster_lag <= video_50hz_active ? 9'd1 :
+                (height_meta == 8'd192 ? 9'd3 : 9'd2);
+            border_raster_y_q <= v_line >= compatibility_raster_lag ?
+                                 v_line-compatibility_raster_lag : 9'd0;
             picture_top <= next_picture_top +
                            (!compatibility_mode ? 9'd1 : 9'd0);
             picture_bottom <= next_picture_top +
@@ -611,7 +618,8 @@ module coco_cvbs_ntsc #(
             pixel_picture <= source_picture;
             pixel_carrier <= source_carrier;
             pixel_sample_tick <= source_sample_tick;
-            border_sample <= source_body && row_border_valid ? row_border_rgb :
+            border_sample <= source_body && row_border_valid ?
+                (h_sample < picture_right ? row_border_rgb : row_right_border_rgb) :
                 compatibility_mode && !source_body && vertical_border_valid ?
                 (h_sample < picture_left ? vertical_left_border_rgb :
                                            vertical_right_border_rgb) :

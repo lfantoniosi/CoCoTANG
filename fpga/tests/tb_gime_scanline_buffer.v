@@ -4,6 +4,7 @@ module tb_gime_scanline_buffer;
  reg [95:0] palettes=0;reg [31:0] memory_data=32'h1b1b1b1b;
  reg memory_valid=0;wire memory_request;wire [22:0] memory_addr;
  wire [23:0] hdmi_pixel;wire [5:0] cvbs_pixel;
+ wire [5:0] cvbs_border,cvbs_right_border;
  wire [5:0] hdmi_left_border,hdmi_right_border;wire hdmi_border_valid;
  wire [5:0] hdmi_vertical_left_border,hdmi_vertical_right_border;
  wire hdmi_vertical_border_valid;
@@ -25,6 +26,7 @@ module tb_gime_scanline_buffer;
  reg [8:0] compatibility_border_y=0,hdmi_border_raster_y=0;
  reg [8:0] cvbs_border_raster_y=0;
  reg [5:0] compatibility_border_rgb=0;reg hdmi_frame_start=0;
+ reg [5:0] border_rgb=0;
  reg hdmi_active_50hz=0;
  reg hdmi_prefetch_valid=1,cvbs_prefetch_valid=0;
  reg [7:0] hdmi_prefetch_y=0,cvbs_prefetch_y=0;
@@ -37,7 +39,7 @@ module tb_gime_scanline_buffer;
   .lines_per_row_code(lpr),.vertical_scroll(vertical_scroll),.screen_base(screen_base),
   .video_bank(video_bank),
   .horizontal_offset(horizontal_offset),.palettes(palettes),
-  .border_rgb(6'd0),
+  .border_rgb(border_rgb),
   .compatibility_mode(compatibility_mode),.compatibility_an_g(compatibility_an_g),
   .compatibility_gm(compatibility_gm),.compatibility_css(compatibility_css),
   .compatibility_sam_mode(compatibility_sam_mode),
@@ -69,6 +71,8 @@ module tb_gime_scanline_buffer;
   .cvbs_prefetch_valid(cvbs_prefetch_valid),
   .cvbs_border_raster_y(cvbs_border_raster_y),
   .cvbs_pixel_data(cvbs_pixel),
+  .cvbs_border_data(cvbs_border),
+  .cvbs_right_border_data(cvbs_right_border),
   .cvbs_vertical_left_border_data(cvbs_vertical_left_border),
   .cvbs_vertical_right_border_data(cvbs_vertical_right_border),
   .cvbs_vertical_border_valid(cvbs_vertical_border_valid),
@@ -148,12 +152,15 @@ module tb_gime_scanline_buffer;
   // still outputs border, but the RAM value must be ready when active video
   // opens rather than leaving a one-pixel seam at the left edge.
   force dut.c_valid0=1;force dut.c_tag0=8'd23;force dut.c_border0=6'h16;
+  force dut.c_right_border0=6'h3f;
   dut.cvbs_line0[0]=6'h2d;cvbs_display_y=8'd23;
   repeat(4)@(posedge cvbs_clk);#1;
   if(!dut.c_read_valid||dut.c_read_bank!=0||cvbs_pixel!==6'h2d||
-     !dut.cvbs_border_valid||dut.cvbs_border_data!==6'h16)begin
+     !dut.cvbs_border_valid||cvbs_border!==6'h16||
+     cvbs_right_border!==6'h3f)begin
    $display("CVBS blanking did not preload pixel zero");errors=errors+1;end
-  release dut.c_border0;release dut.c_tag0;release dut.c_valid0;cvbs_display_y=0;
+  release dut.c_right_border0;release dut.c_border0;
+  release dut.c_tag0;release dut.c_valid0;cvbs_display_y=0;
 
   invalidate_all();
   if(!(dut.h_dirty0||dut.h_dirty1))begin
@@ -339,7 +346,7 @@ module tb_gime_scanline_buffer;
   force dut.c_valid0=1;force dut.c_valid1=1;force dut.c_valid2=1;
   force dut.c_tag0=8'd9;force dut.c_tag1=8'd10;force dut.c_tag2=8'd11;
   force dut.cv_v_s=0;force dut.cv_pv_s=1;force dut.cv_p_s=8'd10;
-  force dut.c_next_bank=0;#1;
+  force dut.c_next_bank=0;repeat(2)@(posedge clk);#1;
   if(dut.c_replacement_bank==0)begin
    $display("CVBS blanking replacement selected active row");errors=errors+1;end
   // HDMI owns the render and does not re-render a tag which still exists in
@@ -349,7 +356,7 @@ module tb_gime_scanline_buffer;
   force dut.h_valid1=0;
   force dut.hd_pa_s=1;force dut.hd_y_s=8'd10;
   force dut.hd_pv_s=1;force dut.hd_p_s=8'd12;
-  force dut.c_next_bank=1;#1;
+  force dut.c_next_bank=1;repeat(2)@(posedge clk);#1;
   if(dut.c_replacement_bank!=2)begin
    $display("CVBS replacement evicted HDMI-retained row instead of free row");
    errors=errors+1;end
@@ -631,15 +638,16 @@ module tb_gime_scanline_buffer;
   release dut.fill_gm;release dut.fill_artifact_mode;
   release dut.fill_left_css;release dut.fill_right_css;
 
-  // Hires still clears its read during the horizontal border. VDG keeps
-  // the selected row border there even though no picture pixel is valid.
+  // A complete cached row includes both border endpoints in native and
+  // compatibility modes. Later live border/mode changes cannot recolour it.
   force dut.h_v0_r=1'b1;force dut.h_tag0_r=8'd7;
   force dut.h_left_border0=6'h0c;force dut.h_right_border0=6'h3f;
   hdmi_display_y=7;hdmi_picture_active=1;hdmi_display_valid=0;
   compatibility_mode=0;
+  border_rgb=6'h15;
   @(posedge hdmi_clk);#1;
-  if(hdmi_border_valid)begin
-   $display("hires border unexpectedly selected VDG row metadata");errors=errors+1;end
+  if(!hdmi_border_valid||hdmi_left_border!==6'h0c||hdmi_right_border!==6'h3f)begin
+   $display("native row did not keep its committed border");errors=errors+1;end
   compatibility_mode=1;
   @(posedge hdmi_clk);#1;
   if(!hdmi_border_valid||hdmi_left_border!==6'h0c||hdmi_right_border!==6'h3f)begin
@@ -650,6 +658,7 @@ module tb_gime_scanline_buffer;
    $display("VDG border metadata remained valid outside raster row");errors=errors+1;end
   release dut.h_v0_r;release dut.h_tag0_r;
   release dut.h_left_border0;release dut.h_right_border0;
+  border_rgb=0;
 
   compatibility_raster_y=0;compatibility_raster_byte=0;
   compatibility_raster_css=0;compatibility_raster_write=1;

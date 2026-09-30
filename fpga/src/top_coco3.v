@@ -142,6 +142,7 @@ module top_coco3 #(
     wire compatibility_video;
     wire artifact_video_active,artifact_css;
     wire [5:0] border_rgb,cvbs_pixel_data,cvbs_border_data;
+    wire [5:0] cvbs_right_border_data;
     wire cvbs_border_valid;
     wire [5:0] cvbs_vertical_left_border_data;
     wire [5:0] cvbs_vertical_right_border_data;
@@ -257,6 +258,7 @@ module top_coco3 #(
         .cvbs_prefetch_valid(cvbs_prefetch_valid),
         .cvbs_border_raster_y(cvbs_border_raster_y),
         .cvbs_pixel_data(cvbs_pixel_data),.cvbs_border_data(cvbs_border_data),
+        .cvbs_right_border_data(cvbs_right_border_data),
         .cvbs_border_valid(cvbs_border_valid),
         .cvbs_vertical_left_border_data(cvbs_vertical_left_border_data),
         .cvbs_vertical_right_border_data(cvbs_vertical_right_border_data),
@@ -613,6 +615,8 @@ module top_coco3 #(
         6'b001100 : border_rgb;
     wire [5:0] visible_cvbs_border = startup_video_blank ?
         6'b001100 : cvbs_border_data;
+    wire [5:0] visible_cvbs_right_border = startup_video_blank ?
+        6'b001100 : cvbs_right_border_data;
     wire visible_cvbs_border_valid = !startup_video_blank && cvbs_border_valid;
     coco3_hdmi #(.LOG_ADDR_WIDTH(LOG_ADDR_WIDTH),
         .LOG_COUNT_WIDTH(LOG_COUNT_WIDTH),.LOG_PAGE_WIDTH(LOG_PAGE_WIDTH),
@@ -656,7 +660,7 @@ module top_coco3 #(
         .border_rgb(visible_border_rgb),
         .row_left_border_rgb(hdmi_left_border_data),
         .row_right_border_rgb(hdmi_right_border_data),
-        .row_border_valid(compatibility_video&&!startup_video_blank&&hdmi_border_valid),
+        .row_border_valid(!startup_video_blank&&hdmi_border_valid),
         .vertical_left_border_rgb(hdmi_vertical_left_border_data),
         .vertical_right_border_rgb(hdmi_vertical_right_border_data),
         .vertical_border_valid(compatibility_video&&!startup_video_blank&&
@@ -702,6 +706,7 @@ module top_coco3 #(
         .high_resolution(1'b1),.compatibility_mode(compatibility_video),
         .framebuffer_data(visible_cvbs_pixel),
         .border_rgb(visible_border_rgb),.row_border_rgb(visible_cvbs_border),
+        .row_right_border_rgb(visible_cvbs_right_border),
         .row_border_valid(visible_cvbs_border_valid),
         .vertical_left_border_rgb(cvbs_vertical_left_border_data),
         .vertical_right_border_rgb(cvbs_vertical_right_border_data),

@@ -194,7 +194,7 @@ module coco3_hdmi #(
                                           {4{vertical_border[3:2]}},
                                           {4{vertical_border[1:0]}}};
     wire [23:0] selected_rgb=picture_d ? pixel_data :
-        (compatibility_s&&source_picture_active&&row_border_valid?
+        (source_picture_active&&row_border_valid?
          expanded_row_border:
          compatibility_s&&!source_picture_active&&vertical_border_valid?
          expanded_vertical_border:expanded_border);

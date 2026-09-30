@@ -9,6 +9,7 @@ module tb_coco_cvbs_ntsc;
     reg [5:0] framebuffer_data = 6'b111111;
     reg [5:0] border_rgb = 6'b001100;
     reg [5:0] row_border_rgb = 6'b001100;
+    reg [5:0] row_right_border_rgb = 6'b001100;
     reg row_border_valid = 1'b0;
     reg [5:0] vertical_left_border_rgb = 6'h3f;
     reg [5:0] vertical_right_border_rgb = 6'h3f;
@@ -31,7 +32,9 @@ module tb_coco_cvbs_ntsc;
         .video_50hz(video_50hz),.high_resolution(high_resolution),
         .compatibility_mode(compatibility_mode),
         .framebuffer_data(framebuffer_data),.border_rgb(border_rgb),
-        .row_border_rgb(row_border_rgb),.row_border_valid(row_border_valid),
+        .row_border_rgb(row_border_rgb),
+        .row_right_border_rgb(row_right_border_rgb),
+        .row_border_valid(row_border_valid),
         .vertical_left_border_rgb(vertical_left_border_rgb),
         .vertical_right_border_rgb(vertical_right_border_rgb),
         .vertical_border_valid(vertical_border_valid),
@@ -105,6 +108,17 @@ module tb_coco_cvbs_ntsc;
 
         high_resolution = 1'b1;
         compatibility_mode = 1'b0;
+        // Both borders of the active raster come from its committed cache
+        // record, not from the current FF9A colour or the opposite endpoint.
+        row_border_valid = 1'b1;
+        row_border_rgb = 6'h0c;
+        row_right_border_rgb = 6'h3f;
+        border_rgb = 6'h15;
+        seek(10'd150,9'd44);
+        @(posedge clk135); #1;
+        if (dut.border_sample !== 6'h0c) begin
+            $display("native left border used live/other-row colour"); errors=errors+1;
+        end
         seek(10'd158,9'd44);
         if (!source_valid || source_x != 10'd0 || source_y != 8'd0) begin
             $display("640-wide first pixel: %0d,%0d",source_x,source_y); errors=errors+1;
@@ -113,6 +127,12 @@ module tb_coco_cvbs_ntsc;
         if (!source_valid || !dut.in_vdg_window || source_x != 10'd639) begin
             $display("640-wide last pixel: %0d",source_x); errors=errors+1;
         end
+        seek(10'd800,9'd44);
+        @(posedge clk135); #1;
+        if (dut.border_sample !== 6'h3f) begin
+            $display("native right border used live/left colour"); errors=errors+1;
+        end
+        row_border_valid = 1'b0;
         compatibility_mode = 1'b1;
         high_resolution = 1'b0;
 
