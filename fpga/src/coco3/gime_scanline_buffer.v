@@ -2,6 +2,7 @@
 // the MiSTer/Gary Becker CoCo3FPGA core, but no framebuffer is used.
 module gime_scanline_buffer (
  input clk,input reset_n,input bit_plane,input [3:0] hres,input [1:0] cres,
+ input [7:0] active_height,
  input [2:0] lines_per_row_code,input [3:0] vertical_scroll,
  input [18:0] screen_base,input [1:0] video_bank,
  input [7:0] horizontal_offset,input [95:0] palettes,input [5:0] border_rgb,
@@ -307,6 +308,8 @@ module gime_scanline_buffer (
  reg [3:0] fill_scale_integer=0;reg [9:0] fill_scale_remainder=0;
  reg fill_narrow_aperture=0;reg [5:0] fill_border_rgb=0;
  reg [18:0] fill_base=0;reg [6:0] fill_hoff=0;reg [95:0] fill_palettes=0;
+ reg [23:0] prior_paint_palette=0;
+ reg prior_paint_valid=0;
  reg [1:0] fill_video_bank=0;
  reg [8:0] row_remainder=0;reg [7:0] source_row=0;reg [3:0] glyph_line=0;
  reg [9:0] out_x=0;reg [12:0] source_x=0;reg [9:0] scale_phase=0;
@@ -683,6 +686,7 @@ reg configuration_pending=1'b1;
    frame_initial_scroll<=0;frame_initial_lpr<=0;
    hdmi_50_meta<=0;hdmi_50_sync<=0;hdmi_50_prev<=0;
    c_replacement_bank_q<=0;
+   prior_paint_palette<=0;prior_paint_valid<=0;
    artifact_bit_write_pending<=0;
    fill_raster_css_valid<=0;
    compatibility_css_read_addr<=0;
@@ -693,6 +697,8 @@ reg configuration_pending=1'b1;
    hdmi_frame_meta<=hdmi_frame_start;
    hdmi_frame_sync<=hdmi_frame_meta;
    hdmi_frame_prev<=hdmi_frame_sync;
+   if(hdmi_frame_rise||hdmi_standard_changed||upper_border_setup_abort)
+    prior_paint_valid<=0;
    if(hd_pa_s)upper_border_active<=0;
    else if(hdmi_frame_rise)upper_border_active<=1;
    // Register this abort decision so HDMI tag comparison and setup changes
@@ -883,6 +889,14 @@ reg configuration_pending=1'b1;
      fill_scale_remainder<=(!compatibility_mode&&!hres[0])?
        scale_remainder_512(live_source_width):scale_remainder(live_source_width);
      fill_hoff<=horizontal_offset[6:0];fill_palettes<=palettes;
+     // The 60-Hz/192-line picture is prefetched before CHART.BAS's paint
+     // palette change belongs to its bitmap row. Keep entries 8-11 from
+     // the preceding fill; every other entry stays in the current snapshot.
+     if(prior_paint_valid&&!compatibility_mode&&!hdmi_50_sync&&
+        active_height==8'd192)
+      fill_palettes[48+:24]<=prior_paint_palette;
+     prior_paint_palette<=palettes[48+:24];
+     prior_paint_valid<=1;
      // Native LPR=0/1 is one raster line per memory row.  The real GIME
      // forces its fine-scroll counter to zero in this mode; FF9C must not
      // skip whole bitmap rows.  HDMI border lines never enter h_pending_y,

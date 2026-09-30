@@ -17,6 +17,7 @@ module tb_gime_scanline_buffer;
  reg [2:0] compatibility_gm=0,compatibility_sam_mode=0;
  reg compatibility_css=0;reg [18:0] signature_without_css=0;
  reg [3:0] hres=7;reg [1:0] cres=1;
+ reg [7:0] active_height=8'd192;
  reg bit_plane=1;reg [2:0] lpr=0;reg [3:0] vertical_scroll=0;
  reg [18:0] screen_base=0;reg [1:0] video_bank=0;
  reg [7:0] horizontal_offset=0;reg cpu_write_strobe=0;reg [20:0] cpu_write_addr=0;
@@ -36,6 +37,7 @@ module tb_gime_scanline_buffer;
 
  gime_scanline_buffer dut(
   .clk(clk),.reset_n(reset_n),.bit_plane(bit_plane),.hres(hres),.cres(cres),
+  .active_height(active_height),
   .lines_per_row_code(lpr),.vertical_scroll(vertical_scroll),.screen_base(screen_base),
   .video_bank(video_bank),
   .horizontal_offset(horizontal_offset),.palettes(palettes),
@@ -771,6 +773,30 @@ module tb_gime_scanline_buffer;
   if(dut.frame_screen_base!=19'h12380)begin
    $display("VOFF changed after picture began");errors=errors+1;
   end
+
+  // CHART.BAS updates palette entries 8-11 between adjacent cached rows.
+  // The second row must retain the preceding paint palette, without
+  // delaying the fixed outline entries.
+  hdmi_prefetch_valid=0;
+  repeat(5) @(negedge clk);
+  force dut.state=4'd0;force dut.h_pending=1'b1;
+  force dut.h_pending_y=8'd42;force dut.coalesce_count=3'd7;
+  palettes[48+:24]=24'h123456;
+  @(posedge clk);#1;
+  palettes[48+:24]=24'habcdef;
+  palettes[0+:6]=6'h3e;
+  @(posedge clk);#1;
+  if(dut.fill_palettes[48+:24]!==24'h123456||
+     dut.fill_palettes[0+:6]!==6'h3e)begin
+   $display("CHART paint palette advanced before its bitmap row");errors=errors+1;
+  end
+  active_height=8'd225;palettes[48+:24]=24'hfedcba;
+  @(posedge clk);#1;
+  if(dut.fill_palettes[48+:24]!==24'hfedcba)begin
+   $display("non-192-line palette incorrectly delayed");errors=errors+1;
+  end
+  release dut.state;release dut.h_pending;release dut.h_pending_y;
+  release dut.coalesce_count;
 
   if(errors==0)$display("tb_gime_scanline_buffer PASS");
   else $display("tb_gime_scanline_buffer FAIL: %0d",errors);

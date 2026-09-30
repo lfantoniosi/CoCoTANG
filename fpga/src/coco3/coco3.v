@@ -322,6 +322,7 @@ module coco3 #(
         .bit_plane(effective_bit_plane),
         .hres(effective_hres),
         .cres(effective_cres),
+        .active_height(active_height),
         .lines_per_row_code(effective_lines_per_row_code),
         .vertical_scroll(vertical_scroll),
         .screen_base(effective_screen_base),

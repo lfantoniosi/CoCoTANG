@@ -32,6 +32,7 @@ module tb_gime_handover_cache_trace;
 
  gime_scanline_buffer dut(
   .clk(clk),.reset_n(reset_n),.bit_plane(1'b1),.hres(4'd7),.cres(2'd2),
+  .active_height(8'd192),
   .lines_per_row_code(lpr),.vertical_scroll(vertical_scroll),
   .screen_base(screen_base),.video_bank(2'd0),
   .horizontal_offset(8'h0b),.palettes(palettes),.border_rgb(6'd0),

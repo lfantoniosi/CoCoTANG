@@ -15,6 +15,7 @@ open_project [file join $::env(COCOTANG_FPGA_ROOT) $::env(COCOTANG_PROJECT)]
 set_option -top_module $::env(COCOTANG_TOP)
 set_option -output_base_name $::env(COCOTANG_OUTPUT)
 set_option -verilog_std sysv2017
+set_option -route_option 1
 set_option -use_mspi_as_gpio 1
 set_option -use_sspi_as_gpio 1
 run all

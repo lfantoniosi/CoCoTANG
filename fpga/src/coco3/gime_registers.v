@@ -69,7 +69,11 @@ module gime_registers #(
     // low page bits are supplied by the destination slot, not by the value
     // written to the MMU register.  Consequently a RAM page such as $00
     // mapped at CPU $8000 must remain RAM; ROM is not a fixed CPU window.
-    wire mmu_rom_page = &selected_mmu_page[5:2];
+    // Predecode ROM-capable MMU pages on register writes. The cartridge
+    // select path needs only this bit; selecting all six page bits and then
+    // reducing four of them was the longest 108-MHz pad-control path.
+    reg mmu_rom_flag [0:15];
+    wire mmu_rom_page = mmu_rom_flag[mmu_index];
     wire legacy_rom_window = !mmu_enabled && cpu_addr >= 16'h8000;
     wire mapped_rom_window = mmu_enabled && mmu_rom_page;
     // The hardware-vector page is always supplied by the internal ROM,
@@ -235,6 +239,7 @@ module gime_registers #(
             // using i directly here formerly wrapped task 1 to pages 00-07.
             for (i=0;i<16;i=i+1) begin
                 mmu[i] <= 6'h38 + {3'b000,i[2:0]};
+                mmu_rom_flag[i] <= i[2];
                 disto_mmu[i] <= 2'b00;
             end
             // CoCo3FPGA RGB defaults.  The former values were its composite
@@ -348,6 +353,7 @@ module gime_registers #(
                         default: begin
                             if (cpu_addr >= 16'hffa0 && cpu_addr <= 16'hffaf) begin
                                 mmu[cpu_addr[3:0]] <= cpu_data[5:0];
+                                mmu_rom_flag[cpu_addr[3:0]] <= &cpu_data[5:2];
                                 if (DISTO_2MB)
                                     disto_mmu[cpu_addr[3:0]] <= cpu_data[7:6];
                             end

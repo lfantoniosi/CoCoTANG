@@ -25,6 +25,7 @@ module tb_gime_cached_scanline;
 
  gime_scanline_buffer dut(
   .clk(clk),.reset_n(reset_n),.bit_plane(1'b1),.hres(hres),.cres(2'd1),
+  .active_height(8'd192),
   .lines_per_row_code(3'd0),.vertical_scroll(4'd0),
   .screen_base(19'd0),.video_bank(2'd0),.horizontal_offset(8'd0),
   .palettes(palettes),.border_rgb(border_rgb),
