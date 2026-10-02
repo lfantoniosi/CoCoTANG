@@ -6,7 +6,8 @@ remain in the computer.
 
 ## Design
 
-`CoCoTANG.gprj` builds `top_coco3`. The FPGA provides:
+The default Makefile build uses the timing-qualified NTSC S-Video top-level.
+The FPGA provides:
 
 - GIME-compatible CPU timing, MMU, interrupts, palette, native graphics, and
   legacy compatibility video modes.
@@ -28,6 +29,12 @@ stored in module flash at offset `0x100000`. Program it with:
 make rom
 ```
 
+For the experimental PAL-chroma variant, program the supplied 32 KiB
+`coco3p.rom` from `/Users/felipe/src/retro/coco_roms/coco3p.rom` using
+`make pal-rom`. The path can be overridden with `PAL_ROM=/path/to/coco3p.rom`.
+The ROM is not copied into this repository. `make rom` restores the normal
+ROM at the same flash offset.
+
 ## Video
 
 `ANALOG_VIDEO_MODE=2` produces Y/Pb/Pr component video:
@@ -37,7 +44,12 @@ E clock because the original E connection is shared with HSPI. Separate Y
 uses the component HAT's seven-bit sigma-delta method: a 40-code sync-to-black
 pedestal and an 87-code black-to-white excursion.
 
-`ANALOG_VIDEO_MODE=3` is the default and reuses the component HAT for RGB
+The default `ANALOG_VIDEO_MODE=1` selects the CVBS/S-Video HAT. Its NTSC
+S-Video output uses the same DAC-generated burst and picture-to-burst phase
+treatment as the experimental PAL path, but retains the NTSC colour carrier.
+CVBS encoding is unchanged.
+
+`ANALOG_VIDEO_MODE=3` reuses the component HAT for RGB
 with sync on green:
 pin 56/Y is green with composite sync, pin 54/Pb is blue, and pin 18/Pr is
 red. The existing 1 kOhm/4.7 kOhm transistor inputs, 75-ohm output resistors,
@@ -53,6 +65,27 @@ bit 3 (H50) selects 60- or 50-Hz vertical timing without changing the CPU
 clock. The 50-Hz path retains NTSC-machine timing and colour encoding while
 using a 625-line output raster. HDMI follows
 H50 using 720x480p59.94 or 720x576p50 respectively.
+
+### Experimental PAL-chroma variant
+
+`make pal-rebuild` builds `impl/pnr/CoCoTANG-pal.fs`. To try it on hardware,
+run `make pal-rom` and `make pal-program`. This variant selects the existing
+CVBS/S-Video analog pins, generates a 4.43361875 MHz PAL chroma carrier, and
+alternates the V chroma component and burst phase on successive scanlines.
+It does **not** change the NTSC-derived CPU E/Q or video clocks, horizontal
+timing, or GIME raster. Thus it is PAL-colour encoding on the existing CoCo
+timing, not a standards-compliant PAL computer or guaranteed-compatible
+625/50 signal. HDMI is unchanged. Use `make rom` and `make program` to restore
+the standard ROM and default NTSC CVBS/S-Video bitstream.
+
+The matched NTSC S-Video path is also available as explicitly named
+`make ntsc-svideo-rebuild`/`make ntsc-svideo-program` targets. The default
+`make build`, `make rebuild`, `make timing`, and `make program` use that same
+timing-qualified S-Video top-level.
+Neither bitstream replaces the ROM in SPI flash: leave `coco3p.rom` installed
+for a direct PAL-versus-NTSC carrier comparison, or run `make rom` if you also
+want the normal NTSC ROM. The separate `ANALOG_VIDEO_MODE=3` RGB configuration
+is unchanged.
 
 ## Glenside IDE / TF card
 
@@ -78,11 +111,11 @@ With Gowin EDA and `openFPGALoader` installed:
 ```sh
 make test       # RTL regression suite
 make rebuild    # clean synthesis, place-and-route, and bitstream
-make program    # build if needed and program SRAM
+make program    # build if needed and program the FPGA flash
 make reprogram  # program the existing bitstream
 ```
 
-The generated bitstream is `impl/pnr/CoCoTANG.fs`. See
+The default generated bitstream is `impl/pnr/CoCoTANG-ntsc-svideo.fs`. See
 [`docs/pinout.md`](docs/pinout.md) for the FPGA pin and bus-multiplexer map.
 
 Low-level SDRAM, SPI flash, and HDMI code was adapted from

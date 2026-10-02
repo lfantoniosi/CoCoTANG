@@ -7,6 +7,13 @@
 module coco_cvbs_ntsc #(
     parameter integer STREAMING_INPUT = 0,
     parameter integer CANONICAL_640_INPUT = 0,
+    // Experimental PAL chroma over the existing CoCo/HDMI line timing.  This
+    // selects only the analog subcarrier and PAL V/burst line alternation;
+    // it must never change the CPU E/Q clocks or video scanline counters.
+    parameter integer PAL_CHROMA_OUTPUT = 0,
+    // Use a DAC-generated burst and align S-Video picture chroma with CVBS.
+    // PAL always uses this; the NTSC experiment enables it independently.
+    parameter integer MATCH_SVIDEO_TO_CVBS = 0,
     // Reuse the component DACs as RGB with negative composite sync on green.
     // The component HAT then needs no component changes: Y=G/SoG, Pb=B,
     // and Pr=R.
@@ -179,10 +186,14 @@ module coco_cvbs_ntsc #(
 
     // NTSC fSC is 455/2 times the line rate. At 135 MHz this accumulator
     // advances 91/3432 of an octant per clock and exactly half a carrier
-    // cycle per 858-sample scan line.
+    // cycle per 858-sample scan line.  The optional PAL DDS is clocked by
+    // the SAME 135 MHz PLL output: 2203964/2^26 * 135 MHz = 4,433,619.08 Hz.
     reg [8:0] carrier_fraction = 9'd0;
     reg [2:0] carrier_octant = 3'd0;
-    wire [2:0] carrier_phase = carrier_octant;
+    reg [25:0] pal_carrier_acc = 26'd0;
+    reg pal_v_invert = 1'b0;
+    wire [2:0] carrier_phase = PAL_CHROMA_OUTPUT ?
+                               pal_carrier_acc[25:23] : carrier_octant;
 
     function signed [5:0] chroma8;
         input [2:0] phase;
@@ -408,13 +419,30 @@ module coco_cvbs_ntsc #(
     reg signed [7:0] mod_component_x = 8'sd0;
     reg signed [7:0] mod_component_y = 8'sd0;
 
+    // PAL reverses the V/R-Y contribution on successive physical lines.
+    // The existing X/Y matrix uses Y as its V-like axis.  Reversing Y also
+    // swaps the X+Y and X-Y diagonal terms, without touching baseband Y,
+    // component Pb/Pr, HDMI, or any CoCo raster timing.
+    wire signed [10:0] pal_picture_y4 =
+        (PAL_CHROMA_OUTPUT && pal_v_invert) ? -mod_y4 : mod_y4;
+    wire signed [10:0] pal_picture_sum3 =
+        (PAL_CHROMA_OUTPUT && pal_v_invert) ? mod_difference3 : mod_sum3;
+    wire signed [10:0] pal_picture_difference3 =
+        (PAL_CHROMA_OUTPUT && pal_v_invert) ? mod_sum3 : mod_difference3;
     wire signed [5:0] mod_picture_chroma =
-        rgb_chroma(mod_x4,mod_y4,mod_sum3,mod_difference3,mod_carrier);
+        rgb_chroma(mod_x4,pal_picture_y4,pal_picture_sum3,
+                   pal_picture_difference3,mod_carrier);
     wire signed [5:0] mod_svideo_picture_chroma =
-        rgb_chroma(mod_x4,mod_y4,mod_sum3,mod_difference3,
-                   mod_carrier + 3'd1);
+        (PAL_CHROMA_OUTPUT || MATCH_SVIDEO_TO_CVBS) ? mod_picture_chroma :
+        rgb_chroma(mod_x4,pal_picture_y4,pal_picture_sum3,
+                   pal_picture_difference3,mod_carrier + 3'd1);
+    // PAL burst swings +/-45 degrees about the negative U axis.  The two
+    // octant offsets correspond to -U+V and -U-V respectively; NTSC keeps
+    // its original 180-degree burst unchanged.
+    wire [2:0] burst_phase_offset = PAL_CHROMA_OUTPUT ?
+        (pal_v_invert ? 3'd5 : 3'd3) : 3'd4;
     wire signed [5:0] mod_burst_chroma =
-        chroma8(mod_carrier + 3'd4,2'd3);
+        chroma8(mod_carrier + burst_phase_offset,2'd3);
     wire signed [5:0] mod_selected_chroma = mod_burst ?
         mod_burst_chroma : mod_picture_chroma;
 
@@ -447,14 +475,14 @@ module coco_cvbs_ntsc #(
     wire signed [10:0] component_pr_delta_q2 =
         $signed(mod_component_y) - (component_pr_x >>> 5);
 
-    // The S-Video connector locks to the inverted burst convention below, so
-    // active-picture chroma must use the same polarity.  Advance picture hue
-    // by one 45-degree carrier octant to compensate the measured analogue
-    // rotation.  The corrected Q8 emitter follower still attenuates picture
-    // chroma with the calibrated x4 gain.
+    // The legacy NTSC S-Video path uses a fixed-polarity square-wave burst,
+    // with inverted picture chroma advanced by one octant. The matched path
+    // uses the same DAC phase for S-Video burst and picture on either carrier.
+    // Retain the x4 picture gain required by the Q8 emitter follower.
     wire signed [7:0] svideo_chroma_extended = level_svideo_chroma;
     wire signed [7:0] svideo_picture_chroma =
-        -(svideo_chroma_extended <<< 2);
+        (PAL_CHROMA_OUTPUT || MATCH_SVIDEO_TO_CVBS) ?
+        (svideo_chroma_extended <<< 2) : -(svideo_chroma_extended <<< 2);
 
     wire [6:0] selected_luma_level_q2 = (FORCE_LUMA_LEVEL >= 0) ?
                                         {FORCE_LUMA_LEVEL[4:0],2'b00} :
@@ -508,6 +536,8 @@ module coco_cvbs_ntsc #(
             field_odd <= 1'b0;
             carrier_fraction <= 9'd0;
             carrier_octant <= 3'd0;
+            pal_carrier_acc <= 26'd0;
+            pal_v_invert <= 1'b0;
             source_sync <= 1'b1;
             source_burst <= 1'b0;
             source_picture <= 1'b0;
@@ -677,6 +707,7 @@ module coco_cvbs_ntsc #(
             end else begin
                 carrier_fraction <= carrier_fraction + 9'd91;
             end
+            pal_carrier_acc <= pal_carrier_acc + 26'd2203964;
 
             // The input is HDMI's frame-committed standard.  Re-establish
             // the intentional 17-line phase lead exactly when that standard
@@ -692,6 +723,7 @@ module coco_cvbs_ntsc #(
                 sample_phase <= 4'd0;
                 if (h_sample == line_last_sample) begin
                     h_sample <= 10'd0;
+                    pal_v_invert <= ~pal_v_invert;
                     if (v_line == field_last_line) begin
                         v_line <= 9'd0;
                         field_odd <= ~field_odd;
@@ -823,8 +855,9 @@ module coco_cvbs_ntsc #(
                 luma_phase_lfsr <= {luma_phase_lfsr[14:0],
                                     luma_phase_feedback};
             luma_out_reg <= luma_sigma[7];
-            // Use the calibrated sparse-XOR burst shaper for NTSC.
-            chroma_out_reg <= chroma_burst_270 ?
+            // Keep the legacy shaper only for the original NTSC S-Video path.
+            chroma_out_reg <= (!PAL_CHROMA_OUTPUT &&
+                               !MATCH_SVIDEO_TO_CVBS && chroma_burst_270) ?
                               shaped_burst_bit : chroma_sigma[5];
             cvbs_out_reg <= cvbs_sigma[5];
             component_pb_out_reg <= component_pb_sigma[7];

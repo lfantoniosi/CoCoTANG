@@ -23,7 +23,9 @@ module top_coco3 #(
     parameter integer DEBUG_OVERLAY=0,
     // 0/1: simultaneous S-Video and CVBS; 2: Y/Pb/Pr component;
     // 3: RGB with composite sync on green (Y=G/SoG, Pb=B, Pr=R).
-    parameter integer ANALOG_VIDEO_MODE=3,
+    parameter integer ANALOG_VIDEO_MODE=1,
+    parameter integer PAL_CHROMA_OUTPUT=0,
+    parameter integer MATCH_SVIDEO_TO_CVBS=1,
     // 0=OFF, 1=ON (blue/orange), 2=REVERSE (orange/blue).
     parameter [1:0] INITIAL_ARTIFACT_MODE=2'd1,
     parameter integer DISTO_2MB=1,
@@ -697,6 +699,8 @@ module top_coco3 #(
         end
     end
     coco_cvbs_ntsc #(.STREAMING_INPUT(0),.CANONICAL_640_INPUT(1),
+        .PAL_CHROMA_OUTPUT(PAL_CHROMA_OUTPUT),
+        .MATCH_SVIDEO_TO_CVBS(MATCH_SVIDEO_TO_CVBS),
         .RGB_SOG_OUTPUT(ANALOG_VIDEO_MODE==3)) analog_encoder(
         // Start on the same board reset as HDMI.  cpu_release is aligned to
         // the CoCo bus, not to video, and made the CVBS consumer enter the

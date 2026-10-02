@@ -1,7 +1,10 @@
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
-PROJECT := $(ROOT)/CoCoTANG.gprj
+PAL_PROJECT := $(ROOT)/CoCoTANG-pal.gprj
 BUILD_TCL := $(ROOT)/scripts/build.tcl
-OUTPUT := $(ROOT)/impl/pnr/CoCoTANG.fs
+OUTPUT := $(ROOT)/impl/pnr/CoCoTANG-ntsc-svideo.fs
+PAL_OUTPUT := $(ROOT)/impl/pnr/CoCoTANG-pal.fs
+NTSC_SVIDEO_OUTPUT := $(OUTPUT)
+PAL_ROM ?= /Users/felipe/src/retro/coco_roms/coco3p.rom
 
 ifeq ($(shell uname -s),Darwin)
 GOWIN_IDE ?= /Applications/GowinIDE.app/Contents/Resources/Gowin_EDA/IDE
@@ -17,16 +20,33 @@ PROGRAMMER_BOARD ?= tangnano20k
 ROM_OFFSET ?= 1048576
 
 .DEFAULT_GOAL := build
-.PHONY: build rebuild test timing program reprogram rom check-tools
+.PHONY: build rebuild pal-build pal-rebuild ntsc-svideo-build \
+ ntsc-svideo-rebuild test timing pal-timing ntsc-svideo-timing program \
+ reprogram pal-program pal-reprogram ntsc-svideo-program \
+ ntsc-svideo-reprogram rom pal-rom check-tools
 
 build: $(OUTPUT)
 
-rebuild: check-tools
-	$(call run-gowin,CoCoTANG.gprj,top_coco3,CoCoTANG)
+rebuild: ntsc-svideo-rebuild
+
+pal-build: $(PAL_OUTPUT)
+
+pal-rebuild: check-tools
+	$(call run-gowin,CoCoTANG-pal.gprj,top_coco3_pal,CoCoTANG-pal)
+
+ntsc-svideo-build: $(NTSC_SVIDEO_OUTPUT)
+
+ntsc-svideo-rebuild: check-tools
+	$(call run-gowin,CoCoTANG-pal.gprj,top_coco3_ntsc_svideo,CoCoTANG-ntsc-svideo)
 
 # Inspect the last routed build without programming the board or rebuilding.
-timing:
-	python3 scripts/check_timing.py impl/pnr/CoCoTANG_tr_content.html
+timing: ntsc-svideo-timing
+
+pal-timing:
+	python3 scripts/check_timing.py impl/pnr/CoCoTANG-pal_tr_content.html
+
+ntsc-svideo-timing:
+	python3 scripts/check_timing.py impl/pnr/CoCoTANG-ntsc-svideo_tr_content.html
 
 test:
 	iverilog -g2012 -o /private/tmp/cocotang_tb_sd_spi tests/tb_sd_spi_block.v src/storage/sd_spi_block.v
@@ -39,6 +59,10 @@ test:
 	vvp /private/tmp/cocotang_tb_mux
 	iverilog -g2012 -o /private/tmp/cocotang_tb_cvbs tests/tb_coco_cvbs_ntsc.v src/video/coco_cvbs_ntsc.v
 	vvp /private/tmp/cocotang_tb_cvbs
+	iverilog -g2012 -o /private/tmp/cocotang_tb_pal_cvbs tests/tb_coco_cvbs_pal.v src/video/coco_cvbs_ntsc.v
+	vvp /private/tmp/cocotang_tb_pal_cvbs
+	iverilog -g2012 -o /private/tmp/cocotang_tb_ntsc_svideo tests/tb_coco_cvbs_ntsc_svideo.v src/video/coco_cvbs_ntsc.v
+	vvp /private/tmp/cocotang_tb_ntsc_svideo
 	iverilog -g2012 -o /private/tmp/cocotang_tb_startup_test tests/tb_coco_sdram_startup_test.v src/memory/coco_sdram_startup_test.v
 	vvp /private/tmp/cocotang_tb_startup_test
 	iverilog -g2012 -o /private/tmp/cocotang_tb_cpu_arbiter tests/tb_cpu_sdram_arbiter.v src/memory/cpu_sdram_arbiter.v
@@ -90,9 +114,26 @@ program: $(OUTPUT)
 reprogram:
 	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(OUTPUT)"
 
+pal-program: $(PAL_OUTPUT)
+	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(PAL_OUTPUT)"
+
+pal-reprogram:
+	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(PAL_OUTPUT)"
+
+ntsc-svideo-program: $(NTSC_SVIDEO_OUTPUT)
+	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(NTSC_SVIDEO_OUTPUT)"
+
+ntsc-svideo-reprogram:
+	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(NTSC_SVIDEO_OUTPUT)"
+
 rom: roms/coco3.rom
 	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f --external-flash \
 	 -o "$(ROM_OFFSET)" "$<"
+
+pal-rom:
+	@test -f "$(PAL_ROM)" || (echo "PAL ROM not found: $(PAL_ROM)"; exit 1)
+	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f --external-flash \
+	 -o "$(ROM_OFFSET)" "$(PAL_ROM)"
 
 check-tools:
 	@test -x "$(GW_SH)" || (echo "Gowin shell not found: $(GW_SH)"; exit 1)
@@ -103,5 +144,8 @@ define run-gowin
 	 "$(GW_SH)" "$(BUILD_TCL)"
 endef
 
-$(OUTPUT): $(PROJECT) $(BUILD_TCL) $(shell find src -type f) | check-tools
-	$(call run-gowin,CoCoTANG.gprj,top_coco3,CoCoTANG)
+$(PAL_OUTPUT): $(PAL_PROJECT) $(BUILD_TCL) $(shell find src -type f) | check-tools
+	$(call run-gowin,CoCoTANG-pal.gprj,top_coco3_pal,CoCoTANG-pal)
+
+$(NTSC_SVIDEO_OUTPUT): $(PAL_PROJECT) $(BUILD_TCL) $(shell find src -type f) | check-tools
+	$(call run-gowin,CoCoTANG-pal.gprj,top_coco3_ntsc_svideo,CoCoTANG-ntsc-svideo)
