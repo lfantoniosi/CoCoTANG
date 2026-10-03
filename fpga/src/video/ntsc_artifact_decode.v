@@ -28,7 +28,9 @@ module ntsc_artifact_decode (
             case(color)
                 0:rgb=6'h00;  1:rgb=6'h15;  2:rgb=6'h04;  3:rgb=6'h2a;
                 4:rgb=6'h2a;  5:rgb=6'h24;  6:rgb=6'h05;  7:rgb=6'h29;
-                8:rgb=6'h1a;  9:rgb=6'h06; 10:rgb=6'h24; 11:rgb=6'h2a;
+                // RGB222: give PMODE 4's blue and orange their full blue/red
+                // channel while keeping the six-bit scanline cache unchanged.
+                8:rgb=6'h1a;  9:rgb=6'h07; 10:rgb=6'h34; 11:rgb=6'h2a;
                12:rgb=6'h1a; 13:rgb=6'h14; 14:rgb=6'h05; default:rgb=6'h3e;
             endcase
         end else begin

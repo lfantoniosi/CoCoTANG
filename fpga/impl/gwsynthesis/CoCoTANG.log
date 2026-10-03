@@ -45,6 +45,7 @@ Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco3_hdm
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/artifact_mode_control.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3_pal.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3_ntsc_svideo.v'
 Compiling module 'top_coco3'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":4)
 Compiling module 'coco_clocks'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco_clocks.v":1)
 Compiling module 'CLK108'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/gowin_rpll/clk108.v":10)
@@ -93,7 +94,7 @@ Compiling module 'glenside_ide(IDE_BASE=16'b1111111101010000,CPU_ENABLE_PREDECOD
 Compiling module 'glenside_ata(IDE_BASE=16'b1111111101010000,CPU_ENABLE_PREDECODED=1)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/glenside_ata.v":7)
 Compiling module 'glenside_sector_buffer'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/glenside_sector_buffer.v":3)
 Compiling module 'sd_spi_block'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/sd_spi_block.v":6)
-WARN  (EX3791) : Expression size 8 truncated to fit in target size 7("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":587)
+WARN  (EX3791) : Expression size 8 truncated to fit in target size 7("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":588)
 Compiling module 'coco3_hdmi(LOG_ADDR_WIDTH=13,LOG_COUNT_WIDTH=14,LOG_PAGE_WIDTH=7,LOG_DEPTH=4092,ENABLE_DEBUG_OVERLAY=32'b00000000000000000000000000000000,GIME_TRACE_MODE=32'b00000000000000000000000000000000)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco3_hdmi.sv":3)
 WARN  (EX3791) : Expression size 10 truncated to fit in target size 9("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco3_hdmi.sv":127)
 Compiling module 'artifact_mode_osd'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/artifact_mode_osd.sv":3)
@@ -112,10 +113,10 @@ Compiling module 'tmds_channel'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/
 Compiling module 'tmds_channel(CN=1)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/tmds_channel.sv":4)
 Compiling module 'tmds_channel(CN=2)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/tmds_channel.sv":4)
 Compiling module 'serializer(VIDEO_RATE=0)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/serializer.sv":3)
-Compiling module 'coco_cvbs_ntsc(CANONICAL_640_INPUT=1,RGB_SOG_OUTPUT=32'b00000000000000000000000000000000)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_cvbs_ntsc.v":7)
+Compiling module 'coco_cvbs_ntsc(CANONICAL_640_INPUT=1,MATCH_SVIDEO_TO_CVBS=1,RGB_SOG_OUTPUT=32'b00000000000000000000000000000001,RGB_SCANLINE_PHASE_ALTERNATION=32'b00000000000000000000000000000001,CVBS_SVIDEO_SCANLINE_PHASE_ALTERNATION=32'b00000000000000000000000000000000,CVBS_LUMA_FILTER=32'b00000000000000000000000000000000)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_cvbs_ntsc.v":7)
 NOTE  (EX0101) : Current top module is "top_coco3"
 [5%] Running netlist conversion ...
-WARN  (CV0016) : Input s2 is unused("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":35)
+WARN  (CV0016) : Input s2 is unused("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":36)
 Running device independent optimization ...
 [10%] Optimizing Phase 0 completed
 [15%] Optimizing Phase 1 completed
