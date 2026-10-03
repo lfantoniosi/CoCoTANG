@@ -94,6 +94,8 @@ test:
 	vvp /private/tmp/cocotang_tb_rgb_phase
 	iverilog -g2012 -o /private/tmp/cocotang_tb_cvbs_svideo_phase tests/tb_cvbs_svideo_scanline_dac_phase.v src/video/coco_cvbs_ntsc.v
 	vvp /private/tmp/cocotang_tb_cvbs_svideo_phase
+	iverilog -g2012 -o /private/tmp/cocotang_tb_cvbs_luma_filter tests/tb_cvbs_luma_filter.v src/video/coco_cvbs_ntsc.v
+	vvp /private/tmp/cocotang_tb_cvbs_luma_filter
 	iverilog -g2012 -o /private/tmp/cocotang_tb_artifact_control tests/tb_artifact_mode_control.v src/video/artifact_mode_control.v
 	vvp /private/tmp/cocotang_tb_artifact_control
 	iverilog -g2012 -o /private/tmp/cocotang_tb_artifact_osd tests/tb_artifact_mode_osd.sv src/video/artifact_mode_osd.sv

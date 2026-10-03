@@ -24,6 +24,9 @@ module coco_cvbs_ntsc #(
     // Alternate the separate Y and CVBS DAC phases by half a cycle on
     // successive scanlines, without changing their requested levels.
     parameter integer CVBS_SVIDEO_SCANLINE_PHASE_ALTERNATION = 0,
+    // Three-sample 1:2:1 low-pass filter on composite picture luma only.
+    // Separate S-Video Y, sync, blanking, burst and chroma are unchanged.
+    parameter integer CVBS_LUMA_FILTER = 0,
     // Diagnostic override for the separate Y output.  -1 selects normal
     // pixel luma; 0..63 forces a constant visible-aperture level while sync
     // and blanking remain valid.  Composite video is deliberately untouched.
@@ -396,13 +399,25 @@ module coco_cvbs_ntsc #(
 
     // Two-tap horizontal chroma filter.  Update once per 13.5-MHz
     // sample, not once per clk135 cycle, because each source sample is held
-    // for ten clocks.  Luma remains unfiltered, so text detail is unchanged.
+    // for ten clocks.
     wire signed [8:0] chroma_x_pair =
         $signed(encoder_x_axis) + $signed(chroma_x_previous);
     wire signed [8:0] chroma_y_pair =
         $signed(encoder_y_axis) + $signed(chroma_y_previous);
     wire signed [7:0] chroma_x_average = chroma_x_pair >>> 1;
     wire signed [7:0] chroma_y_average = chroma_y_pair >>> 1;
+    // Apply the optional composite-only FIR on the same sample enable.
+    // Its symmetric taps soften one-sample edges and give luma a one-sample
+    // group delay, while the separate Y output keeps its original bandwidth.
+    wire [5:0] encoder_cvbs_luma =
+        LEVEL_BLANK + encoder_luma_sum[10:6];
+    reg [5:0] cvbs_luma_previous = LEVEL_BLANK;
+    reg [5:0] cvbs_luma_older = LEVEL_BLANK;
+    reg [5:0] cvbs_luma_filtered = LEVEL_BLANK;
+    wire [7:0] cvbs_luma_filter_sum =
+        {2'b00,encoder_cvbs_luma} +
+        {1'b0,cvbs_luma_previous,1'b0} +
+        {2'b00,cvbs_luma_older} + 8'd2;
     // Consume the registered average in the existing modulator stage.  This
     // avoids duplicating the expensive chroma matrix, which otherwise moves
     // unrelated scanline logic enough to disturb timing on the nearly-full
@@ -460,6 +475,8 @@ module coco_cvbs_ntsc #(
     reg [6:0] level_luma_q2 = LUMA_BLANK_Q2;
     reg signed [5:0] level_chroma = 6'sd0;
     reg signed [5:0] level_svideo_chroma = 6'sd0;
+    wire [5:0] selected_cvbs_luma =
+        CVBS_LUMA_FILTER ? cvbs_luma_filtered : mod_luma;
 
     // SMPTE-style colour difference from the same RGB/luma coefficients as
     // the composite encoder.  With x=B-G and y=R-G:
@@ -575,6 +592,9 @@ module coco_cvbs_ntsc #(
             chroma_y_previous <= 8'sd0;
             chroma_x_filtered <= 8'sd0;
             chroma_y_filtered <= 8'sd0;
+            cvbs_luma_previous <= LEVEL_BLANK;
+            cvbs_luma_older <= LEVEL_BLANK;
+            cvbs_luma_filtered <= LEVEL_BLANK;
             encoder_luma_rb <= 10'd0;
             encoder_luma_g <= 10'd0;
             mod_sync <= 1'b1;
@@ -678,6 +698,9 @@ module coco_cvbs_ntsc #(
                 chroma_y_previous <= encoder_y_axis;
                 chroma_x_filtered <= chroma_x_average;
                 chroma_y_filtered <= chroma_y_average;
+                cvbs_luma_older <= cvbs_luma_previous;
+                cvbs_luma_previous <= encoder_cvbs_luma;
+                cvbs_luma_filtered <= cvbs_luma_filter_sum[7:2];
             end
 
             mod_sync <= encoder_sync;
@@ -685,7 +708,7 @@ module coco_cvbs_ntsc #(
             mod_picture <= encoder_picture;
             mod_carrier <= encoder_carrier;
             mod_rgb <= encoder_rgb;
-            mod_luma <= LEVEL_BLANK + encoder_luma_sum[10:6];
+            mod_luma <= encoder_cvbs_luma;
             mod_luma_q2 <= LUMA_BLANK_Q2 + encoder_y_picture_excursion;
             mod_x4 <= filtered_x <<< 2;
             mod_y4 <= filtered_y <<< 2;
@@ -702,7 +725,8 @@ module coco_cvbs_ntsc #(
             level_burst <= mod_burst;
             level_picture <= mod_picture;
             level_carrier <= mod_carrier;
-            level_luma <= mod_luma > LEVEL_WHITE ? LEVEL_WHITE : mod_luma;
+            level_luma <= selected_cvbs_luma > LEVEL_WHITE ?
+                          LEVEL_WHITE : selected_cvbs_luma;
             level_luma_q2 <= mod_luma_q2;
             level_chroma <= mod_selected_chroma;
             level_svideo_chroma <= mod_svideo_picture_chroma;

@@ -52,6 +52,10 @@ Modes 0 and 1 alternate the CVBS and separate Y DAC accumulator phases by
 half a cycle on successive scanlines. The chroma DAC and requested video
 levels are unchanged. Set `CVBS_SVIDEO_SCANLINE_PHASE_ALTERNATION=0` in the
 encoder instantiation to compare against the former phase sequence.
+They also apply an experimental three-sample `1:2:1` low-pass filter to the
+CVBS picture luma. This softens sharp composite edges; S-Video Y and chroma
+remain unfiltered. Set `CVBS_LUMA_FILTER=0` in the encoder instantiation to
+compare against the unfiltered CVBS output.
 
 The default `ANALOG_VIDEO_MODE=3` reuses the component HAT for RGB
 with sync on green:
