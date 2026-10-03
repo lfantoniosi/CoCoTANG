@@ -1,9 +1,10 @@
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+PROJECT := $(ROOT)/CoCoTANG.gprj
 PAL_PROJECT := $(ROOT)/CoCoTANG-pal.gprj
 BUILD_TCL := $(ROOT)/scripts/build.tcl
-OUTPUT := $(ROOT)/impl/pnr/CoCoTANG-ntsc-svideo.fs
+OUTPUT := $(ROOT)/impl/pnr/CoCoTANG.fs
 PAL_OUTPUT := $(ROOT)/impl/pnr/CoCoTANG-pal.fs
-NTSC_SVIDEO_OUTPUT := $(OUTPUT)
+NTSC_SVIDEO_OUTPUT := $(ROOT)/impl/pnr/CoCoTANG-ntsc-svideo.fs
 PAL_ROM ?= /Users/felipe/src/retro/coco_roms/coco3p.rom
 
 ifeq ($(shell uname -s),Darwin)
@@ -27,7 +28,8 @@ ROM_OFFSET ?= 1048576
 
 build: $(OUTPUT)
 
-rebuild: ntsc-svideo-rebuild
+rebuild: check-tools
+	$(call run-gowin,CoCoTANG.gprj,top_coco3,CoCoTANG)
 
 pal-build: $(PAL_OUTPUT)
 
@@ -40,7 +42,8 @@ ntsc-svideo-rebuild: check-tools
 	$(call run-gowin,CoCoTANG-pal.gprj,top_coco3_ntsc_svideo,CoCoTANG-ntsc-svideo)
 
 # Inspect the last routed build without programming the board or rebuilding.
-timing: ntsc-svideo-timing
+timing:
+	python3 scripts/check_timing.py impl/pnr/CoCoTANG_tr_content.html
 
 pal-timing:
 	python3 scripts/check_timing.py impl/pnr/CoCoTANG-pal_tr_content.html
@@ -143,6 +146,9 @@ define run-gowin
 	 COCOTANG_PROJECT="$(1)" COCOTANG_TOP="$(2)" COCOTANG_OUTPUT="$(3)" \
 	 "$(GW_SH)" "$(BUILD_TCL)"
 endef
+
+$(OUTPUT): $(PROJECT) $(BUILD_TCL) $(shell find src -type f) | check-tools
+	$(call run-gowin,CoCoTANG.gprj,top_coco3,CoCoTANG)
 
 $(PAL_OUTPUT): $(PAL_PROJECT) $(BUILD_TCL) $(shell find src -type f) | check-tools
 	$(call run-gowin,CoCoTANG-pal.gprj,top_coco3_pal,CoCoTANG-pal)

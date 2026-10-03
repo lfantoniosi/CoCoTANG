@@ -6,7 +6,7 @@ remain in the computer.
 
 ## Design
 
-The default Makefile build uses the timing-qualified NTSC S-Video top-level.
+The default Makefile build uses the RGB sync-on-green top-level.
 The FPGA provides:
 
 - GIME-compatible CPU timing, MMU, interrupts, palette, native graphics, and
@@ -44,12 +44,12 @@ E clock because the original E connection is shared with HSPI. Separate Y
 uses the component HAT's seven-bit sigma-delta method: a 40-code sync-to-black
 pedestal and an 87-code black-to-white excursion.
 
-The default `ANALOG_VIDEO_MODE=1` selects the CVBS/S-Video HAT. Its NTSC
+`ANALOG_VIDEO_MODE=1` selects the CVBS/S-Video HAT. Its NTSC
 S-Video output uses the same DAC-generated burst and picture-to-burst phase
 treatment as the experimental PAL path, but retains the NTSC colour carrier.
 CVBS encoding is unchanged.
 
-`ANALOG_VIDEO_MODE=3` reuses the component HAT for RGB
+The default `ANALOG_VIDEO_MODE=3` reuses the component HAT for RGB
 with sync on green:
 pin 56/Y is green with composite sync, pin 54/Pb is blue, and pin 18/Pr is
 red. The existing 1 kOhm/4.7 kOhm transistor inputs, 75-ohm output resistors,
@@ -76,16 +76,14 @@ It does **not** change the NTSC-derived CPU E/Q or video clocks, horizontal
 timing, or GIME raster. Thus it is PAL-colour encoding on the existing CoCo
 timing, not a standards-compliant PAL computer or guaranteed-compatible
 625/50 signal. HDMI is unchanged. Use `make rom` and `make program` to restore
-the standard ROM and default NTSC CVBS/S-Video bitstream.
+the standard ROM and default RGB bitstream.
 
-The matched NTSC S-Video path is also available as explicitly named
+The matched NTSC S-Video path is available as explicitly named
 `make ntsc-svideo-rebuild`/`make ntsc-svideo-program` targets. The default
-`make build`, `make rebuild`, `make timing`, and `make program` use that same
-timing-qualified S-Video top-level.
+`make build`, `make rebuild`, `make timing`, and `make program` use RGB SoG.
 Neither bitstream replaces the ROM in SPI flash: leave `coco3p.rom` installed
 for a direct PAL-versus-NTSC carrier comparison, or run `make rom` if you also
-want the normal NTSC ROM. The separate `ANALOG_VIDEO_MODE=3` RGB configuration
-is unchanged.
+want the normal NTSC ROM.
 
 ## Glenside IDE / TF card
 
@@ -115,7 +113,7 @@ make program    # build if needed and program the FPGA flash
 make reprogram  # program the existing bitstream
 ```
 
-The default generated bitstream is `impl/pnr/CoCoTANG-ntsc-svideo.fs`. See
+The default generated bitstream is `impl/pnr/CoCoTANG.fs`. See
 [`docs/pinout.md`](docs/pinout.md) for the FPGA pin and bus-multiplexer map.
 
 Low-level SDRAM, SPI flash, and HDMI code was adapted from

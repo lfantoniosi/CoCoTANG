@@ -23,7 +23,7 @@ module top_coco3 #(
     parameter integer DEBUG_OVERLAY=0,
     // 0/1: simultaneous S-Video and CVBS; 2: Y/Pb/Pr component;
     // 3: RGB with composite sync on green (Y=G/SoG, Pb=B, Pr=R).
-    parameter integer ANALOG_VIDEO_MODE=1,
+    parameter integer ANALOG_VIDEO_MODE=3,
     parameter integer PAL_CHROMA_OUTPUT=0,
     parameter integer MATCH_SVIDEO_TO_CVBS=1,
     // 0=OFF, 1=ON (blue/orange), 2=REVERSE (orange/blue).
