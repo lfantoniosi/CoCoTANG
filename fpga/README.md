@@ -47,7 +47,11 @@ pedestal and an 87-code black-to-white excursion.
 `ANALOG_VIDEO_MODE=1` selects the CVBS/S-Video HAT. Its NTSC
 S-Video output uses the same DAC-generated burst and picture-to-burst phase
 treatment as the experimental PAL path, but retains the NTSC colour carrier.
-CVBS encoding is unchanged.
+CVBS colour encoding is unchanged.
+Modes 0 and 1 alternate the CVBS and separate Y DAC accumulator phases by
+half a cycle on successive scanlines. The chroma DAC and requested video
+levels are unchanged. Set `CVBS_SVIDEO_SCANLINE_PHASE_ALTERNATION=0` in the
+encoder instantiation to compare against the former phase sequence.
 
 The default `ANALOG_VIDEO_MODE=3` reuses the component HAT for RGB
 with sync on green:

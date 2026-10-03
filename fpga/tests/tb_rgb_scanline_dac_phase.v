@@ -25,10 +25,10 @@ module tb_rgb_scanline_dac_phase;
             if (dut.luma_sigma !== green ||
                 dut.component_pb_sigma !== blue ||
                 dut.component_pr_sigma !== red ||
-                dut.rgb_line_phase !== next_phase)
+                dut.dac_line_phase !== next_phase)
                 $fatal(1,"RGB DAC phase mismatch: G=%0d B=%0d R=%0d phase=%b",
                     dut.luma_sigma, dut.component_pb_sigma,
-                    dut.component_pr_sigma, dut.rgb_line_phase);
+                    dut.component_pr_sigma, dut.dac_line_phase);
             force dut.dac_line_start = 1'b0;
             @(posedge clk270); #1;
         end
