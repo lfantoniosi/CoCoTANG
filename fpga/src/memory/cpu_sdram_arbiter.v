@@ -132,17 +132,20 @@ module cpu_sdram_arbiter #(
                     // row even while speculative CPU reads remain queued.
                     if (video_req && video_background_slot)
                         launch(OWNER_VIDEO,1'b0,video_addr,8'd0);
-                    else if (cpu_req)
-                        launch(OWNER_CPU,cpu_wr,cpu_addr,cpu_wdata);
-                    else if (loader_req)
-                        launch(OWNER_LOADER,loader_wr,loader_addr,loader_wdata);
                     else if (enabled && refresh_background_slot &&
                              refresh_count == REFRESH_CYCLES) begin
+                        // CPU and loader requests can be continuous.  Once
+                        // due, use the next unused early-E-low slot so they
+                        // cannot starve SDRAM refresh indefinitely.
                         refresh <= 1'b1;
                         refresh_count <= 16'd0;
                         saw_busy <= 1'b0;
                         state <= ACTIVE_REFRESH;
                     end
+                    else if (cpu_req)
+                        launch(OWNER_CPU,cpu_wr,cpu_addr,cpu_wdata);
+                    else if (loader_req)
+                        launch(OWNER_LOADER,loader_wr,loader_addr,loader_wdata);
                 end
                 ACTIVE_READ: begin
                     if (data_ready) begin

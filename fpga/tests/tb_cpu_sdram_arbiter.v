@@ -24,13 +24,19 @@ module tb_cpu_sdram_arbiter;
     reg [31:0] dout32=32'h44332211;
     reg data_ready=0, busy=0, enabled=1;
     reg saw_video_ack=0, saw_cpu_ack=0, saw_loader_ack=0;
+    reg stress_cpu=0, saw_stress_refresh=0;
 
     always #5 clk=~clk;
     always @(posedge clk) begin
         if (video_ack) saw_video_ack <= 1'b1;
         if (cpu_ack) saw_cpu_ack <= 1'b1;
         if (loader_ack) saw_loader_ack <= 1'b1;
+        if (stress_cpu && refresh) saw_stress_refresh <= 1'b1;
     end
+    // Keep a CPU request ready whenever the arbiter returns to IDLE.  The
+    // single-cycle drop acknowledges each completed request.
+    always @(negedge clk)
+        if (stress_cpu) cpu_req = (dut.state != 3'd3);
 
     cpu_sdram_arbiter dut (
         .clk(clk),.reset_n(reset_n),.e(e),.q(q),
@@ -128,6 +134,14 @@ module tb_cpu_sdram_arbiter;
         if (!saw_loader_ack || loader_rdata !== 8'h5a)
             $fatal(1,"loader verification response was wrong: %h",loader_rdata);
         @(negedge clk); loader_req=0;
+
+        repeat (3) @(negedge clk);
+        refresh_slot_open=1;
+        data_ready=1;
+        stress_cpu=1;
+        repeat (1600) @(negedge clk);
+        if (!saw_stress_refresh)
+            $fatal(1,"continuous CPU traffic starved SDRAM refresh");
 
         $display("tb_cpu_sdram_arbiter PASS");
         $finish;
