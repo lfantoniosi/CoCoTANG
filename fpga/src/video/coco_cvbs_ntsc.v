@@ -18,6 +18,9 @@ module coco_cvbs_ntsc #(
     // The component HAT then needs no component changes: Y=G/SoG, Pb=B,
     // and Pr=R.
     parameter integer RGB_SOG_OUTPUT = 0,
+    // Restart the RGB DAC accumulators with staggered phases, alternating
+    // each channel by half a cycle on successive scanlines.
+    parameter integer RGB_SCANLINE_PHASE_ALTERNATION = 0,
     // Diagnostic override for the separate Y output.  -1 selects normal
     // pixel luma; 0..63 forces a constant visible-aperture level while sync
     // and blanking remain valid.  Composite video is deliberately untouched.
@@ -777,6 +780,10 @@ module coco_cvbs_ntsc #(
     reg luma_sync_270 = 1'b1;
     reg luma_sync_270_d = 1'b1;
     wire dac_line_start = luma_sync_270 && !luma_sync_270_d;
+    reg rgb_line_phase = 1'b0;
+    wire [7:0] rgb_green_seed = rgb_line_phase ? 8'd64 : 8'd0;
+    wire [7:0] rgb_blue_seed = rgb_line_phase ? 8'd106 : 8'd42;
+    wire [7:0] rgb_red_seed = rgb_line_phase ? 8'd21 : 8'd85;
     wire [7:0] luma_sum = {1'b0,luma_sigma[6:0]} +
                           {1'b0,luma_dac_level};
     wire [5:0] chroma_sum = {1'b0,chroma_sigma[4:0]} + chroma_dac_level;
@@ -824,6 +831,7 @@ module coco_cvbs_ntsc #(
             luma_phase_lfsr <= 16'h1ace;
             luma_sync_270 <= 1'b1;
             luma_sync_270_d <= 1'b1;
+            rgb_line_phase <= 1'b0;
             chroma_burst_270 <= 1'b0;
             chroma_burst_bit_270 <= 1'b0;
             burst_shape_phase <= 3'd0;
@@ -835,6 +843,9 @@ module coco_cvbs_ntsc #(
             component_pr_dac_level <= component_pr_level_135;
             luma_sync_270 <= (luma_level_135 == LUMA_SYNC_Q2);
             luma_sync_270_d <= luma_sync_270;
+            if (dac_line_start && RGB_SOG_OUTPUT &&
+                RGB_SCANLINE_PHASE_ALTERNATION)
+                rgb_line_phase <= ~rgb_line_phase;
             chroma_burst_270 <= chroma_burst_135;
             chroma_burst_bit_270 <= chroma_burst_bit_135;
             burst_shape_phase <= burst_shape_phase + 1'b1;
@@ -842,15 +853,21 @@ module coco_cvbs_ntsc #(
             // in the horizontal sync tip, so the accumulator transient is
             // invisible; Pb/Pr and S-Video chroma retain continuous phase.
             luma_sigma <= dac_line_start ?
-                          {1'b0,luma_phase_lfsr[6:0]} : luma_sum;
+                          ((RGB_SOG_OUTPUT && RGB_SCANLINE_PHASE_ALTERNATION) ?
+                           rgb_green_seed : {1'b0,luma_phase_lfsr[6:0]}) :
+                          luma_sum;
             chroma_sigma <= chroma_sum;
             cvbs_sigma <= dac_line_start ?
                           {1'b0,luma_phase_lfsr[4:0]} : cvbs_sum;
-            // Keep colour-difference error continuous.  Resetting either
-            // accumulator at a scanline boundary injects a level transient
-            // which appears as black lines in split/scrolling displays.
-            component_pb_sigma <= component_pb_sum;
-            component_pr_sigma <= component_pr_sum;
+            // Keep colour-difference error continuous in component mode.
+            // RGB mode restarts both channels during sync for the scanline
+            // phase experiment, before either channel has picture output.
+            component_pb_sigma <= (dac_line_start && RGB_SOG_OUTPUT &&
+                                   RGB_SCANLINE_PHASE_ALTERNATION) ?
+                                  rgb_blue_seed : component_pb_sum;
+            component_pr_sigma <= (dac_line_start && RGB_SOG_OUTPUT &&
+                                   RGB_SCANLINE_PHASE_ALTERNATION) ?
+                                  rgb_red_seed : component_pr_sum;
             if (dac_line_start)
                 luma_phase_lfsr <= {luma_phase_lfsr[14:0],
                                     luma_phase_feedback};
