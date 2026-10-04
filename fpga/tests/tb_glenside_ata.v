@@ -13,6 +13,8 @@ module tb_glenside_ata;
     wire [7:0] sd_data_out;
     integer i;
     reg [7:0] value;
+    reg slow_reset_n=0;
+    wire [7:0] slow_status;
 
     always #5 clk=~clk;
 
@@ -26,6 +28,17 @@ module tb_glenside_ata;
         .sd_data_valid(sd_data_valid),.sd_data_addr(sd_data_addr),
         .sd_data_in(sd_data_in),.sd_data_out(sd_data_out),
         .capacity_sectors(32'h01234567));
+
+    // Exercise the prescaled hardware path as well as the short, exact
+    // cycle-by-cycle timeout used by the primary DUT.
+    glenside_ata #(.INIT_TIMEOUT_CYCLES(108000)) slow_timeout_dut(
+        .clk(clk),.reset_n(slow_reset_n),.cpu_enable(1'b1),.e_fall(1'b0),
+        .cpu_addr(16'hff57),.cpu_rw_n(1'b1),.cpu_wdata(8'd0),
+        .cpu_rdata(slow_status),.cpu_data_oe(),
+        .sd_init(),.sd_read_start(),.sd_write_start(),.sd_sector(),
+        .sd_busy(1'b0),.sd_done(1'b0),.sd_error(1'b0),
+        .sd_data_valid(1'b0),.sd_data_addr(9'd0),.sd_data_in(8'd0),
+        .sd_data_out(),.capacity_sectors(32'd0));
 
     task fail;
         input [8*96-1:0] message;
@@ -167,7 +180,17 @@ module tb_glenside_ata;
         read_reg(4'h8,value);
         if(value!==8'h00) fail("IDENTIFY word 0 high byte");
 
-        $display("PASS: Glenside ATA task-file, latch ordering, LBA read/write and IDENTIFY");
+        // With no SD busy transition, the one-tick prescaled timeout must
+        // retain BSY until the interval elapses, then expose ATA ERR.
+        @(negedge clk); slow_reset_n=1;
+        repeat(107900) @(posedge clk);
+        #1;
+        if(slow_status!==8'h80) fail("prescaled init timeout ended early");
+        repeat(200) @(posedge clk);
+        #1;
+        if(slow_status!==8'h51) fail("prescaled init timeout did not report ERR");
+
+        $display("PASS: Glenside ATA task-file, latch ordering, LBA read/write, IDENTIFY and prescaled timeout");
         $finish;
     end
 endmodule

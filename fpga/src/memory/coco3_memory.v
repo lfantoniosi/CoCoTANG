@@ -9,6 +9,7 @@ module coco3_memory #(
     input cpu_access_enable, input cpu_bus_valid, input cpu_address_valid,
     input e, input q, input e_fall,
     input cpu_mem_read, input cpu_mem_write, input cpu_mem_is_rom,
+    input [15:0] cpu_logical_addr,
     input [22:0] cpu_mem_addr, input [7:0] cpu_wdata,
     output [7:0] cpu_rdata, output cpu_data_oe, output cpu_wait,
 
@@ -37,92 +38,133 @@ module coco3_memory #(
     // the remainder of the external CPU cycle.
     reg [22:0] selected_addr_pipe=0,cycle_addr=0;
     reg pipe_read=0,pipe_write=0,cycle_read=0,cycle_write=0;
-    reg pipe_rom=0,cycle_rom=0;
+    reg pipe_rom=0,cycle_rom=0,pipe_io=0;
     reg cycle_snapshot_seen=0;
     reg cpu_req=0,cpu_wr=0;
     reg [22:0] request_addr=0;
     reg [7:0] request_wdata=0;
+    reg read_invalidated=0;
     wire cpu_ack;
     wire [7:0] cpu_read_value;
     reg [7:0] response_data=8'hff;
     reg [22:0] response_addr=23'h7fffff;
     reg response_valid=0;
-    reg pending_valid=0,pending_wr=0;
-    reg [22:0] pending_addr=0;
-    reg [7:0] pending_wdata=0;
+    reg [7:0] rom_read_data=8'hff;
+    reg [14:0] rom_read_addr_tag=15'h7fff;
+    // Completed CPU writes cannot be replaced by speculative reads from the
+    // next bus cycle. Keep them in a separate FIFO until SDRAM accepts them.
+    // A healthy SDRAM completes a command in far less than one CPU cycle;
+    // fifteen entries also cover a long burst delayed by video/refresh.
+    // Leave one physical slot unused, so simultaneous push/pop never access
+    // the same array location (independent of inferred RAM collision mode).
+    localparam integer WRITE_QUEUE_DEPTH=16;
+    localparam integer WRITE_QUEUE_CAPACITY=WRITE_QUEUE_DEPTH-1;
+    reg [22:0] write_addr_queue [0:WRITE_QUEUE_DEPTH-1];
+    reg [7:0] write_data_queue [0:WRITE_QUEUE_DEPTH-1];
+    reg [3:0] write_head=0,write_tail=0;
+    reg [4:0] write_count=0;
+    reg pending_read_valid=0;
+    reg [22:0] pending_read_addr=0;
+    wire write_push=e_fall && cycle_write;
+    wire write_pop=!cpu_req && write_count!=0;
     reg [2:0] read_hold=0;
     // Keep the pending-address tag comparison out of one long carry chain.
     // These independent chunks are a combinational identity of the full
     // equality test; no CPU transaction timing or pipeline stage changes.
     (* syn_keep = "true" *) wire [5:0] pending_addr_equal_parts;
-    assign pending_addr_equal_parts[0]=pending_addr[3:0]==selected_addr_pipe[3:0];
-    assign pending_addr_equal_parts[1]=pending_addr[7:4]==selected_addr_pipe[7:4];
-    assign pending_addr_equal_parts[2]=pending_addr[11:8]==selected_addr_pipe[11:8];
-    assign pending_addr_equal_parts[3]=pending_addr[15:12]==selected_addr_pipe[15:12];
-    assign pending_addr_equal_parts[4]=pending_addr[19:16]==selected_addr_pipe[19:16];
-    assign pending_addr_equal_parts[5]=pending_addr[22:20]==selected_addr_pipe[22:20];
+    assign pending_addr_equal_parts[0]=pending_read_addr[3:0]==selected_addr_pipe[3:0];
+    assign pending_addr_equal_parts[1]=pending_read_addr[7:4]==selected_addr_pipe[7:4];
+    assign pending_addr_equal_parts[2]=pending_read_addr[11:8]==selected_addr_pipe[11:8];
+    assign pending_addr_equal_parts[3]=pending_read_addr[15:12]==selected_addr_pipe[15:12];
+    assign pending_addr_equal_parts[4]=pending_read_addr[19:16]==selected_addr_pipe[19:16];
+    assign pending_addr_equal_parts[5]=pending_read_addr[22:20]==selected_addr_pipe[22:20];
     wire pending_addr_matches_selected=&pending_addr_equal_parts;
 
     wire snapshot_response_ready = pipe_read &&
         ((pipe_rom && rom_read_addr_tag == selected_addr_pipe[14:0]) ||
          (response_valid && response_addr == selected_addr_pipe) ||
-         (cpu_ack && !cpu_wr && request_addr == selected_addr_pipe));
+         (cpu_ack && !cpu_wr && !read_invalidated &&
+          request_addr == selected_addr_pipe));
     wire current_read_ready = cycle_snapshot_seen && cycle_read &&
         ((cycle_rom && rom_read_addr_tag == cycle_addr[14:0]) ||
          (response_valid && response_addr == cycle_addr));
     wire selected_read_in_flight =
-        (cpu_req && !cpu_wr && request_addr == selected_addr_pipe) ||
-        (pending_valid && !pending_wr &&
-         pending_addr_matches_selected);
+        (cpu_req && !cpu_wr && !read_invalidated &&
+         request_addr == selected_addr_pipe) ||
+        (pending_read_valid && pending_addr_matches_selected);
 
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
             selected_addr_pipe<=0; pipe_read<=0; pipe_write<=0;
             cycle_addr<=0; cycle_read<=0; cycle_write<=0;
-            pipe_rom<=0; cycle_rom<=0;
+            pipe_rom<=0; cycle_rom<=0; pipe_io<=0;
             cycle_snapshot_seen<=0; cpu_req<=0; cpu_wr<=0;
+            read_invalidated<=0;
             request_addr<=0; request_wdata<=0;
             response_data<=8'hff; response_addr<=23'h7fffff;
             response_valid<=0;
-            pending_valid<=0; pending_wr<=0;
-            pending_addr<=0; pending_wdata<=0; read_hold<=0;
+            pending_read_valid<=0; pending_read_addr<=0;
+            write_head<=0; write_tail<=0; write_count<=0;
+            read_hold<=0;
         end else if (!cpu_access_enable) begin
-            cpu_req<=0; response_valid<=0;
+            cpu_req<=0; response_valid<=0; read_invalidated<=0;
             cycle_read<=0; cycle_write<=0;
             cycle_rom<=0;
-            cycle_snapshot_seen<=0; pending_valid<=0; read_hold<=0;
+            cycle_snapshot_seen<=0; pending_read_valid<=0;
+            write_head<=0; write_tail<=0; write_count<=0;
+            read_hold<=0;
         end else begin
             selected_addr_pipe<=selected_addr;
             pipe_read<=cpu_mem_read;
             pipe_write<=cpu_mem_write;
             pipe_rom<=cpu_mem_is_rom;
+            pipe_io<=cpu_logical_addr>=16'hff00 &&
+                     cpu_logical_addr<16'hffe0;
             if (read_hold != 0) read_hold<=read_hold-1'b1;
 
             if (cpu_ack) begin
                 cpu_req<=0;
-                if (!cpu_wr) begin
+                if (!cpu_wr && !read_invalidated) begin
                     response_data<=cpu_read_value;
                     response_addr<=request_addr;
                     response_valid<=1;
                 end
             end
-            if (pending_valid && !cpu_req) begin
-                cpu_wr<=pending_wr; request_addr<=pending_addr;
-                request_wdata<=pending_wdata; cpu_req<=1;
-                pending_valid<=0;
+            if (write_push && (write_count<WRITE_QUEUE_CAPACITY || write_pop)) begin
+                write_addr_queue[write_tail]<=cycle_addr;
+                write_data_queue[write_tail]<=cpu_wdata;
+                write_tail<=write_tail+1'b1;
+            end
+            if (write_pop) begin
+                cpu_wr<=1; request_addr<=write_addr_queue[write_head];
+                request_wdata<=write_data_queue[write_head]; cpu_req<=1;
+                read_invalidated<=0;
+                write_head<=write_head+1'b1;
+            end else if (!cpu_req && pending_read_valid && !e_fall) begin
+                cpu_wr<=0; request_addr<=pending_read_addr;
+                request_wdata<=0; cpu_req<=1;
+                read_invalidated<=0;
+                pending_read_valid<=0;
+            end
+            if (write_push != write_pop) begin
+                if (write_push && write_count<WRITE_QUEUE_CAPACITY)
+                    write_count<=write_count+1'b1;
+                else if (write_pop)
+                    write_count<=write_count-1'b1;
             end
             // The high address bank is trustworthy well before the control
             // bank has completed its scan.  Speculatively fetch that byte;
             // reads then have the full remainder of Q-low/Q-high to settle,
             // while writes and I/O cycles merely discard the harmless read.
-            if (cpu_address_valid && !pipe_rom &&
+            if (cpu_address_valid && !e_fall && !pipe_rom && !pipe_io &&
                 !selected_read_in_flight) begin
-                if (!cpu_req) begin
+                if (!cpu_req && write_count==0 && !pending_read_valid) begin
                     cpu_wr<=0; request_addr<=selected_addr_pipe;
                     request_wdata<=0; cpu_req<=1;
+                    read_invalidated<=0;
                 end else begin
-                    pending_wr<=0; pending_addr<=selected_addr_pipe;
-                    pending_wdata<=0; pending_valid<=1;
+                    pending_read_addr<=selected_addr_pipe;
+                    pending_read_valid<=1;
                 end
             end
             if (cpu_bus_valid) begin
@@ -136,32 +178,34 @@ module coco3_memory #(
                         // any unrelated SDRAM response alone.
                     end else if (snapshot_response_ready) begin
                         response_valid<=1;
-                        if (pending_valid && !pending_wr &&
-                            pending_addr_matches_selected)
-                            pending_valid<=0;
+                        if (pending_read_valid && pending_addr_matches_selected)
+                            pending_read_valid<=0;
                     end else if (!selected_read_in_flight) begin
-                        response_valid<=0; pending_wr<=0;
-                        pending_addr<=selected_addr_pipe;
-                        pending_wdata<=0; pending_valid<=1;
+                        response_valid<=0;
+                        pending_read_addr<=selected_addr_pipe;
+                        pending_read_valid<=1;
                     end else response_valid<=0;
                 end else response_valid<=0;
             end
             if (cycle_snapshot_seen && cycle_read && !cycle_rom &&
                 !current_read_ready &&
-                !cpu_req && !pending_valid) begin
-                pending_wr<=0; pending_addr<=cycle_addr;
-                pending_wdata<=0; pending_valid<=1;
+                !cpu_req && !pending_read_valid) begin
+                pending_read_addr<=cycle_addr;
+                pending_read_valid<=1;
             end
             if (e_fall) begin
                 cycle_snapshot_seen<=0;
+                pending_read_valid<=0;
+                if (cycle_write) begin
+                    // A speculative read from this write cycle may finish
+                    // later. Its pre-write value must never serve a readback.
+                    response_valid<=0;
+                    if (cpu_req && !cpu_wr) read_invalidated<=1;
+                end
                 if (cycle_read && ((cycle_rom &&
                     rom_read_addr_tag==cycle_addr[14:0]) ||
                     (response_valid && response_addr==cycle_addr)))
                     read_hold<=3'd4;
-                if (cycle_write) begin
-                    pending_wr<=1; pending_addr<=cycle_addr;
-                    pending_wdata<=cpu_wdata; pending_valid<=1;
-                end
             end
         end
     end
@@ -233,8 +277,6 @@ module coco3_memory #(
     // loader; port B continuously follows the CPU ROM address after startup.
     // During verification, port B is temporarily directed at FFFE/FFFF.
     (* syn_ramstyle = "block_ram" *) reg [7:0] rom_memory [0:ROM_BYTES-1];
-    reg [7:0] rom_read_data=8'hff;
-    reg [14:0] rom_read_addr_tag=15'h7fff;
     reg [14:0] verify_rom_addr=15'd0;
     wire [14:0] rom_read_addr =
         (raw_loader_done && !rom_verify_done) ? verify_rom_addr :

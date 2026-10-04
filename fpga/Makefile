@@ -6,6 +6,8 @@ OUTPUT := $(ROOT)/impl/pnr/CoCoTANG.fs
 PAL_OUTPUT := $(ROOT)/impl/pnr/CoCoTANG-pal.fs
 NTSC_SVIDEO_OUTPUT := $(ROOT)/impl/pnr/CoCoTANG-ntsc-svideo.fs
 PAL_ROM ?= /Users/felipe/src/retro/coco_roms/coco3p.rom
+PALETTE_BRIDGE_DISK := $(ROOT)/results/PALBRDG.DSK
+PALETTE_BRIDGE_BIN := $(ROOT)/results/PALROT.BIN
 
 ifeq ($(shell uname -s),Darwin)
 GOWIN_IDE ?= /Applications/GowinIDE.app/Contents/Resources/Gowin_EDA/IDE
@@ -24,7 +26,7 @@ ROM_OFFSET ?= 1048576
 .PHONY: build rebuild pal-build pal-rebuild ntsc-svideo-build \
  ntsc-svideo-rebuild test timing pal-timing ntsc-svideo-timing program \
  reprogram pal-program pal-reprogram ntsc-svideo-program \
- ntsc-svideo-reprogram rom pal-rom check-tools
+ ntsc-svideo-reprogram rom pal-rom palette-bridge-dsk check-tools
 
 build: $(OUTPUT)
 
@@ -70,6 +72,8 @@ test:
 	vvp /private/tmp/cocotang_tb_startup_test
 	iverilog -g2012 -o /private/tmp/cocotang_tb_cpu_arbiter tests/tb_cpu_sdram_arbiter.v src/memory/cpu_sdram_arbiter.v
 	vvp /private/tmp/cocotang_tb_cpu_arbiter
+	iverilog -g2012 -s tb_coco3_memory_write_queue -o /private/tmp/cocotang_tb_memory_write_queue tests/tb_coco3_memory_write_queue.v src/memory/coco3_memory.v src/memory/cpu_sdram_arbiter.v src/memory/coco_sdram_startup_test.v src/memory/coco_flash_loader.v src/memory/spi_flash_reader.v
+	vvp /private/tmp/cocotang_tb_memory_write_queue
 	iverilog -g2012 -o /private/tmp/cocotang_tb_cpu_bus_logger tests/tb_cpu_bus_logger.v src/debug/cpu_bus_logger.v
 	vvp /private/tmp/cocotang_tb_cpu_bus_logger
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_mode tests/tb_gime_mode_debug.v src/coco3/gime_mode_debug.v
@@ -138,6 +142,16 @@ ntsc-svideo-reprogram:
 rom: roms/coco3.rom
 	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f --external-flash \
 	 -o "$(ROM_OFFSET)" "$<"
+
+$(PALETTE_BRIDGE_BIN): tests/palette_bridge/palrot.asm
+	lwasm --6809 --decb --list=$(ROOT)/results/PALROT.lst -o "$@" "$<"
+
+$(PALETTE_BRIDGE_DISK): tests/palette_bridge/PALBARS.BAS $(PALETTE_BRIDGE_BIN)
+	decb dskini "$@"
+	decb copy -0 -a -l "$<" "$@,PALBARS.BAS"
+	decb copy -2 -b "$(PALETTE_BRIDGE_BIN)" "$@,PALROT.BIN"
+
+palette-bridge-dsk: $(PALETTE_BRIDGE_DISK)
 
 pal-rom:
 	@test -f "$(PAL_ROM)" || (echo "PAL ROM not found: $(PAL_ROM)"; exit 1)

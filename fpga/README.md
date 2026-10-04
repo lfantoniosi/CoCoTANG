@@ -35,6 +35,23 @@ For the experimental PAL-chroma variant, program the supplied 32 KiB
 The ROM is not copied into this repository. `make rom` restores the normal
 ROM at the same flash offset.
 
+`make palette-bridge-dsk` builds `results/PALBRDG.DSK`. On the CoCo, use
+`LOAD "PALBARS":RUN`. BASIC loads `PALROT.BIN`, draws 16 vertical bars once,
+then saves `BEFORE.BIN` and repeatedly calls the routine at `$4000` with
+`EXEC`. Each call rotates the 16 palette colors using `ORCC #$50`, `SYNC`, and
+`ANDCC #$AF`, then returns to BASIC for a delay and keyboard check. Press any
+key to save `AFTER.BIN`, return to text mode, and see the number of completed
+calls. The two `SAVEM` files cover CPU addresses `$0000` through `$FEFF`;
+`$FF00` through `$FFFF` is the I/O/vector region and cannot be treated as
+ordinary RAM. ROM mapped into the upper address range is read as ROM, and
+`SAVEM` changes some BASIC/DOS workspace while writing the files.
+
+On the modified CoCo 2 used for testing, the simple HDB-DOS ROM cart needs a
+4.7 kOhm pullup from its R/W line to +5 V. Without it, `SYNC` in the stock
+CoCo 3 palette routines can be followed by BASIC errors or a crash; the pullup
+fixed the repeated RGB/CMP and RGBBARS tests. The resistor is on the ROM cart,
+not the motherboard.
+
 ## Video
 
 `ANALOG_VIDEO_MODE=2` produces Y/Pb/Pr component video:

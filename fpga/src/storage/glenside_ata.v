@@ -54,7 +54,18 @@ module glenside_ata #(
     localparam [3:0] S_TEST_FILL  = 4'd11;
     localparam [3:0] S_LBA_INCREMENT = 4'd12;
 
-    localparam integer INIT_COUNT_WIDTH = $clog2(INIT_TIMEOUT_CYCLES + 1);
+    // Initialization can take seconds. Counting every 108 MHz clock through
+    // a 30-bit decrementer put its carry chain on the ATA status/state path.
+    // Count 1 ms intervals for the normal timeout, while short simulation
+    // timeouts retain their original cycle-by-cycle behavior.
+    localparam integer INIT_TICK_CYCLES =
+        (INIT_TIMEOUT_CYCLES >= 108000) ? 108000 : 1;
+    localparam integer INIT_TIMEOUT_TICKS =
+        (INIT_TIMEOUT_CYCLES + INIT_TICK_CYCLES - 1) / INIT_TICK_CYCLES;
+    localparam integer INIT_COUNT_WIDTH =
+        (INIT_TIMEOUT_TICKS > 1) ? $clog2(INIT_TIMEOUT_TICKS + 1) : 1;
+    localparam integer INIT_TICK_WIDTH =
+        (INIT_TICK_CYCLES > 1) ? $clog2(INIT_TICK_CYCLES) : 1;
 
     wire [15:0] sector_cpu_word;
     wire [7:0] sector_sd_byte;
@@ -82,6 +93,7 @@ module glenside_ata #(
     reg sd_busy_seen;
     reg card_ready;
     reg [INIT_COUNT_WIDTH-1:0] init_timeout;
+    reg [INIT_TICK_WIDTH-1:0] init_tick_count;
 
     wire selected = cpu_enable && (CPU_ENABLE_PREDECODED ||
                                    cpu_addr[15:4] == IDE_BASE[15:4]);
@@ -198,7 +210,8 @@ module glenside_ata #(
             sd_write_start <= 1'b0;
             sd_busy_seen <= 1'b0;
             card_ready <= 1'b0;
-            init_timeout <= INIT_TIMEOUT_CYCLES;
+            init_timeout <= INIT_TIMEOUT_TICKS;
+            init_tick_count <= 0;
         end else begin
             sd_init <= 1'b0;
             sd_read_start <= 1'b0;
@@ -286,7 +299,8 @@ module glenside_ata #(
                 S_INIT_START: begin
                     sd_init <= 1'b1;
                     sd_busy_seen <= 1'b0;
-                    init_timeout <= INIT_TIMEOUT_CYCLES;
+                    init_timeout <= INIT_TIMEOUT_TICKS;
+                    init_tick_count <= 0;
                     state <= S_INIT_WAIT;
                 end
                 S_INIT_WAIT: begin
@@ -301,7 +315,12 @@ module glenside_ata #(
                         error_reg <= sd_error ? 8'h04 : 8'h01;
                         state <= S_READY;
                     end else if (init_timeout != 0) begin
-                        init_timeout <= init_timeout - 1'b1;
+                        if (init_tick_count == INIT_TICK_CYCLES - 1) begin
+                            init_tick_count <= 0;
+                            init_timeout <= init_timeout - 1'b1;
+                        end else begin
+                            init_tick_count <= init_tick_count + 1'b1;
+                        end
                     end else begin
                         card_ready <= 1'b0;
                         status_reg <= ST_DRDY | ST_DSC | ST_ERR;
