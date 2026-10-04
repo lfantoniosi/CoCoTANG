@@ -24,19 +24,13 @@ module tb_cpu_sdram_arbiter;
     reg [31:0] dout32=32'h44332211;
     reg data_ready=0, busy=0, enabled=1;
     reg saw_video_ack=0, saw_cpu_ack=0, saw_loader_ack=0;
-    reg stress_cpu=0, saw_stress_refresh=0;
 
     always #5 clk=~clk;
     always @(posedge clk) begin
         if (video_ack) saw_video_ack <= 1'b1;
         if (cpu_ack) saw_cpu_ack <= 1'b1;
         if (loader_ack) saw_loader_ack <= 1'b1;
-        if (stress_cpu && refresh) saw_stress_refresh <= 1'b1;
     end
-    // Keep a CPU request ready whenever the arbiter returns to IDLE.  The
-    // single-cycle drop acknowledges each completed request.
-    always @(negedge clk)
-        if (stress_cpu) cpu_req = (dut.state != 3'd3);
 
     cpu_sdram_arbiter dut (
         .clk(clk),.reset_n(reset_n),.e(e),.q(q),
@@ -135,13 +129,21 @@ module tb_cpu_sdram_arbiter;
             $fatal(1,"loader verification response was wrong: %h",loader_rdata);
         @(negedge clk); loader_req=0;
 
+        // A due refresh must wait for an already queued CPU access. Once
+        // the CPU releases the bus, the same refresh can use the next slot.
         repeat (3) @(negedge clk);
         refresh_slot_open=1;
-        data_ready=1;
-        stress_cpu=1;
-        repeat (1600) @(negedge clk);
-        if (!saw_stress_refresh)
-            $fatal(1,"continuous CPU traffic starved SDRAM refresh");
+        dut.refresh_count=dut.REFRESH_CYCLES;
+        cpu_addr=23'h000020; cpu_req=1;
+        @(posedge clk); #1;
+        if (!rd || refresh || addr !== 23'h000010)
+            $fatal(1,"due refresh preempted the queued CPU read");
+        finish_read();
+        @(negedge clk); cpu_req=0;
+        wait (dut.state==3'd0);
+        @(posedge clk); #1;
+        if (!refresh)
+            $fatal(1,"due refresh did not run after the CPU released the bus");
 
         $display("tb_cpu_sdram_arbiter PASS");
         $finish;
