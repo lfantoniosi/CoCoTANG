@@ -522,6 +522,12 @@ module gime_scanline_buffer (
                                     (pixel_compatibility_css?6'd4:6'd2);
   end else begin
    decoded_pixel=(~decoded_pixel)^inverse_character;
+   // VDG alpha text is routed through GIME palette entries 12-15.  The
+   // direct RGB codes below bypassed those registers, so BASIC PALETTE writes
+   // had no effect on the standard 32-column screen.
+   decoded_index=decoded_pixel?
+      (pixel_compatibility_css?4'd15:4'd13):
+      (pixel_compatibility_css?4'd14:4'd12);
    decoded_code=decoded_pixel?vdg_code(pixel_compatibility_css?3'd7:3'd0):
                               (pixel_compatibility_css?6'd4:6'd2);
   end
@@ -996,10 +1002,12 @@ reg configuration_pending=1'b1;
      state<=COLOR_LOOKUP;
     end
     COLOR_LOOKUP:begin
-     pixel_latched<=palette_rgb(fill_compatibility?color_code_latched:
-       fill_palettes[color_index_latched*6+:6]);
+     pixel_latched<=palette_rgb(fill_compatibility&&
+       (fill_bit_plane||character[7])?
+       color_code_latched:fill_palettes[color_index_latched*6+:6]);
      hdmi_pixel_latched<=expand_rgb222(
-       palette_rgb(fill_compatibility?color_code_latched:
+       palette_rgb(fill_compatibility&&
+       (fill_bit_plane||character[7])?color_code_latched:
        fill_palettes[color_index_latched*6+:6]));
      if(artifact_active)begin
       artifact_bit_write_pending<=1;
