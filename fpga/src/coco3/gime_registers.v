@@ -34,7 +34,9 @@ module gime_registers #(
     reg [7:0] init0, init1;
     reg [5:0] irq_enable, firq_enable;
     reg [5:0] irq_pending, firq_pending;
-    reg [11:0] timer_reload, timer_count;
+    reg [11:0] timer_reload;
+    reg [12:0] timer_count;
+    reg timer_running;
     reg [12:0] timer_divider;
     reg prior_serint_n, prior_keyint_n, prior_cart_n;
     reg prior_hs_n, prior_fs_n;
@@ -216,6 +218,7 @@ module gime_registers #(
             firq_pending <= 6'd0;
             timer_reload <= 12'd0;
             timer_count <= 12'd0;
+            timer_running <= 1'b0;
             timer_divider <= 13'd0;
             prior_serint_n <= 1'b1;
             prior_keyint_n <= 1'b1;
@@ -280,16 +283,23 @@ module gime_registers #(
             end
 
             // INIT1.TINS selects approximately 279 ns or the HS line clock.
-            if (timer_reload != 0) begin
+            if (timer_running) begin
                 if (init1[5]) begin
                     if (timer_clock) timer_divider <= 13'd0;
                     else timer_divider <= timer_divider + 1'b1;
                 end else timer_divider <= 13'd0;
                 if (timer_clock) begin
                     if (timer_count <= 12'd1) begin
-                        timer_count <= timer_reload;
                         irq_pending[5] <= irq_enable[5];
                         firq_pending[5] <= firq_enable[5];
+                        if (timer_reload != 0)
+                            // The common 1986 GIME effectively counts the
+                            // programmed interval plus two timer clocks.
+                            timer_count <= {1'b0,timer_reload} + 13'd2;
+                        else begin
+                            timer_count <= 12'd0;
+                            timer_running <= 1'b0;
+                        end
                     end else timer_count <= timer_count - 1'b1;
                 end
             end else begin
@@ -330,16 +340,55 @@ module gime_registers #(
                 if (gime_selected) begin
                     case (cpu_addr)
                         16'hff90: init0 <= cpu_data;
-                        16'hff91: init1 <= cpu_data;
-                        16'hff92: begin irq_enable <= cpu_data[5:0]; irq_pending <= 6'd0; end
-                        16'hff93: begin firq_enable <= cpu_data[5:0]; firq_pending <= 6'd0; end
+                        16'hff91: begin
+                            init1 <= cpu_data;
+                            // Changing TINS switches the timer's clock
+                            // domain. The GIME restarts the countdown from
+                            // the programmed reload value on that change.
+                            if (init1[5] != cpu_data[5]) begin
+                                timer_divider <= 13'd0;
+                                timer_running <= (timer_reload != 0);
+                                if (timer_reload != 0)
+                                    timer_count <= {1'b0,timer_reload} + 13'd2;
+                                else
+                                    timer_count <= 13'd0;
+                            end
+                        end
+                        16'hff92: begin
+                            irq_enable <= cpu_data[5:0];
+                            // Disabling a source acknowledges its pending
+                            // flag; changing the mask must not discard flags
+                            // for sources that remain enabled.
+                            irq_pending <= irq_pending & cpu_data[5:0];
+                            // A zero timer has no running countdown, but
+                            // enabling its IRQ while zero generates an
+                            // immediate timer request on GIME hardware.
+                            if (timer_reload == 0 && cpu_data[5] && !irq_enable[5])
+                                irq_pending[5] <= 1'b1;
+                        end
+                        16'hff93: begin
+                            firq_enable <= cpu_data[5:0];
+                            firq_pending <= firq_pending & cpu_data[5:0];
+                            if (timer_reload == 0 && cpu_data[5] && !firq_enable[5])
+                                firq_pending[5] <= 1'b1;
+                        end
                         16'hff94: begin
                             timer_reload[11:8] <= cpu_data[3:0];
-                            timer_count <= {cpu_data[3:0],timer_reload[7:0]};
+                            timer_running <= ({cpu_data[3:0],timer_reload[7:0]} != 0);
+                            if ({cpu_data[3:0],timer_reload[7:0]} != 0)
+                                timer_count <= {1'b0,cpu_data[3:0],timer_reload[7:0]} + 13'd2;
+                            else timer_count <= 13'd0;
+                            timer_divider <= 13'd0;
+                            // Loading zero stops the countdown, but the
+                            // zero terminal event still requests the timer
+                            // interrupt when its enable is already active.
+                            if (cpu_data[3:0] == 0 && timer_reload[7:0] == 0) begin
+                                if (irq_enable[5]) irq_pending[5] <= 1'b1;
+                                if (firq_enable[5]) firq_pending[5] <= 1'b1;
+                            end
                         end
                         16'hff95: begin
                             timer_reload[7:0] <= cpu_data;
-                            timer_count <= {timer_reload[11:8],cpu_data};
                         end
                         16'hff98: vmode <= cpu_data;
                         16'hff99: vres <= cpu_data;
