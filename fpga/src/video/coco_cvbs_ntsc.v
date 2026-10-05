@@ -360,6 +360,11 @@ module coco_cvbs_ntsc #(
     reg source_picture = 1'b0;
     reg source_active = 1'b0;
     reg source_body = 1'b0;
+    // Carry horizontal border-side decisions through the source stage. Doing
+    // these comparisons here keeps the standard-dependent picture bounds out
+    // of the later border-colour mux on the 135 MHz sample clock.
+    reg source_left_of_picture = 1'b1;
+    reg source_left_of_right_edge = 1'b0;
     reg [2:0] source_carrier = 3'd0;
     reg source_sample_tick = 1'b0;
 
@@ -566,6 +571,8 @@ module coco_cvbs_ntsc #(
             source_picture <= 1'b0;
             source_active <= 1'b0;
             source_body <= 1'b0;
+            source_left_of_picture <= 1'b1;
+            source_left_of_right_edge <= 1'b0;
             source_carrier <= 3'd0;
             source_sample_tick <= 1'b0;
             pixel_sync <= 1'b1;
@@ -664,6 +671,8 @@ module coco_cvbs_ntsc #(
             source_active <= in_picture;
             source_body <= (v_line >= field_picture_top) &&
                            (v_line < field_picture_bottom);
+            source_left_of_picture <= (h_sample < picture_left);
+            source_left_of_right_edge <= (h_sample < picture_right);
             source_carrier <= carrier_phase;
             source_sample_tick <= (sample_phase == 4'd0);
 
@@ -675,10 +684,10 @@ module coco_cvbs_ntsc #(
             pixel_carrier <= source_carrier;
             pixel_sample_tick <= source_sample_tick;
             border_sample <= source_body && row_border_valid ?
-                (h_sample < picture_right ? row_border_rgb : row_right_border_rgb) :
+                (source_left_of_right_edge ? row_border_rgb : row_right_border_rgb) :
                 compatibility_mode && !source_body && vertical_border_valid ?
-                (h_sample < picture_left ? vertical_left_border_rgb :
-                                           vertical_right_border_rgb) :
+                (source_left_of_picture ? vertical_left_border_rgb :
+                                          vertical_right_border_rgb) :
                 border_row_delay2;
             pixel_rgb <= source_active ? framebuffer_data : border_sample;
 
