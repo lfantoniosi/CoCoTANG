@@ -12,27 +12,27 @@
   <Part Number>: GW2AR-LV18QN88C8/I7
   <Device>: GW2AR-18
   <Device Version>: C
-  <Created Time>:Mon Oct  5 03:08:45 2026
+  <Created Time>:Mon Oct  5 10:14:40 2026
 
 
 2. PnR Details
 
   Running placement:
-    Placement Phase 0: CPU time = 0h 0m 0.371s, Elapsed time = 0h 0m 0.384s
-    Placement Phase 1: CPU time = 0h 0m 0.09s, Elapsed time = 0h 0m 0.093s
-    Placement Phase 2: CPU time = 0h 0m 0.911s, Elapsed time = 0h 0m 0.916s
-    Placement Phase 3: CPU time = 0h 0m 0.706s, Elapsed time = 0h 0m 0.714s
+    Placement Phase 0: CPU time = 0h 0m 0.436s, Elapsed time = 0h 0m 0.443s
+    Placement Phase 1: CPU time = 0h 0m 0.101s, Elapsed time = 0h 0m 0.103s
+    Placement Phase 2: CPU time = 0h 0m 1s, Elapsed time = 0h 0m 1s
+    Placement Phase 3: CPU time = 0h 0m 0.793s, Elapsed time = 0h 0m 0.805s
     Total Placement: CPU time = 0h 0m 2s, Elapsed time = 0h 0m 2s
  Running routing:
-    Routing Phase 0: CPU time = 0h 0m 0.001s, Elapsed time = 0h 0m 0.005s
-    Routing Phase 1: CPU time = 0h 0m 0.792s, Elapsed time = 0h 0m 0.8s
+    Routing Phase 0: CPU time = 0h 0m 0.001s, Elapsed time = 0h 0m 0.004s
+    Routing Phase 1: CPU time = 0h 0m 0.887s, Elapsed time = 0h 0m 0.895s
     Routing Phase 2: CPU time = 0h 0m 3s, Elapsed time = 0h 0m 3s
     Routing Phase 3: CPU time = 0h 0m 0s, Elapsed time = 0h 0m 0s
-    Total Routing: CPU time = 0h 0m 3s, Elapsed time = 0h 0m 3s
+    Total Routing: CPU time = 0h 0m 4s, Elapsed time = 0h 0m 4s
  Generate output files:
-    CPU time = 0h 0m 0.675s, Elapsed time = 0h 0m 0.691s
+    CPU time = 0h 0m 0.734s, Elapsed time = 0h 0m 0.744s
 
- Total Time and Memory Usage: CPU time = 0h 0m 6s, Elapsed time = 0h 0m 6s, Peak memory usage = 464MB
+ Total Time and Memory Usage: CPU time = 0h 0m 7s, Elapsed time = 0h 0m 7s, Peak memory usage = 474MB
 
 
 3. Resource Usage Summary

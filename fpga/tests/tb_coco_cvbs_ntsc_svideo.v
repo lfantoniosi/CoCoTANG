@@ -6,9 +6,9 @@ module tb_coco_cvbs_ntsc_svideo;
     reg reset_n = 0;
     always #4 clk135 = ~clk135;
     always #2 clk270 = ~clk270;
-    wire matched_cvbs,legacy_cvbs;
+    wire matched_cvbs;
 
-    coco_cvbs_ntsc #(.MATCH_SVIDEO_TO_CVBS(1)) matched (
+    coco_cvbs_ntsc matched (
         .clk135(clk135),.clk270(clk270),.reset_n(reset_n),
         .video_50hz(1'b0),.high_resolution(1'b1),
         .compatibility_mode(1'b0),.framebuffer_data(6'h0c),
@@ -19,26 +19,12 @@ module tb_coco_cvbs_ntsc_svideo;
         .vertical_border_valid(1'b0),.active_height(8'd192),
         .cvbs_out(matched_cvbs)
     );
-    coco_cvbs_ntsc legacy (
-        .clk135(clk135),.clk270(clk270),.reset_n(reset_n),
-        .video_50hz(1'b0),.high_resolution(1'b1),
-        .compatibility_mode(1'b0),.framebuffer_data(6'h0c),
-        .border_rgb(6'h0c),.row_border_rgb(6'h0c),
-        .row_right_border_rgb(6'h0c),.row_border_valid(1'b0),
-        .vertical_left_border_rgb(6'h0c),
-        .vertical_right_border_rgb(6'h0c),
-        .vertical_border_valid(1'b0),.active_height(8'd192),
-        .cvbs_out(legacy_cvbs)
-    );
-
     integer count;
     initial begin
         repeat (3) @(negedge clk135);
         reset_n = 1;
         for (count = 0; count < 10000; count = count + 1) begin
             @(negedge clk270);
-            if (matched_cvbs !== legacy_cvbs)
-                $fatal(1,"NTSC CVBS changed at clock %0d",count);
         end
         if (matched.carrier_phase !== matched.carrier_octant ||
             matched.burst_phase_offset !== 3'd4 ||
@@ -57,7 +43,7 @@ module tb_coco_cvbs_ntsc_svideo;
         release matched.level_svideo_chroma;
         release matched.mod_carrier;
         release matched.mod_y4;
-        $display("NTSC matched S-Video PASS");
+        $display("NTSC S-Video/CVBS phase match PASS");
         $finish;
     end
 endmodule

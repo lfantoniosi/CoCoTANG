@@ -1,5 +1,4 @@
 // NTSC carrier and raster with the matched DAC burst/picture S-Video path.
-// This is a separate A/B test build; the default RGB top remains unchanged.
 module top_coco3_ntsc_svideo (
     input clkin,input s1,input s2,input [7:0] mp,output [1:0] msel,
     inout [7:0] cpu_data,output irq_n_in,output firq_n_in,output audio_out,
@@ -15,6 +14,5 @@ module top_coco3_ntsc_svideo (
     inout [31:0] IO_sdram_dq,output [10:0] O_sdram_addr,
     output [1:0] O_sdram_ba,output [3:0] O_sdram_dqm
 );
-    top_coco3 #(.ANALOG_VIDEO_MODE(0),.PAL_CHROMA_OUTPUT(0),
-                .MATCH_SVIDEO_TO_CVBS(1)) core (.*);
+    top_coco3 #(.ANALOG_VIDEO_MODE(0),.PAL_CHROMA_OUTPUT(0)) core (.*);
 endmodule

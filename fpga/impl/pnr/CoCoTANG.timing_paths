@@ -160,7 +160,7 @@ analog_encoder/luma_sum_5_s
 analog_encoder/luma_sum_6_s
 3.610
 3.645
-analog_encoder/n2484_s3
+analog_encoder/n2468_s3
 5.014
 5.563
 analog_encoder/luma_sigma_7_s0
@@ -650,7 +650,7 @@ analog_encoder/component_pb_sum_5_s
 analog_encoder/component_pb_sum_6_s
 3.703
 3.738
-analog_encoder/n2498_s3
+analog_encoder/n2482_s3
 4.621
 5.191
 analog_encoder/component_pb_sigma_7_s0
@@ -752,7 +752,7 @@ analog_encoder/component_pb_sum_5_s
 analog_encoder/component_pb_sum_6_s
 3.703
 4.173
-analog_encoder/n2499_s1
+analog_encoder/n2483_s1
 4.586
 5.156
 analog_encoder/component_pb_sigma_6_s0

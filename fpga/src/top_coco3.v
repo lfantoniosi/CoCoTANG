@@ -25,7 +25,6 @@ module top_coco3 #(
     // 3: RGB with composite sync on green (Y=G/SoG, Pb=B, Pr=R).
     parameter integer ANALOG_VIDEO_MODE=3,
     parameter integer PAL_CHROMA_OUTPUT=0,
-    parameter integer MATCH_SVIDEO_TO_CVBS=1,
     // 0=OFF, 1=ON (blue/orange), 2=REVERSE (orange/blue).
     parameter [1:0] INITIAL_ARTIFACT_MODE=2'd1,
     parameter integer DISTO_2MB=1,
@@ -701,7 +700,6 @@ module top_coco3 #(
     end
     coco_cvbs_ntsc #(.STREAMING_INPUT(0),.CANONICAL_640_INPUT(1),
         .PAL_CHROMA_OUTPUT(PAL_CHROMA_OUTPUT),
-        .MATCH_SVIDEO_TO_CVBS(MATCH_SVIDEO_TO_CVBS),
         .RGB_SOG_OUTPUT(ANALOG_VIDEO_MODE==3),
         .RGB_SCANLINE_PHASE_ALTERNATION(ANALOG_VIDEO_MODE==3),
         .CVBS_SVIDEO_SCANLINE_PHASE_ALTERNATION(ANALOG_VIDEO_MODE<=1),
