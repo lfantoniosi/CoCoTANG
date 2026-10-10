@@ -48,6 +48,7 @@
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco3_hdmi.sv" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/artifact_mode_control.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3_contras_debug.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3_pal.v" type="verilog"/>
         <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3_ntsc_svideo.v" type="verilog"/>
     </FileList>

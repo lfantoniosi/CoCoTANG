@@ -49,6 +49,7 @@
         <File path="src/video/coco3_hdmi.sv" type="file.verilog" enable="1"/>
         <File path="src/video/artifact_mode_control.v" type="file.verilog" enable="1"/>
         <File path="src/top_coco3.v" type="file.verilog" enable="1"/>
+        <File path="src/top_coco3_contras_debug.v" type="file.verilog" enable="1"/>
         <File path="src/top_coco3_pal.v" type="file.verilog" enable="1"/>
         <File path="src/top_coco3_ntsc_svideo.v" type="file.verilog" enable="1"/>
         <File path="src/top_coco3.cst" type="file.cst" enable="1"/>

@@ -16813,6 +16813,12 @@
 		(uuid "913b2087-c7f2-480e-8746-7f3fffba0951")
 	)
 	(junction
+		(at 681.99 151.13)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "92e8a2a8-697d-4c45-9132-4114577789be")
+	)
+	(junction
 		(at 335.28 186.69)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -18228,6 +18234,16 @@
 	)
 	(wire
 		(pts
+			(xy 692.785 171.45) (xy 692.785 172.085)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9f985870-918e-4357-a29b-6331edbd2501")
+	)
+	(wire
+		(pts
 			(xy 643.255 109.855) (xy 628.65 109.855)
 		)
 		(stroke
@@ -18608,6 +18624,16 @@
 	)
 	(wire
 		(pts
+			(xy 681.99 151.13) (xy 681.99 153.67)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e031716c-b903-433f-9210-9026f20ff625")
+	)
+	(wire
+		(pts
 			(xy 27.305 24.765) (xy 27.305 26.035)
 		)
 		(stroke
@@ -18795,6 +18821,16 @@
 			(type default)
 		)
 		(uuid "f97fe2ce-a0f4-40f0-81c1-9fa280650a9d")
+	)
+	(wire
+		(pts
+			(xy 681.99 171.45) (xy 692.785 171.45)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "fa2c3cf1-5acb-4ea3-90e5-1851bb10a092")
 	)
 	(wire
 		(pts
@@ -19363,6 +19399,30 @@
 		(uuid "05f273a0-4586-432f-946d-13c09bdb05bc")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 505.7708 158.75 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+	)
+	(global_label "R{slash}~{W}"
+		(shape input)
+		(at 381.635 144.78 270)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "06e28b68-6993-4d62-b8e4-be30bd8e45c6")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 381.635 151.8171 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -24222,7 +24282,7 @@
 			)
 		)
 	)
-	(global_label "ROW1"
+	(global_label "ROW2"
 		(shape input)
 		(at 266.065 144.145 180)
 		(fields_autoplaced yes)
@@ -25086,30 +25146,6 @@
 			)
 		)
 	)
-	(global_label "R{slash}~{W}"
-		(shape output)
-		(at 681.99 153.67 0)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "590bd0e9-0b5e-4fdd-a38f-a65fe894e0f5")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 689.0271 153.67 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-	)
 	(global_label "PR_33"
 		(shape input)
 		(at 643.255 102.235 180)
@@ -25395,6 +25431,30 @@
 					(size 1.27 1.27)
 				)
 				(justify right)
+			)
+		)
+	)
+	(global_label "ROW3"
+		(shape input)
+		(at 294.64 128.905 90)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "5d72cb9e-228a-46fd-837d-28315b4fad1a")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 294.64 120.6584 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
 			)
 		)
 	)
@@ -29406,7 +29466,7 @@
 			)
 		)
 	)
-	(global_label "~{HALT}"
+	(global_label "~{RESET}"
 		(shape output)
 		(at 350.52 194.31 0)
 		(fields_autoplaced yes)
@@ -29418,7 +29478,7 @@
 		)
 		(uuid "961dfa31-45e0-462c-9bd8-6b3765f25cf7")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 357.92 194.31 0)
+			(at 359.2503 194.31 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -30222,7 +30282,7 @@
 			)
 		)
 	)
-	(global_label "ROW0"
+	(global_label "ROW3"
 		(shape input)
 		(at 266.065 141.605 180)
 		(fields_autoplaced yes)
@@ -31515,6 +31575,30 @@
 					(size 1.27 1.27)
 				)
 				(justify right)
+			)
+		)
+	)
+	(global_label "ROW2"
+		(shape input)
+		(at 309.245 128.905 90)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "b3c0b4dd-8349-4975-a586-f873e6f831e8")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 309.245 120.6584 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
 			)
 		)
 	)
@@ -33667,30 +33751,6 @@
 		(uuid "d722a5c9-f4d3-461c-9dd1-afdfccc07bcb")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 91.1292 154.94 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-	)
-	(global_label "~{SCS}"
-		(shape input)
-		(at 681.99 171.45 0)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "d72ce075-184e-4034-88e7-c5e3b858f8fc")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 688.6642 171.45 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -36222,7 +36282,7 @@
 			)
 		)
 	)
-	(global_label "~{SCS}"
+	(global_label "~{CTS}"
 		(shape input)
 		(at 681.99 166.37 0)
 		(fields_autoplaced yes)
@@ -36234,7 +36294,7 @@
 		)
 		(uuid "faf3d1e3-a032-4f2f-8759-b09e4d82dcdf")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 688.6642 166.37 0)
+			(at 688.4223 166.37 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -40137,6 +40197,83 @@
 		)
 	)
 	(symbol
+		(lib_id "power:+5V")
+		(at 381.635 137.16 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "28879e4a-f442-48f9-b777-c252c660d070")
+		(property "Reference" "#PWR0132"
+			(at 381.635 140.97 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "+5V"
+			(at 377.825 135.89 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 381.635 137.16 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 381.635 137.16 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 381.635 137.16 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "3e8a1e82-1507-4b22-8042-05df12343a79")
+		)
+		(instances
+			(project "CoCoTANG"
+				(path "/975e10be-2eb6-4f70-aa39-19e0743e473f"
+					(reference "#PWR0132")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "power:GND")
 		(at 175.26 248.92 0)
 		(unit 1)
@@ -40824,6 +40961,83 @@
 			(project "CoCoTANG"
 				(path "/975e10be-2eb6-4f70-aa39-19e0743e473f"
 					(reference "#PWR039")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 309.245 136.525 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "32643368-976a-43f6-aed0-84b68696c91e")
+		(property "Reference" "#PWR0137"
+			(at 309.245 142.875 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 309.245 140.335 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 309.245 136.525 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 309.245 136.525 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 309.245 136.525 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "f7edf54c-276f-4504-bd57-ca33a1417b8a")
+		)
+		(instances
+			(project "CoCoTANG"
+				(path "/975e10be-2eb6-4f70-aa39-19e0743e473f"
+					(reference "#PWR0137")
 					(unit 1)
 				)
 			)
@@ -43318,6 +43532,85 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:R")
+		(at 381.635 140.97 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "51d7cef9-5d5c-4430-af41-5fe7b982a961")
+		(property "Reference" "R19"
+			(at 383.667 140.97 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "47K"
+			(at 381.635 140.97 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder"
+			(at 379.857 140.97 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 381.635 140.97 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 381.635 140.97 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "f130db41-483e-4cde-882b-0144c40280c2")
+		)
+		(pin "2"
+			(uuid "c75495f2-dc14-4437-955a-3dd3af20828b")
+		)
+		(instances
+			(project "CoCoTANG"
+				(path "/975e10be-2eb6-4f70-aa39-19e0743e473f"
+					(reference "R19")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "power:GND")
 		(at 125.095 248.92 0)
 		(unit 1)
@@ -45453,6 +45746,88 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:C")
+		(at 294.64 132.715 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "6be6cf27-118c-4c38-b243-ad668d90f35a")
+		(property "Reference" "C10"
+			(at 298.45 131.4449 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "1800pF"
+			(at 298.45 133.9849 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder"
+			(at 295.6052 136.525 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 294.64 132.715 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 294.64 132.715 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "2"
+			(uuid "30d8061b-8c1d-46ed-9d1c-2c290edbabda")
+		)
+		(pin "1"
+			(uuid "326e4719-256a-4b3a-b958-aeebefadcc74")
+		)
+		(instances
+			(project "CoCoTANG"
+				(path "/975e10be-2eb6-4f70-aa39-19e0743e473f"
+					(reference "C10")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Connector_Generic:Conn_02x20_Counter_Clockwise")
 		(at 427.355 157.48 0)
 		(unit 1)
@@ -45728,6 +46103,88 @@
 			(project "CoCoTANG"
 				(path "/975e10be-2eb6-4f70-aa39-19e0743e473f"
 					(reference "Q1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 309.245 132.715 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "6e8e550a-1760-4ad6-b271-8f5a1574982e")
+		(property "Reference" "C12"
+			(at 313.055 131.4449 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "1800pF"
+			(at 313.055 133.9849 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder"
+			(at 310.2102 136.525 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 309.245 132.715 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 309.245 132.715 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "2"
+			(uuid "88e03327-e60d-478b-8cf9-57ea1c411327")
+		)
+		(pin "1"
+			(uuid "909427b8-31c0-4dc3-a7c7-00e9f4c7e957")
+		)
+		(instances
+			(project "CoCoTANG"
+				(path "/975e10be-2eb6-4f70-aa39-19e0743e473f"
+					(reference "C12")
 					(unit 1)
 				)
 			)
@@ -49979,6 +50436,83 @@
 			(project "CoCoTANG"
 				(path "/975e10be-2eb6-4f70-aa39-19e0743e473f"
 					(reference "R24")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 294.64 136.525 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "a06c1d76-4283-41ab-b5be-eef4f1ba0800")
+		(property "Reference" "#PWR0133"
+			(at 294.64 142.875 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 294.64 140.335 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 294.64 136.525 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 294.64 136.525 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 294.64 136.525 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "7b0f5d46-fc01-4c00-9608-a1cbc1fec452")
+		)
+		(instances
+			(project "CoCoTANG"
+				(path "/975e10be-2eb6-4f70-aa39-19e0743e473f"
+					(reference "#PWR0133")
 					(unit 1)
 				)
 			)
@@ -55814,6 +56348,83 @@
 			(project "CoCoTANG"
 				(path "/975e10be-2eb6-4f70-aa39-19e0743e473f"
 					(reference "#PWR030")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 692.785 172.085 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "f1848b9f-d2ab-4409-b9c1-165d5c5ac3d7")
+		(property "Reference" "#PWR0129"
+			(at 692.785 178.435 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 692.785 175.895 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 692.785 172.085 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 692.785 172.085 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 692.785 172.085 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "10f3f18d-d1f8-4895-af07-2085e21f229b")
+		)
+		(instances
+			(project "CoCoTANG"
+				(path "/975e10be-2eb6-4f70-aa39-19e0743e473f"
+					(reference "#PWR0129")
 					(unit 1)
 				)
 			)

@@ -117,9 +117,14 @@ module hdmi_debug_overlay #(
     logic [LOG_ADDR_WIDTH-1:0] base_gray_pixel = '0;
     logic [LOG_ADDR_WIDTH-1:0] display_base = '0;
     logic [LOG_ADDR_WIDTH-1:0] entry_index;
+    logic [LOG_ADDR_WIDTH:0] entry_index_sum;
     logic [LOG_ADDR_WIDTH:0] entry_index_full;
+    logic [LOG_ADDR_WIDTH:0] page_start_index;
+    logic [LOG_COUNT_WIDTH-1:0] tail_page_index;
     logic [6:0] page_entry_index;
     logic [47:0] entry = 48'd0;
+    wire entry_is_nmi=entry[45:30]==16'hfffc &&
+                      entry[29:22]==8'h4e && entry[21:14]==8'h4d;
 
     function automatic [LOG_COUNT_WIDTH-1:0] gray_to_binary(
         input logic [LOG_COUNT_WIDTH-1:0] gray
@@ -264,8 +269,17 @@ module hdmi_debug_overlay #(
         page_entry_index={1'b0,character_row}-TRACE_FIRST_ROW;
         if (character_column >= 7'd45)
             page_entry_index=page_entry_index+TRACE_ROWS_PER_COLUMN;
-        entry_index_full=(log_page * TRACE_ENTRIES_PER_PAGE)+page_entry_index;
-        entry_index=display_base+entry_index_full[LOG_ADDR_WIDTH-1:0];
+        tail_page_index=display_count==0 ? 0 :
+                        (display_count-1)/TRACE_ENTRIES_PER_PAGE;
+        if(log_page==tail_page_index &&
+           display_count>TRACE_ENTRIES_PER_PAGE)
+            page_start_index=display_count-TRACE_ENTRIES_PER_PAGE;
+        else page_start_index=log_page*TRACE_ENTRIES_PER_PAGE;
+        entry_index_full=page_start_index+page_entry_index;
+        entry_index_sum={1'b0,display_base}+entry_index_full[LOG_ADDR_WIDTH:0];
+        if(entry_index_sum>=LOG_DEPTH)
+            entry_index=entry_index_sum-LOG_DEPTH;
+        else entry_index=entry_index_sum[LOG_ADDR_WIDTH-1:0];
         entry_index_16={{(15-LOG_ADDR_WIDTH){1'b0}},entry_index_full};
         display_count_16={{(16-LOG_COUNT_WIDTH){1'b0}},display_count};
         log_page_8={{(8-LOG_PAGE_WIDTH){1'b0}},log_page};
@@ -510,8 +524,10 @@ module hdmi_debug_overlay #(
                 1:character=hex_char(entry_index_16[11:8]);
                 2:character=hex_char(entry_index_16[7:4]);
                 3:character=hex_char(entry_index_16[3:0]);
-                5:character=entry[46] ? "R" : "W";
-                7:character="A"; 8:character=":";
+                5:character=entry_is_nmi ? "N" : entry[46] ? "R" : "W";
+                6:if(entry_is_nmi)character="M";
+                7:character=entry_is_nmi ? "I" : "A";
+                8:character=entry_is_nmi ? " " : ":";
                 9:character=hex_char(entry[45:42]);
                 10:character=hex_char(entry[41:38]);
                 11:character=hex_char(entry[37:34]);
@@ -569,6 +585,7 @@ module hdmi_debug_overlay #(
                       rom_verify_done && !rom_verify_pass) ? 24'hff4040 :
                      (character_row == 0 && character_column >= 7'd60 &&
                       sdram_test_done && !sdram_test_pass) ? 24'hff4040 :
+                     (valid_entry && entry_is_nmi) ? 24'h40ffff :
                      (character_row == 0 ||
                       (EXTENDED_HEADER==2 && character_row==1)) ? 24'h40ffff :
                      (EXTENDED_HEADER==2 && valid_entry && !entry[46]) ?

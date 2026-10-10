@@ -1,5 +1,6 @@
 module gime_native_video (
     input clk, input reset_n, input video_50hz, input bit_plane,
+    input [3:0] hres, input [7:0] vmode,
     input hdmi_frame_start, input hdmi_active_50hz,
     input [7:0] active_height,
     input compatibility_mode, input compatibility_css,
@@ -45,6 +46,21 @@ module gime_native_video (
          active_height==8'd199 ? 9'd23 : 9'd24);
     wire [8:0] native_top = live_top;
     wire [8:0] native_bottom=native_top+active_height;
+    // XRoar's default CoCo 3 is the 1986 GIME. Its HBORD interrupt position
+    // is derived from the mode-dependent horizontal timing, relative to HS
+    // falling, rather than from the HDMI picture's fixed right edge. The
+    // 1986 GIME uses 80 HS clocks, a mode-dependent back porch/left border,
+    // and a 512- or 640-clock active area.
+    wire timing_hr2 = compatibility_mode ? 1'b0 : hres[2];
+    wire timing_hr0 = compatibility_mode ? 1'b0 : hres[0];
+    wire timing_graphics = vmode[7];
+    wire [10:0] hb_tbp = timing_hr2 ? 11'd63 :
+                              timing_graphics ? 11'd57 : 11'd61;
+    wire [10:0] hb_tlb = timing_hr2 ? (timing_hr0 ? 11'd42 : 11'd104) :
+                         timing_hr0 ? (timing_graphics ? 11'd48 : 11'd44) :
+                                      (timing_graphics ? 11'd110 : 11'd106);
+    wire [10:0] hb_taa = timing_hr0 ? 11'd640 : 11'd512;
+    wire [10:0] hb_irq_position = 11'd80 + hb_tbp + hb_tlb + hb_taa;
     // Capture after FF98 writes made early in HBORD (BOINK writes at dot 71),
     // at the same left-border point used by XRoar's field trace.
     assign trace_line_sample=raster_tick && x==10'd200;
@@ -142,9 +158,9 @@ module gime_native_video (
                 native_hblank<=x<10'd200 || x>=10'd840;
                 native_vblank<=y<native_top || y>=native_bottom;
                 // GIME interrupt bits 4/3 are border events, not the raw
-                // HSYNC/FSYNC pins. HBORD asserts one 1.79 MHz CPU cycle
-                // before the 640-dot body ends and releases at body start.
-                if(x==10'd830)native_hborder_irq_n<=1'b0;
+                // HSYNC/FSYNC pins. Match the XRoar 1986-GIME HBORD point;
+                // its location changes with HRES and graphics/text mode.
+                if(x==hb_irq_position)native_hborder_irq_n<=1'b0;
                 else if(x==10'd200)native_hborder_irq_n<=1'b1;
                 // A 480p frame is 525 HDMI lines, or 262.5 native line
                 // periods.  End the final native row after a half-line so
@@ -190,7 +206,7 @@ module gime_native_video (
                                       compatibility_x>=10'd840;
                 compatibility_vblank<=compatibility_y<live_top ||
                                       compatibility_y>=live_top+active_height;
-                if(compatibility_x==10'd830)
+                if(compatibility_x==hb_irq_position)
                     compatibility_hborder_irq_n<=0;
                 else if(compatibility_x==10'd200)
                     compatibility_hborder_irq_n<=1;

@@ -8,6 +8,17 @@ NTSC_SVIDEO_OUTPUT := $(ROOT)/impl/pnr/CoCoTANG-ntsc-svideo.fs
 PAL_ROM ?= /Users/felipe/src/retro/coco_roms/coco3p.rom
 PALETTE_BRIDGE_DISK := $(ROOT)/results/PALBRDG.DSK
 PALETTE_BRIDGE_BIN := $(ROOT)/results/PALROT.BIN
+CONTRAS_PALETTE_TEST_DISK := $(ROOT)/results/CONTPAL.DSK
+CONTRAS_PALETTE_TEST_BIN := $(ROOT)/results/CONTPAL.BIN
+CONTRAS_PALETTE_SYNC_DISK := $(ROOT)/results/CONTPAS.DSK
+CONTRAS_PALETTE_SYNC_BIN := $(ROOT)/results/CONTPAS.BIN
+CONTRAS_EXACT_TEST_DISK := $(ROOT)/results/CONTRAX.DSK
+CONTRAS_EXACT_TEST_BIN := $(ROOT)/results/CONTRAX.BIN
+FLOPPY_DIAG_DISK := $(ROOT)/results/FLOPTEST.DSK
+FLOPPY_WRITE_BIN := $(ROOT)/results/FLOPWRIT.BIN
+CONTRAS_IRQ_DISK := $(ROOT)/results/CONIRQ.DSK
+CONTRAS_IRQ_BIN := $(ROOT)/results/CONIRQ.BIN
+CONTRAS_IRQ_DATA_BIN := $(ROOT)/results/IRQDATA.BIN
 
 ifeq ($(shell uname -s),Darwin)
 GOWIN_IDE ?= /Applications/GowinIDE.app/Contents/Resources/Gowin_EDA/IDE
@@ -23,15 +34,21 @@ PROGRAMMER_BOARD ?= tangnano20k
 ROM_OFFSET ?= 1048576
 
 .DEFAULT_GOAL := build
-.PHONY: build rebuild pal-build pal-rebuild ntsc-svideo-build \
+.PHONY: build rebuild contras-debug-build contras-debug-rebuild pal-build pal-rebuild ntsc-svideo-build \
  ntsc-svideo-rebuild test timing pal-timing ntsc-svideo-timing program \
  reprogram pal-program pal-reprogram ntsc-svideo-program \
- ntsc-svideo-reprogram rom pal-rom palette-bridge-dsk check-tools
+ ntsc-svideo-reprogram rom pal-rom palette-bridge-dsk contras-palette-test-dsk \
+ contras-palette-sync-dsk contras-exact-dsk floppy-diag-dsk contras-irq-dsk check-tools
 
 build: $(OUTPUT)
 
 rebuild: check-tools
 	$(call run-gowin,CoCoTANG.gprj,top_coco3,CoCoTANG)
+
+contras-debug-build: $(ROOT)/impl/pnr/CoCoTANG-contras-debug.fs
+
+contras-debug-rebuild: check-tools
+	$(call run-gowin,CoCoTANG-pal.gprj,top_coco3_contras_debug,CoCoTANG-contras-debug)
 
 pal-build: $(PAL_OUTPUT)
 
@@ -153,6 +170,63 @@ $(PALETTE_BRIDGE_DISK): tests/palette_bridge/PALBARS.BAS $(PALETTE_BRIDGE_BIN)
 
 palette-bridge-dsk: $(PALETTE_BRIDGE_DISK)
 
+$(CONTRAS_PALETTE_TEST_BIN): tests/contras_palette/contras_palette.asm
+	lwasm --6809 --decb --list=$(ROOT)/results/CONTPAL.lst -o "$@" "$<"
+
+$(CONTRAS_PALETTE_TEST_DISK): tests/contras_palette/CONTPAL.BAS $(CONTRAS_PALETTE_TEST_BIN)
+	decb dskini "$@"
+	decb copy -0 -a -l "$<" "$@,CONTPAL.BAS"
+	decb copy -2 -b "$(CONTRAS_PALETTE_TEST_BIN)" "$@,CONTPAL.BIN"
+
+contras-palette-test-dsk: $(CONTRAS_PALETTE_TEST_DISK)
+
+$(CONTRAS_PALETTE_SYNC_BIN): tests/contras_palette/contras_palette.asm
+	lwasm --6809 -D SYNC_VARIANT=1 --decb --list=$(ROOT)/results/CONTPAS.lst -o "$@" "$<"
+
+$(CONTRAS_PALETTE_SYNC_DISK): tests/contras_palette/CONTPAS.BAS $(CONTRAS_PALETTE_SYNC_BIN)
+	decb dskini "$@"
+	decb copy -0 -a -l "$<" "$@,CONTPAS.BAS"
+	decb copy -2 -b "$(CONTRAS_PALETTE_SYNC_BIN)" "$@,CONTPAS.BIN"
+
+contras-palette-sync-dsk: $(CONTRAS_PALETTE_SYNC_DISK)
+
+$(CONTRAS_EXACT_TEST_BIN): tests/contras_palette/contras_exact.asm
+	lwasm --6809 --decb --list=$(ROOT)/results/CONTRAX.lst -o "$@" "$<"
+
+$(CONTRAS_EXACT_TEST_DISK): tests/contras_palette/CONTRAX.BAS $(CONTRAS_EXACT_TEST_BIN)
+	decb dskini "$@"
+	decb copy -0 -a -l "$<" "$@,CONTRAX.BAS"
+	decb copy -2 -b "$(CONTRAS_EXACT_TEST_BIN)" "$@,CONTRAX.BIN"
+
+contras-exact-dsk: $(CONTRAS_EXACT_TEST_DISK)
+
+$(FLOPPY_WRITE_BIN): tests/floppy_diag/FLOPWRIT.asm
+	lwasm --6809 --decb --list=$(ROOT)/results/FLOPWRIT.lst -o "$@" "$<"
+
+$(FLOPPY_DIAG_DISK): tests/floppy_diag/FLOPSET.BAS tests/floppy_diag/FLOPCHK.BAS tests/floppy_diag/FLOPWRIT.BAS tests/floppy_diag/IDE2FDC.BAS $(FLOPPY_WRITE_BIN)
+	decb dskini "$@"
+	decb copy -0 -a -l tests/floppy_diag/FLOPSET.BAS "$@,FLOPSET.BAS"
+	decb copy -0 -a -l tests/floppy_diag/FLOPCHK.BAS "$@,FLOPCHK.BAS"
+	decb copy -0 -a -l tests/floppy_diag/FLOPWRIT.BAS "$@,FLOPWRIT.BAS"
+	decb copy -0 -a -l tests/floppy_diag/IDE2FDC.BAS "$@,IDE2FDC.BAS"
+	decb copy -2 -b "$(FLOPPY_WRITE_BIN)" "$@,FLOPWRIT.BIN"
+
+floppy-diag-dsk: $(FLOPPY_DIAG_DISK)
+
+$(CONTRAS_IRQ_BIN): tests/contras_irq/CONIRQ.asm
+	lwasm --6809 --decb --list=$(ROOT)/results/CONIRQ.lst -o "$@" "$<"
+
+$(CONTRAS_IRQ_DATA_BIN): tests/contras_irq/IRQDATA.asm
+	lwasm --6809 --decb --list=$(ROOT)/results/IRQDATA.lst -o "$@" "$<"
+
+$(CONTRAS_IRQ_DISK): tests/contras_irq/CONIRQ.BAS $(CONTRAS_IRQ_BIN) $(CONTRAS_IRQ_DATA_BIN)
+	decb dskini "$@"
+	decb copy -0 -a -l "$<" "$@,CONIRQ.BAS"
+	decb copy -2 -b "$(CONTRAS_IRQ_BIN)" "$@,CONIRQ.BIN"
+	decb copy -2 -b "$(CONTRAS_IRQ_DATA_BIN)" "$@,IRQDATA.BIN"
+
+contras-irq-dsk: $(CONTRAS_IRQ_DISK)
+
 pal-rom:
 	@test -f "$(PAL_ROM)" || (echo "PAL ROM not found: $(PAL_ROM)"; exit 1)
 	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f --external-flash \
@@ -169,6 +243,9 @@ endef
 
 $(OUTPUT): $(PROJECT) $(BUILD_TCL) $(shell find src -type f) | check-tools
 	$(call run-gowin,CoCoTANG.gprj,top_coco3,CoCoTANG)
+
+$(ROOT)/impl/pnr/CoCoTANG-contras-debug.fs: $(PAL_PROJECT) $(BUILD_TCL) $(shell find src -type f) | check-tools
+	$(call run-gowin,CoCoTANG-pal.gprj,top_coco3_contras_debug,CoCoTANG-contras-debug)
 
 $(PAL_OUTPUT): $(PAL_PROJECT) $(BUILD_TCL) $(shell find src -type f) | check-tools
 	$(call run-gowin,CoCoTANG-pal.gprj,top_coco3_pal,CoCoTANG-pal)

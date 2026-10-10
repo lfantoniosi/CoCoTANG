@@ -392,7 +392,7 @@ module coco3 #(
     assign gime_trace_y=debug_native_y;
     gime_native_video native_video(
         .clk(clk),.reset_n(core_reset_n),.video_50hz(video_50hz),
-        .bit_plane(effective_bit_plane),
+        .bit_plane(effective_bit_plane),.hres(effective_hres),.vmode(vmode),
         .hdmi_frame_start(hdmi_frame_start),
         .hdmi_active_50hz(hdmi_active_50hz),
         .active_height(active_height),.compatibility_mode(compatibility_mode),

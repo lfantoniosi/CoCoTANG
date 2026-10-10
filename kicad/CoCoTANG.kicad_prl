@@ -18,14 +18,14 @@
     "prototype_zone_fills": false,
     "selection_filter": {
       "dimensions": false,
-      "footprints": true,
-      "graphics": true,
+      "footprints": false,
+      "graphics": false,
       "gridItems": false,
       "keepouts": false,
-      "lockedItems": true,
+      "lockedItems": false,
       "otherItems": false,
       "pads": false,
-      "text": false,
+      "text": true,
       "tracks": false,
       "vias": false,
       "zones": false
@@ -56,7 +56,7 @@
       "grid_items",
       "via_stitching"
     ],
-    "visible_layers": "ffffffff_ffffffff_ffffdd75_575555ff",
+    "visible_layers": "ffffffff_ffffffff_ffffdd7d_57557550",
     "zone_display_mode": 0
   },
   "git": {
