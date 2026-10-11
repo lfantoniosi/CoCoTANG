@@ -998,6 +998,309 @@
 			)
 			(embedded_fonts no)
 		)
+		(symbol "Connector_Generic:Conn_01x07"
+			(pin_names
+				(offset 1.016)
+				(hide yes)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(in_pos_files yes)
+			(duplicate_pin_numbers_are_jumpers no)
+			(property "Reference" "J"
+				(at 0 10.16 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "Conn_01x07"
+				(at 0 -10.16 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Description" "Generic connector, single row, 01x07, script generated (kicad-library-utils/schlib/autogen/connector/)"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_keywords" "connector"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_fp_filters" "Connector*:*_1x??_*"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(symbol "Conn_01x07_1_1"
+				(rectangle
+					(start -1.27 8.89)
+					(end 1.27 -8.89)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type background)
+					)
+				)
+				(rectangle
+					(start -1.27 7.747)
+					(end 0 7.493)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(rectangle
+					(start -1.27 5.207)
+					(end 0 4.953)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(rectangle
+					(start -1.27 2.667)
+					(end 0 2.413)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(rectangle
+					(start -1.27 0.127)
+					(end 0 -0.127)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(rectangle
+					(start -1.27 -2.413)
+					(end 0 -2.667)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(rectangle
+					(start -1.27 -4.953)
+					(end 0 -5.207)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(rectangle
+					(start -1.27 -7.493)
+					(end 0 -7.747)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(pin passive line
+					(at -5.08 7.62 0)
+					(length 3.81)
+					(name "Pin_1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at -5.08 5.08 0)
+					(length 3.81)
+					(name "Pin_2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at -5.08 2.54 0)
+					(length 3.81)
+					(name "Pin_3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at -5.08 0 0)
+					(length 3.81)
+					(name "Pin_4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at -5.08 -2.54 0)
+					(length 3.81)
+					(name "Pin_5"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "5"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at -5.08 -5.08 0)
+					(length 3.81)
+					(name "Pin_6"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "6"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at -5.08 -7.62 0)
+					(length 3.81)
+					(name "Pin_7"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "7"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "Connector_Generic:Conn_02x07_Counter_Clockwise"
 			(pin_names
 				(offset 1.016)
@@ -11163,7 +11466,7 @@
 	)
 	(global_label "~{SLENB}"
 		(shape output)
-		(at 352.298 97.282 180)
+		(at 355.6 97.282 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -11173,7 +11476,7 @@
 		)
 		(uuid "05025880-f07f-4f59-8d67-9a674d8250ca")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 343.3257 97.282 0)
+			(at 346.6277 97.282 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -15243,7 +15546,7 @@
 	)
 	(global_label "~{DATAEN}"
 		(shape output)
-		(at 352.298 99.822 180)
+		(at 355.6 99.822 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -15253,7 +15556,7 @@
 		)
 		(uuid "713c729f-ef8d-4bbe-9f05-05255149383e")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 342.4185 99.822 0)
+			(at 345.7205 99.822 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -15699,7 +16002,7 @@
 	)
 	(global_label "DATADIR"
 		(shape output)
-		(at 352.298 102.362 180)
+		(at 355.6 102.362 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -15709,7 +16012,7 @@
 		)
 		(uuid "7d5abcb2-ee80-4d32-8528-6a1141724594")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 341.7532 102.362 0)
+			(at 345.0552 102.362 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -17233,6 +17536,30 @@
 			)
 		)
 	)
+	(global_label "R{slash}~{W}"
+		(shape input)
+		(at 355.6 104.902 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "a665271f-db4e-488e-950f-b7fe24d3b912")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 348.5629 104.902 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+	)
 	(global_label "BP28"
 		(shape input)
 		(at 194.4503 58.42 0)
@@ -17979,7 +18306,7 @@
 	)
 	(global_label "S2"
 		(shape input)
-		(at 352.298 94.742 180)
+		(at 355.6 94.742 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -17989,7 +18316,7 @@
 		)
 		(uuid "ba5ea5d9-aad9-419f-af09-1a4e3fad6856")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 346.8938 94.742 0)
+			(at 350.1958 94.742 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -18051,7 +18378,7 @@
 	)
 	(global_label "S0"
 		(shape input)
-		(at 352.298 89.662 180)
+		(at 355.6 89.662 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -18061,7 +18388,7 @@
 		)
 		(uuid "bb88a9b4-194c-4f50-870d-08299fd6ddb2")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 346.8938 89.662 0)
+			(at 350.1958 89.662 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -19491,7 +19818,7 @@
 	)
 	(global_label "S1"
 		(shape input)
-		(at 352.298 92.202 180)
+		(at 355.6 92.202 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -19501,7 +19828,7 @@
 		)
 		(uuid "e4fa4438-05d3-4835-9a95-16b7099b3b63")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 346.8938 92.202 0)
+			(at 350.1958 92.202 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -20150,6 +20477,30 @@
 		(uuid "f56d7e3c-9f39-4cce-825d-a4a7da112068")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 143.3672 220.98 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+	)
+	(global_label "R{slash}~{W}"
+		(shape output)
+		(at 269.24 170.18 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "f5a553a3-a25c-4fca-8c30-780ab4afe765")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 262.2029 170.18 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21516,100 +21867,6 @@
 			(project "CoCoTANG"
 				(path "/975e10be-2eb6-4f70-aa39-19e0743e473f"
 					(reference "#PWR078")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Connector_Generic:Conn_01x06")
-		(at 274.32 160.02 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "0c74d7c7-3fe6-4856-95cc-d842752f1f40")
-		(property "Reference" "J3"
-			(at 277.114 160.0199 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "ADDRMUX_IN"
-			(at 277.114 162.5599 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Vertical"
-			(at 274.32 160.02 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 274.32 160.02 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Generic connector, single row, 01x06, script generated (kicad-library-utils/schlib/autogen/connector/)"
-			(at 274.32 160.02 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "5a54958b-eda8-452d-9445-65ff13cddf1f")
-		)
-		(pin "2"
-			(uuid "bcac1b60-f9c6-47aa-b606-9fe51892f8aa")
-		)
-		(pin "3"
-			(uuid "84dd0997-1c8c-435e-a5a7-6b31671fa8b2")
-		)
-		(pin "6"
-			(uuid "df49fdc8-e3ad-4b89-8b72-e2c33393d902")
-		)
-		(pin "5"
-			(uuid "e4b6b4c7-b704-4229-8e63-b80a896efcc8")
-		)
-		(pin "4"
-			(uuid "c02e2ee6-056a-411f-84f4-e3bee4b74031")
-		)
-		(instances
-			(project "CoCoTANG"
-				(path "/975e10be-2eb6-4f70-aa39-19e0743e473f"
-					(reference "J3")
 					(unit 1)
 				)
 			)
@@ -32563,6 +32820,103 @@
 		)
 	)
 	(symbol
+		(lib_id "Connector_Generic:Conn_01x07")
+		(at 274.32 162.56 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "a2a585bb-e21e-49dd-9741-04be3c9d8014")
+		(property "Reference" "J3"
+			(at 276.86 161.2899 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "ADDRMUX_IN"
+			(at 276.86 163.8299 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x07_P2.54mm_Vertical"
+			(at 274.32 162.56 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 274.32 162.56 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Generic connector, single row, 01x07, script generated (kicad-library-utils/schlib/autogen/connector/)"
+			(at 274.32 162.56 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "3"
+			(uuid "11a23776-c1fa-4512-8982-96b1dfcbd098")
+		)
+		(pin "4"
+			(uuid "60c65348-337e-478f-b6ba-addcff656768")
+		)
+		(pin "5"
+			(uuid "1727e535-bf0f-4d79-89af-8b2dbbb294a6")
+		)
+		(pin "2"
+			(uuid "25013264-dc8e-45da-9a04-825457981d43")
+		)
+		(pin "1"
+			(uuid "f41b25f4-42e8-4d24-95d6-3e5fa9ae16d6")
+		)
+		(pin "6"
+			(uuid "4e4a8fbc-5974-4b40-96df-93f45584e6f1")
+		)
+		(pin "7"
+			(uuid "793567f8-90c3-4ecc-a527-8b9e6f0ac43b")
+		)
+		(instances
+			(project "CoCoTANG"
+				(path "/975e10be-2eb6-4f70-aa39-19e0743e473f"
+					(reference "J3")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "power:+3.3V")
 		(at 431.165 31.75 0)
 		(unit 1)
@@ -34009,6 +34363,103 @@
 			(project "CoCoTANG"
 				(path "/975e10be-2eb6-4f70-aa39-19e0743e473f"
 					(reference "#PWR0104")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector_Generic:Conn_01x07")
+		(at 360.68 97.282 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "b653c278-9496-4e89-8052-ff4d0cda27d1")
+		(property "Reference" "J2"
+			(at 363.22 96.0119 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "ADDRMUX_OUT"
+			(at 363.22 98.5519 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x07_P2.54mm_Vertical"
+			(at 360.68 97.282 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 360.68 97.282 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Generic connector, single row, 01x07, script generated (kicad-library-utils/schlib/autogen/connector/)"
+			(at 360.68 97.282 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "3"
+			(uuid "db0e4a29-bbc0-4bb0-b0bf-db488e1400ed")
+		)
+		(pin "4"
+			(uuid "c0a364a7-6ff7-45c5-bde0-dd64d48d0ae1")
+		)
+		(pin "5"
+			(uuid "2b6c2f9c-77f2-44d3-8ae9-d81036c291b8")
+		)
+		(pin "2"
+			(uuid "083b0fdc-5131-499c-99a5-91edd4160f20")
+		)
+		(pin "1"
+			(uuid "c3aa51e2-d0d8-4cc8-b45f-4bb2a01405b5")
+		)
+		(pin "6"
+			(uuid "e9d12bd4-d8fd-429e-9102-253e9ebcabb9")
+		)
+		(pin "7"
+			(uuid "760215b0-0b51-4924-bca0-c61078968a63")
+		)
+		(instances
+			(project "CoCoTANG"
+				(path "/975e10be-2eb6-4f70-aa39-19e0743e473f"
+					(reference "J2")
 					(unit 1)
 				)
 			)
@@ -35666,100 +36117,6 @@
 			(project "CoCoTANG"
 				(path "/975e10be-2eb6-4f70-aa39-19e0743e473f"
 					(reference "U22")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Connector_Generic:Conn_01x06")
-		(at 357.378 94.742 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "d443473f-4a00-40e9-b70c-b7b9c058af45")
-		(property "Reference" "J2"
-			(at 359.41 94.7419 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "ADDRMUX_OUT"
-			(at 359.41 97.2819 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Vertical"
-			(at 357.378 94.742 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 357.378 94.742 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Generic connector, single row, 01x06, script generated (kicad-library-utils/schlib/autogen/connector/)"
-			(at 357.378 94.742 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "16023f70-4a95-4140-b0d3-2869a9e2da5f")
-		)
-		(pin "2"
-			(uuid "55e9688b-0811-44b2-8f2f-997a7414850c")
-		)
-		(pin "3"
-			(uuid "e59d3ba2-7301-4aaf-a939-c7592ebbab41")
-		)
-		(pin "6"
-			(uuid "b9be6d16-dc9a-4840-a6fe-132f63027618")
-		)
-		(pin "5"
-			(uuid "9366dfcc-a60d-488f-8d10-8dd78cf9f781")
-		)
-		(pin "4"
-			(uuid "8da89919-76d4-4a51-8cb0-8986422668e1")
-		)
-		(instances
-			(project "CoCoTANG"
-				(path "/975e10be-2eb6-4f70-aa39-19e0743e473f"
-					(reference "J2")
 					(unit 1)
 				)
 			)
