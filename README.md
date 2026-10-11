@@ -17,9 +17,9 @@ CoCoTANG is a Tang Nano 20K-based CoCo 3 upgrade for the Radio Shack/Tandy Color
 
 ![Render of the complete CoCoTANG PCB panel](fpga/docs/board-panel.png)
 
-The PCB is manufactured as one panel containing eight sections: the **main board**; **PIA0**, **PIA1**, **CPU**, and **74LS138 displacers**; a **Component/RGB video hat**; a **CVBS/S-Video hat**; and an **HDBDOS ROM cartridge**. The render shows their arrangement before the sections are separated for assembly.
+The project is composed of several daugherboards: the **main board** (CPU/TangNano20K); the **PIA0**; the **PIA1**; the **74LS138 displacers**; a **Component/RGB video hat**; a **CVBS/S-Video hat**; and finally an **HDBDOS ROM cartridge**. The render shows their arrangement. Video hats and the cartridge is optional. You can use a FD502 rom slot or CoCoSDC flash banks for the HDB-DOS rom.
 
-The design uses NTSC-machine clocking. The GIME's 50 Hz setting remains available, but it does **not** switch to a PAL crystal or PAL color encoding. See the [FPGA design notes](fpga/README.md) for supported video modes and hardware details.
+The design uses NTSC-machine clocking. The GIME's 50 Hz setting remains available, but it does **not** switch to a PAL crystal, although it can output PAL encoded video at CVBS/S-Video. See the [FPGA design notes](fpga/README.md) for supported video modes and hardware details.
 
 ## Hardware and files
 
@@ -39,6 +39,7 @@ The design uses NTSC-machine clocking. The GIME's 50 Hz setting remains availabl
 | 6 | 470pF | CAP CER 470PF 50V C0G/NP0 0805 | [490-1617-1-ND](https://www.digikey.com/en/products/detail/murata-electronics/GRM2165C1H471JA01D/587515) | C8,C9,C11,C13,C14,C16 | |
 | 1 | 1uF | CAP CER 1UF 25V X7R 0805 | [399-C0805C105K3RACTUCT-ND](https://www.digikey.com/en/products/detail/kemet/C0805C105K3RACTU/3471727) | C15 | |
 | 2 | 6.8nF | CAP CER 6800PF 250V C0G/NP0 0805 | [490-GCM21B5C2E682JX0ALCT-ND](https://www.digikey.com/en/products/detail/murata-electronics/GCM21B5C2E682JX0AL/17846799) | C22,C24 | |
+| 2 | 6.8nF | CAP CER 1800PF 250V C0G/NP0 0805 | [490-GCM21A5C2E182FX01DCT-ND](https://www.digikey.ca/en/products/detail/murata-electronics/GCM21A5C2E182FX01D/17845644) | C10,C12 | |
 | 2 | 4.7uF | CAP CER 4.7UF 16V X7R 0805 | [732-7666-1-ND](https://www.digikey.com/en/products/detail/w%C3%BCrth-elektronik/885012207053/5453521) | C23,C25 | |
 | 2 | SD103BW | DIODE SCHOTTKY 30V 0.35A SOD123F | [4878-SD103BWCT-ND](https://www.digikey.com/en/products/detail/diotec-semiconductor/SD103BW/22600375) | D1,D3 | |
 | 1 | SS14 | DIODE SCHOTTKY 40V 1A DO214AC | [SS14CT-ND](https://www.digikey.com/en/products/detail/onsemi/SS14/965474) | D2 | |
