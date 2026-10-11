@@ -1,6 +1,17 @@
 # CoCoTANG
 
-![CoCoTANG logo](models/logo.png)
+![CoCoTANG logo](fpga/docs/logo.png)
+
+# WARNING: WIP Project - DO NOT ISSUE BOARDS YET
+
+Until we greenlit the project, do not order boards yet, but you are free to sneak peek the project so far.
+
+## Current rollout: 
+
+- A new board has been designed but not issued
+- Still deciding on PIAs layout
+
+# Project Description
 
 CoCoTANG is a Tang Nano 20K-based CoCo 3 upgrade for the Radio Shack/Tandy Color Computer. It keeps the original MC6809E CPU and motherboard PIAs while the FPGA implements the GIME video and memory subsystem, HDMI and analog video output, and an SD-card-backed Glenside-compatible IDE interface. The FPGA sources, KiCad board files, manufacturing files, and bill of materials are in this repository.
 
@@ -45,12 +56,8 @@ The design uses NTSC-machine clocking. The GIME's 50 Hz setting remains availabl
 | 4 | SN74LVC245AN | IC TXRX 1.65V/3.6V 20-TSSOP | [296-1233-1-ND](https://www.digikey.com/en/products/detail/texas-instruments/SN74LVC245APWR/276501) | U8,U10,U11,U12 | |
 | 1 | SN74HC245PWR | IC TXRX 2V/6V 20-TSSOP | [296-8279-1-ND](https://www.digikey.com/en/products/detail/texas-instruments/SN74HC245PWR/376997) | U9 | |
 | 1 | 74HC11 | IC AND 3-CIR 3-IN 14-TSSOP | [296-13611-1-ND](https://www.digikey.com/en/products/detail/texas-instruments/SN74HC11PWR/498520) | U22 | |
-| 3 | CABLE FFC/FPC 40POS 0.5MM 8" | CABLE FFC/FPC 40POS 0.5MM 8" | [WM19595-ND](https://www.digikey.com/en/products/detail/molex/0151660440/3281321) | J2,J22,J26,J24,J29,J8 | [AliExpress](https://www.aliexpress.com/item/1005007302750085.html) |
-| 1 | CABLE FFC/FPC 16POS 0.5MM 8" | CABLE FFC/FPC 16POS 0.5MM 8" | [0151660176-ND](https://www.digikey.com/en/products/detail/molex/0151660176/3281057) | J11,J10 | [AliExpress](https://www.aliexpress.com/item/1005007302750085.html) |
 | 1 | DIP-16 SOCKET | CONN IC DIP SOCKET 16POS GOLD | [SA163000](https://www.digikey.com/en/products/detail/on-shore-technology-inc/SA163000/3313525) | 74LS138 | |
-| 6 | ZIF-CONN 40 POS | CONN FFC FPC 40POS 0.5MM R/A | [2987-CF4240FH0R0-05-NHCT-ND](https://www.digikey.com/en/products/detail/cvilux-usa/CF4240FH0R0-05-NH/15793119) | J2,J22,J26,J24,J29,J8 | |
-| 2 | ZIF-CONN 16 POS | CONN FFC FPC 16POS 0.5MM R/A | [2987-CF4216FH0R0-05-NHCT-ND](https://www.digikey.com/en/products/detail/cvilux-usa/CF4216FH0R0-05-NH/15793066) | J11,J10 | |
-| 6 | DIP-40 SOCKET | MACHINE PIN SOCKET, IC, DIP, 40P | [ICM-640-1-GT-HT](https://www.digikey.com/en/products/detail/adam-tech/ICM-640-1-GT-HT/9832971) | J1,J4,J5,PIA0,PIA1,CPU | [AliExpress](https://www.aliexpress.com/item/1005006139495909.html) |
+| 3 | DIP-40 SOCKET | MACHINE PIN SOCKET, IC, DIP, 40P | [ICM-640-1-GT-HT](https://www.digikey.com/en/products/detail/adam-tech/ICM-640-1-GT-HT/9832971) | J1,J4,J5,PIA0,PIA1,CPU | [AliExpress](https://www.aliexpress.com/item/1005006139495909.html) |
 | 1 | SIL FEMALE HDR | MACHINE PIN SOCKET 40P 2.54MM PI | [SMC-1A-40-1-GT-HT](https://www.digikey.com/en/products/detail/adam-tech/SMC-1A-40-1-GT-HT/9831942) | U5 | [AliExpress](https://www.aliexpress.com/item/1005008648234734.html) |
 | 8 | SIL HEADER | CONN SIL HDR MALE PIN 20POS | [D01-9922046](https://www.digikey.com/en/products/detail/harwin-inc/D01-9922046/3727867) | J9,12,J13,U5 | [AliExpress](https://www.aliexpress.com/item/1005007563971977.html) |
 | 2 | SIL MALE HEADER | CONN HDR .100" 8POS | [TS-108-T-A-1](https://www.digikey.com/en/products/detail/samtec-inc/TS-108-T-A-1/9772928) | J28 | [AliExpress](https://www.aliexpress.com/item/1005007563971977.html) |

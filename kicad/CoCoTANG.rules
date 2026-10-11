@@ -11,7 +11,7 @@
     (via_costs 500)
     (plane_via_costs 5)
     (start_ripup_costs 100)
-    (start_pass_no 68380)
+    (start_pass_no 71331)
     (layer_rule F.Cu
       (active on)
       (preferred_direction vertical)
@@ -33,7 +33,6 @@
     (clearance 152.4 (type "kicad_default"))
     (clearance 152.4 (type GND))
     (clearance 152.4 (type +5V))
-    (clearance 152.4 (type +3.3V))
     (clearance 152.4 (type kicad))
   )
   (padstack "Via[0-1]_457.2:203.2_um"
@@ -86,31 +85,11 @@
     )
   )
   (class "kicad_default"
-    "@kicad-selection-only@@~{HALT}" "@kicad-selection-only@@~{NMI}" "@kicad-selection-only@@~{RESET}" "@kicad-selection-only@@E" "@kicad-selection-only@@Q" "@kicad-selection-only@@~{CART}" "@kicad-selection-only@@D0" "@kicad-selection-only@@D1"
-    "@kicad-selection-only@@D2" "@kicad-selection-only@@D3" "@kicad-selection-only@@D4" "@kicad-selection-only@@D5" "@kicad-selection-only@@D6" "@kicad-selection-only@@D7" "@kicad-selection-only@@R{slash}~{W}" "@kicad-selection-only@@A0"
-    "@kicad-selection-only@@A1" "@kicad-selection-only@@A2" "@kicad-selection-only@@A3" "@kicad-selection-only@@A4" "@kicad-selection-only@@A5" "@kicad-selection-only@@A6" "@kicad-selection-only@@A7" "@kicad-selection-only@@A8"
-    "@kicad-selection-only@@A9" "@kicad-selection-only@@A10" "@kicad-selection-only@@A11" "@kicad-selection-only@@A12" "@kicad-selection-only@@~{CTS}" "@kicad-selection-only@@~{SCS}" "@kicad-selection-only@@A13" "@kicad-selection-only@@A14"
-    "@kicad-selection-only@@A15" "@kicad-selection-only@@~{SLENB}" "@kicad-selection-only@@Y_33" "@kicad-selection-only@@CVBS_33" "@kicad-selection-only@@AUDIO_33" "@kicad-selection-only@@Net-(D1-K)" "@kicad-selection-only@@Net-(D3-K)" "@kicad-selection-only@@MP7_33"
-    "@kicad-selection-only@@MP6_33" "@kicad-selection-only@@MP5_33" "@kicad-selection-only@@MP4_33" "@kicad-selection-only@@MP3_33" "@kicad-selection-only@@MP2_33" "@kicad-selection-only@@MP1_33" "@kicad-selection-only@@MP0_33" "@kicad-selection-only@@MSEL0"
-    "@kicad-selection-only@@~{HS_33}" "@kicad-selection-only@@~{FS_33}" "@kicad-selection-only@@FIRQ_33" "@kicad-selection-only@@unconnected-(U5-85_IOT4B-Pad4)" "@kicad-selection-only@@S0_33" "@kicad-selection-only@@S2_33" "@kicad-selection-only@@MSEL0_33" "@kicad-selection-only@@MSEL1_33"
-    "@kicad-selection-only@@IRQ_33" "@kicad-selection-only@@D7_33" "@kicad-selection-only@@D6_33" "@kicad-selection-only@@D5_33" "@kicad-selection-only@@D4_33" "@kicad-selection-only@@D3_33" "@kicad-selection-only@@D2_33" "@kicad-selection-only@@D1_33"
-    "@kicad-selection-only@@D0_33" "@kicad-selection-only@@E_33" "@kicad-selection-only@@CHR_33" "@kicad-selection-only@@S1_33" "@kicad-selection-only@@RESET_33" "@kicad-selection-only@@unconnected-(U5-80_IOT27A-Pad37)" "@kicad-selection-only@@Q_33" "@kicad-selection-only@@Net-(D2-K)"
-    "@kicad-selection-only@@ROW0" "@kicad-selection-only@@ROW1" "@kicad-selection-only@@ROW2" "@kicad-selection-only@@ROW3" "@kicad-selection-only@@ROW4" "@kicad-selection-only@@ROW5" "@kicad-selection-only@@ROW6" "@kicad-selection-only@@AP9"
-    "@kicad-selection-only@@AP10" "@kicad-selection-only@@AP11" "@kicad-selection-only@@AP12" "@kicad-selection-only@@AP13" "@kicad-selection-only@@AP14" "@kicad-selection-only@@AP15" "@kicad-selection-only@@AP16" "@kicad-selection-only@@AP17"
-    "@kicad-selection-only@@~{FS}" "@kicad-selection-only@@AP19" "@kicad-selection-only@@~{HS}" "@kicad-selection-only@@AP39" "@kicad-selection-only@@AP38" "@kicad-selection-only@@AP37" "@kicad-selection-only@@AP36" "@kicad-selection-only@@AP35"
-    "@kicad-selection-only@@AP34" "@kicad-selection-only@@AP33" "@kicad-selection-only@@AP32" "@kicad-selection-only@@AP31" "@kicad-selection-only@@AP30" "@kicad-selection-only@@AP29" "@kicad-selection-only@@AP28" "@kicad-selection-only@@AP27"
-    "@kicad-selection-only@@AP26" "@kicad-selection-only@@AP25" "@kicad-selection-only@@AP24" "@kicad-selection-only@@AP23" "@kicad-selection-only@@AP22" "@kicad-selection-only@@AP21" "@kicad-selection-only@@Net-(Q8-Pad1)" "@kicad-selection-only@@~{IRQ}"
-    "@kicad-selection-only@@~{FIRQ}" "@kicad-selection-only@@CP39" "@kicad-selection-only@@S0" "@kicad-selection-only@@S1" "@kicad-selection-only@@S2" "@kicad-selection-only@@DP4" "@kicad-selection-only@@DP5" "@kicad-selection-only@@PIA1"
-    "@kicad-selection-only@@PIA0" "@kicad-selection-only@@DATADIR" "@kicad-selection-only@@~{DATAEN}" "@kicad-selection-only@@BP2" "@kicad-selection-only@@BP3" "@kicad-selection-only@@BP4" "@kicad-selection-only@@BP5" "@kicad-selection-only@@BP6"
-    "@kicad-selection-only@@BP7" "@kicad-selection-only@@BP8" "@kicad-selection-only@@BP9" "@kicad-selection-only@@SERNT" "@kicad-selection-only@@BP11" "@kicad-selection-only@@BP12" "@kicad-selection-only@@BP13" "@kicad-selection-only@@BP14"
-    "@kicad-selection-only@@BP15" "@kicad-selection-only@@BP16" "@kicad-selection-only@@BP17" "@kicad-selection-only@@BP19" "@kicad-selection-only@@BP21" "@kicad-selection-only@@BP22" "@kicad-selection-only@@BP23" "@kicad-selection-only@@BP24"
-    "@kicad-selection-only@@BP25" "@kicad-selection-only@@BP26" "@kicad-selection-only@@BP27" "@kicad-selection-only@@BP28" "@kicad-selection-only@@BP29" "@kicad-selection-only@@BP30" "@kicad-selection-only@@BP31" "@kicad-selection-only@@BP32"
-    "@kicad-selection-only@@BP33" "@kicad-selection-only@@BP34" "@kicad-selection-only@@BP35" "@kicad-selection-only@@BP36" "@kicad-selection-only@@BP37" "@kicad-selection-only@@BP38" "@kicad-selection-only@@BP39" "@kicad-selection-only@@BP40"
-    "@kicad-selection-only@@Net-(Q7-Pad1)" "@kicad-selection-only@@CP5" "@kicad-selection-only@@CP6" "@kicad-selection-only@@CP38" "@kicad-selection-only@@CP36" "@kicad-selection-only@@CP33" "@kicad-selection-only@@CLK" "@kicad-selection-only@@Net-(Q9-Pad1)"
-    "@kicad-selection-only@@~{MRD}" "@kicad-selection-only@@~{ROM}" "@kicad-selection-only@@~{MENEN}" "@kicad-selection-only@@~{EXTROM}" "@kicad-selection-only@@unconnected-(J10-Pad7)" "@kicad-selection-only@@unconnected-(J10-Pad10)" "@kicad-selection-only@@unconnected-(J10-Pad11)" "@kicad-selection-only@@unconnected-(J10-Pad12)"
-    "@kicad-selection-only@@unconnected-(J1-Pin_5-Pad5)" "@kicad-selection-only@@unconnected-(J1-Pin_6-Pad6)" "@kicad-selection-only@@unconnected-(J1-Pin_33-Pad33)" "@kicad-selection-only@@unconnected-(J1-Pin_36-Pad36)" "@kicad-selection-only@@unconnected-(J1-Pin_38-Pad38)" "@kicad-selection-only@@KEYINT" "@kicad-selection-only@@MSEL2" "@kicad-selection-only@@MSEL1"
-    "@kicad-selection-only@@unconnected-(U1-Y7-Pad7)" "@kicad-selection-only@@unconnected-(U3-Pin_7-Pad7)" "@kicad-selection-only@@unconnected-(U3-Pin_9-Pad9)" "@kicad-selection-only@@unconnected-(U3-Pin_10-Pad10)" "@kicad-selection-only@@unconnected-(U3-Pin_11-Pad11)" "@kicad-selection-only@@unconnected-(U3-Pin_12-Pad12)" "@kicad-selection-only@@unconnected-(U3-Pin_13-Pad13)" "@kicad-selection-only@@unconnected-(U3-Pin_14-Pad14)"
-    "@kicad-selection-only@@unconnected-(U3-Pin_15-Pad15)" "@kicad-selection-only@@unconnected-(U7-Pin_9-Pad9)" "@kicad-selection-only@@unconnected-(U7-Pin_10-Pad10)" "@kicad-selection-only@@unconnected-(U7-Pin_13-Pad13)"
+    "@kicad-selection-only@@unconnected-(J13-Pin_1-Pad1)" "@kicad-selection-only@@unconnected-(J13-Pin_2-Pad2)" "@kicad-selection-only@@~{HALT}" "@kicad-selection-only@@~{NMI}" "@kicad-selection-only@@~{RESET}" "@kicad-selection-only@@E" "@kicad-selection-only@@Q" "@kicad-selection-only@@~{CART}"
+    "@kicad-selection-only@@D0" "@kicad-selection-only@@D1" "@kicad-selection-only@@D2" "@kicad-selection-only@@D3" "@kicad-selection-only@@D4" "@kicad-selection-only@@D5" "@kicad-selection-only@@D6" "@kicad-selection-only@@D7"
+    "@kicad-selection-only@@R{slash}~{W}" "@kicad-selection-only@@A0" "@kicad-selection-only@@A1" "@kicad-selection-only@@A2" "@kicad-selection-only@@A3" "@kicad-selection-only@@A4" "@kicad-selection-only@@A5" "@kicad-selection-only@@A6"
+    "@kicad-selection-only@@A7" "@kicad-selection-only@@A8" "@kicad-selection-only@@A9" "@kicad-selection-only@@A10" "@kicad-selection-only@@A11" "@kicad-selection-only@@A12" "@kicad-selection-only@@~{CTS}" "@kicad-selection-only@@SND"
+    "@kicad-selection-only@@~{SCS}" "@kicad-selection-only@@A13" "@kicad-selection-only@@A14" "@kicad-selection-only@@A15" "@kicad-selection-only@@~{SLENB}" "@kicad-selection-only@@unconnected-(U2-NC-Pad1)" "@kicad-selection-only@@unconnected-(U2-NC-Pad26)"
     (clearance_class "kicad_default")
     (via_rule "kicad_default")
     (rule
@@ -143,7 +122,6 @@
     )
   )
   (class +3.3V
-    "@kicad-selection-only@@+3.3V"
     (clearance_class default)
     (via_rule +3.3V)
     (rule
