@@ -131,12 +131,13 @@ module coco3 #(
     wire [6:0] sam_video_offset;
     wire [95:0] palettes;
     wire hborder_irq_n;
+    wire vborder_irq_n;
     assign video_50hz = vmode[3];
     gime_registers #(.DISTO_2MB(DISTO_2MB)) registers (
         .clk(clk), .reset_n(core_reset_n), .e(e), .e_fall(e_fall),
         .cpu_addr(cpu_addr), .cpu_rw_n(cpu_rw_n), .cpu_data(cpu_data),
         .serint_n(serint_n), .keyint_n(keyint_n), .cart_n(cart_n),
-        .hs_n(hborder_irq_n), .fs_n(fs_n),
+        .hs_n(hborder_irq_n), .fs_n(vborder_irq_n),
         .irq_assert(irq_assert), .firq_assert(firq_assert),
         .fast_mode(fast_mode),
         .core_rdata(core_rdata), .core_data_oe(core_data_oe), .sam_s(sam_s),
@@ -401,6 +402,7 @@ module coco3 #(
         .pixel_rgb({hdmi_pixel_data[23:22],hdmi_pixel_data[15:14],
                     hdmi_pixel_data[7:6]}),.hs_n(hs_n),.fs_n(fs_n),
         .hborder_irq_n(hborder_irq_n),
+        .vborder_irq_n(vborder_irq_n),
         .hblank(hblank),.vblank(vblank),.debug_raster_y(debug_native_y),
         .trace_line_sample(gime_trace_sample),
         .trace_active_line(gime_trace_active_line),

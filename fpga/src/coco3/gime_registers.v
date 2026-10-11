@@ -7,6 +7,7 @@ module gime_registers #(
     input clk, input reset_n, input e, input e_fall,
     input [15:0] cpu_addr, input cpu_rw_n, input [7:0] cpu_data,
     input serint_n, input keyint_n, input cart_n,
+    // Border-event inputs; physical HS/FS go separately to the PIAs.
     input hs_n, input fs_n,
     output reg [7:0] core_rdata, output core_data_oe,
     output irq_assert, output firq_assert, output wire fast_mode,

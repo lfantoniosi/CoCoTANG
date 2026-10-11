@@ -7,6 +7,7 @@ module gime_native_video (
     input [5:0] compatibility_border_rgb,
     input [5:0] pixel_rgb,
     output wire hs_n, output wire fs_n, output wire hborder_irq_n,
+    output wire vborder_irq_n,
     output wire hblank, output wire vblank,
     output [8:0] debug_raster_y,
     output wire trace_line_sample,
@@ -33,6 +34,7 @@ module gime_native_video (
     reg [9:0] x=0;
     reg [8:0] y=0;
     reg native_hs_n=1,native_fs_n=1,native_hborder_irq_n=1;
+    reg native_vborder_irq_n=1;
     reg native_hblank=1,native_vblank=1;
     // The body is positioned inside the 240 visible raster lines, not the
     // complete 262.5-line field.  The omitted vertical-blank interval is
@@ -61,6 +63,12 @@ module gime_native_video (
                                       (timing_graphics ? 11'd110 : 11'd106);
     wire [10:0] hb_taa = timing_hr0 ? 11'd640 : 11'd512;
     wire [10:0] hb_irq_position = 11'd80 + hb_tbp + hb_tlb + hb_taa;
+    // 1986 GIME vertical events occur near the start of the left border.
+    // XRoar's tHS_VB varies with horizontal resolution and text/graphics.
+    wire [9:0] vb_irq_position = timing_hr2 ?
+        (timing_hr0 ? 10'd163 : 10'd227) :
+        timing_hr0 ? (timing_graphics ? 10'd157 : 10'd161) :
+                     (timing_graphics ? 10'd221 : 10'd225);
     // Capture after FF98 writes made early in HBORD (BOINK writes at dot 71),
     // at the same left-border point used by XRoar's field trace.
     assign trace_line_sample=raster_tick && x==10'd200;
@@ -100,6 +108,7 @@ module gime_native_video (
     reg [8:0] compatibility_y=0;
     reg [3:0] compatibility_sample_phase=0;
     reg compatibility_hs_n=1,compatibility_fs_n=1;
+    reg compatibility_vborder_irq_n=1;
     reg compatibility_hborder_irq_n=1;
     reg compatibility_hblank=1,compatibility_vblank=1;
     wire [8:0] compatibility_top=live_top+9'd16;
@@ -114,6 +123,8 @@ module gime_native_video (
     assign fs_n=compatibility_mode?compatibility_fs_n:native_fs_n;
     assign hborder_irq_n=compatibility_mode?
         compatibility_hborder_irq_n:native_hborder_irq_n;
+    assign vborder_irq_n=compatibility_mode?
+        compatibility_vborder_irq_n:native_vborder_irq_n;
     assign hblank=compatibility_mode?compatibility_hblank:native_hblank;
     assign vblank=compatibility_mode?compatibility_vblank:native_vblank;
     always @(posedge clk or negedge reset_n) begin
@@ -126,6 +137,7 @@ module gime_native_video (
             standard_50_seen<=0;standard_60_phase_valid<=0;
             standard_60_phase_x<=0;standard_60_phase_y<=0;
             native_hs_n<=1; native_fs_n<=1;native_hborder_irq_n<=1;
+            native_vborder_irq_n<=1;
             native_hblank<=1; native_vblank<=1;
         end else begin
             hdmi_frame_meta<=hdmi_frame_start;
@@ -154,6 +166,9 @@ module gime_native_video (
                 native_field_50hz<=1'b0;
                 standard_60_resync_pending<=1'b0;
             end else if (raster_tick) begin
+                // VBORD is the end of the active picture, independent of
+                // FS, which remains the external/PIA frame-sync signal.
+                native_vborder_irq_n<=!(y==native_bottom && x==vb_irq_position);
                 native_hs_n<=x>=10'd64; native_fs_n<=y>=9'd3;
                 native_hblank<=x<10'd200 || x>=10'd840;
                 native_vblank<=y<native_top || y>=native_bottom;
@@ -186,6 +201,7 @@ module gime_native_video (
             compatibility_field_50hz<=0;
             compatibility_hs_n<=1;compatibility_fs_n<=1;
             compatibility_hborder_irq_n<=1;
+            compatibility_vborder_irq_n<=1;
             compatibility_hblank<=1;compatibility_vblank<=1;
             compatibility_sample<=0;compatibility_sample_css<=0;
             compatibility_sample_y<=0;compatibility_sample_byte<=0;
@@ -200,6 +216,9 @@ module gime_native_video (
             compatibility_accumulator<=compatibility_sum[31:0];
             compatibility_raster_tick<=compatibility_sum[32];
             if (compatibility_raster_tick) begin
+                compatibility_vborder_irq_n<=
+                    !(compatibility_y==compatibility_bottom &&
+                      compatibility_x==vb_irq_position);
                 compatibility_hs_n<=compatibility_x>=10'd66;
                 compatibility_fs_n<=compatibility_y>=9'd3;
                 compatibility_hblank<=compatibility_x<10'd200 ||

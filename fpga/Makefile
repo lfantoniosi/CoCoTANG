@@ -99,6 +99,8 @@ test:
 	vvp /private/tmp/cocotang_tb_gime_timing
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_native_video tests/tb_gime_native_video.v src/coco3/gime_native_video.v
 	vvp /private/tmp/cocotang_tb_gime_native_video
+	iverilog -g2012 -s tb_gime_vborder -o /private/tmp/cocotang_tb_gime_vborder tests/tb_gime_vborder.v src/coco3/gime_native_video.v src/coco3/gime_registers.v
+	vvp /private/tmp/cocotang_tb_gime_vborder
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_50_to_60_resync tests/tb_gime_50_to_60_resync.v src/coco3/gime_native_video.v
 	vvp /private/tmp/cocotang_tb_gime_50_to_60_resync
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_50_to_60_field_wrap tests/tb_gime_50_to_60_field_wrap.v src/coco3/gime_native_video.v
