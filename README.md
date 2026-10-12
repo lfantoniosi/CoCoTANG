@@ -4,7 +4,11 @@
 
 # WARNING: WIP Project - DO NOT ISSUE BOARDS YET
 
-Until we greenlit the project, do not order boards yet, but you are free to sneak peek the project so far.
+Until we greenlit the project, do not order boards yet, but you are free to sneak peek in the project so far.
+
+# Notes:
+
+- FGPA address pins are still set to the prototype. They need to be adjusted when new boards arrive (re-ordered pins)
 
 ## Current rollout: 
 
