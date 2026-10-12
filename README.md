@@ -29,11 +29,25 @@ The design uses NTSC-machine clocking. The GIME's 50 Hz setting remains availabl
 
 | Item | File or notes |
 | --- | --- |
-| PCB fabrication files | [KiCad Gerber/drill ZIP](kicad/gerber.zip) |
+| PCB fabrication files | [Gerber/drill ZIPs for each board](kicad/gerber/) |
 | KiCad schematic and PCB | [kicad/](kicad/) |
 | Components | Full bill of materials below |
 | FPGA project and sources | [fpga/](fpga/) |
 | FPGA pin/bus map | [fpga/docs/pinout.md](fpga/docs/pinout.md) |
+
+## Board quantities and Gerber downloads
+
+For one CoCoTANG installation, you need **one main board, one address mux board, and two PIA boards**: one for PIA0 and one for PIA1. The HDB-DOS cartridge and video hat are optional.
+
+| Board | Quantity per installation | Gerber/drill ZIP |
+| --- | --- | --- |
+| Main board (CPU / Tang Nano 20K) | 1 required | [gerber_main.zip](kicad/gerber/gerber_main.zip) |
+| Address mux (addrmux) | 1 required | [gerber_addrmux.zip](kicad/gerber/gerber_addrmux.zip) |
+| PIA card | 2 required: PIA0 and PIA1 | [gerber_pia.zip](kicad/gerber/gerber_pia.zip) |
+| HDB-DOS cartridge | 1 optional | [gerber_cart.zip](kicad/gerber/gerber_cart.zip) |
+| Video hat | 1 optional | [gerber_video.zip](kicad/gerber/gerber_video.zip) |
+
+Use the same PIA Gerber ZIP to fabricate both PIA cards. Upload each desired board's ZIP separately to your PCB manufacturer and select the quantities above, subject to the manufacturer's minimum order quantity.
 
 ## Bill of materials
 
@@ -53,6 +67,7 @@ The design uses NTSC-machine clocking. The GIME's 50 Hz setting remains availabl
 | 2 | 47K | RES SMD 47K OHM 1% 1/8W 0805 | [YAG3735CT-ND](https://www.digikey.com/en/products/detail/yageo/AC0805FR-0747KL/6006584) | R8,R9 | |
 | 6 | 75 | RES 75 OHM 1% 1/8W 0805 | [541-CRCW080575R0FKEACCT-ND](https://www.digikey.com/en/products/detail/vishay-dale/CRCW080575R0FKEAC/12745060) | R10,R11,R12,R13,R14,R15 | |
 | 2 | 100K | RES 100K OHM 1% 1/8W 0805 | [541-3978-1-ND](https://www.digikey.com/en/products/detail/vishay-dale/CRCW0805100KFKEAC/7928661) | R22,R24 | |
+| 2 | 4.7K | RES ARRAY 8 RES 4.7K OHM 9SIP | [4609X-101-472LF-ND](https://www.digikey.ca/en/products/detail/bourns-inc/4609X-101-472LF/3593671) | RN1,RN2 | |
 | 9 | MMBT3904-TP | TRANS NPN 40V 0.2A SOT-23 | [MMBT3904TPMSCT-ND](https://www.digikey.com/en/products/detail/mcc-micro-commercial-components/MMBT3904-TP/717280) | Q1,Q2,Q3,Q4,Q5,Q6,Q7,Q8,Q9 | |
 | 1 | SN74HC138PWR | IC DECODER/DEMUX 1X3:8 16-TSSOP | [296-8228-1-ND](https://www.digikey.com/en/products/detail/texas-instruments/SN74HC138PWR/377034) | U1 | |
 | 1 | 74HC139 | IC DECODER/DEMUX 1X2:4 16-TSSOP | [1727-6580-1-ND](https://www.digikey.com/en/products/detail/nexperia-usa-inc/74HC139PW-118/2813773) | U3 | |

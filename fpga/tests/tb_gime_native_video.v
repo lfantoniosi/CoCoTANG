@@ -6,13 +6,14 @@ module tb_gime_native_video;
     integer errors=0;
     integer raster_ticks=0;
     integer frames=0;
-    reg saw_hborder_at_830=0;
+    reg saw_hborder_at_825=0;
 
     always #5 clk=!clk;
 
     gime_native_video dut(
         .clk(clk),.reset_n(reset_n),.video_50hz(video_50hz),
-        .bit_plane(bit_plane),.hdmi_frame_start(1'b0),
+        .bit_plane(bit_plane),.hres(4'd7),.vmode({bit_plane,7'd0}),
+        .hdmi_frame_start(1'b0),
         .hdmi_active_50hz(1'b0),
         .active_height(8'd192),.compatibility_mode(1'b0),
         .compatibility_css(1'b0),
@@ -28,8 +29,8 @@ module tb_gime_native_video;
         if (reset_n && dut.raster_tick) begin
             raster_ticks=raster_ticks+1;
             // Sequential outputs reflect the preceding dot here.
-            if (!hborder_irq_n && dut.x==10'd831)
-                saw_hborder_at_830=1;
+            if (!hborder_irq_n && dut.x==10'd826)
+                saw_hborder_at_825=1;
             if (dut.y==dut.frame_last_line && dut.x==dut.half_line_dot) begin
                 frames=frames+1;
                 if ((!video_50hz && raster_ticks!=238875) ||
@@ -44,12 +45,12 @@ module tb_gime_native_video;
                 end else if (frames==3) begin
                     video_50hz=1'b1;
                 end else if (frames==4) begin
-                    if (!saw_hborder_at_830) begin
-                        $display("HBORD interrupt did not assert at dot 830");
+                    if (!saw_hborder_at_825) begin
+                        $display("HBORD interrupt did not assert at dot 825");
                         errors=errors+1;
                     end
                     if (errors==0) $display("tb_gime_native_video PASS");
-                    else $display("tb_gime_native_video FAIL: %0d",errors);
+                    else $fatal(1,"tb_gime_native_video FAIL: %0d",errors);
                     $finish;
                 end
             end

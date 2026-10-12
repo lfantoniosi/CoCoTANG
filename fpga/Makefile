@@ -101,6 +101,8 @@ test:
 	vvp /private/tmp/cocotang_tb_gime_native_video
 	iverilog -g2012 -s tb_gime_vborder -o /private/tmp/cocotang_tb_gime_vborder tests/tb_gime_vborder.v src/coco3/gime_native_video.v src/coco3/gime_registers.v
 	vvp /private/tmp/cocotang_tb_gime_vborder
+	iverilog -g2012 -s tb_coco3_vborder_startup -o /private/tmp/cocotang_tb_vborder_startup tests/tb_coco3_vborder_startup.sv src/coco3/coco3.v src/coco3/gime_timing.v src/coco3/gime_registers.v src/coco3/gime_mode_debug.v src/coco3/gime_native_video.v src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v src/video/coco3_hdmi.sv src/video/artifact_mode_osd.sv src/video/hdmi/hdmi.sv src/video/hdmi/tmds_channel.sv
+	vvp /private/tmp/cocotang_tb_vborder_startup
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_50_to_60_resync tests/tb_gime_50_to_60_resync.v src/coco3/gime_native_video.v
 	vvp /private/tmp/cocotang_tb_gime_50_to_60_resync
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_50_to_60_field_wrap tests/tb_gime_50_to_60_field_wrap.v src/coco3/gime_native_video.v

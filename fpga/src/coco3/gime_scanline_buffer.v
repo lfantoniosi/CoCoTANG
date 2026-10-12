@@ -17,6 +17,7 @@ module gime_scanline_buffer (
  input cpu_write_strobe,input [20:0] cpu_write_addr,
  input hdmi_read_clk,input [9:0] hdmi_read_x,input [7:0] hdmi_display_y,
  input hdmi_frame_start,input hdmi_active_50hz,
+ output reg picture_fetch_complete,
  input [8:0] hdmi_border_raster_y,
  input hdmi_display_valid,input hdmi_picture_active,
  input [7:0] hdmi_prefetch_y,input hdmi_prefetch_valid,
@@ -678,6 +679,7 @@ reg configuration_pending=1'b1;
 
  always @(posedge clk or negedge reset_n) begin
  if(!reset_n) begin
+   picture_fetch_complete<=0;
    state<=IDLE;memory_request<=0;memory_addr<=0;h_valid0<=0;h_valid1<=0;
    c_valid0<=0;c_valid1<=0;c_valid2<=0;
    h_dirty0<=0;h_dirty1<=0;c_dirty0<=0;c_dirty1<=0;c_dirty2<=0;
@@ -703,6 +705,8 @@ reg configuration_pending=1'b1;
    hdmi_frame_meta<=hdmi_frame_start;
    hdmi_frame_sync<=hdmi_frame_meta;
    hdmi_frame_prev<=hdmi_frame_sync;
+   if(hdmi_frame_rise||hdmi_standard_changed||upper_border_setup_abort)
+    picture_fetch_complete<=0;
    if(hdmi_frame_rise||hdmi_standard_changed||upper_border_setup_abort)
     prior_paint_valid<=0;
    if(hd_pa_s)upper_border_active<=0;
@@ -1068,6 +1072,8 @@ reg configuration_pending=1'b1;
     end
     FINALIZE_LINE:begin
       if(fill_hdmi)begin
+       if(active_height!=0 && fill_y==active_height-1'b1)
+        picture_fetch_complete<=1;
        if(fill_h_bank)begin h_tag1<=fill_y;h_start1<={fill_video_bank,line_address};h_bytes1<=fill_row_bytes;
         h_left_border1<=rendered_left_border;
         h_right_border1<=rendered_right_border;

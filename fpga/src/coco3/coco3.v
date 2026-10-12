@@ -132,6 +132,32 @@ module coco3 #(
     wire [95:0] palettes;
     wire hborder_irq_n;
     wire vborder_irq_n;
+    wire raw_vborder_irq_n;
+    wire picture_fetch_complete;
+    reg raw_vborder_prev=1'b1;
+    reg vborder_pending=1'b0;
+    reg safe_vborder_irq_n=1'b1;
+    // Keep the original HBORD/PIA raster phase. Only hold an early native
+    // VBORD until the last picture row is cached: its handler may change
+    // live HOFF/palette registers for the following frame.
+    assign vborder_irq_n=compatibility_mode ? raw_vborder_irq_n : safe_vborder_irq_n;
+    always @(posedge clk or negedge core_reset_n) begin
+        if(!core_reset_n)begin
+            raw_vborder_prev<=1'b1;
+            vborder_pending<=1'b0;
+            safe_vborder_irq_n<=1'b1;
+        end else begin
+            raw_vborder_prev<=raw_vborder_irq_n;
+            safe_vborder_irq_n<=1'b1;
+            if(compatibility_mode) vborder_pending<=1'b0;
+            else if((vborder_pending || (raw_vborder_prev && !raw_vborder_irq_n)) &&
+                    (picture_fetch_complete || active_height==0))begin
+                safe_vborder_irq_n<=1'b0;
+                vborder_pending<=1'b0;
+            end else if(raw_vborder_prev && !raw_vborder_irq_n)
+                vborder_pending<=1'b1;
+        end
+    end
     assign video_50hz = vmode[3];
     gime_registers #(.DISTO_2MB(DISTO_2MB)) registers (
         .clk(clk), .reset_n(core_reset_n), .e(e), .e_fall(e_fall),
@@ -360,6 +386,7 @@ module coco3 #(
         .hdmi_vertical_right_border_data(hdmi_vertical_right_border_data),
         .hdmi_vertical_border_valid(hdmi_vertical_border_valid),
         .hdmi_frame_start(hdmi_frame_start),
+        .picture_fetch_complete(picture_fetch_complete),
         .hdmi_active_50hz(hdmi_active_50hz),
         .hdmi_border_raster_y(hdmi_border_raster_y),
         .cvbs_read_clk(cvbs_read_clk),.cvbs_read_x(cvbs_source_x),
@@ -402,7 +429,7 @@ module coco3 #(
         .pixel_rgb({hdmi_pixel_data[23:22],hdmi_pixel_data[15:14],
                     hdmi_pixel_data[7:6]}),.hs_n(hs_n),.fs_n(fs_n),
         .hborder_irq_n(hborder_irq_n),
-        .vborder_irq_n(vborder_irq_n),
+        .vborder_irq_n(raw_vborder_irq_n),
         .hblank(hblank),.vblank(vblank),.debug_raster_y(debug_native_y),
         .trace_line_sample(gime_trace_sample),
         .trace_active_line(gime_trace_active_line),
