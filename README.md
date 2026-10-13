@@ -13,7 +13,6 @@ Until we greenlit the project, do not order boards yet, but you are free to snea
 ## Current rollout: 
 
 - A new board has been designed but not issued
-- Still deciding on PIAs layout
 
 # Project Description
 
@@ -51,41 +50,83 @@ Use the same PIA Gerber ZIP to fabricate both PIA cards. Upload each desired boa
 
 ## Bill of materials
 
+
+## MAINBOARD
+
 | Qty | Value | Description | DigiKey P/N | References | Alternative link |
 | ---: | --- | --- | --- | --- | --- |
-| 16 | 0.1uF | CAP CER 0805 0.1UF 100VDC X7R | [399-C0805F104K1RACAUTOCT-ND](https://www.digikey.com/en/products/detail/kemet/C0805F104K1RACAUTO/26735352) | C1,C2,C3,C4,C5,C6,C7,C26,C27,C28,C29,C30,C31,C32,C33,C34 | |
-| 6 | 470pF | CAP CER 470PF 50V C0G/NP0 0805 | [490-1617-1-ND](https://www.digikey.com/en/products/detail/murata-electronics/GRM2165C1H471JA01D/587515) | C8,C9,C11,C13,C14,C16 | |
-| 1 | 1uF | CAP CER 1UF 25V X7R 0805 | [399-C0805C105K3RACTUCT-ND](https://www.digikey.com/en/products/detail/kemet/C0805C105K3RACTU/3471727) | C15 | |
-| 2 | 6.8nF | CAP CER 6800PF 250V C0G/NP0 0805 | [490-GCM21B5C2E682JX0ALCT-ND](https://www.digikey.com/en/products/detail/murata-electronics/GCM21B5C2E682JX0AL/17846799) | C22,C24 | |
-| 2 | 6.8nF | CAP CER 1800PF 250V C0G/NP0 0805 | [490-GCM21A5C2E182FX01DCT-ND](https://www.digikey.ca/en/products/detail/murata-electronics/GCM21A5C2E182FX01D/17845644) | C10,C12 | |
-| 2 | 4.7uF | CAP CER 4.7UF 16V X7R 0805 | [732-7666-1-ND](https://www.digikey.com/en/products/detail/w%C3%BCrth-elektronik/885012207053/5453521) | C23,C25 | |
-| 2 | SD103BW | DIODE SCHOTTKY 30V 0.35A SOD123F | [4878-SD103BWCT-ND](https://www.digikey.com/en/products/detail/diotec-semiconductor/SD103BW/22600375) | D1,D3 | |
-| 1 | SS14 | DIODE SCHOTTKY 40V 1A DO214AC | [SS14CT-ND](https://www.digikey.com/en/products/detail/onsemi/SS14/965474) | D2 | |
-| 14 | 1K | RES 1K OHM 1% 1/8W 0805 | [541-3977-1-ND](https://www.digikey.com/en/products/detail/vishay-dale/CRCW08051K00FKEAC/7928660) | R1,R16,R17,R18,R23,R25,R27,R29,R31,R33,R35,R37,R38,R39 | |
-| 3 | 10K | RES 10K OHM 1% 1/8W 0805 | [311-10.0KCRCT-ND](https://www.digikey.com/en/products/detail/yageo/RC0805FR-0710KL/727535) | R2,R4,R6 | |
-| 9 | 4.7K | RES 4.7K OHM 1% 1/8W 0805 | [311-4.70KCRCT-ND](https://www.digikey.com/en/products/detail/yageo/RC0805FR-074K7L/730876) | R3,R5,R7,R26,R28,R30,R32,R34,R36 | |
-| 2 | 47K | RES SMD 47K OHM 1% 1/8W 0805 | [YAG3735CT-ND](https://www.digikey.com/en/products/detail/yageo/AC0805FR-0747KL/6006584) | R8,R9 | |
-| 6 | 75 | RES 75 OHM 1% 1/8W 0805 | [541-CRCW080575R0FKEACCT-ND](https://www.digikey.com/en/products/detail/vishay-dale/CRCW080575R0FKEAC/12745060) | R10,R11,R12,R13,R14,R15 | |
-| 2 | 100K | RES 100K OHM 1% 1/8W 0805 | [541-3978-1-ND](https://www.digikey.com/en/products/detail/vishay-dale/CRCW0805100KFKEAC/7928661) | R22,R24 | |
-| 2 | 4.7K | RES ARRAY 8 RES 4.7K OHM 9SIP | [4609X-101-472LF-ND](https://www.digikey.ca/en/products/detail/bourns-inc/4609X-101-472LF/3593671) | RN1,RN2 | |
-| 9 | MMBT3904-TP | TRANS NPN 40V 0.2A SOT-23 | [MMBT3904TPMSCT-ND](https://www.digikey.com/en/products/detail/mcc-micro-commercial-components/MMBT3904-TP/717280) | Q1,Q2,Q3,Q4,Q5,Q6,Q7,Q8,Q9 | |
-| 1 | SN74HC138PWR | IC DECODER/DEMUX 1X3:8 16-TSSOP | [296-8228-1-ND](https://www.digikey.com/en/products/detail/texas-instruments/SN74HC138PWR/377034) | U1 | |
-| 1 | 74HC139 | IC DECODER/DEMUX 1X2:4 16-TSSOP | [1727-6580-1-ND](https://www.digikey.com/en/products/detail/nexperia-usa-inc/74HC139PW-118/2813773) | U3 | |
 | 1 | Tang Nano 20K | Tang Nano 20K FPGA Board | N/A | U5 | [AliExpress](https://www.aliexpress.com/item/1005010280135538.html) |
-| 1 | 74HC30 | IC NAND 1-CIR 8-IN 14-TSSOP | [1727-6596-1-ND](https://www.digikey.com/en/products/detail/nexperia-usa-inc/74HC30PW-118/1230294) | U7 | |
+| 6 | 0.1uF | CAP CER 0805 0.1UF 100VDC X7R | [399-C0805F104K1RACAUTOCT-ND](https://www.digikey.com/en/products/detail/kemet/C0805F104K1RACAUTO/26735352) | C1,C2,C3,C4,C5,C6,C7,C26,C27,C28,C29,C30,C31,C32,C33,C34 | |
+| 3 | MMBT3904-TP | TRANS NPN 40V 0.2A SOT-23 | [MMBT3904TPMSCT-ND](https://www.digikey.com/en/products/detail/mcc-micro-commercial-components/MMBT3904-TP/717280) | Q1,Q2,Q3,Q4,Q5,Q6,Q7,Q8,Q9 | |
+| 1 | SS14 | DIODE SCHOTTKY 40V 1A DO214AC | [SS14CT-ND](https://www.digikey.com/en/products/detail/onsemi/SS14/965474) | D2 | |
+| 3 | 10K | RES 10K OHM 1% 1/8W 0805 | [311-10.0KCRCT-ND](https://www.digikey.com/en/products/detail/yageo/RC0805FR-0710KL/727535) | R2,R4,R6 | |
+| 4 | 4.7K | RES 4.7K OHM 1% 1/8W 0805 | [311-4.70KCRCT-ND](https://www.digikey.com/en/products/detail/yageo/RC0805FR-074K7L/730876) | R3,R5,R7,R26,R28,R30,R32,R34,R36 | |
+| 2 | 47K | RES SMD 47K OHM 1% 1/8W 0805 | [YAG3735CT-ND](https://www.digikey.com/en/products/detail/yageo/AC0805FR-0747KL/6006584) | R8,R9 | |
+| 2 | 4.7K | RES ARRAY 8 RES 4.7K OHM 9SIP | [4609X-101-472LF-ND](https://www.digikey.ca/en/products/detail/bourns-inc/4609X-101-472LF/3593671) | RN1,RN2 | |
 | 4 | SN74LVC245AN | IC TXRX 1.65V/3.6V 20-TSSOP | [296-1233-1-ND](https://www.digikey.com/en/products/detail/texas-instruments/SN74LVC245APWR/276501) | U8,U10,U11,U12 | |
 | 1 | SN74HC245PWR | IC TXRX 2V/6V 20-TSSOP | [296-8279-1-ND](https://www.digikey.com/en/products/detail/texas-instruments/SN74HC245PWR/376997) | U9 | |
+| 1 | 74HC139 | IC DECODER/DEMUX 1X2:4 16-TSSOP | [1727-6580-1-ND](https://www.digikey.com/en/products/detail/nexperia-usa-inc/74HC139PW-118/2813773) | U3 | |
+| 1 | SIL FEMALE HDR | MACHINE PIN SOCKET 40P 2.54MM PI | [SMC-1A-40-1-GT-HT](https://www.digikey.com/en/products/detail/adam-tech/SMC-1A-40-1-GT-HT/9831942) | U5 | [AliExpress](https://www.aliexpress.com/item/1005008648234734.html) |
+| 1 | DIP-40 SOCKET | MACHINE PIN SOCKET, IC, DIP, 40P | [ICM-640-1-GT-HT](https://www.digikey.com/en/products/detail/adam-tech/ICM-640-1-GT-HT/9832971) | J1,J4,J5,PIA0,PIA1,CPU | [AliExpress](https://www.aliexpress.com/item/1005006139495909.html) |
+
+## PIA0
+
+ Qty | Value | Description | DigiKey P/N | References | Alternative link |
+| ---: | --- | --- | --- | --- | --- |
+| 1 | 0.1uF | CAP CER 0805 0.1UF 100VDC X7R | [399-C0805F104K1RACAUTOCT-ND](https://www.digikey.com/en/products/detail/kemet/C0805F104K1RACAUTO/26735352) | C1,C2,C3,C4,C5,C6,C7,C26,C27,C28,C29,C30,C31,C32,C33,C34 | |
+| 1 | DIP-40 SOCKET | MACHINE PIN SOCKET, IC, DIP, 40P | [ICM-640-1-GT-HT](https://www.digikey.com/en/products/detail/adam-tech/ICM-640-1-GT-HT/9832971) | J1,J4,J5,PIA0,PIA1,CPU | [AliExpress](https://www.aliexpress.com/item/1005006139495909.html) |
+| 1 | HEADER PINS RIGHT ANGLE | CONN HEADER R/A 40POS | [PEC36SBAN](https://www.digikey.com/en/products/detail/sullins-connector-solutions/PEC36SBAN/860089) | | [AliExpress](https://www.aliexpress.com/item/1005006181766297.html) |
+| 1 | 74HC30 | IC NAND 1-CIR 8-IN 14-TSSOP | [1727-6596-1-ND](https://www.digikey.com/en/products/detail/nexperia-usa-inc/74HC30PW-118/1230294) | U7 | |
+| 2 | 6.8nF | CAP CER 1800PF 250V C0G/NP0 0805 | [490-GCM21A5C2E182FX01DCT-ND](https://www.digikey.ca/en/products/detail/murata-electronics/GCM21A5C2E182FX01D/17845644) | C10,C12 | |
+| 2 | SD103BW | DIODE SCHOTTKY 30V 0.35A SOD123F | [4878-SD103BWCT-ND](https://www.digikey.com/en/products/detail/diotec-semiconductor/SD103BW/22600375) | D1,D3 | |
+
+## PIA1
+
+ Qty | Value | Description | DigiKey P/N | References | Alternative link |
+| ---: | --- | --- | --- | --- | --- |
+| 1 | DIP-40 SOCKET | MACHINE PIN SOCKET, IC, DIP, 40P | [ICM-640-1-GT-HT](https://www.digikey.com/en/products/detail/adam-tech/ICM-640-1-GT-HT/9832971) | J1,J4,J5,PIA0,PIA1,CPU | [AliExpress](https://www.aliexpress.com/item/1005006139495909.html) |
+
+## ADDRMUX
+
+ Qty | Value | Description | DigiKey P/N | References | Alternative link |
+| ---: | --- | --- | --- | --- | --- |
+| 2 | 0.1uF | CAP CER 0805 0.1UF 100VDC X7R | [399-C0805F104K1RACAUTOCT-ND](https://www.digikey.com/en/products/detail/kemet/C0805F104K1RACAUTO/26735352) | C1,C2,C3,C4,C5,C6,C7,C26,C27,C28,C29,C30,C31,C32,C33,C34 | |
+| 1 | SN74HC138PWR | IC DECODER/DEMUX 1X3:8 16-TSSOP | [296-8228-1-ND](https://www.digikey.com/en/products/detail/texas-instruments/SN74HC138PWR/377034) | U1 | |
 | 1 | 74HC11 | IC AND 3-CIR 3-IN 14-TSSOP | [296-13611-1-ND](https://www.digikey.com/en/products/detail/texas-instruments/SN74HC11PWR/498520) | U22 | |
 | 1 | DIP-16 SOCKET | CONN IC DIP SOCKET 16POS GOLD | [SA163000](https://www.digikey.com/en/products/detail/on-shore-technology-inc/SA163000/3313525) | 74LS138 | |
-| 3 | DIP-40 SOCKET | MACHINE PIN SOCKET, IC, DIP, 40P | [ICM-640-1-GT-HT](https://www.digikey.com/en/products/detail/adam-tech/ICM-640-1-GT-HT/9832971) | J1,J4,J5,PIA0,PIA1,CPU | [AliExpress](https://www.aliexpress.com/item/1005006139495909.html) |
-| 1 | SIL FEMALE HDR | MACHINE PIN SOCKET 40P 2.54MM PI | [SMC-1A-40-1-GT-HT](https://www.digikey.com/en/products/detail/adam-tech/SMC-1A-40-1-GT-HT/9831942) | U5 | [AliExpress](https://www.aliexpress.com/item/1005008648234734.html) |
-| 8 | SIL HEADER | CONN SIL HDR MALE PIN 20POS | [D01-9922046](https://www.digikey.com/en/products/detail/harwin-inc/D01-9922046/3727867) | J9,12,J13,U5 | [AliExpress](https://www.aliexpress.com/item/1005007563971977.html) |
-| 2 | SIL MALE HEADER | CONN HDR .100" 8POS | [TS-108-T-A-1](https://www.digikey.com/en/products/detail/samtec-inc/TS-108-T-A-1/9772928) | J28 | [AliExpress](https://www.aliexpress.com/item/1005007563971977.html) |
-| 1 | AT28C64B-15PU | IC EEPROM 64KBIT PARALLEL 28DIP | [AT28C64B-15PU-ND](https://www.digikey.com/en/products/detail/microchip-technology/AT28C64B-15PU/1008529) | U2 | |
+
+## HDB-DOS CART
+
+ Qty | Value | Description | DigiKey P/N | References | Alternative link |
+| ---: | --- | --- | --- | --- | --- |
 | 1 | DIP-28 SOCKET | CONN IC DIP SOCKET 28POS GOLD | [110-41-628-41-001000](https://www.digikey.com/en/products/detail/mill-max-manufacturing-corp/110-41-628-41-001000/2538108) | U2 | |
-| 1 | 5-PIN DIN | RECEPTACLE - DIN 5 PIN FEMALE - | [NYS325](https://www.digikey.com/en/products/detail/neutrik-americas-inc/NYS325/29713928) | | |
-| 1 | JUMPER CABLES FEMALE HDR | SET OF MALE-FEMALE CABLES, 40 PI | [555035](https://www.digikey.com/en/products/detail/soldered-electronics/555035/29288637) | | |
+| 1 | 0.1uF | CAP CER 0805 0.1UF 100VDC X7R | [399-C0805F104K1RACAUTOCT-ND](https://www.digikey.com/en/products/detail/kemet/C0805F104K1RACAUTO/26735352) | C1,C2,C3,C4,C5,C6,C7,C26,C27,C28,C29,C30,C31,C32,C33,C34 | |
+| 1 | AT28C64B-15PU | IC EEPROM 64KBIT PARALLEL 28DIP | [AT28C64B-15PU-ND](https://www.digikey.com/en/products/detail/microchip-technology/AT28C64B-15PU/1008529) | U2 | |
+
+## VIDEO BOARD
+
+ Qty | Value | Description | DigiKey P/N | References | Alternative link |
+| ---: | --- | --- | --- | --- | --- |
+| 3 | 0.1uF | CAP CER 0805 0.1UF 100VDC X7R | [399-C0805F104K1RACAUTOCT-ND](https://www.digikey.com/en/products/detail/kemet/C0805F104K1RACAUTO/26735352) | C1,C2,C3,C4,C5,C6,C7,C26,C27,C28,C29,C30,C31,C32,C33,C34 | |
+| 3 | 470pF | CAP CER 470PF 50V C0G/NP0 0805 | [490-1617-1-ND](https://www.digikey.com/en/products/detail/murata-electronics/GRM2165C1H471JA01D/587515) | C8,C9,C11,C13,C14,C16 | |
+| 1 | 1uF | CAP CER 1UF 25V X7R 0805 | [399-C0805C105K3RACTUCT-ND](https://www.digikey.com/en/products/detail/kemet/C0805C105K3RACTU/3471727) | C15 | |
+| 7 | 1K | RES 1K OHM 1% 1/8W 0805 | [541-3977-1-ND](https://www.digikey.com/en/products/detail/vishay-dale/CRCW08051K00FKEAC/7928660) | R1,R16,R17,R18,R23,R25,R27,R29,R31,R33,R35,R37,R38,R39 | |
+| 3 | 75 | RES 75 OHM 1% 1/8W 0805 | [541-CRCW080575R0FKEACCT-ND](https://www.digikey.com/en/products/detail/vishay-dale/CRCW080575R0FKEAC/12745060) | R10,R11,R12,R13,R14,R15 | |
+| 3 | 4.7K | RES 4.7K OHM 1% 1/8W 0805 | [311-4.70KCRCT-ND](https://www.digikey.com/en/products/detail/yageo/RC0805FR-074K7L/730876) | R3,R5,R7,R26,R28,R30,R32,R34,R36 | |
+| 1 | 6.8nF | CAP CER 6800PF 250V C0G/NP0 0805 | [490-GCM21B5C2E682JX0ALCT-ND](https://www.digikey.com/en/products/detail/murata-electronics/GCM21B5C2E682JX0AL/17846799) | C22,C24 | |
+| 1 | 4.7uF | CAP CER 4.7UF 16V X7R 0805 | [732-7666-1-ND](https://www.digikey.com/en/products/detail/w%C3%BCrth-elektronik/885012207053/5453521) | C23,C25 | |
+| 1 | 100K | RES 100K OHM 1% 1/8W 0805 | [541-3978-1-ND](https://www.digikey.com/en/products/detail/vishay-dale/CRCW0805100KFKEAC/7928661) | R22,R24 | |
+| 3 | MMBT3904-TP | TRANS NPN 40V 0.2A SOT-23 | [MMBT3904TPMSCT-ND](https://www.digikey.com/en/products/detail/mcc-micro-commercial-components/MMBT3904-TP/717280) | Q1,Q2,Q3,Q4,Q5,Q6,Q7,Q8,Q9 | |
 | 1 | HEADER PINS RIGHT ANGLE | CONN HEADER R/A 40POS | [PEC36SBAN](https://www.digikey.com/en/products/detail/sullins-connector-solutions/PEC36SBAN/860089) | | [AliExpress](https://www.aliexpress.com/item/1005006181766297.html) |
+| 1 | 5-PIN DIN | RECEPTACLE - DIN 5 PIN FEMALE - | [NYS325](https://www.digikey.com/en/products/detail/neutrik-americas-inc/NYS325/29713928) | | |
+
+## CONNECTING THE BOARDS
+
+ Qty | Value | Description | DigiKey P/N | References | Alternative link |
+| ---: | --- | --- | --- | --- | --- |
+| 2 | HEADER PINS RIGHT ANGLE | CONN HEADER R/A 40POS | [PEC36SBAN](https://www.digikey.com/en/products/detail/sullins-connector-solutions/PEC36SBAN/860089) | | [AliExpress](https://www.aliexpress.com/item/1005006181766297.html) |
+| 1 | JUMPER CABLES FEMALE HDR | SET OF MALE-FEMALE CABLES, 40 PI | [555035](https://www.digikey.com/en/products/detail/soldered-electronics/555035/29288637) | | |
+
 
 **Check the BOM and the KiCad design together before ordering:** some rows are assembly accessories rather than PCB placements, and connector orientation and socket fit matter. Quantities, references, and part numbers above follow the supplied BOM as written.
 

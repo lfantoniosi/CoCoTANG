@@ -23335,7 +23335,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "R_Network08"
+		(property "Value" "4.7K"
 			(at 319.278 186.6899 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -25052,7 +25052,7 @@
 				)
 			)
 		)
-		(property "Value" "47K"
+		(property "Value" "4.7K"
 			(at 260.096 183.896 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -29001,7 +29001,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "R_Network08"
+		(property "Value" "4.7K"
 			(at 288.798 185.9279 0)
 			(show_name no)
 			(do_not_autoplace no)
