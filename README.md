@@ -130,6 +130,23 @@ Use the same PIA Gerber ZIP to fabricate both PIA cards. Upload each desired boa
 
 **Sourcing tip:** Most listed parts can be sourced through DigiKey; the Sipeed Tang Nano 20K is the notable exception. Compare prices before ordering the mechanical parts in particular: DIP sockets and FFC cables can be relatively expensive at DigiKey. The alternative links in the table point to AliExpress listings for some of these items, but other suppliers may be cheaper too. When substituting, verify pin count, pitch, cable length and contact orientation, and socket dimensions against the KiCad design—not just the product title.
 
+## Orchestra-90 audio
+
+Orchestra-90 audio is enabled by default and provides two 8-bit DACs without the cartridge ROM. Software writes unsigned samples to **`$FF7A` (left)** and **`$FF7B` (right)**; `128` is the digital midpoint. Each channel holds its last sample until the next write. These are write-only DACs: reading the addresses does not change their values or provide readback.
+
+Build and check the standard image from `fpga/`:
+
+```sh
+make rebuild
+make timing
+```
+
+Then program the existing bitstream with `make reprogram`, or use `make program` to build if needed and program it. The output is [`fpga/impl/pnr/CoCoTANG.fs`](fpga/impl/pnr/CoCoTANG.fs). Orchestra-90 audio requires no additional cartridge ROM or audio hardware. The `orchestra90-*` Make targets remain available for a separately named RGB image with the same audio support.
+
+HDMI sends stereo PCM at 48 kHz. The existing CoCo PIA DAC is mixed equally into both channels at its normal gain; each Orchestra-90 DAC contributes at half gain, and the mixer clips at the signed PCM limits to prevent overflow. Both Orchestra-90 channels reset to the midpoint so they contribute silence before software uses them. The analog `audio_out` pin carries a mono mix of both Orchestra-90 channels and the CoCo PIA DAC. Each Orchestra-90 channel contributes at quarter gain to this downmix, while the CoCo PIA DAC keeps its normal gain; the sum is clipped before conversion to the physical 8-bit sigma-delta DAC.
+
+To omit Orchestra-90 audio in a custom build, set the `top_coco3` parameter `ENABLE_ORCHESTRA90=0`. Address and channel assignments follow [XRoar's Orchestra-90 documentation](https://www.6809.org.uk/xroar/doc/xroar.shtml#Orchestra-90_002dCC-sound-cartridge) and [MAME's Orchestra-90 implementation](https://github.com/mamedev/mame/blob/master/src/devices/bus/coco/coco_orch90.cpp).
+
 ## Build on macOS or Linux
 
 1. Download **GOWIN EDA Education** for your OS from [Gowin's official download page](https://www.gowinsemi.com/en/support/download_eda/) (an account may be required). Install the full EDA package, not only Gowin Programmer. The Education edition is intended for noncommercial education/research; check Gowin's current terms for your use.

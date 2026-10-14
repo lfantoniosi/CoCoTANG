@@ -24,6 +24,7 @@ module top_coco3 #(
     // 0=OFF, 1=ON (blue/orange), 2=REVERSE (orange/blue).
     parameter [1:0] INITIAL_ARTIFACT_MODE=2'd1,
     parameter integer DISTO_2MB=1,
+    parameter integer ENABLE_ORCHESTRA90=1,
     // Glenside task-file occupies IDE_BASE..IDE_BASE+$0f; $FF50 is standard.
     parameter integer ENABLE_GLENSIDE_IDE=1,
     parameter [15:0] IDE_BASE=16'hff50
@@ -181,8 +182,28 @@ module top_coco3 #(
         .dac_level(pia1_dac_level),.sound_enable(pia1_sound_enable),
         .pwm_sample(pia1_pwm_sample),
         .pcm_sample(pia1_pcm_sample),.audio_clk(pia1_audio_clk));
+    wire [15:0] hdmi_pcm_left,hdmi_pcm_right;
+    wire [15:0] line_audio_pcm;
+    // The physical sigma-delta DAC takes unsigned eight-bit samples.
+    // Register the mix in the CPU domain so the faster DAC samples a held
+    // value rather than the carry transitions of the mono summing logic.
+    reg [7:0] orchestra90_mono_sample=8'h80;
+    generate if(ENABLE_ORCHESTRA90)begin: mono_audio
+        always @(posedge clk108 or negedge pia1_audio_reset_n)begin
+            if(!pia1_audio_reset_n)orchestra90_mono_sample<=8'h80;
+            else orchestra90_mono_sample<={~line_audio_pcm[15],line_audio_pcm[14:8]};
+        end
+    end endgenerate
+    wire [7:0] line_audio_sample=ENABLE_ORCHESTRA90 ?
+        orchestra90_mono_sample : pia1_pwm_sample;
+    coco_orchestra90 #(.ENABLED(ENABLE_ORCHESTRA90)) orchestra90(
+        .clk(clk108),.reset_n(pia1_audio_reset_n),
+        .e_fall(e_fall),.cpu_rw_n(rw_n),
+        .cpu_addr(address),.cpu_data(cpu_write_data),.mono_pcm(pia1_pcm_sample),
+        .left_pcm(hdmi_pcm_left),.right_pcm(hdmi_pcm_right),
+        .mono_mix_pcm(line_audio_pcm));
     sigma_delta_dac line_audio_dac(.clk(clk270),
-        .reset_n(pia1_audio_reset_n),.sample(pia1_pwm_sample),
+        .reset_n(pia1_audio_reset_n),.sample(line_audio_sample),
         .bit_out(audio_out));
     wire [7:0] cpu_data_in;
     wire [31:0] raster_debug;
@@ -642,7 +663,8 @@ module top_coco3 #(
         .ENABLE_DEBUG_OVERLAY(ENABLE_BUS_LOGGER||ENABLE_GIME_TRACE),
         .GIME_TRACE_MODE(ENABLE_GIME_TRACE!=0&&ENABLE_BUS_LOGGER==0)) hdmi_output(
         .pixel_clk(clk27),.serial_clk(clk135),.reset(!board_reset_n),
-        .audio_clk(pia1_audio_clk),.audio_pcm(pia1_pcm_sample),
+        .audio_clk(pia1_audio_clk),.audio_pcm_left(hdmi_pcm_left),
+        .audio_pcm_right(hdmi_pcm_right),
         .debug_clk(clk108),.log_we(log_we),.log_addr(log_addr),
         .log_base(log_base),
         .log_data(log_data),.log_count(log_count),.log_page(log_page),

@@ -4,6 +4,7 @@ PAL_PROJECT := $(ROOT)/CoCoTANG-pal.gprj
 BUILD_TCL := $(ROOT)/scripts/build.tcl
 OUTPUT := $(ROOT)/impl/pnr/CoCoTANG.fs
 PAL_OUTPUT := $(ROOT)/impl/pnr/CoCoTANG-pal.fs
+ORCHESTRA90_OUTPUT := $(ROOT)/impl/pnr/CoCoTANG-orchestra90.fs
 NTSC_SVIDEO_OUTPUT := $(ROOT)/impl/pnr/CoCoTANG-ntsc-svideo.fs
 PAL_ROM ?= /Users/felipe/src/retro/coco_roms/coco3p.rom
 PALETTE_BRIDGE_DISK := $(ROOT)/results/PALBRDG.DSK
@@ -34,7 +35,7 @@ PROGRAMMER_BOARD ?= tangnano20k
 ROM_OFFSET ?= 1048576
 
 .DEFAULT_GOAL := build
-.PHONY: build rebuild contras-debug-build contras-debug-rebuild pal-build pal-rebuild ntsc-svideo-build \
+.PHONY: orchestra90-build orchestra90-rebuild orchestra90-timing orchestra90-program orchestra90-reprogram build rebuild contras-debug-build contras-debug-rebuild pal-build pal-rebuild ntsc-svideo-build \
  ntsc-svideo-rebuild test timing pal-timing ntsc-svideo-timing program \
  reprogram pal-program pal-reprogram ntsc-svideo-program \
  ntsc-svideo-reprogram rom pal-rom palette-bridge-dsk contras-palette-test-dsk \
@@ -44,6 +45,11 @@ build: $(OUTPUT)
 
 rebuild: check-tools
 	$(call run-gowin,CoCoTANG.gprj,top_coco3,CoCoTANG)
+
+orchestra90-build: $(ORCHESTRA90_OUTPUT)
+
+orchestra90-rebuild: check-tools
+	$(call run-gowin,CoCoTANG-pal.gprj,top_coco3_orchestra90,CoCoTANG-orchestra90)
 
 contras-debug-build: $(ROOT)/impl/pnr/CoCoTANG-contras-debug.fs
 
@@ -64,6 +70,9 @@ ntsc-svideo-rebuild: check-tools
 timing:
 	python3 scripts/check_timing.py impl/pnr/CoCoTANG_tr_content.html
 
+orchestra90-timing:
+	python3 scripts/check_timing.py impl/pnr/CoCoTANG-orchestra90_tr_content.html
+
 pal-timing:
 	python3 scripts/check_timing.py impl/pnr/CoCoTANG-pal_tr_content.html
 
@@ -71,6 +80,8 @@ ntsc-svideo-timing:
 	python3 scripts/check_timing.py impl/pnr/CoCoTANG-ntsc-svideo_tr_content.html
 
 test:
+	iverilog -g2012 -s tb_coco_orchestra90 -o /private/tmp/cocotang_tb_orchestra90 tests/tb_coco_orchestra90.sv tests/tb_coco3_hdmi_border_handoff.sv src/audio/coco_orchestra90.v src/video/sigma_delta_dac.v src/video/coco3_hdmi.sv src/video/artifact_mode_osd.sv src/video/hdmi/audio_sample_packet.sv
+	vvp /private/tmp/cocotang_tb_orchestra90
 	iverilog -g2012 -o /private/tmp/cocotang_tb_sd_spi tests/tb_sd_spi_block.v src/storage/sd_spi_block.v
 	vvp /private/tmp/cocotang_tb_sd_spi
 	iverilog -g2012 -o /private/tmp/cocotang_tb_glenside tests/tb_glenside_ata.v src/storage/glenside_ata.v src/storage/glenside_sector_buffer.v
@@ -147,6 +158,12 @@ program: $(OUTPUT)
 
 reprogram:
 	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(OUTPUT)"
+
+orchestra90-program: $(ORCHESTRA90_OUTPUT)
+	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(ORCHESTRA90_OUTPUT)"
+
+orchestra90-reprogram:
+	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(ORCHESTRA90_OUTPUT)"
 
 pal-program: $(PAL_OUTPUT)
 	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(PAL_OUTPUT)"
@@ -256,3 +273,6 @@ $(PAL_OUTPUT): $(PAL_PROJECT) $(BUILD_TCL) $(shell find src -type f) | check-too
 
 $(NTSC_SVIDEO_OUTPUT): $(PAL_PROJECT) $(BUILD_TCL) $(shell find src -type f) | check-tools
 	$(call run-gowin,CoCoTANG-pal.gprj,top_coco3_ntsc_svideo,CoCoTANG-ntsc-svideo)
+
+$(ORCHESTRA90_OUTPUT): $(PAL_PROJECT) $(BUILD_TCL) $(shell find src -type f) | check-tools
+	$(call run-gowin,CoCoTANG-pal.gprj,top_coco3_orchestra90,CoCoTANG-orchestra90)

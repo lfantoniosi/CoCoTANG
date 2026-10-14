@@ -320,6 +320,14 @@ module gime_scanline_buffer (
  reg [11:0] source_byte_index=0;
  reg [7:0] source_character_column=0;
  reg [9:0] hdmi_out_x=0;reg [2:0] hdmi_filter_phase=0;
+ // Every pixel write has at least one decode clock before the next write.
+ // Compute the increment in that gap, keeping the state/colour decode mux
+ // out of the counter's carry chain without adding a renderer cycle.
+ reg [9:0] next_out_x=1;
+ always @(posedge clk or negedge reset_n)begin
+  if(!reset_n)next_out_x<=1;
+  else next_out_x<=out_x+10'd1;
+ end
  reg [255:0] artifact_bits=0;
  reg [260:0] artifact_shift=0;
  reg artifact_bit_write_pending=0;
@@ -1038,7 +1046,7 @@ reg configuration_pending=1'b1;
        state<=ARTIFACT_DECODE;
       end else state<=FINALIZE_LINE;
      end else begin
-      out_x<=out_x+1'b1;
+      out_x<=next_out_x;
       if(in_fill_aperture)begin
        source_x<=next_source_x;
        source_byte_index<=next_source_byte_index;
@@ -1064,7 +1072,7 @@ reg configuration_pending=1'b1;
      else begin
       if(hdmi_filter_phase==4)
        artifact_shift<=artifact_shift>>2;
-      out_x<=out_x+1'b1;source_x<=next_source_x;
+      out_x<=next_out_x;source_x<=next_source_x;
       scale_phase<=(next_scale_phase_sum>=11'd640)?
                    (next_scale_phase_sum-11'd640):next_scale_phase_sum[9:0];
       state<=ARTIFACT_DECODE;

@@ -9,7 +9,8 @@ module coco3_hdmi #(
     parameter integer GIME_TRACE_MODE=0
 ) (
     input logic pixel_clk,input logic serial_clk,
-    input logic audio_clk,input logic [15:0] audio_pcm,input logic reset,
+    input logic audio_clk,input logic [15:0] audio_pcm_left,
+    input logic [15:0] audio_pcm_right,input logic reset,
     input logic debug_clk,input logic log_we,
     input logic [LOG_ADDR_WIDTH-1:0] log_addr,input logic [47:0] log_data,
     input logic [LOG_ADDR_WIDTH-1:0] log_base,
@@ -286,7 +287,8 @@ module coco3_hdmi #(
         .rgb_in(debug_rgb),.rgb_out(rgb));
 
     logic [15:0] audio_samples[1:0];
-    assign audio_samples[0]=audio_pcm; assign audio_samples[1]=audio_pcm;
+    assign audio_samples[0]=audio_pcm_left;
+    assign audio_samples[1]=audio_pcm_right;
     logic [9:0] tmds_internal[2:0];
     hdmi #(.VIDEO_ID_CODE(2),.DYNAMIC_480_576(1),.DVI_OUTPUT(1'b0),
            .VIDEO_REFRESH_RATE(59.94),

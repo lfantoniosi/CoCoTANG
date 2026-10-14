@@ -82,7 +82,7 @@ module tb_coco3_vborder_startup;
   end
  end
  coco3_hdmi display(.pixel_clk(pixel_clk),.serial_clk(pixel_clk),
-  .audio_clk(pixel_clk),.audio_pcm(16'd0),.reset(board_reset),
+  .audio_clk(pixel_clk),.audio_pcm_left(16'd0),.audio_pcm_right(16'd0),.reset(board_reset),
   .video_50hz(1'b0),.bit_plane(1'b1),.active_height(8'd192),
   .compatibility_mode(1'b0),.border_rgb(6'd0),.artifact_mode(2'd0),
   .artifact_video_active(1'b0),.artifact_css(1'b0),.overlay_enable(1'b0),
