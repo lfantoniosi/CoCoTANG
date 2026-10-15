@@ -4,7 +4,7 @@ module tb_gime_disto;
  reg [15:0] cpu_addr=0;reg [7:0] cpu_data=0;
  wire [22:0] disto_addr,stock_addr;
  wire [7:0] disto_rdata;
- wire [1:0] disto_video_bank,stock_video_bank;
+ wire [3:0] disto_video_bank,stock_video_bank;
  integer errors=0;
 
  gime_registers #(.DISTO_2MB(1)) disto(

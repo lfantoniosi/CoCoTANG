@@ -24,6 +24,7 @@ module top_coco3 #(
     // 0=OFF, 1=ON (blue/orange), 2=REVERSE (orange/blue).
     parameter [1:0] INITIAL_ARTIFACT_MODE=2'd1,
     parameter integer DISTO_2MB=1,
+    parameter integer NOCAN3_8MB=1,
     parameter integer ENABLE_ORCHESTRA90=1,
     // Glenside task-file occupies IDE_BASE..IDE_BASE+$0f; $FF50 is standard.
     parameter integer ENABLE_GLENSIDE_IDE=1,
@@ -216,7 +217,7 @@ module top_coco3 #(
     wire [7:0] gime_trace_active_line,gime_trace_cache_y,
                gime_trace_dma_next_y;
     wire [1:0] gime_trace_phase;
-    wire [20:0] gime_trace_cache_start;
+    wire [22:0] gime_trace_cache_start;
     wire [18:0] gime_trace_dma_next_address;
     wire [3:0] gime_trace_dma_line;
     wire [95:0] mmu_register_debug;
@@ -228,7 +229,7 @@ module top_coco3 #(
     wire gime_keyint_n=!mux_keyint_n;
     wire gime_serint_n=!mux_sernt_n;
 
-    coco3 #(.DISTO_2MB(DISTO_2MB)) machine(
+    coco3 #(.DISTO_2MB(DISTO_2MB),.NOCAN3_8MB(NOCAN3_8MB)) machine(
         .clk(clk108),.reset_n(board_reset_n),
         .cpu_reset_n(cpu_release),
         .s2(1'b0),.artifact_mode(artifact_mode_video),

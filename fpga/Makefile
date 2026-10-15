@@ -7,6 +7,8 @@ PAL_OUTPUT := $(ROOT)/impl/pnr/CoCoTANG-pal.fs
 ORCHESTRA90_OUTPUT := $(ROOT)/impl/pnr/CoCoTANG-orchestra90.fs
 NTSC_SVIDEO_OUTPUT := $(ROOT)/impl/pnr/CoCoTANG-ntsc-svideo.fs
 PAL_ROM ?= /Users/felipe/src/retro/coco_roms/coco3p.rom
+RAM8M_DISK := $(ROOT)/results/RAM8M.DSK
+RAM8M_BIN := $(ROOT)/results/RAM8M.BIN
 PALETTE_BRIDGE_DISK := $(ROOT)/results/PALBRDG.DSK
 PALETTE_BRIDGE_BIN := $(ROOT)/results/PALROT.BIN
 CONTRAS_PALETTE_TEST_DISK := $(ROOT)/results/CONTPAL.DSK
@@ -35,7 +37,7 @@ PROGRAMMER_BOARD ?= tangnano20k
 ROM_OFFSET ?= 1048576
 
 .DEFAULT_GOAL := build
-.PHONY: orchestra90-build orchestra90-rebuild orchestra90-timing orchestra90-program orchestra90-reprogram build rebuild contras-debug-build contras-debug-rebuild pal-build pal-rebuild ntsc-svideo-build \
+.PHONY: ram8m-dsk orchestra90-build orchestra90-rebuild orchestra90-timing orchestra90-program orchestra90-reprogram build rebuild contras-debug-build contras-debug-rebuild pal-build pal-rebuild ntsc-svideo-build \
  ntsc-svideo-rebuild test timing pal-timing ntsc-svideo-timing program \
  reprogram pal-program pal-reprogram ntsc-svideo-program \
  ntsc-svideo-reprogram rom pal-rom palette-bridge-dsk contras-palette-test-dsk \
@@ -124,6 +126,8 @@ test:
 	vvp /private/tmp/cocotang_tb_gime_registers
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_disto tests/tb_gime_disto.v src/coco3/gime_registers.v
 	vvp /private/tmp/cocotang_tb_gime_disto
+	iverilog -g2012 -s tb_gime_nocan3 -o /private/tmp/cocotang_tb_gime_nocan3 tests/tb_gime_nocan3.v src/coco3/gime_registers.v
+	vvp /private/tmp/cocotang_tb_gime_nocan3
 	iverilog -g2012 -o /private/tmp/cocotang_tb_artifact_decode tests/tb_ntsc_artifact_decode.v src/video/ntsc_artifact_decode.v
 	vvp /private/tmp/cocotang_tb_artifact_decode
 	iverilog -g2012 -o /private/tmp/cocotang_tb_rgb_phase tests/tb_rgb_scanline_dac_phase.v src/video/coco_cvbs_ntsc.v
@@ -180,6 +184,17 @@ ntsc-svideo-reprogram:
 rom: roms/coco3.rom
 	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f --external-flash \
 	 -o "$(ROM_OFFSET)" "$<"
+
+$(RAM8M_BIN): tests/ram8m/RAM8M.asm
+	@mkdir -p "$(ROOT)/results"
+	lwasm --6809 --decb --list=$(ROOT)/results/RAM8M.lst -o "$@" "$<"
+
+$(RAM8M_DISK): tests/ram8m/RAM8M.BAS $(RAM8M_BIN)
+	decb dskini "$@"
+	decb copy -0 -a -l "$<" "$@,RAM8M.BAS"
+	decb copy -2 -b "$(RAM8M_BIN)" "$@,RAM8M.BIN"
+
+ram8m-dsk: $(RAM8M_DISK)
 
 $(PALETTE_BRIDGE_BIN): tests/palette_bridge/palrot.asm
 	lwasm --6809 --decb --list=$(ROOT)/results/PALROT.lst -o "$@" "$<"

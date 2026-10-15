@@ -7,7 +7,7 @@ module tb_gime_field_trace;
     logic [8:0] sample_y=0;
     logic [9:0] display_y=0;
     logic [2:0] page=0;
-    logic [198:0] sample_data=0;
+    logic [200:0] sample_data=0;
     wire [23:0] rgb;
     integer y,errors=0;
 
@@ -27,7 +27,7 @@ module tb_gime_field_trace;
         .sdram_test_actual(8'd0),.rgb_in(24'd0),.rgb_out(rgb));
 
     task write_line(input integer line,input [7:0] vmode,
-                    input [20:0] cache_start);
+                    input [22:0] cache_start);
         reg [127:0] regs;
         begin
             regs=128'd0;
@@ -52,10 +52,10 @@ module tb_gime_field_trace;
             $display("field did not freeze: count=%0d active=%b",
                      dut.gime_count,dut.gime_capturing);errors=errors+1;
         end
-        if(dut.gime_field_memory[26][134:127]!==8'h87 ||
-           dut.gime_field_memory[27][134:127]!==8'h80 ||
-           dut.gime_field_memory[27][70:50]!==21'h0c0e0 ||
-           dut.gime_field_memory[122][70:50]!==21'h0fba0)begin
+        if(dut.gime_field_memory[26][136:129]!==8'h87 ||
+           dut.gime_field_memory[27][136:129]!==8'h80 ||
+           dut.gime_field_memory[27][72:50]!==21'h0c0e0 ||
+           dut.gime_field_memory[122][72:50]!==21'h0fba0)begin
             $display("line26 BOINK trace bytes/addresses differ");errors=errors+1;
         end
         page=3'd4;
@@ -66,17 +66,17 @@ module tb_gime_field_trace;
         end
         @(negedge debug_clk);arm=1;
         @(negedge debug_clk);arm=0;
-        write_line(0,8'h80,21'h00440);
+        write_line(0,8'h80,23'h700440);
         if(dut.gime_count!==9'd1 ||
-           dut.gime_field_memory[0][70:50]!==21'h00440)begin
+           dut.gime_field_memory[0][72:50]!==23'h700440)begin
             $display("S2 rearm did not start next field");errors=errors+1;
         end
         for(y=1;y<313;y=y+1)
             write_line(y,8'h80,21'h00440+y*21'h0a0);
         write_line(0,8'h87,21'h12345);
         if(dut.gime_count!==9'd313 ||
-           dut.gime_field_memory[312][134:127]!==8'h80 ||
-           dut.gime_field_memory[312][70:50]!==21'h0c740)begin
+           dut.gime_field_memory[312][136:129]!==8'h80 ||
+           dut.gime_field_memory[312][72:50]!==21'h0c740)begin
             $display("313-line field did not freeze at line 312");errors=errors+1;
         end
         page=3'd5;

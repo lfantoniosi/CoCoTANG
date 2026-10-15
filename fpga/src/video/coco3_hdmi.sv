@@ -18,7 +18,7 @@ module coco3_hdmi #(
     input logic [LOG_PAGE_WIDTH-1:0] log_page,
     input logic gime_trace_arm,input logic [2:0] gime_trace_page,
     input logic gime_trace_sample,input logic [8:0] gime_trace_y,
-    input logic [198:0] gime_trace_data,
+    input logic [200:0] gime_trace_data,
     input logic [4:0] debug_status,input logic overlay_enable,
     input logic [3:0] interrupt_status,
     input logic [31:0] raster_debug,

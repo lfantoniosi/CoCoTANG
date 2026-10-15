@@ -130,6 +130,30 @@ Use the same PIA Gerber ZIP to fabricate both PIA cards. Upload each desired boa
 
 **Sourcing tip:** Most listed parts can be sourced through DigiKey; the Sipeed Tang Nano 20K is the notable exception. Compare prices before ordering the mechanical parts in particular: DIP sockets and FFC cables can be relatively expensive at DigiKey. The alternative links in the table point to AliExpress listings for some of these items, but other suppliers may be cheaper too. When substituting, verify pin count, pitch, cable length and contact orientation, and socket dimensions against the KiCad design—not just the product title.
 
+## 8 MB memory mapping
+
+The standard FPGA build enables a NoCan3-style extension that exposes the Tang Nano 20K's full 8 MB SDRAM. The internal 32 KB CoCo 3 ROM resides in separate FPGA block RAM and does not reserve SDRAM space. The CPU still sees 64 KB at a time, mapped through 8 KB pages.
+
+| Register | Function |
+| --- | --- |
+| `$FF9B` bits 5–4 | Upper two CPU page bits, captured on the next MMU-register write |
+| `$FFA0–$FFAF` | Lower eight bits of each CPU page number; both MMU tasks retain their own captured upper bits |
+| `$FF9B` bits 3–0 | Video bank: sixteen 512 KB regions across 8 MB |
+
+A CPU page number is `($FF9B[5:4] << 8) | MMU_byte`, giving 1024 pages. Writing `$FF9B` alone does not remap existing CPU slots. Keep a software copy of the bank control: this core retains GIME-style six-bit MMU readback, so the extended page bits cannot be recovered by reading the MMU registers. Existing 2 MB software retains its mapping when the additional CPU and video bank bits are zero. Software must explicitly use the extension to allocate memory above 2 MB.
+
+Custom builds can set `NOCAN3_8MB=0` on `top_coco3` for the previous Disto 2 MB mapping, or additionally set `DISTO_2MB=0` for the stock 512 KB mapping. The extended bank convention follows the [NoCan3 documentation](https://www.geocities.ws/idezilla/CoCoZilla/8mbdet.html).
+
+### Hardware bank probe
+
+Build the probe disk with `make ram8m-dsk` from `fpga/`. After programming the new image with `make reprogram`, start from freshly booted CoCo 3 BASIC, mount [`RAM8M.DSK`](fpga/results/RAM8M.DSK), and run:
+
+```basic
+RUN "RAM8M"
+```
+
+Expected result: `PASS: 1024 DISTINCT 8KB PAGES`. The probe checks one byte at the end of every 8 KB page for aliasing, saves and restores those bytes, and restores the standard BASIC slot mapping and video bank zero. It returns in all-RAM mode. This is a bank-mapping probe rather than a full memory stress test; use it from the standard fresh-boot BASIC memory map.
+
 ## Orchestra-90 audio
 
 Orchestra-90 audio is enabled by default and provides two 8-bit DACs without the cartridge ROM. Software writes unsigned samples to **`$FF7A` (left)** and **`$FF7B` (right)**; `128` is the digital midpoint. Each channel holds its last sample until the next write. These are write-only DACs: reading the addresses does not change their values or provide readback.

@@ -19,8 +19,8 @@ module tb_gime_scanline_buffer;
  reg [3:0] hres=7;reg [1:0] cres=1;
  reg [7:0] active_height=8'd192;
  reg bit_plane=1;reg [2:0] lpr=0;reg [3:0] vertical_scroll=0;
- reg [18:0] screen_base=0;reg [1:0] video_bank=0;
- reg [7:0] horizontal_offset=0;reg cpu_write_strobe=0;reg [20:0] cpu_write_addr=0;
+ reg [18:0] screen_base=0;reg [3:0] video_bank=0;
+ reg [7:0] horizontal_offset=0;reg cpu_write_strobe=0;reg [22:0] cpu_write_addr=0;
  reg compatibility_raster_write=0;reg [7:0] compatibility_raster_y=0;
  reg [4:0] compatibility_raster_byte=0;reg compatibility_raster_css=0;
  reg compatibility_border_write=0,compatibility_border_right=0;
@@ -504,7 +504,7 @@ module tb_gime_scanline_buffer;
   // running 19-bit DMA address.  This preserves the card's documented wrap
   // from the end to the beginning of the same selected 512K bank.
   begin : disto_video_bank_wrap
-   force dut.fill_video_bank=2'd2;force dut.aligned_address=19'h7fffc;
+   force dut.fill_video_bank=4'd2;force dut.aligned_address=19'h7fffc;
    force dut.word_valid=1'b0;force dut.state=5'd5;
    @(posedge clk);#1;
    if(memory_addr!=23'h17fffc)begin
@@ -520,6 +520,29 @@ module tb_gime_scanline_buffer;
    release dut.dma_advance_stride;release dut.dma_advance_base;
    release dut.dma_advance_row;release dut.dma_advance_infinite;
    release dut.dma_advance_bit_plane;
+   dut.memory_request=0;
+  end
+
+  begin : nocan3_video_banks
+   integer bank_number;
+   force dut.aligned_address=19'h7fffc;
+   force dut.word_valid=1'b0;
+   for(bank_number=0;bank_number<16;bank_number=bank_number+1)begin
+    dut.fill_video_bank=bank_number;
+    force dut.state=5'd5;
+    @(posedge clk);#1;
+    if(memory_addr!==((bank_number*524288)+524284))
+     $fatal(1,"NoCan3 video bank %0d address=%h",bank_number,memory_addr);
+    release dut.state;
+   end
+   release dut.word_valid;release dut.aligned_address;
+   force dut.h_valid0=1'b1;force dut.h_start0=23'h700400;
+   force dut.h_bytes0=10'd16;
+   cpu_write_addr=23'h100408;#1;
+   if(dut.write_hits_h0)$fatal(1,"upper video cache aliased lower CPU bank");
+   cpu_write_addr=23'h700408;#1;
+   if(!dut.write_hits_h0)$fatal(1,"upper CPU write missed video cache");
+   release dut.h_valid0;release dut.h_start0;release dut.h_bytes0;
    dut.memory_request=0;
   end
 

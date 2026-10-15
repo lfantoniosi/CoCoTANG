@@ -4,7 +4,7 @@ module gime_scanline_buffer (
  input clk,input reset_n,input bit_plane,input [3:0] hres,input [1:0] cres,
  input [7:0] active_height,
  input [2:0] lines_per_row_code,input [3:0] vertical_scroll,
- input [18:0] screen_base,input [1:0] video_bank,
+ input [18:0] screen_base,input [3:0] video_bank,
  input [7:0] horizontal_offset,input [95:0] palettes,input [5:0] border_rgb,
  input compatibility_mode,input compatibility_an_g,input [2:0] compatibility_gm,
  input [2:0] compatibility_sam_mode,
@@ -14,7 +14,7 @@ module gime_scanline_buffer (
  input compatibility_border_write,input compatibility_border_right,
  input [8:0] compatibility_border_y,input [5:0] compatibility_border_rgb,
  input [1:0] artifact_mode,input blink,
- input cpu_write_strobe,input [20:0] cpu_write_addr,
+ input cpu_write_strobe,input [22:0] cpu_write_addr,
  input hdmi_read_clk,input [9:0] hdmi_read_x,input [7:0] hdmi_display_y,
  input hdmi_frame_start,input hdmi_active_50hz,
  output reg picture_fetch_complete,
@@ -41,7 +41,7 @@ module gime_scanline_buffer (
  output [7:0] debug_dma_next_y,output [7:0] debug_fill_y,
  output [3:0] debug_state,
  output [7:0] trace_cache_y,output trace_cache_valid,
- output [20:0] trace_cache_start,
+ output [22:0] trace_cache_start,
  output [18:0] trace_dma_next_address,
  output [3:0] trace_dma_line
 );
@@ -190,7 +190,7 @@ module gime_scanline_buffer (
  reg h_valid0=0,h_valid1=0,c_valid0=0,c_valid1=0,c_valid2=0;
  reg h_dirty0=0,h_dirty1=0,c_dirty0=0,c_dirty1=0,c_dirty2=0;
  reg [7:0] h_tag0=0,h_tag1=0,c_tag0=0,c_tag1=0,c_tag2=0;
- reg [20:0] h_start0=0,h_start1=0,c_start0=0,c_start1=0,c_start2=0;
+ reg [22:0] h_start0=0,h_start1=0,c_start0=0,c_start1=0,c_start2=0;
  reg [10:0] h_bytes0=0,h_bytes1=0,c_bytes0=0,c_bytes1=0,c_bytes2=0;
  reg [5:0] h_left_border0=0,h_left_border1=0;
  reg [5:0] h_right_border0=0,h_right_border1=0;
@@ -311,7 +311,7 @@ module gime_scanline_buffer (
  reg [18:0] fill_base=0;reg [6:0] fill_hoff=0;reg [95:0] fill_palettes=0;
  reg [23:0] prior_paint_palette=0;
  reg prior_paint_valid=0;
- reg [1:0] fill_video_bank=0;
+ reg [3:0] fill_video_bank=0;
  reg [8:0] row_remainder=0;reg [7:0] source_row=0;reg [3:0] glyph_line=0;
  reg [9:0] out_x=0;reg [12:0] source_x=0;reg [9:0] scale_phase=0;
  // Cache the byte/character indices alongside source_x.  Deriving them
@@ -556,12 +556,12 @@ module gime_scanline_buffer (
  wire write_hits_c0=c_valid0&&cpu_write_addr>=c_start0&&cpu_write_addr<c_start0+c_bytes0;
  wire write_hits_c1=c_valid1&&cpu_write_addr>=c_start1&&cpu_write_addr<c_start1+c_bytes1;
  wire write_hits_c2=c_valid2&&cpu_write_addr>=c_start2&&cpu_write_addr<c_start2+c_bytes2;
-wire [20:0] fill_physical_start={fill_video_bank,line_address};
+wire [22:0] fill_physical_start={fill_video_bank,line_address};
 wire write_hits_fill=state!=IDLE&&cpu_write_addr>=fill_physical_start&&
                       cpu_write_addr<fill_physical_start+fill_row_bytes;
 reg [18:0] mode_signature=19'h7ffff;reg [18:0] last_screen_base=19'h7ffff;
 reg [18:0] frame_screen_base=0;
-reg [1:0] frame_video_bank=0,last_video_bank=0;
+reg [3:0] frame_video_bank=0,last_video_bank=0;
  // Running GIME DMA state.  This cannot be reconstructed as y*stride when
  // FF98.LPR or FF9F.HVEN changes during the picture: each raster advances
  // from the address left by the preceding raster.
@@ -629,7 +629,7 @@ reg configuration_pending=1'b1;
  assign trace_cache_valid=(h_valid0&&h_tag0==hd_y_s)||
                           (h_valid1&&h_tag1==hd_y_s);
  assign trace_cache_start=(h_valid0&&h_tag0==hd_y_s)?h_start0:
-                          (h_valid1&&h_tag1==hd_y_s)?h_start1:21'd0;
+                          (h_valid1&&h_tag1==hd_y_s)?h_start1:23'd0;
  assign trace_dma_next_address=dma_next_address;
  assign trace_dma_line=dma_line_in_row;
 
@@ -970,7 +970,7 @@ reg configuration_pending=1'b1;
     end
     CHECK_WORD:begin
      if(!word_valid||word_tag!=aligned_address)begin
-      memory_addr<={2'b00,fill_video_bank,aligned_address};
+      memory_addr<={fill_video_bank,aligned_address};
       memory_request<=1;state<=WAIT_WORD;end
      else if(!fill_bit_plane)begin
       character<=cached_byte;
@@ -994,7 +994,7 @@ reg configuration_pending=1'b1;
      word_valid<=1;memory_request<=0;state<=CHECK_WORD;end
     CHECK_ATTRIBUTE:begin
      if(!word_valid||word_tag!=aligned_address)begin
-      memory_addr<={2'b00,fill_video_bank,aligned_address};
+      memory_addr<={fill_video_bank,aligned_address};
       memory_request<=1;state<=WAIT_ATTRIBUTE;end
      else begin attribute<=cached_byte;font_addr<={1'b0,character[6:0],glyph_line};
       state<=FONT_WAIT1;end

@@ -25,7 +25,7 @@ module hdmi_debug_overlay #(
     input  logic [2:0]   gime_trace_page,
     input  logic         gime_trace_sample,
     input  logic [8:0]   gime_trace_y,
-    input  logic [198:0] gime_trace_data,
+    input  logic [200:0] gime_trace_data,
     input  logic [4:0]   debug_status,
     input  logic [3:0]   interrupt_status,
     input  logic [79:0]  gime_register_debug,
@@ -48,7 +48,7 @@ module hdmi_debug_overlay #(
     logic [47:0] display_memory [0:LOG_DEPTH-1];
     // One frozen 263/313-line native field. S2 advances through six pages;
     // wrapping to page zero arms capture of the next complete field.
-    logic [198:0] gime_field_memory [0:312];
+    logic [200:0] gime_field_memory [0:312];
     logic gime_waiting=1'b1,gime_capturing=1'b0;
     logic [8:0] gime_count=0;
     wire gime_store=GIME_TRACE_MODE!=0 && !gime_trace_arm &&
@@ -81,7 +81,7 @@ module hdmi_debug_overlay #(
     end
     logic [8:0] gime_count_meta=0,gime_count_pixel=0;
     logic [8:0] gime_trace_index;
-    logic [198:0] gime_entry=0;
+    logic [200:0] gime_entry=0;
     always_ff @(posedge pixel_clk) begin
         gime_count_meta<=gime_count;
         gime_count_pixel<=gime_count_meta;
@@ -232,7 +232,7 @@ module hdmi_debug_overlay #(
     logic [3:0] status_mmu_index;
     logic [5:0] status_mmu_page;
     logic [127:0] trace_regs;
-    logic [20:0] trace_cache_start;
+    logic [22:0] trace_cache_start;
     logic [18:0] trace_dma_next;
     logic [7:0] trace_cache_y,trace_dma_y,trace_active;
     logic [3:0] trace_dma_line;
@@ -339,7 +339,7 @@ module hdmi_debug_overlay #(
                     8:character="0"+(trace_active%10);
                     10:character=hex_char(trace_cache_y[7:4]);
                     11:character=hex_char(trace_cache_y[3:0]);
-                    13:character=hex_char({3'b0,trace_cache_start[20]});
+                    13:character=hex_char({1'b0,trace_cache_start[22:20]});
                     14:character=hex_char(trace_cache_start[19:16]);
                     15:character=hex_char(trace_cache_start[15:12]);
                     16:character=hex_char(trace_cache_start[11:8]);

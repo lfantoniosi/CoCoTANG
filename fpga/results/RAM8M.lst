@@ -1,0 +1,128 @@
+                      (s/ram8m/RAM8M.asm):00001                 org     $0e00
+0E00 200B             (s/ram8m/RAM8M.asm):00002                 bra     start
+0E02 00               (s/ram8m/RAM8M.asm):00003         status  fcb     0               ; $0e02: 0=pass, 1=alias/mismatch, 2=wrong map
+0E03 0000             (s/ram8m/RAM8M.asm):00004         errors  fdb     0               ; $0e03: number of mismatching pages
+0E05 FFFF             (s/ram8m/RAM8M.asm):00005         first   fdb     $ffff           ; $0e05: first mismatching 8 KiB page
+0E07 0000             (s/ram8m/RAM8M.asm):00006         old_s   fdb     0
+0E09 00               (s/ram8m/RAM8M.asm):00007         old_init fcb    0
+0E0A 00               (s/ram8m/RAM8M.asm):00008         old_page fcb    0
+0E0B 0000             (s/ram8m/RAM8M.asm):00009         page    fdb     0
+                      (s/ram8m/RAM8M.asm):00010         
+                      (s/ram8m/RAM8M.asm):00011         ; Run from freshly booted CoCo 3 BASIC. The launcher reserves everything
+                      (s/ram8m/RAM8M.asm):00012         ; above $0dff. Code, saved bytes and private stack stay below $2000 while
+                      (s/ram8m/RAM8M.asm):00013         ; the $2000-$3fff window walks all 1024 pages. IRQ/FIRQ are masked until
+                      (s/ram8m/RAM8M.asm):00014         ; every probed byte is restored. Return in BASIC's normal all-RAM mode.
+0E0D 10FF0E07         (s/ram8m/RAM8M.asm):00015         start   sts     old_s
+0E11 10CE1334         (s/ram8m/RAM8M.asm):00016                 lds     #stack_end
+0E15 347F             (s/ram8m/RAM8M.asm):00017                 pshs    cc,dp,d,x,y,u
+0E17 1A50             (s/ram8m/RAM8M.asm):00018                 orcc    #$50
+0E19 7F0E02           (s/ram8m/RAM8M.asm):00019                 clr     status
+0E1C 4F               (s/ram8m/RAM8M.asm):00020                 clra
+0E1D 5F               (s/ram8m/RAM8M.asm):00021                 clrb
+0E1E FD0E03           (s/ram8m/RAM8M.asm):00022                 std     errors
+0E21 CCFFFF           (s/ram8m/RAM8M.asm):00023                 ldd     #$ffff
+0E24 FD0E05           (s/ram8m/RAM8M.asm):00024                 std     first
+0E27 8EFFA1           (s/ram8m/RAM8M.asm):00025                 ldx     #$ffa1
+0E2A B6FF91           (s/ram8m/RAM8M.asm):00026                 lda     $ff91
+0E2D 8501             (s/ram8m/RAM8M.asm):00027                 bita    #1
+0E2F 2702             (s/ram8m/RAM8M.asm):00028                 beq     task_ready
+0E31 3008             (s/ram8m/RAM8M.asm):00029                 leax    8,x             ; task 1 uses FFA9
+0E33                  (s/ram8m/RAM8M.asm):00030         task_ready
+0E33 A684             (s/ram8m/RAM8M.asm):00031                 lda     ,x
+0E35 843F             (s/ram8m/RAM8M.asm):00032                 anda    #$3f
+0E37 B70E0A           (s/ram8m/RAM8M.asm):00033                 sta     old_page
+0E3A 8139             (s/ram8m/RAM8M.asm):00034                 cmpa    #$39            ; expect standard BASIC page for slot 1
+0E3C 10260092         (s/ram8m/RAM8M.asm):00035                 lbne    wrong_map
+0E40 B6FF90           (s/ram8m/RAM8M.asm):00036                 lda     $ff90
+0E43 B70E09           (s/ram8m/RAM8M.asm):00037                 sta     old_init
+0E46 8A40             (s/ram8m/RAM8M.asm):00038                 ora     #$40
+0E48 B7FF90           (s/ram8m/RAM8M.asm):00039                 sta     $ff90           ; enable MMU, retain other INIT0 bits
+0E4B 7FFFDF           (s/ram8m/RAM8M.asm):00040                 clr     $ffdf           ; read RAM even when a page resembles ROM
+                      (s/ram8m/RAM8M.asm):00041         
+                      (s/ram8m/RAM8M.asm):00042         ; Save all original marker bytes before writing any pattern. This also
+                      (s/ram8m/RAM8M.asm):00043         ; makes restoration safe when an older 2 MiB core aliases upper banks.
+0E4E CE0EF4           (s/ram8m/RAM8M.asm):00044                 ldu     #saved
+0E51 4F               (s/ram8m/RAM8M.asm):00045                 clra
+0E52 5F               (s/ram8m/RAM8M.asm):00046                 clrb
+0E53 FD0E0B           (s/ram8m/RAM8M.asm):00047                 std     page
+0E56                  (s/ram8m/RAM8M.asm):00048         save_loop
+0E56 170080           (s/ram8m/RAM8M.asm):00049                 lbsr    map_page
+0E59 B63FFF           (s/ram8m/RAM8M.asm):00050                 lda     $3fff
+0E5C A7C0             (s/ram8m/RAM8M.asm):00051                 sta     ,u+
+0E5E 170085           (s/ram8m/RAM8M.asm):00052                 lbsr    advance
+0E61 25F3             (s/ram8m/RAM8M.asm):00053                 blo     save_loop
+                      (s/ram8m/RAM8M.asm):00054         
+0E63 4F               (s/ram8m/RAM8M.asm):00055                 clra
+0E64 5F               (s/ram8m/RAM8M.asm):00056                 clrb
+0E65 FD0E0B           (s/ram8m/RAM8M.asm):00057                 std     page
+0E68                  (s/ram8m/RAM8M.asm):00058         write_loop
+0E68 17006E           (s/ram8m/RAM8M.asm):00059                 lbsr    map_page
+0E6B B60E0B           (s/ram8m/RAM8M.asm):00060                 lda     page
+0E6E B80E0C           (s/ram8m/RAM8M.asm):00061                 eora    page+1
+0E71 B73FFF           (s/ram8m/RAM8M.asm):00062                 sta     $3fff
+0E74 17006F           (s/ram8m/RAM8M.asm):00063                 lbsr    advance
+0E77 25EF             (s/ram8m/RAM8M.asm):00064                 blo     write_loop
+                      (s/ram8m/RAM8M.asm):00065         
+0E79 4F               (s/ram8m/RAM8M.asm):00066                 clra
+0E7A 5F               (s/ram8m/RAM8M.asm):00067                 clrb
+0E7B FD0E0B           (s/ram8m/RAM8M.asm):00068                 std     page
+0E7E                  (s/ram8m/RAM8M.asm):00069         verify_loop
+0E7E 170058           (s/ram8m/RAM8M.asm):00070                 lbsr    map_page
+0E81 B60E0B           (s/ram8m/RAM8M.asm):00071                 lda     page
+0E84 B80E0C           (s/ram8m/RAM8M.asm):00072                 eora    page+1
+0E87 B13FFF           (s/ram8m/RAM8M.asm):00073                 cmpa    $3fff
+0E8A 2717             (s/ram8m/RAM8M.asm):00074                 beq     next_check
+0E8C 7D0E02           (s/ram8m/RAM8M.asm):00075                 tst     status
+0E8F 2609             (s/ram8m/RAM8M.asm):00076                 bne     counted
+0E91 FC0E0B           (s/ram8m/RAM8M.asm):00077                 ldd     page
+0E94 FD0E05           (s/ram8m/RAM8M.asm):00078                 std     first
+0E97 7C0E02           (s/ram8m/RAM8M.asm):00079                 inc     status
+0E9A FC0E03           (s/ram8m/RAM8M.asm):00080         counted ldd     errors
+0E9D C30001           (s/ram8m/RAM8M.asm):00081                 addd    #1
+0EA0 FD0E03           (s/ram8m/RAM8M.asm):00082                 std     errors
+0EA3                  (s/ram8m/RAM8M.asm):00083         next_check
+0EA3 170040           (s/ram8m/RAM8M.asm):00084                 lbsr    advance
+0EA6 25D6             (s/ram8m/RAM8M.asm):00085                 blo     verify_loop
+                      (s/ram8m/RAM8M.asm):00086         
+0EA8 CE0EF4           (s/ram8m/RAM8M.asm):00087                 ldu     #saved
+0EAB 4F               (s/ram8m/RAM8M.asm):00088                 clra
+0EAC 5F               (s/ram8m/RAM8M.asm):00089                 clrb
+0EAD FD0E0B           (s/ram8m/RAM8M.asm):00090                 std     page
+0EB0                  (s/ram8m/RAM8M.asm):00091         restore_loop
+0EB0 170026           (s/ram8m/RAM8M.asm):00092                 lbsr    map_page
+0EB3 A6C0             (s/ram8m/RAM8M.asm):00093                 lda     ,u+
+0EB5 B73FFF           (s/ram8m/RAM8M.asm):00094                 sta     $3fff
+0EB8 17002B           (s/ram8m/RAM8M.asm):00095                 lbsr    advance
+0EBB 25F3             (s/ram8m/RAM8M.asm):00096                 blo     restore_loop
+                      (s/ram8m/RAM8M.asm):00097         
+0EBD 7FFF9B           (s/ram8m/RAM8M.asm):00098                 clr     $ff9b           ; standard CPU prefix and video bank zero
+0EC0 B60E0A           (s/ram8m/RAM8M.asm):00099                 lda     old_page
+0EC3 A784             (s/ram8m/RAM8M.asm):00100                 sta     ,x
+0EC5 B60E09           (s/ram8m/RAM8M.asm):00101                 lda     old_init
+0EC8 B7FF90           (s/ram8m/RAM8M.asm):00102                 sta     $ff90
+0ECB 357F             (s/ram8m/RAM8M.asm):00103         exit    puls    cc,dp,d,x,y,u
+0ECD 10FE0E07         (s/ram8m/RAM8M.asm):00104                 lds     old_s
+0ED1 39               (s/ram8m/RAM8M.asm):00105                 rts
+0ED2                  (s/ram8m/RAM8M.asm):00106         wrong_map
+0ED2 8602             (s/ram8m/RAM8M.asm):00107                 lda     #2
+0ED4 B70E02           (s/ram8m/RAM8M.asm):00108                 sta     status
+0ED7 20F2             (s/ram8m/RAM8M.asm):00109                 bra     exit
+                      (s/ram8m/RAM8M.asm):00110         
+0ED9                  (s/ram8m/RAM8M.asm):00111         map_page
+0ED9 FC0E0B           (s/ram8m/RAM8M.asm):00112                 ldd     page            ; A=page bits 9:8, B=bits 7:0
+0EDC 48               (s/ram8m/RAM8M.asm):00113                 lsla
+0EDD 48               (s/ram8m/RAM8M.asm):00114                 lsla
+0EDE 48               (s/ram8m/RAM8M.asm):00115                 lsla
+0EDF 48               (s/ram8m/RAM8M.asm):00116                 lsla
+0EE0 B7FF9B           (s/ram8m/RAM8M.asm):00117                 sta     $ff9b           ; upper CPU bits; video remains bank zero
+0EE3 E784             (s/ram8m/RAM8M.asm):00118                 stb     ,x              ; latch all 10 page bits for this slot
+0EE5 39               (s/ram8m/RAM8M.asm):00119                 rts
+0EE6 FC0E0B           (s/ram8m/RAM8M.asm):00120         advance ldd     page
+0EE9 C30001           (s/ram8m/RAM8M.asm):00121                 addd    #1
+0EEC FD0E0B           (s/ram8m/RAM8M.asm):00122                 std     page
+0EEF 10830400         (s/ram8m/RAM8M.asm):00123                 cmpd    #1024
+0EF3 39               (s/ram8m/RAM8M.asm):00124                 rts
+0EF4                  (s/ram8m/RAM8M.asm):00125         saved   rmb     1024
+12F4                  (s/ram8m/RAM8M.asm):00126                 rmb     64
+1334                  (s/ram8m/RAM8M.asm):00127         stack_end
+                      (s/ram8m/RAM8M.asm):00128                 end     $0e00
