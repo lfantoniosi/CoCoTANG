@@ -22,9 +22,15 @@ module coco_cvbs_ntsc #(
     // Alternate the separate Y and CVBS DAC phases by half a cycle on
     // successive scanlines, without changing their requested levels.
     parameter integer CVBS_SVIDEO_SCANLINE_PHASE_ALTERNATION = 0,
-    // Three-sample 1:2:1 low-pass filter on composite picture luma only.
+    // Four-sample 1:3:3:1 low-pass filter on composite picture luma only.
     // Separate S-Video Y, sync, blanking, burst and chroma are unchanged.
     parameter integer CVBS_LUMA_FILTER = 0,
+    // Tune the four-sample CVBS FIR into a luma trap at the selected
+    // standard's colour carrier. Requires CVBS_LUMA_FILTER; Y/C is untouched.
+    parameter integer CVBS_LUMA_NOTCH = 0,
+    // Four-sample box low-pass on CVBS colour differences before modulation.
+    // S-Video keeps its original two-sample chroma path and burst amplitude.
+    parameter integer CVBS_CHROMA_FILTER = 0,
     // Diagnostic override for the separate Y output.  -1 selects normal
     // pixel luma; 0..63 forces a constant visible-aperture level while sync
     // and blanking remain valid.  Composite video is deliberately untouched.
@@ -261,15 +267,18 @@ module coco_cvbs_ntsc #(
         end
     endfunction
 
-    function [5:0] add_level_wide;
+    // The S-Video DAC uses a modulo-32 residue and a single carry bit.
+    // Saturate at its physical full scale: allowing levels 33..63 makes the
+    // carry overflow and turns bright chroma peaks into low-duty-cycle pulses.
+    function [5:0] add_svideo_level;
         input [5:0] base;
         input signed [7:0] delta;
         reg signed [8:0] result;
         begin
             result = $signed({1'b0,base}) + delta;
-            if (result < 0) add_level_wide = 6'd0;
-            else if (result > 63) add_level_wide = 6'd63;
-            else add_level_wide = result[5:0];
+            if (result[8]) add_svideo_level = 6'd0;
+            else if (|result[7:5]) add_svideo_level = 6'd32;
+            else add_svideo_level = {1'b0,result[4:0]};
         end
     endfunction
 
@@ -409,18 +418,67 @@ module coco_cvbs_ntsc #(
         $signed(encoder_y_axis) + $signed(chroma_y_previous);
     wire signed [7:0] chroma_x_average = chroma_x_pair >>> 1;
     wire signed [7:0] chroma_y_average = chroma_y_pair >>> 1;
+    reg signed [7:0] cvbs_chroma_x_older=0,cvbs_chroma_x_oldest=0;
+    reg signed [7:0] cvbs_chroma_y_older=0,cvbs_chroma_y_oldest=0;
+    wire signed [8:0] cvbs_chroma_x_history_pair=
+        $signed(chroma_x_previous)+$signed(cvbs_chroma_x_older);
+    wire signed [8:0] cvbs_chroma_y_history_pair=
+        $signed(chroma_y_previous)+$signed(cvbs_chroma_y_older);
+    reg signed [9:0] cvbs_chroma_x_history=0,cvbs_chroma_y_history=0;
+    wire signed [9:0] cvbs_chroma_x_sum=
+        $signed(encoder_x_axis)+cvbs_chroma_x_history+10'sd2;
+    wire signed [9:0] cvbs_chroma_y_sum=
+        $signed(encoder_y_axis)+cvbs_chroma_y_history+10'sd2;
+    reg signed [7:0] cvbs_chroma_x_filtered=0,cvbs_chroma_y_filtered=0;
+    reg signed [7:0] cvbs_chroma_x_delayed=0,cvbs_chroma_y_delayed=0;
+    wire signed [10:0] cvbs_filtered_x=cvbs_chroma_x_delayed;
+    wire signed [10:0] cvbs_filtered_y=cvbs_chroma_y_delayed;
+    wire signed [10:0] cvbs_filtered_sum=cvbs_filtered_x+cvbs_filtered_y;
+    wire signed [10:0] cvbs_filtered_difference=cvbs_filtered_x-cvbs_filtered_y;
     // Apply the optional composite-only FIR on the same sample enable.
-    // Its symmetric taps soften one-sample edges and give luma a one-sample
+    // Its symmetric taps soften edges and give luma a 1.5-sample
     // group delay, while the separate Y output keeps its original bandwidth.
     wire [5:0] encoder_cvbs_luma =
         LEVEL_BLANK + encoder_luma_sum[10:6];
     reg [5:0] cvbs_luma_previous = LEVEL_BLANK;
     reg [5:0] cvbs_luma_older = LEVEL_BLANK;
+    reg [5:0] cvbs_luma_oldest = LEVEL_BLANK;
     reg [5:0] cvbs_luma_filtered = LEVEL_BLANK;
-    wire [7:0] cvbs_luma_filter_sum =
-        {2'b00,encoder_cvbs_luma} +
-        {1'b0,cvbs_luma_previous,1'b0} +
-        {2'b00,cvbs_luma_older} + 8'd2;
+    // History changes only every tenth clk135 edge. Compute its weighted
+    // sum on the intervening clocks, keeping that arithmetic out of the
+    // live RGB-to-luma path sampled by the FIR. One free clock suffices.
+    wire [6:0] cvbs_luma_middle_pair =
+        {1'b0,cvbs_luma_previous} + {1'b0,cvbs_luma_older};
+    wire [8:0] cvbs_luma_middle_weighted =
+        {1'b0,cvbs_luma_middle_pair,1'b0} + {2'b00,cvbs_luma_middle_pair};
+    wire [6:0] cvbs_luma_oldest_biased = {1'b0,cvbs_luma_oldest} + 7'd4;
+    reg [8:0] cvbs_luma_history_sum = (7 * LEVEL_BLANK) + 4;
+    wire [8:0] cvbs_luma_filter_sum =
+        {3'b000,encoder_cvbs_luma} + cvbs_luma_history_sum;
+    // Symmetric four-tap trap, normalised by 128:
+    // NTSC [29,35,35,29], zero at 3.5977 MHz (13.5 MHz sample rate).
+    // PAL  [22,42,42,22], zero near 4.39 MHz. Coefficient rounding keeps
+    // carrier rejection below the resolution of the six-bit luma DAC.
+    // Both keep the existing FIR's 1.5-sample group delay. Two extra fast
+    // pipeline clocks (14.8 ns) isolate RGB conversion from the products
+    // and final sum; sync, burst, carrier phase and S-Video are unchanged.
+    localparam [5:0] CVBS_TRAP_OUTER = PAL_CHROMA_OUTPUT ? 6'd22 : 6'd29;
+    localparam [5:0] CVBS_TRAP_INNER = PAL_CHROMA_OUTPUT ? 6'd42 : 6'd35;
+    localparam [12:0] CVBS_TRAP_HISTORY_RESET =
+        ((2 * CVBS_TRAP_INNER + CVBS_TRAP_OUTER) * LEVEL_BLANK) + 64;
+    reg [6:0] cvbs_trap_middle_pair = 2 * LEVEL_BLANK;
+    reg [5:0] cvbs_trap_oldest = LEVEL_BLANK;
+    reg [12:0] cvbs_trap_inner_product = 2 * CVBS_TRAP_INNER * LEVEL_BLANK;
+    reg [10:0] cvbs_trap_outer_product = CVBS_TRAP_OUTER * LEVEL_BLANK;
+    reg [12:0] cvbs_trap_history_sum = CVBS_TRAP_HISTORY_RESET;
+    reg [5:0] cvbs_trap_current = LEVEL_BLANK;
+    reg [12:0] cvbs_trap_history = CVBS_TRAP_HISTORY_RESET;
+    reg [10:0] cvbs_trap_current_product = CVBS_TRAP_OUTER * LEVEL_BLANK;
+    reg [12:0] cvbs_trap_history_delayed = CVBS_TRAP_HISTORY_RESET;
+    reg [1:0] cvbs_trap_tick = 0;
+    reg [5:0] cvbs_luma_notched = LEVEL_BLANK;
+    wire [12:0] cvbs_trap_sum =
+        {2'b00,cvbs_trap_current_product} + cvbs_trap_history_delayed;
     // Consume the registered average in the existing modulator stage.  This
     // avoids duplicating the expensive chroma matrix, which otherwise moves
     // unrelated scanline logic enough to disturb timing on the nearly-full
@@ -440,6 +498,8 @@ module coco_cvbs_ntsc #(
     reg signed [10:0] mod_y4 = 11'sd0;
     reg signed [10:0] mod_sum3 = 11'sd0;
     reg signed [10:0] mod_difference3 = 11'sd0;
+    reg signed [10:0] cvbs_mod_x4=0,cvbs_mod_y4=0;
+    reg signed [10:0] cvbs_mod_sum3=0,cvbs_mod_difference3=0;
     reg signed [7:0] mod_component_x = 8'sd0;
     reg signed [7:0] mod_component_y = 8'sd0;
 
@@ -457,6 +517,18 @@ module coco_cvbs_ntsc #(
         rgb_chroma(mod_x4,pal_picture_y4,pal_picture_sum3,
                    pal_picture_difference3,mod_carrier);
     wire signed [5:0] mod_svideo_picture_chroma = mod_picture_chroma;
+    // Delay baseband colour, never the modulated carrier. The four-tap
+    // chroma group delay and fast pipeline now match the CVBS luma trap;
+    // the shared carrier and burst keep their original phase relationship.
+    wire signed [10:0] cvbs_pal_y4=
+        (PAL_CHROMA_OUTPUT && pal_v_invert) ? -cvbs_mod_y4 : cvbs_mod_y4;
+    wire signed [10:0] cvbs_pal_sum3=
+        (PAL_CHROMA_OUTPUT && pal_v_invert) ? cvbs_mod_difference3 : cvbs_mod_sum3;
+    wire signed [10:0] cvbs_pal_difference3=
+        (PAL_CHROMA_OUTPUT && pal_v_invert) ? cvbs_mod_sum3 : cvbs_mod_difference3;
+    wire signed [5:0] cvbs_picture_chroma=
+        rgb_chroma(cvbs_mod_x4,cvbs_pal_y4,cvbs_pal_sum3,
+                   cvbs_pal_difference3,mod_carrier);
     // PAL burst swings +/-45 degrees about the negative U axis.  The two
     // octant offsets correspond to -U+V and -U-V respectively; NTSC keeps
     // its original 180-degree burst unchanged.
@@ -465,7 +537,7 @@ module coco_cvbs_ntsc #(
     wire signed [5:0] mod_burst_chroma =
         chroma8(mod_carrier + burst_phase_offset,2'd3);
     wire signed [5:0] mod_selected_chroma = mod_burst ?
-        mod_burst_chroma : mod_picture_chroma;
+        mod_burst_chroma : (CVBS_CHROMA_FILTER ? cvbs_picture_chroma : mod_picture_chroma);
 
     reg level_sync = 1'b1;
     reg level_burst = 1'b0;
@@ -476,7 +548,8 @@ module coco_cvbs_ntsc #(
     reg signed [5:0] level_chroma = 6'sd0;
     reg signed [5:0] level_svideo_chroma = 6'sd0;
     wire [5:0] selected_cvbs_luma =
-        CVBS_LUMA_FILTER ? cvbs_luma_filtered : mod_luma;
+        CVBS_LUMA_FILTER ? (CVBS_LUMA_NOTCH ? cvbs_luma_notched :
+                           cvbs_luma_filtered) : mod_luma;
 
     // SMPTE-style colour difference from the same RGB/luma coefficients as
     // the composite encoder.  With x=B-G and y=R-G:
@@ -519,7 +592,7 @@ module coco_cvbs_ntsc #(
                                             LUMA_BLANK_Q2;
     // The receiver derives hue and saturation from the picture-to-burst ratio.
     wire [5:0] chroma_level = level_picture ?
-        add_level_wide(CHROMA_CENTER,svideo_picture_chroma) :
+        add_svideo_level(CHROMA_CENTER,svideo_picture_chroma) :
         level_burst ? add_level(CHROMA_CENTER,level_chroma) :
         CHROMA_CENTER;
     wire [5:0] composite_level = level_sync ? LEVEL_SYNC :
@@ -588,9 +661,27 @@ module coco_cvbs_ntsc #(
             chroma_y_previous <= 8'sd0;
             chroma_x_filtered <= 8'sd0;
             chroma_y_filtered <= 8'sd0;
+            cvbs_chroma_x_older<=0;cvbs_chroma_x_oldest<=0;
+            cvbs_chroma_y_older<=0;cvbs_chroma_y_oldest<=0;
+            cvbs_chroma_x_history<=0;cvbs_chroma_y_history<=0;
+            cvbs_chroma_x_filtered<=0;cvbs_chroma_y_filtered<=0;
+            cvbs_chroma_x_delayed<=0;cvbs_chroma_y_delayed<=0;
             cvbs_luma_previous <= LEVEL_BLANK;
             cvbs_luma_older <= LEVEL_BLANK;
+            cvbs_luma_oldest <= LEVEL_BLANK;
             cvbs_luma_filtered <= LEVEL_BLANK;
+            cvbs_luma_history_sum <= (7 * LEVEL_BLANK) + 4;
+            cvbs_trap_middle_pair <= 2 * LEVEL_BLANK;
+            cvbs_trap_oldest <= LEVEL_BLANK;
+            cvbs_trap_inner_product <= 2 * CVBS_TRAP_INNER * LEVEL_BLANK;
+            cvbs_trap_outer_product <= CVBS_TRAP_OUTER * LEVEL_BLANK;
+            cvbs_trap_history_sum <= CVBS_TRAP_HISTORY_RESET;
+            cvbs_trap_current <= LEVEL_BLANK;
+            cvbs_trap_history <= CVBS_TRAP_HISTORY_RESET;
+            cvbs_trap_current_product <= CVBS_TRAP_OUTER * LEVEL_BLANK;
+            cvbs_trap_history_delayed <= CVBS_TRAP_HISTORY_RESET;
+            cvbs_trap_tick <= 0;
+            cvbs_luma_notched <= LEVEL_BLANK;
             encoder_luma_rb <= 10'd0;
             encoder_luma_g <= 10'd0;
             mod_sync <= 1'b1;
@@ -603,6 +694,8 @@ module coco_cvbs_ntsc #(
             mod_y4 <= 11'sd0;
             mod_sum3 <= 11'sd0;
             mod_difference3 <= 11'sd0;
+            cvbs_mod_x4<=0;cvbs_mod_y4<=0;
+            cvbs_mod_sum3<=0;cvbs_mod_difference3<=0;
             mod_component_x <= 8'sd0;
             mod_component_y <= 8'sd0;
             level_sync <= 1'b1;
@@ -687,14 +780,43 @@ module coco_cvbs_ntsc #(
             encoder_luma_rb <= fb_luma_rb;
             encoder_luma_g <= fb_luma_g;
 
+            cvbs_luma_history_sum <= cvbs_luma_middle_weighted +
+                                     {2'b00,cvbs_luma_oldest_biased};
+            cvbs_chroma_x_history<=cvbs_chroma_x_history_pair+
+                                   $signed(cvbs_chroma_x_oldest);
+            cvbs_chroma_y_history<=cvbs_chroma_y_history_pair+
+                                   $signed(cvbs_chroma_y_oldest);
+            cvbs_chroma_x_delayed<=cvbs_chroma_x_filtered;
+            cvbs_chroma_y_delayed<=cvbs_chroma_y_filtered;
+            // Three fast clocks settle the history products between the
+            // 13.5 MHz sample enables, which are ten clk135 edges apart.
+            cvbs_trap_middle_pair <= cvbs_luma_middle_pair;
+            cvbs_trap_oldest <= cvbs_luma_oldest;
+            cvbs_trap_inner_product <= cvbs_trap_middle_pair * CVBS_TRAP_INNER;
+            cvbs_trap_outer_product <= cvbs_trap_oldest * CVBS_TRAP_OUTER;
+            cvbs_trap_history_sum <= cvbs_trap_inner_product +
+                                    {2'b00,cvbs_trap_outer_product} + 13'd64;
+            cvbs_trap_tick <= {cvbs_trap_tick[0],encoder_sample_tick};
+            cvbs_trap_current_product <= cvbs_trap_current * CVBS_TRAP_OUTER;
+            cvbs_trap_history_delayed <= cvbs_trap_history;
+            if(cvbs_trap_tick[1])cvbs_luma_notched <= cvbs_trap_sum[12:7];
             if (encoder_sample_tick) begin
+                cvbs_chroma_x_oldest<=cvbs_chroma_x_older;
+                cvbs_chroma_x_older<=chroma_x_previous;
+                cvbs_chroma_y_oldest<=cvbs_chroma_y_older;
+                cvbs_chroma_y_older<=chroma_y_previous;
+                cvbs_chroma_x_filtered<=cvbs_chroma_x_sum>>>2;
+                cvbs_chroma_y_filtered<=cvbs_chroma_y_sum>>>2;
+                cvbs_trap_current <= encoder_cvbs_luma;
+                cvbs_trap_history <= cvbs_trap_history_sum;
                 chroma_x_previous <= encoder_x_axis;
                 chroma_y_previous <= encoder_y_axis;
                 chroma_x_filtered <= chroma_x_average;
                 chroma_y_filtered <= chroma_y_average;
+                cvbs_luma_oldest <= cvbs_luma_older;
                 cvbs_luma_older <= cvbs_luma_previous;
                 cvbs_luma_previous <= encoder_cvbs_luma;
-                cvbs_luma_filtered <= cvbs_luma_filter_sum[7:2];
+                cvbs_luma_filtered <= cvbs_luma_filter_sum[8:3];
             end
 
             mod_sync <= encoder_sync;
@@ -709,6 +831,11 @@ module coco_cvbs_ntsc #(
             mod_sum3 <= (filtered_sum <<< 1) + filtered_sum;
             mod_difference3 <=
                 (filtered_difference <<< 1) + filtered_difference;
+            cvbs_mod_x4<=cvbs_filtered_x<<<2;
+            cvbs_mod_y4<=cvbs_filtered_y<<<2;
+            cvbs_mod_sum3<=(cvbs_filtered_sum<<<1)+cvbs_filtered_sum;
+            cvbs_mod_difference3<=
+                (cvbs_filtered_difference<<<1)+cvbs_filtered_difference;
             // Component video keeps the full colour-difference bandwidth;
             // the composite-only two-tap chroma filter is intentionally not
             // inserted in these paths.

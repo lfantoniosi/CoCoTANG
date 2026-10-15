@@ -742,7 +742,9 @@ module top_coco3 #(
         .RGB_SOG_OUTPUT(ANALOG_VIDEO_MODE==3),
         .RGB_SCANLINE_PHASE_ALTERNATION(ANALOG_VIDEO_MODE==3),
         .CVBS_SVIDEO_SCANLINE_PHASE_ALTERNATION(ANALOG_VIDEO_MODE<=1),
-        .CVBS_LUMA_FILTER(ANALOG_VIDEO_MODE<=1)) analog_encoder(
+        .CVBS_LUMA_FILTER(ANALOG_VIDEO_MODE<=1),
+        .CVBS_LUMA_NOTCH(ANALOG_VIDEO_MODE<=1),
+        .CVBS_CHROMA_FILTER(ANALOG_VIDEO_MODE<=1)) analog_encoder(
         // Start on the same board reset as HDMI.  cpu_release is aligned to
         // the CoCo bus, not to video, and made the CVBS consumer enter the
         // shared two-line cache at an arbitrary scanline phase.

@@ -51,10 +51,30 @@ module tb_cvbs_luma_filter;
         repeat (3) @(negedge clk135);
         reset_n = 1;
         sample(11'd0, 6'd10, 6'd10);
-        sample(11'd1408, 6'd16, 6'd32);
-        sample(11'd1408, 6'd27, 6'd32);
+        // A hard edge ramps over four 13.5 MHz samples, with unity DC gain.
+        sample(11'd1408, 6'd13, 6'd32);
+        sample(11'd1408, 6'd21, 6'd32);
+        sample(11'd1408, 6'd29, 6'd32);
         sample(11'd1408, 6'd32, 6'd32);
-        sample(11'd0, 6'd27, 6'd10);
+        sample(11'd1408, 6'd32, 6'd32);
+        sample(11'd0, 6'd29, 6'd10);
+        sample(11'd0, 6'd21, 6'd10);
+        sample(11'd0, 6'd13, 6'd10);
+        sample(11'd0, 6'd10, 6'd10);
+        // A single bright sample spreads symmetrically rather than ringing.
+        sample(11'd1408, 6'd13, 6'd32);
+        sample(11'd0, 6'd18, 6'd10);
+        sample(11'd0, 6'd18, 6'd10);
+        sample(11'd0, 6'd13, 6'd10);
+        sample(11'd0, 6'd10, 6'd10);
+        // Alternating black/white detail settles to a steady middle level.
+        sample(11'd1408, 6'd13, 6'd32);
+        sample(11'd0, 6'd18, 6'd10);
+        sample(11'd1408, 6'd21, 6'd32);
+        repeat(4)begin
+            sample(11'd0, 6'd21, 6'd10);
+            sample(11'd1408, 6'd21, 6'd32);
+        end
         force filtered.level_sync = 1'b1;
         force filtered.level_picture = 1'b0;
         #1;
@@ -64,7 +84,7 @@ module tb_cvbs_luma_filter;
         #1;
         if (filtered.composite_level !== 6'd10)
             $fatal(1,"CVBS FIR changed blanking level");
-        $display("CVBS luma FIR PASS");
+        $display("Four-sample CVBS luma FIR PASS");
         $finish;
     end
 endmodule

@@ -20,6 +20,9 @@ module tb_coco_cvbs_ntsc_svideo;
         .cvbs_out(matched_cvbs)
     );
     integer count;
+    integer delta, expected, level, ones;
+    reg signed [5:0] test_delta;
+    reg [5:0] test_level;
     initial begin
         repeat (3) @(negedge clk135);
         reset_n = 1;
@@ -43,6 +46,36 @@ module tb_coco_cvbs_ntsc_svideo;
         release matched.level_svideo_chroma;
         release matched.mod_carrier;
         release matched.mod_y4;
+        // Exercise both polarities, including saturated green (+5 -> 36).
+        // The six-bit DAC adder has only five residue bits: full scale is 32.
+        force matched.level_picture = 1'b1;
+        force matched.level_svideo_chroma = test_delta;
+        for (delta = -32; delta < 32; delta = delta + 1) begin
+            test_delta = delta;
+            expected = 16 + delta * 4;
+            if (expected < 0) expected = 0;
+            if (expected > 32) expected = 32;
+            #1;
+            if (matched.chroma_level !== expected)
+                $fatal(1,"S-Video chroma wraps/clips incorrectly: delta=%0d level=%0d expected=%0d",
+                       delta,matched.chroma_level,expected);
+        end
+        release matched.level_svideo_chroma;
+        release matched.level_picture;
+        // Check actual pulse density, including steady 100% at the upper rail.
+        force matched.chroma_level_135 = test_level;
+        for (level = 0; level <= 32; level = level + 1) begin
+            test_level = level;
+            repeat (8) @(negedge clk270);
+            ones = 0;
+            repeat (256) begin
+                @(negedge clk270);
+                ones = ones + matched.chroma_out;
+            end
+            if (ones != level * 8)
+                $fatal(1,"S-Video DAC density: level=%0d ones=%0d",level,ones);
+        end
+        release matched.chroma_level_135;
         $display("NTSC S-Video/CVBS phase match PASS");
         $finish;
     end
