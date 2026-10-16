@@ -46,12 +46,13 @@ module tb_gime_compat_capture;
   integer r,c;
   begin
    if(!display_valid)$fatal(1,"completed capture not published");
-   for(r=0;r<192;r=r+37)
+   // Check both sides of every 2-KiB capture-page boundary.
+   for(r=0;r<192;r=r+1)
     for(c=0;c<32;c=c+7)begin
      @(negedge clk);read_addr=r*32+c;
      repeat(2)@(negedge clk);
      if(read_data!=={1'((r+c+id)&1),
-                    8'((id==8&&r==0&&c>0&&c<8)?9:id)})
+                    8'((id==8&&r==0&&c>0&&c<8)?9:id+(r/64)*16)})
       $fatal(1,"torn capture field=%0d y=%0d col=%0d got=%h",id,r,c,read_data);
     end
   end
@@ -65,7 +66,7 @@ module tb_gime_compat_capture;
      // A CPU write between two byte samples must invalidate the captured
      // word cache, without changing the byte already stored in the field.
      cpu_write=id==8&&iy==0&&ix==1;
-     live_pixel=cpu_write?id+1:id;sample=1;
+     live_pixel=cpu_write?id+1:id+(iy/64)*16;sample=1;
      @(negedge clk);sample=0;cpu_write=0;
      repeat(19)@(negedge clk);
      if(switch_midway&&iy==96&&ix==0)begin

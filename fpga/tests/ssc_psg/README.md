@@ -13,8 +13,8 @@ a busy timeout, and an explicit stop command. Enter 254 for approximately
 `PSGAUTO.BAS` is an additional test: it plays A, B, C separately and then
 a three-voice chord. Each step lasts about two seconds at 60 Hz. The mono
 PSG is mixed into both HDMI channels and the physical audio output, alongside
-the existing PIA and Orchestra-90 sources. Speech is mixed into the same outputs. The shared SSC mix uses unity gain
-and saturates overloads.
+the existing PIA and Orchestra-90 sources. Speech is mixed into the same outputs. The shared SSC mix uses 1.5× gain (about +3.5 dB)
+and saturates overloads without changing the CoCo DAC or Orchestra-90 gain.
 
 `RUN "SPEAK"` says “Color Computer” using buffered AL2 allophones. Its phrase
 is from the manual's printed page 14 example. It loads buffer 0 with B0,
@@ -52,7 +52,18 @@ KQ1/KQ2's SSC-enabled Sierra loader expects BF shortly after reset; the 1-ms
 speech-startup window reproduces that probe. All three game probes are
 covered in simulation; gameplay still needs validation on the board.
 
-SSC sound and speech default to enabled (`ENABLE_SSC_PSG=1` in `src/top_coco3.v`).
+SSC sound and speech are included in the default build but disabled at cold boot.
+Press the CoCo motherboard RESET to cycle through ARTIFACT NORMAL,
+ARTIFACT REVERSE, NO ARTIFACT, ARTIFACT NORMAL - SSC,
+ARTIFACT REVERSE - SSC, and NO ARTIFACT - SSC, then back to the SSC-off modes.
+Cold boot starts at ARTIFACT NORMAL. Both synthesizers stay in reset and silent
+and leave `$FF7D`/`$FF7E` unclaimed until an SSC mode is selected.
+HDMI shows the reset-mode message for four seconds, with `- SSC` appended
+when SSC sound/speech is enabled. The analog banner is off by default; set
+`ENABLE_ANALOG_BANNER=1` in `src/top_coco3.v` and rebuild to enable it on all
+analog outputs. The analog font is doubled horizontally and vertically.
+`make test-ssc-toggle` checks the top-level reset cycle, bus ownership and
+disabled audio clamp using the installed Gowin simulation library.
 `ENABLE_SSC_SPEECH=0` keeps the PSG while removing the speech core.
 For RGB, build with `make build-rgb`, check `make timing-rgb`, then flash
 with `make reprogram-rgb`. The YPbPr and CVBS targets include the same audio

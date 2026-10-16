@@ -88,9 +88,9 @@ module gime_registers #(
     // outside the ram_mode qualification is essential: IRQ entry commonly
     // occurs after Extended BASIC has enabled all-RAM, and otherwise FFF8/9
     // are incorrectly translated through the RAM/MMU path.
-    wire rom_window = vector_selected || (!ram_mode && !io_selected &&
+    wire mapped_rom_selected = !ram_mode && !io_selected &&
                       !constant_fe_page &&
-                      (legacy_rom_window || mapped_rom_window));
+                      (legacy_rom_window || mapped_rom_window);
     wire [14:0] rom_byte_addr = vector_selected ? cpu_addr[14:0] :
                                 mmu_enabled ? {cpu_block[1:0],cpu_addr[12:0]} :
                                               cpu_addr[14:0];
@@ -104,9 +104,12 @@ module gime_registers #(
     // 32K internal, and 11 is 32K external except for vectors.  The FPGA
     // contains the complete internal 32K image; external portions must
     // release the data bus for the cartridge/motherboard path.
-    wire external_rom_selected = rom_window && !vector_selected &&
-        ((!rom_map[1] && rom_byte_addr[14]) || rom_map == 2'b11);
-    wire rom_selected = rom_window && !external_rom_selected;
+    // Decode the ROM bank independently of the MMU-page selection. Avoid
+    // feeding the wide page mux through external-ROM decode and back into
+    // the internal-ROM/address mux on the 108-MHz memory capture path.
+    wire external_rom_bank = (!rom_map[1] && rom_byte_addr[14]) || rom_map == 2'b11;
+    wire external_rom_selected = !vector_selected && mapped_rom_selected && external_rom_bank;
+    wire rom_selected = vector_selected || (mapped_rom_selected && !external_rom_bank);
     // The card supplies D7:D6 externally.  It has no GIME MMU-enable input,
     // so those two latched bits remain active over the GIME's fixed $38-$3f
     // compatibility pages when INIT0.MMU is clear.
@@ -206,7 +209,9 @@ module gime_registers #(
             16'hff9f: core_rdata = horizontal_offset;
             default: begin
                 if (cpu_addr >= 16'hffa0 && cpu_addr <= 16'hffaf)
-                    core_rdata = {2'b00,mmu[cpu_addr[3:0]]};
+                    // Read the latched DISTO page bits, independent of the active task.
+                    core_rdata = {DISTO_2MB ? disto_mmu[cpu_addr[3:0]][1:0] :
+                                  2'b00,mmu[cpu_addr[3:0]]};
                 else if (cpu_addr >= 16'hffb0 && cpu_addr <= 16'hffbf)
                     core_rdata = {2'b00,palette[cpu_addr[3:0]]};
             end

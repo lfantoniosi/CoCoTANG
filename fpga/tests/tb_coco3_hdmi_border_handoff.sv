@@ -9,7 +9,7 @@ module tb_coco3_hdmi_border_handoff;
         .pixel_clk(clk),.serial_clk(clk),.audio_clk(clk),.reset(1'b1),
         .video_50hz(1'b0),.bit_plane(1'b1),.active_height(8'd192),
         .compatibility_mode(1'b0),.border_rgb(border_rgb),
-        .artifact_mode(2'd0),.artifact_video_active(1'b0),
+        .ssc_enabled(1'b0),.artifact_mode(2'd0),.artifact_video_active(1'b0),
         .artifact_css(1'b0),.overlay_enable(1'b0),
         .row_left_border_rgb(6'h0c),.row_right_border_rgb(6'h3f),
         .row_border_valid(row_border_valid),.vertical_left_border_rgb(6'd0),
@@ -82,7 +82,9 @@ module hdmi #(
     assign screen_height=480;
     assign active_video_50hz=0;
 endmodule
+`ifndef COCOTANG_GOWIN_SIMLIB
 module ELVDS_OBUF(input I, output O, OB);
     assign O=I;
     assign OB=~I;
 endmodule
+`endif

@@ -24,6 +24,14 @@ The project is composed of several daugherboards: the **main board** (CPU/TangNa
 
 The design uses NTSC-machine clocking. The GIME's 50 Hz setting remains available, but it does **not** switch to a PAL crystal, although it can output PAL encoded video at CVBS/S-Video. See the [FPGA design notes](fpga/README.md) for supported video modes and hardware details.
 
+## Current FPGA features
+
+- GIME video and memory mapping with 8 MB NoCan3-style RAM support and readable Disto MMU page bits.
+- Simultaneous HDMI and analog video, with separate RGB, YPbPr, and CVBS/S-Video build targets.
+- Six motherboard RESET selections combining normal, reversed, or disabled artifact colours with SSC sound/speech off or on.
+- Tandy Speech/Sound Cartridge PSG, buffered allophones, and ASCII English text-to-speech, alongside the CoCo DAC and Orchestra-90 audio.
+- HDMI status labels and an optional analog status banner with a larger font.
+
 ## Hardware and files
 
 | Item | File or notes |
@@ -140,7 +148,7 @@ The standard FPGA build enables a NoCan3-style extension that exposes the Tang N
 | `$FFA0–$FFAF` | Lower eight bits of each CPU page number; both MMU tasks retain their own captured upper bits |
 | `$FF9B` bits 3–0 | Video bank: sixteen 512 KB regions across 8 MB |
 
-A CPU page number is `($FF9B[5:4] << 8) | MMU_byte`, giving 1024 pages. Writing `$FF9B` alone does not remap existing CPU slots. Keep a software copy of the bank control: this core retains GIME-style six-bit MMU readback, so the extended page bits cannot be recovered by reading the MMU registers. Existing 2 MB software retains its mapping when the additional CPU and video bank bits are zero. Software must explicitly use the extension to allocate memory above 2 MB.
+A CPU page number is `($FF9B[5:4] << 8) | MMU_byte`, giving 1024 pages. Writing `$FF9B` alone does not remap existing CPU slots. Reading `$FFA0–$FFAF` returns the full eight-bit MMU byte, including the two Disto page bits, for the addressed slot in either task. Keep a software copy of the NoCan3 bank control: the additional page bits captured from `$FF9B[5:4]` are not returned by an MMU-register read. Stock 512 KB builds retain six-bit readback. Existing 2 MB software retains its mapping when the additional CPU and video bank bits are zero. Software must explicitly use the extension to allocate memory above 2 MB.
 
 Custom builds can set `NOCAN3_8MB=0` on `top_coco3` for the previous Disto 2 MB mapping, or additionally set `DISTO_2MB=0` for the stock 512 KB mapping. The extended bank convention follows the [NoCan3 documentation](https://www.geocities.ws/idezilla/CoCoZilla/8mbdet.html).
 
@@ -153,6 +161,29 @@ RUN "RAM8M"
 ```
 
 Expected result: `PASS: 1024 DISTINCT 8KB PAGES`. The probe checks one byte at the end of every 8 KB page for aliasing, saves and restores those bytes, and restores the standard BASIC slot mapping and video bank zero. It returns in all-RAM mode. This is a bank-mapping probe rather than a full memory stress test; use it from the standard fresh-boot BASIC memory map.
+
+## Artifact colours and SSC sound/speech
+
+The standard build includes the Tandy Speech/Sound Cartridge (SSC) PSG and speech engine. **SSC always starts disabled at cold boot.** Press the CoCo motherboard RESET to advance through these selections:
+
+| RESET presses since cold boot | Status label | SSC PSG and speech |
+| --- | --- | --- |
+| 0 (cold boot) | `ARTIFACT NORMAL` | Disabled |
+| 1 | `ARTIFACT REVERSE` | Disabled |
+| 2 | `NO ARTIFACT` | Disabled |
+| 3 | `ARTIFACT NORMAL - SSC` | Enabled |
+| 4 | `ARTIFACT REVERSE - SSC` | Enabled |
+| 5 | `NO ARTIFACT - SSC` | Enabled |
+
+The next RESET returns to `ARTIFACT NORMAL` with SSC disabled. RESET is debounced, and holding it down advances only once. Disabled SSC stays silent, holds both synthesizers in reset, and leaves `$FF7D`/`$FF7E` available to the motherboard/cartridge bus. Software cannot enable SSC by writing its registers while an SSC-off selection is active.
+
+HDMI shows the selected label for about four seconds. The analog banner is optional and **off by default**: set `ENABLE_ANALOG_BANNER=1` in `fpga/src/top_coco3.v` and rebuild to include it. Its font is doubled in both dimensions, with each font row occupying two analog scanlines. This applies to RGB, YPbPr, CVBS, and S-Video; the HDMI label keeps its original size.
+
+When SSC is selected, software resets its interface by writing `1` then `0` to `$FF7D`. `$FF7E` accepts commands/data and returns status; bit 7 high means ready. The implementation supports direct PSG register writes, buffered sound events/register streams, buffered AL2 allophones, and immediate ASCII text terminated by carriage return. English text uses NRL letter-to-sound rules; this is command-level compatibility rather than a TMS7040 CPU emulation. See the [SSC test disk and compatibility notes](fpga/tests/ssc_psg/README.md) for commands, limits, and example programs.
+
+PSG and speech are combined and mixed into both HDMI channels and the physical mono output at **1.5× gain (about +3.5 dB)**. The CoCo DAC and Orchestra-90 gains are unchanged. The final sum saturates at the signed PCM limits instead of wrapping, and disabling SSC clamps its contribution to silence.
+
+Build the sample disk with `make ssc-psg-dsk` from `fpga/`, select an SSC-on reset mode, mount `fpga/results/SSCPSG.DSK`, and run `PSGTEST`, `PSGAUTO`, `SPEAK`, `SPEAK2`, or `SAY`. In custom builds, `ENABLE_SSC_SPEECH=0` removes speech while retaining the PSG; `ENABLE_SSC_PSG=0` removes both SSC engines and restores the three artifact-only reset selections. `make test-ssc-toggle` checks the real top-level reset cycle, disabled bus/audio behavior, and both analog-banner settings using Gowin's installed simulation library.
 
 ## Orchestra-90 audio
 
@@ -199,6 +230,14 @@ Each mode has its own bitstream and fixed video-mode setting, independent of the
 | NTSC CVBS and S-Video | `make program-cvbs` | `make reprogram-cvbs` | `CoCoTANG-cvbs.fs` |
 
 Run these commands from `fpga/`. To build without programming, use `make build-rgb`, `make build-ypbpr`, or `make build-cvbs`. Use `make rebuild-rgb`, `make rebuild-ypbpr`, or `make rebuild-cvbs` to force a rebuild, and the corresponding `make timing-rgb`, `make timing-ypbpr`, or `make timing-cvbs` to check the routed timing. The `reprogram-*` targets never rebuild; their named image must already exist.
+
+The artifact/SSC status banner is off on analog outputs by default. Set `ENABLE_ANALOG_BANNER=1` in `fpga/src/top_coco3.v` and rebuild to enable its larger font in any analog video mode. The HDMI status label and reset selector are always available.
+
+### Scanline timing
+
+Analog compatibility video now trails the shared HDMI renderer by one complete source line in both alternating fields. This gives PMODE 4 artifact decoding time to finish without alternating between a graphics field and a black field, while keeping the captured Dragonfire border/CSS changes aligned with the picture.
+
+SDRAM video/refresh slots cover the complete early E-low/Q-low phase at both 0.895 MHz and 1.79 MHz. The E/Q guards close the slot before the next CPU address phase. This corrects a shortened slow-speed slot that reproduced random black HDMI scanlines under memory load, even while analog output remained complete. Regression simulations cover 40- and 80-column text with queued RAM writes, variable SDRAM response delays, and both field phases, alongside the BOINK raster and compatibility-video checks. The latest EOU/BOINK hardware reports still need confirmation with the rebuilt image.
 
 ## Program on macOS or Linux
 

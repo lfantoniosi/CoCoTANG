@@ -51,7 +51,7 @@ ROM_OFFSET ?= 1048576
 .PHONY: $(addprefix build-,$(VIDEO_MODES)) $(addprefix rebuild-,$(VIDEO_MODES)) \
  $(addprefix timing-,$(VIDEO_MODES)) $(addprefix program-,$(VIDEO_MODES)) \
  $(addprefix reprogram-,$(VIDEO_MODES))
-.PHONY: ssc-psg-dsk
+.PHONY: ssc-psg-dsk test-ssc-toggle
 
 build: $(OUTPUT)
 
@@ -100,6 +100,9 @@ pal-timing:
 
 ntsc-svideo-timing:
 	python3 scripts/check_timing.py impl/pnr/CoCoTANG-ntsc-svideo_tr_content.html
+
+test-ssc-toggle:
+	python3 tests/test_ssc_toggle.py "$(GOWIN_IDE)/simlib/gw2a/prim_sim.v"
 
 test:
 	python3 tests/ssc_psg/test_tts.py
@@ -153,6 +156,10 @@ test:
 	vvp /private/tmp/cocotang_tb_gime_compat_video
 	iverilog -g2012 -s tb_gime_css_alignment -o /private/tmp/cocotang_tb_gime_css_alignment tests/tb_gime_css_alignment.sv src/coco3/gime_native_video.v src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
 	vvp /private/tmp/cocotang_tb_gime_css_alignment
+	iverilog -g2012 -s tb_gime_text_hdmi_slots -o /private/tmp/cocotang_tb_text_hdmi_slots tests/tb_gime_text_hdmi_slots.sv src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v src/video/coco_cvbs_ntsc.v src/memory/cpu_sdram_arbiter.v
+	vvp /private/tmp/cocotang_tb_text_hdmi_slots
+	iverilog -g2012 -s tb_gime_pmode4_analog -o /private/tmp/cocotang_tb_gime_pmode4_analog tests/tb_gime_pmode4_analog.sv src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v src/video/coco_cvbs_ntsc.v
+	vvp /private/tmp/cocotang_tb_gime_pmode4_analog
 	iverilog -g2012 -s tb_gime_compat_capture -o /private/tmp/cocotang_tb_gime_compat_capture tests/tb_gime_compat_capture.sv src/coco3/gime_scanline_buffer.v
 	vvp /private/tmp/cocotang_tb_gime_compat_capture
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_registers tests/tb_gime_registers.v src/coco3/gime_registers.v

@@ -189,7 +189,12 @@ module gime_scanline_buffer (
  // because HDMI and CVBS have unrelated read clocks; this is still two lines
  // per output, never a framebuffer.
  reg [23:0] hdmi_line0[0:639],hdmi_line1[0:639];
- reg [5:0] cvbs_line0[0:639],cvbs_line1[0:639],cvbs_line2[0:639];
+ // Short LUT-RAM pages leave block RAM for speech and keep read muxes shallow.
+ wire [5:0] cvbs_bytes0[0:9],cvbs_bytes1[0:9],cvbs_bytes2[0:9];
+`ifdef __ICARUS__
+ // Flat read-only views keep cache inspection convenient in simulation.
+ wire [5:0] cvbs_line0[0:639],cvbs_line1[0:639],cvbs_line2[0:639];
+`endif
  reg h_valid0=0,h_valid1=0,c_valid0=0,c_valid1=0,c_valid2=0;
  reg h_dirty0=0,h_dirty1=0,c_dirty0=0,c_dirty1=0,c_dirty2=0;
  reg [7:0] h_tag0=0,h_tag1=0,c_tag0=0,c_tag1=0,c_tag2=0;
@@ -206,12 +211,16 @@ module gime_scanline_buffer (
  reg hd_v_m=0,hd_v_s=0,hd_pa_m=0,hd_pa_s=0,hd_pv_m=0,hd_pv_s=0;
  reg [7:0] cv_y_m=0,cv_y_s=0,cv_p_m=0,cv_p_s=0;
  reg cv_v_m=0,cv_v_s=0,cv_pv_m=0,cv_pv_s=0;
+ reg [7:0] cv_active_y=0;
  always @(posedge clk) begin
   hd_y_m<=hdmi_display_y;hd_y_s<=hd_y_m;hd_p_m<=hdmi_prefetch_y;hd_p_s<=hd_p_m;
   hd_v_m<=hdmi_display_valid;hd_v_s<=hd_v_m;hd_pv_m<=hdmi_prefetch_valid;hd_pv_s<=hd_pv_m;
   hd_pa_m<=hdmi_picture_active;hd_pa_s<=hd_pa_m;
   cv_y_m<=cvbs_display_y;cv_y_s<=cv_y_m;cv_p_m<=cvbs_prefetch_y;cv_p_s<=cv_p_m;
   cv_v_m<=cvbs_display_valid;cv_v_s<=cv_v_m;cv_pv_m<=cvbs_prefetch_valid;cv_pv_s<=cv_pv_m;
+  // Compute from the first synchronizer stage alongside the second stage.
+  // This is the same row identity, without a subtract on cache-tag paths.
+  cv_active_y<=cv_v_m?cv_y_m:(cv_p_m-1'b1);
  end
  wire h_display_cached=(h_valid0&&h_tag0==hd_y_s)||(h_valid1&&h_tag1==hd_y_s);
  // A cached row remains immutable until normal two-line replacement.  CPU
@@ -241,7 +250,6 @@ module gime_scanline_buffer (
  // render duration (notably 256 -> 320 dots) can make round-robin replacement
  // overwrite the row just before component/CVBS starts reading it.
  wire cv_line_active=cv_v_s||(cv_pv_s&&cv_p_s!=0);
- wire [7:0] cv_active_y=cv_v_s?cv_y_s:(cv_p_s-1'b1);
  wire h_keep_tag0=h_valid0&&hd_pa_s&&
                   ((h_tag0==hd_y_s)||(hd_pv_s&&h_tag0==hd_p_s));
  wire h_keep_tag1=h_valid1&&hd_pa_s&&
@@ -447,8 +455,11 @@ module gime_scanline_buffer (
  // Both terms are strictly below 640, so eleven bits cover the complete
  // 0..1278 sum.  Keeping this at fourteen bits needlessly lengthened the
  // source-index update carry chain on the 108 MHz renderer clock.
- wire [10:0] next_scale_phase_sum={1'b0,scale_phase}+
-                                  {1'b0,fill_scale_remainder};
+ // Pixel decode/colour lookup leaves several clocks before WRITE_PIXEL.
+ // Precompute this sum to separate it from the source-address carry chain.
+ reg [10:0] next_scale_phase_sum=0;
+ always @(posedge clk)
+  next_scale_phase_sum<={1'b0,scale_phase}+{1'b0,fill_scale_remainder};
  wire [12:0] next_source_x=source_x+fill_scale_integer+
      (next_scale_phase_sum>=(fill_narrow_aperture?11'd512:11'd640));
  wire in_fill_aperture=!fill_narrow_aperture||
@@ -555,7 +566,7 @@ module gime_scanline_buffer (
  localparam IDLE=0,DIVIDE_ROW=1,ROW_ADDRESS=2,LINE_ADDRESS=3,PIXEL_ADDRESS=4,
   CHECK_WORD=5,WAIT_WORD=6,FINALIZE_LINE=7,CHECK_ATTRIBUTE=8,WAIT_ATTRIBUTE=9,
   FONT_WAIT1=10,FONT_WAIT2=11,DECODE_PIXEL=12,COLOR_LOOKUP=13,WRITE_PIXEL=14,
-  ARTIFACT_WRITE=15,ARTIFACT_DECODE=16,SNAPSHOT_WAIT=17;
+  ARTIFACT_WRITE=15,ARTIFACT_DECODE=16,SNAPSHOT_WAIT=17,SNAPSHOT_WAIT2=18;
  reg [4:0] state=IDLE;reg [5:0] pixel_latched;
  reg [23:0] hdmi_pixel_latched=0;
  reg [5:0] artifact_pixel_latched=0;
@@ -687,12 +698,20 @@ reg configuration_pending=1'b1;
    if(hdmi_write_bank)hdmi_line1[hdmi_write_x]<=hdmi_write_data;
    else hdmi_line0[hdmi_write_x]<=hdmi_write_data;
   end
-  if(cvbs_write_pending)begin
-   case(cvbs_write_bank)
-    2'd0:cvbs_line0[cvbs_write_x]<=cvbs_write_data;
-    2'd1:cvbs_line1[cvbs_write_x]<=cvbs_write_data;
-    default:cvbs_line2[cvbs_write_x]<=cvbs_write_data;
-   endcase
+ end
+
+ // Keep the output counter enable independent of the renderer's priority
+ // mux. These states cannot coincide with the IDLE configuration update.
+ always @(posedge clk)begin
+  if(reset_n && !hdmi_standard_changed && !upper_border_setup_abort &&
+     !compatibility_frame_abort)begin
+   if(state==ROW_ADDRESS ||
+      (state==WRITE_PIXEL && out_x==CANONICAL_WIDTH-1'b1 && artifact_active))
+    hdmi_out_x<=0;
+   else if(fill_hdmi &&
+           ((state==WRITE_PIXEL && (!fill_compatibility||hdmi_filter_phase!=1)) ||
+            (state==ARTIFACT_WRITE && hdmi_filter_phase!=1)))
+    hdmi_out_x<=hdmi_out_x+1'b1;
   end
  end
 
@@ -967,7 +986,7 @@ reg configuration_pending=1'b1;
      if(fill_compatibility)begin
       fill_left_css<=fill_css;fill_right_css<=fill_css;
      end
-     scale_phase<=0;hdmi_out_x<=0;hdmi_filter_phase<=0;
+     scale_phase<=0;hdmi_filter_phase<=0;
      state<=LINE_ADDRESS;end
     LINE_ADDRESS:begin line_address<=fill_base+row_address;
      state<=PIXEL_ADDRESS;end
@@ -990,7 +1009,8 @@ reg configuration_pending=1'b1;
       state<=DECODE_PIXEL;
      else begin byte_address<=calculated_byte_address;state<=CHECK_WORD;end
     end
-    SNAPSHOT_WAIT:state<=CHECK_WORD;
+    SNAPSHOT_WAIT:state<=SNAPSHOT_WAIT2;
+    SNAPSHOT_WAIT2:state<=CHECK_WORD;
     CHECK_WORD:begin
      if(!fill_bitmap_valid&&(!word_valid||word_tag!=aligned_address))begin
       memory_addr<={fill_video_bank,aligned_address};
@@ -1055,8 +1075,6 @@ reg configuration_pending=1'b1;
      // Native GIME keeps all 640 pixels. Compatibility video still occupies
      // the 512-dot HDMI aperture, so its five canonical positions advance
      // the output address four times.
-     if(fill_hdmi&&(!fill_compatibility||hdmi_filter_phase!=1))
-      hdmi_out_x<=hdmi_out_x+1'b1;
      hdmi_filter_phase<=(hdmi_filter_phase==4)?0:hdmi_filter_phase+1'b1;
      if(out_x==CANONICAL_WIDTH-1'b1)begin
       if(artifact_active)begin
@@ -1064,7 +1082,7 @@ reg configuration_pending=1'b1;
        // border. Set-bit padding avoids artificial cyan/green edge lines.
        artifact_shift<={3'b111,color_index_latched[0],
                         artifact_bits[254:0],2'b11};
-       out_x<=0;source_x<=0;scale_phase<=0;hdmi_out_x<=0;
+       out_x<=0;source_x<=0;scale_phase<=0;
        hdmi_filter_phase<=0;
        state<=ARTIFACT_DECODE;
       end else state<=FINALIZE_LINE;
@@ -1088,8 +1106,6 @@ reg configuration_pending=1'b1;
      state<=ARTIFACT_WRITE;
     end
     ARTIFACT_WRITE:begin
-     if(fill_hdmi&&hdmi_filter_phase!=1)
-      hdmi_out_x<=hdmi_out_x+1'b1;
      hdmi_filter_phase<=(hdmi_filter_phase==4)?0:hdmi_filter_phase+1'b1;
      if(out_x==CANONICAL_WIDTH-1'b1)state<=FINALIZE_LINE;
      else begin
@@ -1234,19 +1250,58 @@ reg configuration_pending=1'b1;
  reg [7:0] c_tag0_m=0,c_tag0_r=0,c_tag1_m=0,c_tag1_r=0,
            c_tag2_m=0,c_tag2_r=0;
  reg c_v0_m=0,c_v0_r=0,c_v1_m=0,c_v1_r=0,c_v2_m=0,c_v2_r=0;
+ // Row selection settles during horizontal blanking. Stage the tag compares
+ // before the page/bank mux rather than driving pixels through both at once.
+ reg c_match0=0,c_match1=0,c_match2=0;
  reg [1:0] c_read_bank=0;
  reg c_read_valid=0;
  reg [9:0] c_read_addr=0;
+ wire [9:0] c_next_read_addr=cvbs_display_valid ?
+        (cvbs_read_x==10'd639 ? 10'd639 : cvbs_read_x+1'b1) : 10'd0;
+ // The prefetch after pixel 639 is already in blanking. Let its low address
+ // wrap so the last-pixel clamp stays off the LUT-RAM read path.
+ wire [5:0] c_next_page_addr=cvbs_display_valid ? cvbs_read_x[5:0]+6'd1 : 6'd0;
+ genvar cvbs_page;
+ generate for(cvbs_page=0;cvbs_page<10;cvbs_page=cvbs_page+1)begin:cvbs_pages
+  (* syn_ramstyle = "distributed_ram" *) reg [5:0] line0[0:63],line1[0:63],line2[0:63];
+  reg [5:0] data0=0,data1=0,data2=0;
+  always @(posedge clk)begin
+   if(cvbs_write_pending && cvbs_write_x[9:6]==cvbs_page)case(cvbs_write_bank)
+    0:line0[cvbs_write_x[5:0]]<=cvbs_write_data;
+    1:line1[cvbs_write_x[5:0]]<=cvbs_write_data;
+    default:line2[cvbs_write_x[5:0]]<=cvbs_write_data;
+   endcase
+  end
+  // Read ahead with the address pipeline; the final page/bank mux retains
+  // the original output latency and horizontal alignment.
+  always @(posedge cvbs_read_clk)begin
+   data0<=line0[c_next_page_addr];
+   data1<=line1[c_next_page_addr];
+   data2<=line2[c_next_page_addr];
+  end
+  assign cvbs_bytes0[cvbs_page]=data0;
+  assign cvbs_bytes1[cvbs_page]=data1;
+  assign cvbs_bytes2[cvbs_page]=data2;
+`ifdef __ICARUS__
+  for(genvar offset=0;offset<64;offset=offset+1)begin:inspect_bytes
+   assign cvbs_line0[cvbs_page*64+offset]=line0[offset];
+   assign cvbs_line1[cvbs_page*64+offset]=line1[offset];
+   assign cvbs_line2[cvbs_page*64+offset]=line2[offset];
+  end
+`endif
+ end endgenerate
  always @(posedge cvbs_read_clk)begin
   // CVBS is always the 640-sample path in the CoCo 3 top.  Preload zero in
   // blanking, then request the following sample so the registered BSRAM
   // address does not add a visible horizontal pixel of delay.
-  c_read_addr<=cvbs_display_valid ?
-               (cvbs_read_x==10'd639 ? 10'd639 : cvbs_read_x+1'b1) : 10'd0;
+  c_read_addr<=c_next_read_addr;
   c_tag0_m<=c_tag0;c_tag0_r<=c_tag0_m;c_tag1_m<=c_tag1;c_tag1_r<=c_tag1_m;
   c_tag2_m<=c_tag2;c_tag2_r<=c_tag2_m;
   c_v0_m<=c_valid0;c_v0_r<=c_v0_m;c_v1_m<=c_valid1;c_v1_r<=c_v1_m;
   c_v2_m<=c_valid2;c_v2_r<=c_v2_m;
+  c_match0<=c_v0_r&&c_tag0_r==cvbs_display_y;
+  c_match1<=c_v1_r&&c_tag1_r==cvbs_display_y;
+  c_match2<=c_v2_r&&c_tag2_r==cvbs_display_y;
   // Refresh data throughout border selection; validity below still decides
   // whether the encoder uses it. This keeps tag comparison off the register
   // enable path without changing the selected row's border colour.
@@ -1258,39 +1313,39 @@ reg configuration_pending=1'b1;
    // Select its bank and preload pixel zero while the encoder is still
    // drawing border, so synchronous BSRAM latency cannot leak the previous
    // border/row into the left edge of the active component/CVBS picture.
-   if(c_v0_r&&c_tag0_r==cvbs_display_y)begin
-    c_read_bank<=0;c_read_valid<=1;cvbs_pixel_data<=cvbs_line0[c_read_addr];
+   if(c_match0)begin
+    c_read_bank<=0;c_read_valid<=1;cvbs_pixel_data<=cvbs_bytes0[c_read_addr[9:6]];
     cvbs_border_data<=c_border0;cvbs_right_border_data<=c_right_border0;
     cvbs_border_valid<=1;end
-   else if(c_v1_r&&c_tag1_r==cvbs_display_y)begin
-    c_read_bank<=1;c_read_valid<=1;cvbs_pixel_data<=cvbs_line1[c_read_addr];
+   else if(c_match1)begin
+    c_read_bank<=1;c_read_valid<=1;cvbs_pixel_data<=cvbs_bytes1[c_read_addr[9:6]];
     cvbs_border_data<=c_border1;cvbs_right_border_data<=c_right_border1;
     cvbs_border_valid<=1;end
-   else if(c_v2_r&&c_tag2_r==cvbs_display_y)begin
-    c_read_bank<=2;c_read_valid<=1;cvbs_pixel_data<=cvbs_line2[c_read_addr];
+   else if(c_match2)begin
+    c_read_bank<=2;c_read_valid<=1;cvbs_pixel_data<=cvbs_bytes2[c_read_addr[9:6]];
     cvbs_border_data<=c_border2;cvbs_right_border_data<=c_right_border2;
     cvbs_border_valid<=1;end
    else begin c_read_valid<=0;cvbs_pixel_data<=0;cvbs_border_valid<=0;end
   end
   else if(cvbs_read_x==0)begin
-   if(c_v0_r&&c_tag0_r==cvbs_display_y)begin
-    c_read_bank<=0;c_read_valid<=1;cvbs_pixel_data<=cvbs_line0[c_read_addr];
+   if(c_match0)begin
+    c_read_bank<=0;c_read_valid<=1;cvbs_pixel_data<=cvbs_bytes0[c_read_addr[9:6]];
     cvbs_border_data<=c_border0;cvbs_right_border_data<=c_right_border0;
     cvbs_border_valid<=1;end
-   else if(c_v1_r&&c_tag1_r==cvbs_display_y)begin
-    c_read_bank<=1;c_read_valid<=1;cvbs_pixel_data<=cvbs_line1[c_read_addr];
+   else if(c_match1)begin
+    c_read_bank<=1;c_read_valid<=1;cvbs_pixel_data<=cvbs_bytes1[c_read_addr[9:6]];
     cvbs_border_data<=c_border1;cvbs_right_border_data<=c_right_border1;
     cvbs_border_valid<=1;end
-   else if(c_v2_r&&c_tag2_r==cvbs_display_y)begin
-    c_read_bank<=2;c_read_valid<=1;cvbs_pixel_data<=cvbs_line2[c_read_addr];
+   else if(c_match2)begin
+    c_read_bank<=2;c_read_valid<=1;cvbs_pixel_data<=cvbs_bytes2[c_read_addr[9:6]];
     cvbs_border_data<=c_border2;cvbs_right_border_data<=c_right_border2;
     cvbs_border_valid<=1;end
    else begin c_read_valid<=0;cvbs_pixel_data<=0;cvbs_border_valid<=0;end
   end else if(c_read_valid)begin
    case(c_read_bank)
-    2'd0:cvbs_pixel_data<=cvbs_line0[c_read_addr];
-    2'd1:cvbs_pixel_data<=cvbs_line1[c_read_addr];
-    default:cvbs_pixel_data<=cvbs_line2[c_read_addr];
+    2'd0:cvbs_pixel_data<=cvbs_bytes0[c_read_addr[9:6]];
+    2'd1:cvbs_pixel_data<=cvbs_bytes1[c_read_addr[9:6]];
+    default:cvbs_pixel_data<=cvbs_bytes2[c_read_addr[9:6]];
    endcase
   end else cvbs_pixel_data<=0;
  end
@@ -1306,13 +1361,20 @@ module gime_compat_capture(
  input [18:0] screen_base,input [3:0] video_bank,
  input [10:0] row_bytes,input [7:0] lines_per_row,
  input cpu_write_strobe,input [22:0] cpu_write_addr,
- input [12:0] read_addr,output [8:0] read_data,output reg display_valid=0,
+ input [12:0] read_addr,output reg [8:0] read_data=0,output reg display_valid=0,
  input renderer_request,input [22:0] renderer_addr,output renderer_valid,
  output memory_request,output [22:0] memory_addr,
  input memory_valid,input [31:0] memory_data
 );
- reg [8:0] field0[0:6143],field1[0:6143],field2[0:6143];
- reg [8:0] read0=0,read1=0,read2=0;
+ // Three 2-KiB byte pages per field avoid padding 6 KiB up to 8 KiB.
+ // Keep CSS in separate bit planes and register the page/bank mux.
+ wire [7:0] read_bytes0[0:2],read_bytes1[0:2],read_bytes2[0:2];
+ reg css0[0:6143],css1[0:6143],css2[0:6143];
+ reg read_css0=0,read_css1=0,read_css2=0;
+ reg [1:0] read_page=0;
+ wire [8:0] read0={read_css0,read_bytes0[read_page]};
+ wire [8:0] read1={read_css1,read_bytes1[read_page]};
+ wire [8:0] read2={read_css2,read_bytes2[read_page]};
  reg [1:0] display_bank=0,capture_bank=1,latest_bank=2;
  reg latest_valid=0,capture_started=0,field_good=0;
  reg frame_m=0,frame_s=0,frame_p=0;
@@ -1379,15 +1441,35 @@ module gime_compat_capture(
    default:if(!renderer_request)owner<=0;
   endcase
  end
+ genvar page;
+ generate for(page=0;page<3;page=page+1)begin:capture_pages
+  (* syn_ramstyle = "block_ram" *) reg [7:0] field0[0:2047],field1[0:2047],field2[0:2047];
+  reg [7:0] byte0=0,byte1=0,byte2=0;
+  always @(posedge clk)begin
+   if(write_valid && write_addr[12:11]==page)case(write_bank)
+    0:field0[write_addr[10:0]]<=write_data[7:0];
+    1:field1[write_addr[10:0]]<=write_data[7:0];
+    default:field2[write_addr[10:0]]<=write_data[7:0];
+   endcase
+   byte0<=field0[read_addr[10:0]];
+   byte1<=field1[read_addr[10:0]];
+   byte2<=field2[read_addr[10:0]];
+  end
+  assign read_bytes0[page]=byte0;
+  assign read_bytes1[page]=byte1;
+  assign read_bytes2[page]=byte2;
+ end endgenerate
  always @(posedge clk)begin
   if(write_valid)case(write_bank)
-   0:field0[write_addr]<=write_data;
-   1:field1[write_addr]<=write_data;
-   default:field2[write_addr]<=write_data;
+   0:css0[write_addr]<=write_data[8];
+   1:css1[write_addr]<=write_data[8];
+   default:css2[write_addr]<=write_data[8];
   endcase
-  read0<=field0[read_addr];read1<=field1[read_addr];read2<=field2[read_addr];
+  read_css0<=css0[read_addr];read_css1<=css1[read_addr];read_css2<=css2[read_addr];
+  read_page<=read_addr[12:11];
  end
- assign read_data=display_bank==0?read0:display_bank==1?read1:read2;
+ always @(posedge clk)
+  read_data<=display_bank==0?read0:display_bank==1?read1:read2;
 
  always @(posedge clk or negedge reset_n)begin
   if(!reset_n)begin

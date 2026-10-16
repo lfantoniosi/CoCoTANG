@@ -166,6 +166,16 @@ module tb_coco3_memory_write_queue;
         repeat (100) @(negedge clk);
         if (dut.response_valid)
             $fatal(1,"stale speculative read became a CPU response");
+        // Slow CPU E-low/Q-low lasts 30 clocks. Retain video/refresh
+        // eligibility through the second half as well as the fast quadrant.
+        @(negedge clk);e_fall=1;
+        @(negedge clk);e_fall=0;
+        repeat(29)@(negedge clk);
+        if(dut.video_slot_count==0||dut.refresh_slot_count==0)
+            $fatal(1,"slow CPU background window closed before Q rises");
+        repeat(3)@(negedge clk);
+        if(dut.video_slot_count!=0||dut.refresh_slot_count!=0)
+            $fatal(1,"background window did not expire");
         $display("tb_coco3_memory_write_queue PASS");
         $finish;
     end

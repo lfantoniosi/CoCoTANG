@@ -83,6 +83,13 @@ module sd_spi_block #(
     reg card_v2;
     reg high_capacity;
     reg [15:0] init_retry_count;
+    // Retries are separated by a complete SPI command. Stage the terminal
+    // count so its wide comparison does not feed the command-launch muxes.
+    reg init_retry_limit=0;
+    always @(posedge clk or negedge reset_n) begin
+        if(!reset_n) init_retry_limit<=0;
+        else init_retry_limit<=&init_retry_count;
+    end
     reg [15:0] timeout_count;
     reg [5:0] timeout_return;
     reg [3:0] init_clock_count;
@@ -329,7 +336,7 @@ module sd_spi_block #(
                     if (last_r1==8'h01) begin
                         init_retry_count<=0;
                         launch_command(6'd8,32'h000001aa,8'h87,ST_CMD8_DONE);
-                    end else if (init_retry_count==16'hffff) begin
+                    end else if (init_retry_limit) begin
                         operation_error<=1;
                         state<=ST_FINISH_START;
                     end else begin
@@ -363,7 +370,7 @@ module sd_spi_block #(
                     if (last_r1==0) begin
                         init_retry_count<=0;
                         launch_command(6'd58,32'd0,8'hff,ST_CMD58_DONE);
-                    end else if (init_retry_count==16'hffff) begin
+                    end else if (init_retry_limit) begin
                         operation_error<=1;
                         state<=ST_FINISH_START;
                     end else begin

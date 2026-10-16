@@ -76,7 +76,7 @@ module coco_ssc_tts_rom (
     input clk,input [12:0] address,output reg [7:0] data,
     input [7:0] letter,output reg [12:0] first_rule
 );
-    reg [7:0] rom [0:8191];
+    (* syn_romstyle = "block_rom" *) reg [7:0] rom [0:8191];
     initial begin
 '''
     text += ''.join(f"        rom[{i}]=8'd{b};\n" for i, b in enumerate(rom))

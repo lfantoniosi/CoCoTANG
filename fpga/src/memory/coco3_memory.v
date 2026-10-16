@@ -224,19 +224,20 @@ module coco3_memory #(
                        (current_read_ready || read_hold!=0);
     assign cpu_wait=cpu_access_enable && cycle_read && !current_read_ready;
 
-    // A fast CoCo 3 cycle still has a complete E-low/Q-low quadrant.  Keep
+    // E-low/Q-low lasts 15 clocks at 1.79 MHz and 30 at 0.895 MHz. Keep
     // the grant eligible for that full quadrant.  The arbiter also qualifies
     // it with !E&&!Q, so the count can never permit a launch after Q begins
-    // the next CPU-address phase.  The former eight-clock half-window could
-    // be entirely consumed by completion/drop of the preceding CPU access.
-    reg [3:0] video_slot_count=0,refresh_slot_count=0;
+    // the next CPU-address phase. A 15-clock limit covered only half of a
+    // slow quadrant; queued CPU transfers could consume that whole window
+    // and push a text-row fetch past the first HDMI scanline deadline.
+    reg [4:0] video_slot_count=0,refresh_slot_count=0;
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
             video_slot_count<=0; refresh_slot_count<=0;
         end else begin
             if (e_fall) begin
-                video_slot_count<=4'd15;
-                refresh_slot_count<=4'd15;
+                video_slot_count<=5'd31;
+                refresh_slot_count<=5'd31;
             end else begin
                 if (video_slot_count!=0) video_slot_count<=video_slot_count-1'b1;
                 if (refresh_slot_count!=0) refresh_slot_count<=refresh_slot_count-1'b1;

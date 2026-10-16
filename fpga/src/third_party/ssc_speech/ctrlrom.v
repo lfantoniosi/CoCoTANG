@@ -14,7 +14,7 @@ module CTRLROM (
     output reg [7:0] data;
 
     // Local: infer a synchronous ROM instead of a large case multiplexer.
-    reg [7:0] rom [0:4095];
+    (* syn_romstyle = "block_rom" *) reg [7:0] rom [0:4095];
     initial begin
         rom[0]=8'd0;
         rom[1]=8'd128;

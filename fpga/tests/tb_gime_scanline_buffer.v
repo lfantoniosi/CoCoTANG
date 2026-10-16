@@ -158,7 +158,7 @@ module tb_gime_scanline_buffer;
   // opens rather than leaving a one-pixel seam at the left edge.
   force dut.c_valid0=1;force dut.c_tag0=8'd23;force dut.c_border0=6'h16;
   force dut.c_right_border0=6'h3f;
-  dut.cvbs_line0[0]=6'h2d;cvbs_display_y=8'd23;
+  dut.cvbs_pages[0].line0[0]=6'h2d;cvbs_display_y=8'd23;
   repeat(4)@(posedge cvbs_clk);#1;
   if(!dut.c_read_valid||dut.c_read_bank!=0||cvbs_pixel!==6'h2d||
      !dut.cvbs_border_valid||cvbs_border!==6'h16||
@@ -351,6 +351,8 @@ module tb_gime_scanline_buffer;
   force dut.c_valid0=1;force dut.c_valid1=1;force dut.c_valid2=1;
   force dut.c_tag0=8'd9;force dut.c_tag1=8'd10;force dut.c_tag2=8'd11;
   force dut.cv_v_s=0;force dut.cv_pv_s=1;force dut.cv_p_s=8'd10;
+  // Inject the matching registered row identity with these synchronized tags.
+  force dut.cv_active_y=8'd9;
   force dut.c_next_bank=0;repeat(2)@(posedge clk);#1;
   if(dut.c_replacement_bank==0)begin
    $display("CVBS blanking replacement selected active row");errors=errors+1;end
@@ -368,6 +370,7 @@ module tb_gime_scanline_buffer;
   release dut.hd_p_s;release dut.hd_pv_s;release dut.hd_y_s;release dut.hd_pa_s;
   release dut.h_tag0;release dut.h_valid0;release dut.h_valid1;
   release dut.c_next_bank;release dut.cv_p_s;release dut.cv_pv_s;release dut.cv_v_s;
+  release dut.cv_active_y;
   release dut.c_tag2;release dut.c_tag1;release dut.c_tag0;
   release dut.c_valid2;release dut.c_valid1;release dut.c_valid0;
 
@@ -383,6 +386,7 @@ module tb_gime_scanline_buffer;
   force dut.h_valid0=1;force dut.h_tag0=8'd31;
   force dut.h_valid1=1;force dut.h_tag1=8'd32;
   force dut.cv_v_s=0;force dut.cv_pv_s=1;force dut.cv_p_s=8'd31;
+  force dut.cv_active_y=8'd30;
   force dut.hd_pa_s=1;force dut.hd_y_s=8'd31;
   force dut.hd_pv_s=1;force dut.hd_p_s=8'd32;
   force dut.state=4'd0;force dut.configuration_pending=1'b1;
@@ -396,6 +400,7 @@ module tb_gime_scanline_buffer;
   release dut.h_tag1;release dut.h_valid1;release dut.h_tag0;release dut.h_valid0;
   release dut.hd_p_s;release dut.hd_pv_s;release dut.hd_y_s;release dut.hd_pa_s;
   release dut.cv_p_s;release dut.cv_pv_s;release dut.cv_v_s;
+  release dut.cv_active_y;
 
   // A mode write in HBORD must not cancel a row request which has already
   // crossed into the renderer but is still in its coalescing window.  Raster

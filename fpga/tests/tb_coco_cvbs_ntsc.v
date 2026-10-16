@@ -88,18 +88,18 @@ module tb_coco_cvbs_ntsc;
         seek(10'd118,9'd17);
         if (!dut.in_vdg_window || dut.in_picture) begin $display("top-left border window"); errors = errors + 1; end
 
-        seek(10'd222,9'd43);
+        seek(10'd222,9'd44);
         if (!source_valid || source_x != 10'd0) begin $display("VDG first pixel"); errors = errors + 1; end
-        seek(10'd224,9'd43);
+        seek(10'd224,9'd44);
         if (source_x != 10'd2) begin $display("VDG canonical scale: %0d",source_x); errors = errors + 1; end
-        seek(10'd733,9'd234);
+        seek(10'd733,9'd235);
         if (!source_valid || source_x != 10'd638 || source_y != 8'd191) begin
             $display("VDG last pixel: %0d,%0d",source_x,source_y); errors = errors + 1; end
         // The first lower-border line must take the captured VDG raster
         // border, even if an old picture-cache row is still marked valid.
         row_border_valid = 1'b1;
         row_border_rgb = 6'h0c;
-        seek(10'd222,9'd235);
+        seek(10'd222,9'd236);
         repeat (4) @(posedge clk135); #1;
         if (border_raster_y != 9'd234 || dut.pixel_rgb !== 6'h3f) begin
             $display("compatibility lower border: raster=%0d rgb=%h",
@@ -197,7 +197,7 @@ module tb_coco_cvbs_ntsc;
         if (dut.in_vdg_window) begin $display("border ends too late"); errors = errors + 1; end
 
         // The backwards seek used by the high-resolution checks has advanced
-        // us to the short field. Compatibility/VDG remains unshifted.
+        // us to the short field. Compatibility/VDG uses the same fixed one-line cache delay.
         if (dut.field_odd !== 1'b0) begin
             $display("short field parity"); errors = errors + 1;
         end

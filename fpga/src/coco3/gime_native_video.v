@@ -50,7 +50,13 @@ module gime_native_video #(
         (active_height==8'd225 ? 9'd8 :
          active_height==8'd199 ? 9'd23 : 9'd24);
     wire [8:0] native_top = live_top;
-    wire [8:0] native_bottom=native_top+active_height;
+    // Fold the standard-height sums before the mode mux. Cascading the top
+    // lookup, an adder and the IRQ comparator was a marginal 108-MHz path.
+    wire [8:0] native_bottom=video_50hz ?
+        (active_height==8'd225 ? 9'd256 :
+         active_height==8'd199 ? 9'd243 : 9'd48+active_height) :
+        (active_height==8'd225 ? 9'd233 :
+         active_height==8'd199 ? 9'd222 : 9'd24+active_height);
     // XRoar's default CoCo 3 is the 1986 GIME. Its HBORD interrupt position
     // is derived from the mode-dependent horizontal timing, relative to HS
     // falling, rather than from the HDMI picture's fixed right edge. The
@@ -119,9 +125,16 @@ module gime_native_video #(
     // independently of HDMI scanout. Align the corrected Dragonfire raster
     // writes with the picture: two lines and one slow E cycle after the old
     // capture origin (one E cycle = 16 master ticks = eight VDG pixels).
-    wire [8:0] compatibility_top=live_top+9'd18;
-    wire [8:0] compatibility_bottom=
-        compatibility_top+{1'b0,active_height};
+    wire [8:0] compatibility_top=video_50hz ?
+        (active_height==8'd225 ? 9'd49 :
+         active_height==8'd199 ? 9'd62 : 9'd66) :
+        (active_height==8'd225 ? 9'd26 :
+         active_height==8'd199 ? 9'd41 : 9'd42);
+    wire [8:0] compatibility_bottom=video_50hz ?
+        (active_height==8'd225 ? 9'd274 :
+         active_height==8'd199 ? 9'd261 : 9'd66+active_height) :
+        (active_height==8'd225 ? 9'd251 :
+         active_height==8'd199 ? 9'd240 : 9'd42+active_height);
     reg compatibility_field_50hz=0;
     wire [8:0] compatibility_last_line=
         compatibility_field_50hz?9'd311:9'd261;

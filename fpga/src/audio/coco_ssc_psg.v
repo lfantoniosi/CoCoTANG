@@ -18,15 +18,16 @@ module coco_ssc_psg #(parameter integer ENABLE_SPEECH=0,
     // Capture completed bus writes before the command parser. Address
     // decoding must not feed the entire event/buffer state machine in the
     // same 108-MHz cycle, and data must survive the next CPU transaction.
-    reg host_write=0,host_reset_port=0;
+    reg host_write=0,host_reset_port=0,host_stop=0;
     reg [7:0] host_data=0;
     always @(posedge clk or negedge reset_n) begin
         if(!reset_n) begin
-            host_write<=0;host_reset_port<=0;host_data<=0;
+            host_write<=0;host_reset_port<=0;host_data<=0;host_stop<=0;
         end else begin
             host_write<=selected && !cpu_rw_n && e_fall;
             if(selected && !cpu_rw_n && e_fall) begin
                 host_reset_port<=cpu_addr[0];host_data<=cpu_wdata;
+                host_stop<=cpu_wdata==0 || cpu_wdata==8'hc7;
             end
         end
     end
@@ -50,8 +51,8 @@ module coco_ssc_psg #(parameter integer ENABLE_SPEECH=0,
     reg [2:0] play_bank = 0;
     reg [5:0] play_offset = 0;
     reg [3:0] play_register = 0;
-    reg [7:0] sound_buffer [0:511];
-    reg [7:0] effect_buffer [0:511];
+    (* syn_ramstyle = "distributed_ram" *) reg [7:0] sound_buffer [0:511];
+    (* syn_ramstyle = "distributed_ram" *) reg [7:0] effect_buffer [0:511];
     reg [4:0] volume_a = 0, volume_b = 0, volume_c = 0;
     integer i;
     initial for (i = 0; i < 512; i = i + 1) begin
@@ -99,12 +100,18 @@ module coco_ssc_psg #(parameter integer ENABLE_SPEECH=0,
     wire speech_loading, speech_active;
     // Stop commands may interrupt text playback while its BUSY bit is low.
     // Values inside a register/event/allophone payload retain their data meaning.
-    wire stop_command=(host_data==0 || host_data==8'hc7) &&
+    wire stop_command=host_stop &&
         !timer_byte_next && load_kind==0 && !direct_psg && !speech_loading;
     wire accept_host_byte=ready || (busy_count==0 && stop_command);
     wire speech_command = host_write && !host_reset_port && accept_host_byte &&
         !timer_byte_next && load_kind==0 && !direct_psg;
-    wire speech_reset = reset_command || (host_write && host_reset_port && host_data[0]);
+    // Keep reset-port decode out of the speech/TTS state-register fanout.
+    // Host bytes are separated by many system clocks.
+    reg speech_reset=0;
+    always @(posedge clk or negedge reset_n) begin
+        if(!reset_n) speech_reset<=0;
+        else speech_reset<=reset_command || (host_write && host_reset_port && host_data[0]);
+    end
     generate if (ENABLE_SPEECH) begin: speech_enabled
         coco_ssc_speech speech(.clk(clk),.reset_n(reset_n),
             .soft_reset(speech_reset),.command_valid(speech_command),

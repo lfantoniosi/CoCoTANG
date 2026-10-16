@@ -18,7 +18,7 @@ module tb_coco_orchestra90;
  coco3_hdmi display(.pixel_clk(clk),.serial_clk(clk),.audio_clk(clk),
   .reset(!reset_n),.audio_pcm_left(left_pcm),.audio_pcm_right(right_pcm),
   .video_50hz(1'b0),.bit_plane(1'b1),.active_height(8'd192),
-  .compatibility_mode(1'b0),.border_rgb(6'd0),.artifact_mode(2'd0),
+  .compatibility_mode(1'b0),.border_rgb(6'd0),.ssc_enabled(1'b0),.artifact_mode(2'd0),
   .artifact_video_active(1'b0),.artifact_css(1'b0),.overlay_enable(1'b0),
   .row_border_valid(1'b0),.vertical_border_valid(1'b0),.pixel_data(24'd0));
  // Exercise the real HDMI sample-packet formatter with the wrapper's

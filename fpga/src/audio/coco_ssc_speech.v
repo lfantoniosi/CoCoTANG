@@ -13,15 +13,20 @@ module coco_ssc_speech (
     // preserves the host handshake while shortening its large fanout path.
     reg command_pending=0;
     reg [7:0] command_byte=0;
+    reg command_aborts_text=0;
     always @(posedge clk or negedge reset_n) begin
-        if(!reset_n) begin command_pending<=0;command_byte<=0;end
+        if(!reset_n) begin command_pending<=0;command_byte<=0;command_aborts_text<=0;end
         else if(soft_reset) command_pending<=0;
         else begin
             command_pending<=command_valid;
-            if(command_valid) command_byte<=command_data;
+            if(command_valid) begin
+                command_byte<=command_data;
+                command_aborts_text<=command_data==0 || command_data==8'hc7 ||
+                    (command_data[7:5]==3'b111 && !command_data[3]);
+            end
         end
     end
-    reg [7:0] buffer [0:511];
+    (* syn_ramstyle = "distributed_ram" *) reg [7:0] buffer [0:511];
     integer i;
     initial for(i=0;i<512;i=i+1) buffer[i]=8'hff;
     reg [8:0] load_pos=0,play_pos=0;
@@ -34,9 +39,8 @@ module coco_ssc_speech (
     wire tts_host_ready,tts_busy,tts_valid,tts_last;
     wire [5:0] tts_allophone;
     wire tts_take=state==TEXT_WAIT && tts_valid && reset_count==0;
-    wire text_abort=soft_reset || (command_pending && !loading &&
-        (command_byte==0 || command_byte==8'hc7 ||
-         (command_byte[7:5]==3'b111 && !command_byte[3])));
+    // Predecode alongside command_byte without changing command latency.
+    wire text_abort=soft_reset || (command_pending && !loading && command_aborts_text);
     assign host_ready=tts_host_ready && !text_playing;
     coco_ssc_tts translator(.clk(clk),.reset_n(reset_n),.abort(text_abort),
         .byte_valid(command_pending && !loading && command_byte<128 && command_byte!=0),
@@ -60,7 +64,7 @@ module coco_ssc_speech (
         .active(synth_active),.ldq(ldq),.data_in(allophone),.data_stb(strobe),.pwm_out(),
         .sample_out(sample),.sample_stb(sample_stb));
     // Scale the filter samples to PCM and saturate loud phonemes. The
-    // shared SSC mixer applies full gain to both speech and PSG.
+    // shared SSC mixer boosts both speech and PSG by 1.5x.
     wire signed [20:0] amplified=$signed(sample)*21'sd32;
     always @(posedge clk or negedge reset_n) begin
         if(!reset_n) begin

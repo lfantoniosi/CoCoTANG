@@ -78,8 +78,16 @@ module tb_cpu_sdram_arbiter;
             if (rd || wr) $fatal(1,"video launched outside its slot");
         end
 
+        // The slow-speed countdown also spans beyond a fast Q-low phase.
+        // Q must close eligibility even while that countdown remains open.
+        @(negedge clk);video_slot_open=1;q=1;
+        repeat(4)begin
+            @(posedge clk);#1;
+            if(rd||wr)$fatal(1,"video launched after Q rose");
+        end
+
         // Opening the early E-low/Q-low slot launches the aligned read.
-        @(negedge clk); video_slot_open=1;
+        @(negedge clk); video_slot_open=1;q=0;
         @(posedge clk); #1;
         if (!rd) $fatal(1,"video did not launch in its slot");
         if (addr !== 23'h00091a)

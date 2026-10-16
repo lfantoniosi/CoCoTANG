@@ -8,7 +8,7 @@ module coco_ssc_tts (
     output [5:0] allophone,output allophone_valid,output allophone_last,
     input allophone_ready
 );
-    reg [7:0] text [0:511];
+    (* syn_ramstyle = "distributed_ram" *) reg [7:0] text [0:511];
     initial text[0]=8'h20;
     reg [9:0] write_pos=1,text_limit=1,cursor=1,match_pos=1,match_end=1;
     reg [15:0] normalize_bytes=0;

@@ -126,10 +126,11 @@ module coco_cvbs_ntsc #(
          height_meta == 8'd199 ? 9'd61 : 9'd65) :
         (height_meta == 8'd225 ? 9'd26 :
          height_meta == 8'd199 ? 9'd41 : 9'd43);
-    // Compatibility/VDG video keeps the proven position. Native GIME video
-    // is delayed by one line in BOTH fields, keeping its cache consumer
-    // behind the HDMI producer without alternating the visible position.
-    // picture_top already includes the native-GIME one-line offset. Keeping
+    // Both native and compatibility video trail the HDMI producer by a
+    // complete line in BOTH fields. PMODE 4's artifact pass can finish after
+    // the old VDG deadline in the 263-line field, blanking that whole field.
+    // Three retained cache rows cover this fixed consumer delay.
+    // picture_top already includes the shared one-line offset. Keeping
     // that selection registered removes an adder from every vertical-window
     // compare and from the line-buffer request path.
     wire [8:0] field_picture_top = picture_top;
@@ -139,7 +140,8 @@ module coco_cvbs_ntsc #(
     // Map this analogue field onto the VDG raster that captured the
     // compatibility vertical-border colours. Include the two-line CSS
     // capture-origin correction also used by HDMI and the picture renderer.
-    reg compatibility_border_lead = 0,compatibility_border_lag = 1;
+    reg compatibility_border_lead = 0;
+    reg [1:0] compatibility_border_lag = 1;
     wire [8:0] border_top = field_picture_top >= 9'd27 ?
                             field_picture_top - 9'd27 : 9'd0;
 
@@ -727,15 +729,15 @@ module coco_cvbs_ntsc #(
             if (video_50hz_sync != video_50hz_active)
                 video_50hz_active <= video_50hz_sync;
             height_meta <= active_height;
-            compatibility_border_lead <= video_50hz_active;
-            compatibility_border_lag <= !video_50hz_active&&height_meta==8'd192;
+            compatibility_border_lead <= video_50hz_active&&!compatibility_mode;
+            compatibility_border_lag <= video_50hz_active ? 2'd0 :
+                ((height_meta==8'd192 ? 2'd1 : 2'd0)+
+                 (compatibility_mode ? 2'd1 : 2'd0));
             border_raster_y_q <= compatibility_border_lead ? v_line+9'd1 :
-                compatibility_border_lag ? (v_line==0 ? 9'd0 : v_line-9'd1) : v_line;
-            picture_top <= next_picture_top +
-                           (!compatibility_mode ? 9'd1 : 9'd0);
-            picture_bottom <= next_picture_top +
-                              (!compatibility_mode ? 9'd1 : 9'd0) +
-                              {1'b0,height_meta};
+                v_line>=compatibility_border_lag ?
+                    v_line-compatibility_border_lag : 9'd0;
+            picture_top <= next_picture_top+9'd1;
+            picture_bottom <= next_picture_top+9'd1+{1'b0,height_meta};
             luma_level_135 <= LUMA_DAC_EVEN_LEVELS ?
                               {luma_level[6:1],1'b0} : luma_level;
             chroma_level_135 <= chroma_level;

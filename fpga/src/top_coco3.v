@@ -21,13 +21,16 @@ module top_coco3 #(
     // 3: RGB with composite sync on green (Y=G/SoG, Pb=B, Pr=R).
     parameter integer ANALOG_VIDEO_MODE=3,
     parameter integer PAL_CHROMA_OUTPUT=0,
+    // Artifact/SSC status banner on analog outputs; HDMI remains enabled.
+    parameter integer ENABLE_ANALOG_BANNER=0,
     // 0=OFF, 1=ON (blue/orange), 2=REVERSE (orange/blue).
     parameter [1:0] INITIAL_ARTIFACT_MODE=2'd1,
     parameter integer DISTO_2MB=1,
     parameter integer NOCAN3_8MB=1,
     parameter integer ENABLE_ORCHESTRA90=1,
-    parameter integer ENABLE_SSC_PSG=0,
-    parameter integer ENABLE_SSC_SPEECH=0,
+    // Include SSC hardware; the motherboard RESET selector enables it at run time.
+    parameter integer ENABLE_SSC_PSG=1,
+    parameter integer ENABLE_SSC_SPEECH=1,
     // Glenside task-file occupies IDE_BASE..IDE_BASE+$0f; $FF50 is standard.
     parameter integer ENABLE_GLENSIDE_IDE=1,
     parameter [15:0] IDE_BASE=16'hff50
@@ -54,6 +57,7 @@ module top_coco3 #(
 
     wire clk108,clk108p,clk270,clk135,clk27,board_reset_n,clocks_locked;
     wire [1:0] artifact_mode;
+    wire ssc_enabled;
     coco_clocks clocks(.clkin(clkin),.button_reset(s1),.clk108(clk108),
         .clk108p(clk108p),.clk270(clk270),.clk135(clk135),.clk27(clk27),
         .board_reset_n(board_reset_n),.clocks_locked(clocks_locked));
@@ -126,9 +130,10 @@ module top_coco3 #(
     wire filtered_mux_reset_n;
     input_filter #(.WIDTH(1)) mux_reset_filter(.clk(clk108),
         .reset_n(board_reset_n),.in(mux_reset_n),.out(filtered_mux_reset_n));
-    artifact_mode_control #(.INITIAL_MODE(INITIAL_ARTIFACT_MODE)) artifact_control(.clk(clk108),
+    artifact_mode_control #(.INITIAL_MODE(INITIAL_ARTIFACT_MODE),
+        .ENABLE_SSC(ENABLE_SSC_PSG)) artifact_control(.clk(clk108),
         .enable(cpu_release),.reset_n(filtered_mux_reset_n),
-        .mode(artifact_mode));
+        .mode(artifact_mode),.ssc_enabled(ssc_enabled));
     reg [1:0] artifact_mode_video=INITIAL_ARTIFACT_MODE;
     always @(posedge clk108)
         artifact_mode_video<=artifact_mode;
@@ -179,6 +184,7 @@ module top_coco3 #(
     wire [15:0] pia1_pcm_sample;
     wire pia1_audio_clk;
     wire pia1_audio_reset_n=board_reset_n && cpu_release && filtered_mux_reset_n;
+    wire ssc_reset_n=pia1_audio_reset_n && ssc_enabled;
     coco_pia1_dac pia1_audio_shadow(.clk(clk108),
         .reset_n(pia1_audio_reset_n),.e_fall(e_fall),.cpu_rw_n(rw_n),
         .cpu_addr(address),.cpu_data(cpu_write_data),
@@ -193,8 +199,8 @@ module top_coco3 #(
     wire signed [16:0] ssc_audio_sum=
         $signed({ssc_psg_pcm[15],ssc_psg_pcm})+
         $signed({ssc_speech_pcm[15],ssc_speech_pcm});
-    always @(posedge clk108 or negedge pia1_audio_reset_n) begin
-        if(!pia1_audio_reset_n) ssc_audio_pcm<=0;
+    always @(posedge clk108 or negedge ssc_reset_n) begin
+        if(!ssc_reset_n) ssc_audio_pcm<=0;
         else if(ssc_audio_sum[16]!=ssc_audio_sum[15])
             ssc_audio_pcm<=ssc_audio_sum[16] ? 16'h8000 : 16'h7fff;
         else ssc_audio_pcm<=ssc_audio_sum[15:0];
@@ -410,6 +416,8 @@ module top_coco3 #(
 
     wire ide_live_selected=(ENABLE_GLENSIDE_IDE != 0) &&
         (address[15:4] == IDE_BASE[15:4]);
+    wire ssc_live_selected=ENABLE_SSC_PSG && ssc_enabled &&
+        (address==16'hff7d || address==16'hff7e);
 
     // Freeze one complete scanned CPU transaction.  The mux address changes
     // while its banks are being acquired, so a live FF5x comparison is not a
@@ -450,24 +458,23 @@ module top_coco3 #(
         end
     end
 
-    wire ssc_live_selected=ENABLE_SSC_PSG &&
-        (address==16'hff7d || address==16'hff7e);
     wire [7:0] ssc_rdata;
     wire ssc_raw_data_oe;
     reg ssc_read_hold=0;
     reg [7:0] ssc_read_latched=8'hff;
-    always @(posedge clk108 or negedge board_reset_n) begin
-        if(!board_reset_n) begin
+    always @(posedge clk108 or negedge ssc_reset_n) begin
+        if(!ssc_reset_n) begin
             ssc_read_hold<=0;ssc_read_latched<=8'hff;
         end else if(ssc_raw_data_oe && e_core) begin
             ssc_read_hold<=1;
             ssc_read_latched<=ssc_rdata;
         end else if(!e_core && !e_fall) ssc_read_hold<=0;
     end
-    wire ssc_data_oe=(ssc_raw_data_oe && e_core) || (ssc_read_hold && e_fall);
-    generate if(ENABLE_SSC_PSG) begin:ssc_enabled
-        coco_ssc_psg #(.ENABLE_SPEECH(ENABLE_SSC_SPEECH),.DECODE_ADDRESS(0)) ssc(.clk(clk108),.reset_n(pia1_audio_reset_n),
-            .cpu_enable(cpu_bus_active && ssc_cycle_active),.e(e_core),
+    wire ssc_data_oe=ssc_enabled &&
+        ((ssc_raw_data_oe && e_core) || (ssc_read_hold && e_fall));
+    generate if(ENABLE_SSC_PSG) begin:ssc_hardware
+        coco_ssc_psg #(.ENABLE_SPEECH(ENABLE_SSC_SPEECH),.DECODE_ADDRESS(0)) ssc(.clk(clk108),.reset_n(ssc_reset_n),
+            .cpu_enable(cpu_bus_active && ssc_cycle_active && ssc_enabled),.e(e_core),
             .e_fall(e_fall),.cpu_addr(ide_address_pipe),
             .cpu_rw_n(ide_cycle_rw_n),.cpu_wdata(cpu_write_data),
             .audio_clk(pia1_audio_clk),.cpu_rdata(ssc_rdata),
@@ -751,6 +758,7 @@ module top_coco3 #(
         .sdram_test_expected(sdram_test_expected),
         .sdram_test_actual(sdram_test_actual),
         .artifact_mode(artifact_mode),
+        .ssc_enabled(ssc_enabled),
         .artifact_video_active(artifact_video_active),
         .artifact_css(artifact_css),
         .video_50hz(video_50hz),
@@ -779,6 +787,19 @@ module top_coco3 #(
 
     wire analog_luma,analog_chroma,analog_cvbs;
     wire analog_component_pb,analog_component_pr;
+    wire [23:0] analog_osd_rgb;
+    artifact_mode_osd #(.DISPLAY_CYCLES(540000000),.PANEL_X(136),
+        .TIMER_DIVIDER(16384),.REGISTER_PIXELS(1),
+        .FONT_SCALE_LOG2(1)) analog_status_osd(
+        .pixel_clk(clk135),.reset(!board_reset_n),.mode(artifact_mode),
+        .ssc_enabled(ssc_enabled),.x(cvbs_source_x),
+        .y({2'b00,cvbs_source_y}),
+        .rgb_in({{4{visible_cvbs_pixel[5:4]}},{4{visible_cvbs_pixel[3:2]}},
+                 {4{visible_cvbs_pixel[1:0]}}}),.rgb_out(analog_osd_rgb));
+    // A constant bypass also lets synthesis remove the unused analog OSD.
+    wire [5:0] analog_status_pixel=ENABLE_ANALOG_BANNER ?
+        {analog_osd_rgb[23:22],analog_osd_rgb[15:14],analog_osd_rgb[7:6]} :
+        visible_cvbs_pixel;
     wire [15:0] unused_cvbs_framebuffer_addr;
     // Cut the encoder-counter -> line-buffer BSRAM-address path at the
     // clk135 boundary.  There are ten clk135 clocks per CVBS sample, so this
@@ -813,7 +834,7 @@ module top_coco3 #(
         .clk135(clk135),.clk270(clk270),.reset_n(board_reset_n),
         .video_50hz(hdmi_video_50hz),
         .high_resolution(1'b1),.compatibility_mode(compatibility_video),
-        .framebuffer_data(visible_cvbs_pixel),
+        .framebuffer_data(analog_status_pixel),
         .border_rgb(visible_border_rgb),.row_border_rgb(visible_cvbs_border),
         .row_right_border_rgb(visible_cvbs_right_border),
         .row_border_valid(visible_cvbs_border_valid),

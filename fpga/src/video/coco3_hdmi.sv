@@ -30,6 +30,7 @@ module coco3_hdmi #(
     input logic [18:0] sdram_test_error_addr,
     input logic [7:0] sdram_test_expected,input logic [7:0] sdram_test_actual,
     input logic [1:0] artifact_mode,
+    input logic ssc_enabled,
     input logic artifact_video_active,input logic artifact_css,
     input logic video_50hz,
     input logic bit_plane,
@@ -284,7 +285,8 @@ module coco3_hdmi #(
     end endgenerate
 
     artifact_mode_osd artifact_osd(
-        .pixel_clk(pixel_clk),.reset(reset),.mode(artifact_mode),.x(x),.y(y),
+        .pixel_clk(pixel_clk),.reset(reset),.mode(artifact_mode),
+        .ssc_enabled(ssc_enabled),.x(x),.y(y),
         .rgb_in(debug_rgb),.rgb_out(rgb));
 
     logic [15:0] audio_samples[1:0];

@@ -36,7 +36,7 @@ module tb_coco_ssc_audio;
     coco3_hdmi display(.pixel_clk(clk),.serial_clk(clk),.audio_clk(audio_clk),
         .reset(!reset_n),.audio_pcm_left(left_pcm),.audio_pcm_right(right_pcm),
         .video_50hz(1'b0),.bit_plane(1'b1),.active_height(8'd192),
-        .compatibility_mode(1'b0),.border_rgb(6'd0),.artifact_mode(2'd0),
+        .compatibility_mode(1'b0),.border_rgb(6'd0),.ssc_enabled(1'b0),.artifact_mode(2'd0),
         .artifact_video_active(1'b0),.artifact_css(1'b0),.overlay_enable(1'b0),
         .row_border_valid(1'b0),.vertical_border_valid(1'b0),.pixel_data(24'd0));
     wire [23:0] words[3:0][1:0];
@@ -103,13 +103,22 @@ module tb_coco_ssc_audio;
             level=$signed(psg_pcm);
             if(level<min_level) min_level=level;
             if(level>max_level) max_level=level;
-            check_outputs(level,level,level);
+            check_outputs(level+(level>>>1),level+(level>>>1),level+(level>>>1));
         end
         if(min_level>=0 || max_level<=0) $fatal(1,"No bipolar PSG tone at outputs");
         // Orchestra-90 stays stereo; the physical output gets its mono mix.
         force psg_pcm=16'sd16000;
         write_bus(16'hff7a,255);write_bus(16'hff7b,0);
-        check_outputs(32256,-384,15936);
+        check_outputs(32767,7616,23936);
+        // Apply opposite-sign base audio before clipping the boosted SSC.
+        // Pre-clipping SSC alone would give a different, incorrect result.
+        force base_left=-16'sd20000;force base_right=16'sd20000;
+        force base_mono=16'sd0;
+        force psg_pcm=16'sd30000;
+        check_outputs(25000,32767,32767);
+        force psg_pcm=-16'sd30000;
+        check_outputs(-32768,-25000,-32768);
+        release base_left;release base_right;release base_mono;
         // Extreme combinations must saturate rather than wrap.
         write_bus(16'hff03,55);write_bus(16'hff20,252);write_bus(16'hff7b,255);
         force psg_pcm=16'sd32767;
