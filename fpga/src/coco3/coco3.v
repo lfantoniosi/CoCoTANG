@@ -331,9 +331,8 @@ module coco3 #(
                 video_cpu_write_addr <= cpu_mem_addr;
         end
     end
-    // One MiSTer-compatible renderer services both scanline consumers.  The
-    // module mirrors only its two-line output RAM for the unrelated HDMI and
-    // CVBS read clocks; SDRAM fetch, tags and mode/address logic are shared.
+    // One renderer services both outputs. Compatibility graphics are first
+    // captured with CSS on the machine raster; native modes fetch live RAM.
     wire [7:0] debug_dma_next_y,debug_fill_y;
     assign gime_trace_dma_next_y=debug_dma_next_y;
     wire [3:0] debug_scanline_state;
@@ -345,6 +344,31 @@ module coco3 #(
     wire compatibility_border_right;
     wire [8:0] compatibility_border_y;
     wire [5:0] compatibility_border_sample_rgb;
+    wire renderer_memory_request,renderer_memory_valid;
+    wire [22:0] renderer_memory_addr;
+    wire [12:0] compatibility_bitmap_read_addr;
+    wire [8:0] compatibility_bitmap_data;
+    wire compatibility_bitmap_valid;
+    wire [10:0] compatibility_row_bytes=
+        (compatibility_gm==0||compatibility_gm==1||
+         compatibility_gm==3||compatibility_gm==5)?11'd16:11'd32;
+    wire [7:0] compatibility_capture_lpr=sam_video_mode<=3?8'd3:
+                                        sam_video_mode<=5?8'd2:8'd1;
+    gime_compat_capture compatibility_capture(
+        .clk(clk),.reset_n(core_reset_n),
+        .enable(compatibility_mode&&compatibility_an_g),
+        .hdmi_frame_start(hdmi_frame_start),.sample(compatibility_raster_sample),
+        .sample_y(compatibility_raster_y),.sample_byte(compatibility_raster_byte),
+        .sample_css(compatibility_raster_css),.screen_base(effective_screen_base),
+        .video_bank(video_bank),.row_bytes(compatibility_row_bytes),
+        .lines_per_row(compatibility_capture_lpr),
+        .cpu_write_strobe(video_cpu_write_strobe),.cpu_write_addr(video_cpu_write_addr),
+        .read_addr(compatibility_bitmap_read_addr),.read_data(compatibility_bitmap_data),
+        .display_valid(compatibility_bitmap_valid),
+        .renderer_request(renderer_memory_request),.renderer_addr(renderer_memory_addr),
+        .renderer_valid(renderer_memory_valid),
+        .memory_request(video_memory_request),.memory_addr(video_memory_addr),
+        .memory_valid(video_memory_valid),.memory_data(video_memory_data32));
     gime_scanline_buffer scanlines (
         .clk(clk),.reset_n(core_reset_n),
         .bit_plane(effective_bit_plane),
@@ -371,6 +395,9 @@ module coco3 #(
         .compatibility_border_right(compatibility_border_right),
         .compatibility_border_y(compatibility_border_y),
         .compatibility_border_rgb(compatibility_border_sample_rgb),
+        .compatibility_bitmap_valid(compatibility_bitmap_valid),
+        .compatibility_bitmap_data(compatibility_bitmap_data),
+        .compatibility_bitmap_read_addr(compatibility_bitmap_read_addr),
         .artifact_mode(artifact_mode),
         .blink(blink_divider[25]),
         .cpu_write_strobe(video_cpu_write_strobe),
@@ -400,8 +427,8 @@ module coco3 #(
         .cvbs_vertical_left_border_data(cvbs_vertical_left_border_data),
         .cvbs_vertical_right_border_data(cvbs_vertical_right_border_data),
         .cvbs_vertical_border_valid(cvbs_vertical_border_valid),
-        .memory_request(video_memory_request),.memory_addr(video_memory_addr),
-        .memory_data(video_memory_data32),.memory_valid(video_memory_valid),
+        .memory_request(renderer_memory_request),.memory_addr(renderer_memory_addr),
+        .memory_data(video_memory_data32),.memory_valid(renderer_memory_valid),
         .debug_dma_next_y(debug_dma_next_y),.debug_fill_y(debug_fill_y),
         .debug_state(debug_scanline_state),
         .trace_cache_y(gime_trace_cache_y),

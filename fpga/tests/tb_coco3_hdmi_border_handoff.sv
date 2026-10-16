@@ -41,6 +41,8 @@ module tb_coco3_hdmi_border_handoff;
         row_border_valid=1;
         force dut.y=10'd52;
         @(posedge clk); #1;
+        if (dut.source_border_raster_y!==9'd42)
+            $fatal(1,"HDMI border raster does not match CSS picture row zero");
         if (dut.encoder.sampled_rgb!==24'h00ff00)
             $fatal(1,"native picture left border ignored its cached row");
         force dut.x=10'd700;

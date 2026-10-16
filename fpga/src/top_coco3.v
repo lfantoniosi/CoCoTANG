@@ -1,6 +1,6 @@
 // CoCo 3 top for the physical MC6809E motherboard.  GIME CPU/MMU/video
-// behavior is implemented in FPGA; video is rendered into output-specific
-// double-buffered scanlines, never a full framebuffer.
+// behavior is implemented in FPGA. Native video renders into scanline RAM;
+// compatibility graphics capture raw bytes and CSS on the machine raster.
 module top_coco3 #(
     parameter integer RESET_HOLD_CYCLES=10800000,
     parameter integer LOG_DEPTH=4092,

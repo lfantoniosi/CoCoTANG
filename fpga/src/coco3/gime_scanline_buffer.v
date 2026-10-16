@@ -1,5 +1,6 @@
 // Unified CoCo 3 scanline renderer. Mode decoding and row addressing follow
-// the MiSTer/Gary Becker CoCo3FPGA core, but no framebuffer is used.
+// the MiSTer/Gary Becker CoCo3FPGA core. Native video renders live scanlines;
+// compatibility graphics retain beam-time raw bytes and CSS for scanout.
 module gime_scanline_buffer (
  input clk,input reset_n,input bit_plane,input [3:0] hres,input [1:0] cres,
  input [7:0] active_height,
@@ -13,6 +14,8 @@ module gime_scanline_buffer (
  input [4:0] compatibility_raster_byte,input compatibility_raster_css,
  input compatibility_border_write,input compatibility_border_right,
  input [8:0] compatibility_border_y,input [5:0] compatibility_border_rgb,
+ input compatibility_bitmap_valid,input [8:0] compatibility_bitmap_data,
+ output [12:0] compatibility_bitmap_read_addr,
  input [1:0] artifact_mode,input blink,
  input cpu_write_strobe,input [22:0] cpu_write_addr,
  input hdmi_read_clk,input [9:0] hdmi_read_x,input [7:0] hdmi_display_y,
@@ -302,6 +305,7 @@ module gime_scanline_buffer (
  reg [7:0] fill_y=0; reg fill_bit_plane=0; reg [1:0] fill_cres=0;
  reg fill_attributes=0;reg [2:0] fill_gm=0;reg fill_css=0;
  reg fill_compatibility=0,fill_blink=0;reg [1:0] fill_artifact_mode=0;
+ reg fill_bitmap_valid=0;
  reg fill_raster_css_valid=0;
  reg fill_left_css=0,fill_right_css=0;
  reg [7:0] fill_lpr=1;
@@ -390,7 +394,8 @@ module gime_scanline_buffer (
    compatibility_css_read_data<=compatibility_css_raster[compatibility_css_read_addr];
   end
  end
- wire pixel_compatibility_css=fill_raster_css_valid?
+ assign compatibility_bitmap_read_addr=compatibility_css_read_addr[12:0];
+ wire pixel_compatibility_css=fill_bitmap_valid?compatibility_bitmap_data[8]:fill_raster_css_valid?
                               compatibility_css_read_data:fill_css;
  wire fill_artifact_border=fill_compatibility&&fill_bit_plane&&
                            fill_gm==3'd7&&fill_artifact_mode!=0;
@@ -461,7 +466,8 @@ module gime_scanline_buffer (
   line_address+pixel_byte_index:
   line_address+{11'd0,horizontal_byte_sum[7:0]};
  wire [18:0] aligned_address={byte_address[18:2],2'b0};
- wire [7:0] cached_byte=byte_address[1:0]==0?word_cache[7:0]:
+ wire [7:0] cached_byte=fill_bitmap_valid?compatibility_bitmap_data[7:0]:
+  byte_address[1:0]==0?word_cache[7:0]:
   byte_address[1:0]==1?word_cache[15:8]:byte_address[1:0]==2?word_cache[23:16]:word_cache[31:24];
  reg [11:0] font_addr=0;wire [7:0] font_data;
  coco3_char_rom font(.clk(clk),.addr(font_addr),.data(font_data));
@@ -509,8 +515,12 @@ module gime_scanline_buffer (
     end else decoded_index=decoded_pixel?1:0;
    end
   end else if(fill_bit_plane) begin
-   decoded_code=fill_cres==0?(decoded_index[0]?vdg_code({pixel_compatibility_css,2'b0}):0):
-                              vdg_code({pixel_compatibility_css,decoded_index[1:0]});
+   // Two-colour VDG graphics use palette pairs 8/9 or 10/11;
+   // four-colour graphics use banks 0-3 or 4-7. Keep bit zero as
+   // the original bitmap dot for the optional PMODE 4 artifact decoder.
+   decoded_index=fill_cres==0?
+      {2'b10,pixel_compatibility_css,decoded_index[0]}:
+      {1'b0,pixel_compatibility_css,decoded_index[1:0]};
   end else if(character[7]) begin
    // PIA1 PB4 is both GM0 and the VDG INT/EXT selection used by the CoCo:
    // low selects SG4, high selects SG6.  Bits are ordered top-to-bottom as
@@ -545,7 +555,7 @@ module gime_scanline_buffer (
  localparam IDLE=0,DIVIDE_ROW=1,ROW_ADDRESS=2,LINE_ADDRESS=3,PIXEL_ADDRESS=4,
   CHECK_WORD=5,WAIT_WORD=6,FINALIZE_LINE=7,CHECK_ATTRIBUTE=8,WAIT_ATTRIBUTE=9,
   FONT_WAIT1=10,FONT_WAIT2=11,DECODE_PIXEL=12,COLOR_LOOKUP=13,WRITE_PIXEL=14,
-  ARTIFACT_WRITE=15,ARTIFACT_DECODE=16;
+  ARTIFACT_WRITE=15,ARTIFACT_DECODE=16,SNAPSHOT_WAIT=17;
  reg [4:0] state=IDLE;reg [5:0] pixel_latched;
  reg [23:0] hdmi_pixel_latched=0;
  reg [5:0] artifact_pixel_latched=0;
@@ -705,6 +715,7 @@ reg configuration_pending=1'b1;
    prior_paint_palette<=0;prior_paint_valid<=0;
    artifact_bit_write_pending<=0;
    fill_raster_css_valid<=0;
+   fill_bitmap_valid<=0;
    compatibility_css_read_addr<=0;
   end else begin
    hdmi_50_meta<=hdmi_active_50hz;
@@ -722,7 +733,8 @@ reg configuration_pending=1'b1;
    // Register this abort decision so HDMI tag comparison and setup changes
    // do not form a long combinational path through the renderer state mux.
    upper_border_setup_abort<=upper_border_active&&upper_border_setup_changed;
-   if(hdmi_standard_changed||upper_border_setup_abort)begin
+   if(hdmi_standard_changed||upper_border_setup_abort||
+      (hdmi_frame_rise&&compatibility_mode&&(compatibility_bitmap_valid===1'b1)))begin
     // A new field or a frame-setup write invalidates speculative row zero.
     // Abort an in-flight fill too, or FINALIZE_LINE could publish a row
     // rendered from the previous VOFF/VSC after the new setup was captured.
@@ -889,6 +901,8 @@ reg configuration_pending=1'b1;
      fill_raster_css_valid<=compatibility_mode&&
                             compatibility_css_display_valid;
      fill_compatibility<=compatibility_mode;fill_blink<=blink;
+     fill_bitmap_valid<=compatibility_mode&&compatibility_an_g&&
+                        (compatibility_bitmap_valid===1'b1);
      fill_video_bank<=frame_video_bank;
      fill_artifact_mode<=artifact_mode;
      fill_lpr<=compatibility_mode?(!compatibility_an_g?12:
@@ -955,11 +969,14 @@ reg configuration_pending=1'b1;
     PIXEL_ADDRESS:begin
      if(fill_compatibility)
       compatibility_css_read_addr<={compatibility_css_display_bank,
-                                    fill_y,source_byte_index[4:0]};
+          fill_y,(!fill_bit_plane||fill_gm==7)?source_x[7:3]:
+                 fill_gm==0?source_x[5:1]:source_x[6:2]};
      if(!in_fill_aperture)begin
       pixel_latched<=fill_border_rgb;
       hdmi_pixel_latched<=expand_rgb222(fill_border_rgb);
       state<=WRITE_PIXEL;
+     end else if(fill_bitmap_valid)begin
+      state<=SNAPSHOT_WAIT;
      end else if(fill_bit_plane&&graphics_cache_valid&&graphics_cache_index==source_byte_index)begin
       state<=DECODE_PIXEL;
      end
@@ -968,8 +985,9 @@ reg configuration_pending=1'b1;
       state<=DECODE_PIXEL;
      else begin byte_address<=calculated_byte_address;state<=CHECK_WORD;end
     end
+    SNAPSHOT_WAIT:state<=CHECK_WORD;
     CHECK_WORD:begin
-     if(!word_valid||word_tag!=aligned_address)begin
+     if(!fill_bitmap_valid&&(!word_valid||word_tag!=aligned_address))begin
       memory_addr<={fill_video_bank,aligned_address};
       memory_request<=1;state<=WAIT_WORD;end
      else if(!fill_bit_plane)begin
@@ -1015,11 +1033,11 @@ reg configuration_pending=1'b1;
     end
     COLOR_LOOKUP:begin
      pixel_latched<=palette_rgb(fill_compatibility&&
-       (fill_bit_plane||character[7])?
+       !fill_bit_plane&&character[7]?
        color_code_latched:fill_palettes[color_index_latched*6+:6]);
      hdmi_pixel_latched<=expand_rgb222(
        palette_rgb(fill_compatibility&&
-       (fill_bit_plane||character[7])?color_code_latched:
+       !fill_bit_plane&&character[7]?color_code_latched:
        fill_palettes[color_index_latched*6+:6]));
      if(artifact_active)begin
       artifact_bit_write_pending<=1;
@@ -1270,5 +1288,170 @@ reg configuration_pending=1'b1;
     default:cvbs_pixel_data<=cvbs_line2[c_read_addr];
    endcase
   end else cvbs_pixel_data<=0;
+ end
+endmodule
+
+// Capture compatibility graphics on the machine raster, rather than reading
+// changing sprite RAM on the unrelated HDMI raster. Three raw-byte/CSS banks
+// keep the displayed field immutable even when the 262-line machine field
+// laps HDMI's 262.5-line field. Native video keeps its live scanline path.
+module gime_compat_capture(
+ input clk,input reset_n,input enable,input hdmi_frame_start,
+ input sample,input [7:0] sample_y,input [4:0] sample_byte,input sample_css,
+ input [18:0] screen_base,input [3:0] video_bank,
+ input [10:0] row_bytes,input [7:0] lines_per_row,
+ input cpu_write_strobe,input [22:0] cpu_write_addr,
+ input [12:0] read_addr,output [8:0] read_data,output reg display_valid=0,
+ input renderer_request,input [22:0] renderer_addr,output renderer_valid,
+ output memory_request,output [22:0] memory_addr,
+ input memory_valid,input [31:0] memory_data
+);
+ reg [8:0] field0[0:6143],field1[0:6143],field2[0:6143];
+ reg [8:0] read0=0,read1=0,read2=0;
+ reg [1:0] display_bank=0,capture_bank=1,latest_bank=2;
+ reg latest_valid=0,capture_started=0,field_good=0;
+ reg frame_m=0,frame_s=0,frame_p=0;
+ wire frame_rise=frame_s&&!frame_p;
+ reg [18:0] row_base=0;
+ reg [7:0] row_repeat=0;
+ reg [10:0] capture_row_bytes=32;
+ reg [7:0] capture_lpr=1;
+ reg [3:0] capture_video_bank=0;
+ wire first_sample=sample&&sample_y==0&&sample_byte==0;
+ // Never recycle either the displayed field or the newest completed field.
+ wire [1:0] free_bank=(display_bank!=0&&latest_bank!=0)?0:
+                       (display_bank!=1&&latest_bank!=1)?1:2;
+ wire [1:0] sample_bank=first_sample?free_bank:capture_bank;
+ wire advance_row=sample_byte==0&&row_repeat==capture_lpr-1'b1;
+ wire [18:0] sample_base=first_sample?screen_base:
+                             advance_row?row_base+capture_row_bytes:row_base;
+ wire [10:0] sample_row_bytes=first_sample?row_bytes:capture_row_bytes;
+ wire [4:0] byte_column=sample_row_bytes==16?{1'b0,sample_byte[4:1]}:sample_byte;
+ wire last_sample=sample_y==191&&sample_byte==31;
+ // Separate row advancement, byte addressing, and cache lookup. These
+ // stages have ample margin between raster samples (about 120 clocks).
+ reg event_valid=0,address_valid=0;
+ reg [18:0] event_base=0;
+ reg [4:0] event_column=0;
+ reg [3:0] event_video_bank=0;
+ reg [22:0] sample_addr=0;
+ reg [12:0] event_dest=0,address_dest=0;
+ reg [1:0] event_bank=0,address_bank=0;
+ reg event_css=0,address_css=0,event_last=0,address_last=0;
+ reg event_first=0,address_first=0;
+
+ reg capture_request=0;
+ reg [22:0] capture_addr=0,word_tag=0;
+ reg [31:0] word_data=0;
+ reg word_valid=0;
+ reg [12:0] pending_dest=0;
+ reg [1:0] pending_bank=0,pending_lane=0;
+ reg pending_css=0,pending_last=0;
+ reg write_valid=0,write_last=0;
+ reg [1:0] write_bank=0;
+ reg [12:0] write_addr=0;
+ reg [8:0] write_data=0;
+ function [7:0] byte_lane;
+  input [31:0] value;input [1:0] lane;
+  begin case(lane)
+   0:byte_lane=value[7:0];1:byte_lane=value[15:8];
+   2:byte_lane=value[23:16];default:byte_lane=value[31:24];
+  endcase end
+ endfunction
+
+ // Hold ownership until the client's request drops, preserving SDRAM's
+ // request/ack/drop protocol. A pending raster capture gets the next slot.
+ reg [1:0] owner=0;
+ assign memory_request=owner==1?capture_request:owner==2?renderer_request:1'b0;
+ assign memory_addr=owner==1?capture_addr:renderer_addr;
+ assign renderer_valid=owner==2&&memory_valid;
+ wire capture_ack=owner==1&&memory_valid;
+ always @(posedge clk or negedge reset_n)begin
+  if(!reset_n)owner<=0;
+  else case(owner)
+   0:if(capture_request)owner<=1;else if(renderer_request)owner<=2;
+   1:if(!capture_request)owner<=0;
+   default:if(!renderer_request)owner<=0;
+  endcase
+ end
+ always @(posedge clk)begin
+  if(write_valid)case(write_bank)
+   0:field0[write_addr]<=write_data;
+   1:field1[write_addr]<=write_data;
+   default:field2[write_addr]<=write_data;
+  endcase
+  read0<=field0[read_addr];read1<=field1[read_addr];read2<=field2[read_addr];
+ end
+ assign read_data=display_bank==0?read0:display_bank==1?read1:read2;
+
+ always @(posedge clk or negedge reset_n)begin
+  if(!reset_n)begin
+   display_bank<=0;capture_bank<=1;latest_bank<=2;
+   display_valid<=0;latest_valid<=0;capture_started<=0;field_good<=0;
+   frame_m<=0;frame_s<=0;frame_p<=0;row_base<=0;row_repeat<=0;
+   capture_row_bytes<=32;capture_lpr<=1;capture_video_bank<=0;
+   capture_request<=0;capture_addr<=0;word_valid<=0;
+   write_valid<=0;write_last<=0;
+   event_valid<=0;address_valid<=0;
+  end else begin
+   frame_m<=hdmi_frame_start;frame_s<=frame_m;frame_p<=frame_s;
+   write_valid<=0;
+   event_valid<=0;address_valid<=event_valid;
+   sample_addr<={event_video_bank,(event_base+{14'd0,event_column})};
+   address_dest<=event_dest;address_bank<=event_bank;
+   address_css<=event_css;address_last<=event_last;address_first<=event_first;
+   if(!enable)begin
+    display_valid<=0;latest_valid<=0;capture_started<=0;field_good<=0;
+    capture_request<=0;word_valid<=0;
+    event_valid<=0;address_valid<=0;
+   end else begin
+    if(frame_rise&&latest_valid)begin
+     display_bank<=latest_bank;display_valid<=1;
+    end
+    // Publish only after the final RAM write has committed. Overruns leave
+    // the last complete field available instead of showing partial sprites.
+    if(write_valid&&write_last&&field_good)begin
+     latest_bank<=write_bank;latest_valid<=1;
+    end
+    if(cpu_write_strobe&&cpu_write_addr[22:2]==word_tag[22:2])word_valid<=0;
+    if(capture_ack&&capture_request)begin
+     capture_request<=0;
+     word_data<=memory_data;word_tag<=capture_addr;
+     word_valid<=!(cpu_write_strobe&&cpu_write_addr[22:2]==capture_addr[22:2]);
+     write_valid<=1;write_bank<=pending_bank;write_addr<=pending_dest;
+     write_data<={pending_css,byte_lane(memory_data,pending_lane)};
+     write_last<=pending_last;
+    end
+    if(sample)begin
+     if(capture_started||first_sample)begin
+      event_valid<=1;event_base<=sample_base;event_column<=byte_column;
+      event_video_bank<=first_sample?video_bank:capture_video_bank;
+      event_dest<={sample_y,sample_byte};event_bank<=sample_bank;
+      event_css<=sample_css;event_last<=last_sample;event_first<=first_sample;
+     end
+     if(first_sample)begin
+      capture_started<=1;field_good<=!capture_request;
+      capture_bank<=free_bank;row_base<=screen_base;row_repeat<=0;
+      capture_row_bytes<=row_bytes;capture_lpr<=lines_per_row;
+      capture_video_bank<=video_bank;
+     end else if(sample_byte==0)begin
+      row_base<=sample_base;row_repeat<=advance_row?0:row_repeat+1'b1;
+     end
+    end
+    if(address_valid)begin
+      if(capture_request)field_good<=0;
+      else if(word_valid&&!address_first&&word_tag[22:2]==sample_addr[22:2]&&
+              !(cpu_write_strobe&&cpu_write_addr[22:2]==sample_addr[22:2]))begin
+       write_valid<=1;write_bank<=address_bank;write_addr<=address_dest;
+       write_data<={address_css,byte_lane(word_data,sample_addr[1:0])};
+       write_last<=address_last;
+      end else begin
+       capture_request<=1;capture_addr<={sample_addr[22:2],2'b0};
+       pending_bank<=address_bank;pending_dest<=address_dest;
+       pending_lane<=sample_addr[1:0];pending_css<=address_css;pending_last<=address_last;
+      end
+    end
+   end
+  end
  end
 endmodule

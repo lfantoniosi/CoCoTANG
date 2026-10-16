@@ -111,14 +111,18 @@ module gime_native_video (
     reg compatibility_vborder_irq_n=1;
     reg compatibility_hborder_irq_n=1;
     reg compatibility_hblank=1,compatibility_vblank=1;
-    wire [8:0] compatibility_top=live_top+9'd16;
+    // CSS capture is timed against the CPU-visible compatibility raster,
+    // independently of HDMI scanout. Align the corrected Dragonfire raster
+    // writes with the picture: two lines and one slow E cycle after the old
+    // capture origin (one E cycle = 16 master ticks = eight VDG pixels).
+    wire [8:0] compatibility_top=live_top+9'd18;
     wire [8:0] compatibility_bottom=
         compatibility_top+{1'b0,active_height};
     reg compatibility_field_50hz=0;
     wire [8:0] compatibility_last_line=
         compatibility_field_50hz?9'd311:9'd261;
-    localparam [9:0] COMPATIBILITY_SAMPLE_START=10'd230;
-    localparam [9:0] COMPATIBILITY_SAMPLE_END=10'd742;
+    localparam [9:0] COMPATIBILITY_SAMPLE_START=10'd246;
+    localparam [9:0] COMPATIBILITY_SAMPLE_END=COMPATIBILITY_SAMPLE_START+10'd512;
     assign hs_n=compatibility_mode?compatibility_hs_n:native_hs_n;
     assign fs_n=compatibility_mode?compatibility_fs_n:native_fs_n;
     assign hborder_irq_n=compatibility_mode?

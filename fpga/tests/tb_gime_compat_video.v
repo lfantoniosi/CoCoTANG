@@ -36,8 +36,8 @@ module tb_gime_compat_video;
     errors=errors+1;
    end
    if(samples==0&&
-      (dut.compatibility_x!=10'd231||
-       dut.compatibility_y!=dut.compatibility_top))begin
+      (dut.compatibility_x!=10'd247||
+       dut.compatibility_y!=9'd42))begin
     $display("VDG first CSS sample missed calibrated x/y");errors=errors+1;
    end
    samples=samples+1;

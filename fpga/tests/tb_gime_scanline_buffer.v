@@ -11,6 +11,9 @@ module tb_gime_scanline_buffer;
  wire [5:0] cvbs_vertical_left_border,cvbs_vertical_right_border;
  wire cvbs_vertical_border_valid;
  integer transactions=0,errors=0,i,timeout,raster;
+ integer graphics_gm,graphics_css,graphics_palette,graphics_dot,graphics_x;
+ reg [3:0] graphics_index;
+ reg [5:0] graphics_expected;
  integer responder_delay=0;reg slow_memory=0;
  integer slow_memory_extra=0;
  reg [1:0] responder_state=0;reg compatibility_mode=0,compatibility_an_g=1;
@@ -820,6 +823,45 @@ module tb_gime_scanline_buffer;
   end
   release dut.state;release dut.h_pending;release dut.h_pending_y;
   release dut.coalesce_count;
+
+  // Exercise every VDG graphics packing, including PMODE 1-4, with both
+  // CSS banks and two distinct programmable palettes. Solid source colours
+  // let us check every output pixel independently of horizontal scaling.
+  for(graphics_palette=0;graphics_palette<2;graphics_palette=graphics_palette+1)
+   for(graphics_gm=0;graphics_gm<8;graphics_gm=graphics_gm+1)
+    for(graphics_css=0;graphics_css<2;graphics_css=graphics_css+1)
+     for(graphics_dot=0;graphics_dot<(graphics_gm%2?2:4);
+         graphics_dot=graphics_dot+1)begin
+      @(negedge clk);reset_n=0;hdmi_prefetch_valid=0;cvbs_prefetch_valid=0;
+      compatibility_mode=1;compatibility_an_g=1;bit_plane=1;
+      compatibility_gm=graphics_gm;compatibility_css=graphics_css;
+      compatibility_sam_mode=6;horizontal_offset=0;screen_base=0;
+      hdmi_prefetch_y=0;hdmi_active_50hz=0;active_height=192;
+      for(i=0;i<16;i=i+1)
+       palettes[i*6+:6]=graphics_palette?(63-i*3):(i*3+1);
+      memory_data=graphics_gm%2?(graphics_dot?32'hffffffff:32'd0):
+                  (32'h55555555*graphics_dot);
+      graphics_index=graphics_gm%2?(8+graphics_css*2+graphics_dot):
+                                      (graphics_css*4+graphics_dot);
+      graphics_expected=mapped(palettes[graphics_index*6+:6]);
+      repeat(4)@(negedge clk);
+      reset_n=1;hdmi_prefetch_valid=1;
+      wait_hdmi_line();#1;
+      for(graphics_x=0;graphics_x<640;graphics_x=graphics_x+1)
+       if((dut.c_valid0?dut.cvbs_line0[graphics_x]:dut.cvbs_line1[graphics_x])
+           !==graphics_expected)begin
+        $display("VDG graphics CVBS palette failed GM=%0d CSS=%0d palette=%0d dot=%0d x=%0d",
+          graphics_gm,graphics_css,graphics_palette,graphics_dot,graphics_x);
+        errors=errors+1;graphics_x=640;
+       end
+      for(graphics_x=0;graphics_x<512;graphics_x=graphics_x+1)
+       if((dut.h_valid0?dut.hdmi_line0[graphics_x]:dut.hdmi_line1[graphics_x])
+           !==dut.expand_rgb222(graphics_expected))begin
+        $display("VDG graphics HDMI palette failed GM=%0d CSS=%0d palette=%0d dot=%0d x=%0d",
+          graphics_gm,graphics_css,graphics_palette,graphics_dot,graphics_x);
+        errors=errors+1;graphics_x=512;
+       end
+     end
 
   if(errors==0)$display("tb_gime_scanline_buffer PASS");
   else $display("tb_gime_scanline_buffer FAIL: %0d",errors);

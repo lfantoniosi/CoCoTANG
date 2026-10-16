@@ -101,7 +101,7 @@ module tb_coco_cvbs_ntsc;
         row_border_rgb = 6'h0c;
         seek(10'd222,9'd235);
         repeat (4) @(posedge clk135); #1;
-        if (border_raster_y != 9'd232 || dut.pixel_rgb !== 6'h3f) begin
+        if (border_raster_y != 9'd234 || dut.pixel_rgb !== 6'h3f) begin
             $display("compatibility lower border: raster=%0d rgb=%h",
                      border_raster_y,dut.pixel_rgb); errors = errors + 1; end
         row_border_valid = 1'b0;

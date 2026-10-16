@@ -140,6 +140,10 @@ test:
 	vvp /private/tmp/cocotang_tb_gime_50_to_60_field_wrap
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_compat_video tests/tb_gime_compat_video.v src/coco3/gime_native_video.v
 	vvp /private/tmp/cocotang_tb_gime_compat_video
+	iverilog -g2012 -s tb_gime_css_alignment -o /private/tmp/cocotang_tb_gime_css_alignment tests/tb_gime_css_alignment.sv src/coco3/gime_native_video.v src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
+	vvp /private/tmp/cocotang_tb_gime_css_alignment
+	iverilog -g2012 -s tb_gime_compat_capture -o /private/tmp/cocotang_tb_gime_compat_capture tests/tb_gime_compat_capture.sv src/coco3/gime_scanline_buffer.v
+	vvp /private/tmp/cocotang_tb_gime_compat_capture
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_registers tests/tb_gime_registers.v src/coco3/gime_registers.v
 	vvp /private/tmp/cocotang_tb_gime_registers
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_disto tests/tb_gime_disto.v src/coco3/gime_registers.v

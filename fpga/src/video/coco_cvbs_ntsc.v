@@ -137,9 +137,9 @@ module coco_cvbs_ntsc #(
     // of rebuilding this adder in every source-valid comparison.
     wire [8:0] field_picture_bottom = picture_bottom;
     // Map this analogue field onto the VDG raster that captured the
-    // compatibility vertical-border colours. The analogue picture starts
-    // 1..3 lines after the corresponding VDG picture, depending on mode.
-    reg [8:0] compatibility_raster_lag = 9'd3;
+    // compatibility vertical-border colours. Include the two-line CSS
+    // capture-origin correction also used by HDMI and the picture renderer.
+    reg compatibility_border_lead = 0,compatibility_border_lag = 1;
     wire [8:0] border_top = field_picture_top >= 9'd27 ?
                             field_picture_top - 9'd27 : 9'd0;
 
@@ -727,10 +727,10 @@ module coco_cvbs_ntsc #(
             if (video_50hz_sync != video_50hz_active)
                 video_50hz_active <= video_50hz_sync;
             height_meta <= active_height;
-            compatibility_raster_lag <= video_50hz_active ? 9'd1 :
-                (height_meta == 8'd192 ? 9'd3 : 9'd2);
-            border_raster_y_q <= v_line >= compatibility_raster_lag ?
-                                 v_line-compatibility_raster_lag : 9'd0;
+            compatibility_border_lead <= video_50hz_active;
+            compatibility_border_lag <= !video_50hz_active&&height_meta==8'd192;
+            border_raster_y_q <= compatibility_border_lead ? v_line+9'd1 :
+                compatibility_border_lag ? (v_line==0 ? 9'd0 : v_line-9'd1) : v_line;
             picture_top <= next_picture_top +
                            (!compatibility_mode ? 9'd1 : 9'd0);
             picture_bottom <= next_picture_top +

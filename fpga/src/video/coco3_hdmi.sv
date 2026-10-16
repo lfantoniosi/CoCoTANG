@@ -123,9 +123,10 @@ module coco3_hdmi #(
         // cache must distinguish them from vertical-border frame setup.
         source_picture_active=(y>=top && y<top+doubled_height);
         source_frame_start=(x==0 && y==0);
-        // The VDG raster's picture starts at top/2+15 (60 Hz) or +16 (50 Hz).
-        // Preserve that offset in the vertical borders as well.
-        source_border_raster_y={1'b0,y[9:1]}+(active_50hz_s?9'd16:9'd15);
+        // Match the CSS capture origin at the first picture row. The
+        // 192-line NTSC window has one extra scanout line of top margin.
+        source_border_raster_y={1'b0,y[9:1]}+
+            (active_50hz_s ? 9'd18 : (height_s==8'd192 ? 9'd16 : 9'd17));
         // Native GIME retains all 640 dots. VDG and artifact modes use the
         // centered 512-dot aperture; ordinary VDG pixels use exact
         // 2x/4x/8x replication and artifact pixels keep composite decoding.
