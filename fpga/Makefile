@@ -128,6 +128,8 @@ test:
 	vvp /private/tmp/cocotang_tb_gime_mode
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_timing tests/tb_gime_timing.v src/coco3/gime_timing.v
 	vvp /private/tmp/cocotang_tb_gime_timing
+	iverilog -g2012 -s tb_gime_compat_phase -o /private/tmp/cocotang_tb_gime_compat_phase tests/tb_gime_compat_phase.sv src/coco3/gime_timing.v src/coco3/gime_native_video.v
+	vvp /private/tmp/cocotang_tb_gime_compat_phase
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_native_video tests/tb_gime_native_video.v src/coco3/gime_native_video.v
 	vvp /private/tmp/cocotang_tb_gime_native_video
 	iverilog -g2012 -s tb_gime_vborder -o /private/tmp/cocotang_tb_gime_vborder tests/tb_gime_vborder.v src/coco3/gime_native_video.v src/coco3/gime_registers.v

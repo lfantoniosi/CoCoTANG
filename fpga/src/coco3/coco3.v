@@ -112,13 +112,15 @@ module coco3 #(
     wire compatibility_mode;
     wire [7:0] vmode;
     reg effective_bit_plane = 1'b0;
+    wire compatibility_clock_tick,compatibility_clock_sync;
     gime_timing timing (
         // E/Q must run while the physical CPU is held in RESET; register and
         // video state remain reset until cpu_reset_n is released.
         .clk(clk), .reset_n(reset_n), .fast_mode(fast_mode),
         .e(e), .q(q),
         .e_pin(e_pin), .q_pin(q_pin),
-        .e_rise(e_rise), .e_fall(e_fall)
+        .e_rise(e_rise), .e_fall(e_fall),
+        .video_tick(compatibility_clock_tick),.video_e_fall(compatibility_clock_sync)
     );
 
     wire [7:0] vres;
@@ -446,13 +448,15 @@ module coco3 #(
     assign active_height=line_count(effective_lpf);
     wire [8:0] debug_native_y;
     assign gime_trace_y=debug_native_y;
-    gime_native_video native_video(
+    gime_native_video #(.USE_CPU_VIDEO_CLOCK(1)) native_video(
         .clk(clk),.reset_n(core_reset_n),.video_50hz(video_50hz),
         .bit_plane(effective_bit_plane),.hres(effective_hres),.vmode(vmode),
         .hdmi_frame_start(hdmi_frame_start),
         .hdmi_active_50hz(hdmi_active_50hz),
         .active_height(active_height),.compatibility_mode(compatibility_mode),
         .compatibility_css(pia1_effective[3]),
+        .compatibility_clock_tick(compatibility_clock_tick),
+        .compatibility_clock_sync(compatibility_clock_sync),
         .compatibility_border_rgb(border_rgb),
         .pixel_rgb({hdmi_pixel_data[23:22],hdmi_pixel_data[15:14],
                     hdmi_pixel_data[7:6]}),.hs_n(hs_n),.fs_n(fs_n),

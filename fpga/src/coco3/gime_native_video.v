@@ -1,9 +1,12 @@
-module gime_native_video (
+module gime_native_video #(
+    parameter integer USE_CPU_VIDEO_CLOCK=0
+) (
     input clk, input reset_n, input video_50hz, input bit_plane,
     input [3:0] hres, input [7:0] vmode,
     input hdmi_frame_start, input hdmi_active_50hz,
     input [7:0] active_height,
     input compatibility_mode, input compatibility_css,
+    input compatibility_clock_tick,input compatibility_clock_sync,
     input [5:0] compatibility_border_rgb,
     input [5:0] pixel_rgb,
     output wire hs_n, output wire fs_n, output wire hborder_irq_n,
@@ -104,6 +107,7 @@ module gime_native_video (
     wire [32:0] compatibility_sum=
         {1'b0,compatibility_accumulator}+{1'b0,COMPATIBILITY_STEP};
     reg compatibility_raster_tick=0;
+    reg compatibility_clock_started=0;
     reg [9:0] compatibility_x=0;
     reg [8:0] compatibility_y=0;
     reg [3:0] compatibility_sample_phase=0;
@@ -201,6 +205,7 @@ module gime_native_video (
         if (!reset_n) begin
             compatibility_accumulator<=0;
             compatibility_raster_tick<=0;
+            compatibility_clock_started<=0;
             compatibility_x<=0;compatibility_y<=0;
             compatibility_field_50hz<=0;
             compatibility_hs_n<=1;compatibility_fs_n<=1;
@@ -218,8 +223,15 @@ module gime_native_video (
             compatibility_sample<=0;
             compatibility_border_sample<=0;
             compatibility_accumulator<=compatibility_sum[31:0];
-            compatibility_raster_tick<=compatibility_sum[32];
-            if (compatibility_raster_tick) begin
+            compatibility_raster_tick<=USE_CPU_VIDEO_CLOCK ?
+                compatibility_clock_tick : compatibility_sum[32];
+            // CPU release can land on either fast E cycle. Start on the
+            // video tick following the fixed slow-E boundary, so HS/FS and
+            // CSS retain their phase across CPU speed changes and reloads.
+            if(USE_CPU_VIDEO_CLOCK&&!compatibility_clock_started)begin
+                compatibility_raster_tick<=0;
+                if(compatibility_clock_sync)compatibility_clock_started<=1;
+            end else if (compatibility_raster_tick) begin
                 compatibility_vborder_irq_n<=
                     !(compatibility_y==compatibility_bottom &&
                       compatibility_x==vb_irq_position);

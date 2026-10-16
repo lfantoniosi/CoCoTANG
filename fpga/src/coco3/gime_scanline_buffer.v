@@ -604,6 +604,7 @@ wire [3:0] advanced_dma_line=
  reg upper_border_active=0;
  reg upper_border_setup_abort=0;
  reg [3:0] frame_initial_scroll=0;
+ reg compatibility_frame_abort=0;
  reg [2:0] frame_initial_lpr=0;
  wire hdmi_frame_rise=hdmi_frame_sync&&!hdmi_frame_prev;
  // Track the entire upper border, not just the last source-row prefetch.
@@ -710,6 +711,7 @@ reg configuration_pending=1'b1;
    hdmi_frame_meta<=0;hdmi_frame_sync<=0;hdmi_frame_prev<=0;
    upper_border_active<=0;upper_border_setup_abort<=0;
    frame_initial_scroll<=0;frame_initial_lpr<=0;
+   compatibility_frame_abort<=0;
    hdmi_50_meta<=0;hdmi_50_sync<=0;hdmi_50_prev<=0;
    c_replacement_bank_q<=0;
    prior_paint_palette<=0;prior_paint_valid<=0;
@@ -724,6 +726,10 @@ reg configuration_pending=1'b1;
    hdmi_frame_meta<=hdmi_frame_start;
    hdmi_frame_sync<=hdmi_frame_meta;
    hdmi_frame_prev<=hdmi_frame_sync;
+   // Stage the field-snapshot handoff before it fans out into renderer
+   // register enables. The extra clock lies in HDMI's vertical blank.
+   compatibility_frame_abort<=hdmi_frame_rise&&compatibility_mode&&
+                              (compatibility_bitmap_valid===1'b1);
    if(hdmi_frame_rise||hdmi_standard_changed||upper_border_setup_abort)
     picture_fetch_complete<=0;
    if(hdmi_frame_rise||hdmi_standard_changed||upper_border_setup_abort)
@@ -733,8 +739,7 @@ reg configuration_pending=1'b1;
    // Register this abort decision so HDMI tag comparison and setup changes
    // do not form a long combinational path through the renderer state mux.
    upper_border_setup_abort<=upper_border_active&&upper_border_setup_changed;
-   if(hdmi_standard_changed||upper_border_setup_abort||
-      (hdmi_frame_rise&&compatibility_mode&&(compatibility_bitmap_valid===1'b1)))begin
+   if(hdmi_standard_changed||upper_border_setup_abort||compatibility_frame_abort)begin
     // A new field or a frame-setup write invalidates speculative row zero.
     // Abort an in-flight fill too, or FINALIZE_LINE could publish a row
     // rendered from the previous VOFF/VSC after the new setup was captured.
