@@ -188,6 +188,18 @@ To omit Orchestra-90 audio in a custom build, set the `top_coco3` parameter `ENA
 
 The output is [`fpga/impl/pnr/CoCoTANG.fs`](fpga/impl/pnr/CoCoTANG.fs). `make rebuild` always runs synthesis and place-and-route; `make build` rebuilds only when Make considers an input newer than the bitstream. The Makefile expects Gowin at `/Applications/GowinIDE.app/Contents/Resources/Gowin_EDA/IDE` on macOS or `/opt/Gowin/IDE` on Linux. If yours is elsewhere, pass `GOWIN_IDE=/path/to/Gowin_EDA/IDE` to Make.
 
+### Select an analogue video output
+
+Each mode has its own bitstream and fixed video-mode setting, independent of the default `ANALOG_VIDEO_MODE` in `src/top_coco3.v`:
+
+| Output | Build if needed and program | Program existing image | Bitstream in `fpga/impl/pnr/` |
+| --- | --- | --- | --- |
+| RGB with sync on green | `make program-rgb` | `make reprogram-rgb` | `CoCoTANG-rgb.fs` |
+| YPbPr component | `make program-ypbpr` | `make reprogram-ypbpr` | `CoCoTANG-ypbpr.fs` |
+| NTSC CVBS and S-Video | `make program-cvbs` | `make reprogram-cvbs` | `CoCoTANG-cvbs.fs` |
+
+Run these commands from `fpga/`. To build without programming, use `make build-rgb`, `make build-ypbpr`, or `make build-cvbs`. Use `make rebuild-rgb`, `make rebuild-ypbpr`, or `make rebuild-cvbs` to force a rebuild, and the corresponding `make timing-rgb`, `make timing-ypbpr`, or `make timing-cvbs` to check the routed timing. The `reprogram-*` targets never rebuild; their named image must already exist.
+
 ## Program on macOS or Linux
 
 Connect the Tang Nano 20K by USB. The FPGA configuration and CoCo 3 ROM are **two separate writes** to the module's external SPI flash:

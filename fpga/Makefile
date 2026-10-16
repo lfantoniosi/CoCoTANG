@@ -6,6 +6,11 @@ OUTPUT := $(ROOT)/impl/pnr/CoCoTANG.fs
 PAL_OUTPUT := $(ROOT)/impl/pnr/CoCoTANG-pal.fs
 ORCHESTRA90_OUTPUT := $(ROOT)/impl/pnr/CoCoTANG-orchestra90.fs
 NTSC_SVIDEO_OUTPUT := $(ROOT)/impl/pnr/CoCoTANG-ntsc-svideo.fs
+VIDEO_MODES := rgb ypbpr cvbs
+VIDEO_OUTPUTS := $(addprefix $(ROOT)/impl/pnr/CoCoTANG-,$(addsuffix .fs,$(VIDEO_MODES)))
+VIDEO_TOP_rgb := top_coco3_rgb
+VIDEO_TOP_ypbpr := top_coco3_ypbpr
+VIDEO_TOP_cvbs := top_coco3_ntsc_svideo
 PAL_ROM ?= /Users/felipe/src/retro/coco_roms/coco3p.rom
 RAM8M_DISK := $(ROOT)/results/RAM8M.DSK
 RAM8M_BIN := $(ROOT)/results/RAM8M.BIN
@@ -42,8 +47,21 @@ ROM_OFFSET ?= 1048576
  reprogram pal-program pal-reprogram ntsc-svideo-program \
  ntsc-svideo-reprogram rom pal-rom palette-bridge-dsk contras-palette-test-dsk \
  contras-palette-sync-dsk contras-exact-dsk floppy-diag-dsk contras-irq-dsk check-tools
+.PHONY: $(addprefix build-,$(VIDEO_MODES)) $(addprefix rebuild-,$(VIDEO_MODES)) \
+ $(addprefix timing-,$(VIDEO_MODES)) $(addprefix program-,$(VIDEO_MODES)) \
+ $(addprefix reprogram-,$(VIDEO_MODES))
 
 build: $(OUTPUT)
+
+# Fixed video modes use wrappers and separate images, independent of the
+# default ANALOG_VIDEO_MODE in top_coco3.v. CVBS also provides separate Y/C.
+$(addprefix build-,$(VIDEO_MODES)): build-%: $(ROOT)/impl/pnr/CoCoTANG-%.fs
+
+$(addprefix rebuild-,$(VIDEO_MODES)): rebuild-%: check-tools
+	$(call run-gowin,CoCoTANG-pal.gprj,$(VIDEO_TOP_$*),CoCoTANG-$*)
+
+$(addprefix timing-,$(VIDEO_MODES)): timing-%:
+	python3 scripts/check_timing.py impl/pnr/CoCoTANG-$*_tr_content.html
 
 rebuild: check-tools
 	$(call run-gowin,CoCoTANG.gprj,top_coco3,CoCoTANG)
@@ -132,6 +150,10 @@ test:
 	vvp /private/tmp/cocotang_tb_artifact_decode
 	iverilog -g2012 -o /private/tmp/cocotang_tb_rgb_phase tests/tb_rgb_scanline_dac_phase.v src/video/coco_cvbs_ntsc.v
 	vvp /private/tmp/cocotang_tb_rgb_phase
+	iverilog -g2012 -s tb_luma_scanline_dac_phase -o /private/tmp/cocotang_tb_luma_phase tests/tb_luma_scanline_dac_phase.sv src/video/coco_cvbs_ntsc.v
+	vvp /private/tmp/cocotang_tb_luma_phase
+	iverilog -g2012 -s tb_component_dac_phase -o /private/tmp/cocotang_tb_component_phase tests/tb_component_dac_phase.sv src/video/coco_cvbs_ntsc.v
+	vvp /private/tmp/cocotang_tb_component_phase
 	iverilog -g2012 -o /private/tmp/cocotang_tb_cvbs_svideo_phase tests/tb_cvbs_svideo_scanline_dac_phase.v src/video/coco_cvbs_ntsc.v
 	vvp /private/tmp/cocotang_tb_cvbs_svideo_phase
 	iverilog -g2012 -o /private/tmp/cocotang_tb_cvbs_luma_filter tests/tb_cvbs_luma_filter.v src/video/coco_cvbs_ntsc.v
@@ -166,6 +188,12 @@ program: $(OUTPUT)
 
 reprogram:
 	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(OUTPUT)"
+
+$(addprefix program-,$(VIDEO_MODES)): program-%: $(ROOT)/impl/pnr/CoCoTANG-%.fs
+	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$<"
+
+$(addprefix reprogram-,$(VIDEO_MODES)): reprogram-%:
+	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(ROOT)/impl/pnr/CoCoTANG-$*.fs"
 
 orchestra90-program: $(ORCHESTRA90_OUTPUT)
 	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(ORCHESTRA90_OUTPUT)"
@@ -283,6 +311,9 @@ endef
 
 $(OUTPUT): $(PROJECT) $(BUILD_TCL) $(shell find src -type f) | check-tools
 	$(call run-gowin,CoCoTANG.gprj,top_coco3,CoCoTANG)
+
+$(VIDEO_OUTPUTS): $(ROOT)/impl/pnr/CoCoTANG-%.fs: $(PAL_PROJECT) $(BUILD_TCL) $(shell find src -type f) | check-tools
+	$(call run-gowin,CoCoTANG-pal.gprj,$(VIDEO_TOP_$*),CoCoTANG-$*)
 
 $(ROOT)/impl/pnr/CoCoTANG-contras-debug.fs: $(PAL_PROJECT) $(BUILD_TCL) $(shell find src -type f) | check-tools
 	$(call run-gowin,CoCoTANG-pal.gprj,top_coco3_contras_debug,CoCoTANG-contras-debug)

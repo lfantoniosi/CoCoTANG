@@ -2,4 +2,7 @@
 /impl/**/CoCoTANG-pal*
 /impl/**/CoCoTANG-ntsc-svideo*
 /impl/**/CoCoTANG-orchestra90*
+/impl/**/CoCoTANG-rgb*
+/impl/**/CoCoTANG-ypbpr*
+/impl/**/CoCoTANG-cvbs*
 /CoCoTANG-ntsc-svideo.gprj.user

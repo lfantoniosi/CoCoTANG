@@ -12,27 +12,27 @@
   <Part Number>: GW2AR-LV18QN88C8/I7
   <Device>: GW2AR-18
   <Device Version>: C
-  <Created Time>:Thu Oct 15 00:44:42 2026
+  <Created Time>:Thu Oct 15 19:11:57 2026
 
 
 2. PnR Details
 
   Running placement:
-    Placement Phase 0: CPU time = 0h 0m 0.392s, Elapsed time = 0h 0m 0.392s
-    Placement Phase 1: CPU time = 0h 0m 0.096s, Elapsed time = 0h 0m 0.096s
-    Placement Phase 2: CPU time = 0h 0m 0.974s, Elapsed time = 0h 0m 0.975s
-    Placement Phase 3: CPU time = 0h 0m 0.733s, Elapsed time = 0h 0m 0.734s
-    Total Placement: CPU time = 0h 0m 2s, Elapsed time = 0h 0m 2s
+    Placement Phase 0: CPU time = 0h 0m 0.406s, Elapsed time = 0h 0m 0.407s
+    Placement Phase 1: CPU time = 0h 0m 0.094s, Elapsed time = 0h 0m 0.094s
+    Placement Phase 2: CPU time = 0h 0m 0.87s, Elapsed time = 0h 0m 0.87s
+    Placement Phase 3: CPU time = 0h 0m 4s, Elapsed time = 0h 0m 4s
+    Total Placement: CPU time = 0h 0m 5s, Elapsed time = 0h 0m 5s
  Running routing:
     Routing Phase 0: CPU time = 0h 0m 0.001s, Elapsed time = 0h 0m 0.001s
-    Routing Phase 1: CPU time = 0h 0m 0.796s, Elapsed time = 0h 0m 0.796s
-    Routing Phase 2: CPU time = 0h 0m 4s, Elapsed time = 0h 0m 4s
+    Routing Phase 1: CPU time = 0h 0m 0.824s, Elapsed time = 0h 0m 0.825s
+    Routing Phase 2: CPU time = 0h 0m 3s, Elapsed time = 0h 0m 3s
     Routing Phase 3: CPU time = 0h 0m 0s, Elapsed time = 0h 0m 0s
     Total Routing: CPU time = 0h 0m 4s, Elapsed time = 0h 0m 4s
  Generate output files:
-    CPU time = 0h 0m 0.707s, Elapsed time = 0h 0m 0.707s
+    CPU time = 0h 0m 0.712s, Elapsed time = 0h 0m 0.712s
 
- Total Time and Memory Usage: CPU time = 0h 0m 7s, Elapsed time = 0h 0m 7s, Peak memory usage = 475MB
+ Total Time and Memory Usage: CPU time = 0h 0m 10s, Elapsed time = 0h 0m 10s, Peak memory usage = 469MB
 
 
 3. Resource Usage Summary
@@ -40,15 +40,15 @@
   --------------------------------------------------------------------------------
   Resources                   | Usage                               | Utilization
   --------------------------------------------------------------------------------
-  Logic                       | 7532/20736                          |  37%
-    --LUT,ALU,ROM16           | 7400(6192 LUT, 1208 ALU, 0 ROM16)   | -
+  Logic                       | 7638/20736                          |  37%
+    --LUT,ALU,ROM16           | 7506(6225 LUT, 1281 ALU, 0 ROM16)   | -
     --SSRAM(RAM16)            | 22                                  | -
-  Register                    | 4265/15915                          |  27%
+  Register                    | 4321/15915                          |  28%
     --Logic Register as Latch | 0/15552                             |  0%
-    --Logic Register as FF    | 4204/15552                          |  28%
+    --Logic Register as FF    | 4260/15552                          |  28%
     --I/O Register as Latch   | 0/363                               |  0%
     --I/O Register as FF      | 61/363                              |  17%
-  CLS                         | 5449/10368                          |  53%
+  CLS                         | 5473/10368                          |  53%
   I/O Port                    | 53/66                               |  81%
   I/O Buf                     | 48                                  | -
     --Input Buf               | 11                                  | -
@@ -102,13 +102,13 @@
   -------------------------------------------
   Signal         | Global Clock   | Location
   -------------------------------------------
-  clkin_d        | PRIMARY        |  TR BR BL
+  clkin_d        | PRIMARY        |  BR BL
   clk27          | PRIMARY        |  TR TL BR BL
   clk108         | PRIMARY        |  TR TL BR BL
   O_sdram_clk_d  | PRIMARY        |  TR
-  clk270         | PRIMARY        |  TR TL BR BL
+  clk270         | PRIMARY        |  BR BL
   clk135         | PRIMARY        |  TR TL BR BL
-  pia1_audio_clk | PRIMARY        |  TR BR BL
+  pia1_audio_clk | PRIMARY        |  BR BL
   board_reset_n_Z| LW             |  -
   compatibility_video| LW             |  -
   sdram_reset_n_Z| LW             |  -

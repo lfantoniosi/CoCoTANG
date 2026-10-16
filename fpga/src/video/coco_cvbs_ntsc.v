@@ -19,6 +19,16 @@ module coco_cvbs_ntsc #(
     // Restart the RGB DAC accumulators with staggered phases, alternating
     // each channel by half a cycle on successive scanlines.
     parameter integer RGB_SCANLINE_PHASE_ALTERNATION = 0,
+    // Stagger the baseband Pb/Pr DACs as in RGB. At neutral grey both
+    // request midpoint 64; identical phases switch both pins in the same direction.
+    parameter integer COMPONENT_DAC_PHASE_STAGGER = 0,
+    // Apply the RGB green DAC's alternating phase to separate Y, including
+    // component mode where the CVBS/S-Video phase option is disabled.
+    parameter integer LUMA_SCANLINE_PHASE_ALTERNATION = 0,
+    // RGB's calibrated levels are all even. Match that DAC precision on Y
+    // to avoid odd-code 128-clock pulse trains (2.109 MHz at clk270), keeping
+    // the longest constant-level train to 64 clocks as in RGB. Drops one LSB.
+    parameter integer LUMA_DAC_EVEN_LEVELS = 0,
     // Alternate the separate Y and CVBS DAC phases by half a cycle on
     // successive scanlines, without changing their requested levels.
     parameter integer CVBS_SVIDEO_SCANLINE_PHASE_ALTERNATION = 0,
@@ -726,7 +736,8 @@ module coco_cvbs_ntsc #(
             picture_bottom <= next_picture_top +
                               (!compatibility_mode ? 9'd1 : 9'd0) +
                               {1'b0,height_meta};
-            luma_level_135 <= luma_level;
+            luma_level_135 <= LUMA_DAC_EVEN_LEVELS ?
+                              {luma_level[6:1],1'b0} : luma_level;
             chroma_level_135 <= chroma_level;
             cvbs_level_135 <= composite_level;
             component_pb_level_135 <= component_pb_level;
@@ -902,6 +913,11 @@ module coco_cvbs_ntsc #(
     reg [5:0] cvbs_sigma = 6'd0;
     reg [7:0] component_pb_sigma = 8'd0;
     reg [7:0] component_pr_sigma = 8'd0;
+    reg component_midpoint_phase = 1'b0;
+    reg component_pb_midpoint = 1'b1;
+    reg component_pr_midpoint = 1'b1;
+    reg component_pb_midpoint_output = 1'b1;
+    reg component_pr_midpoint_output = 1'b1;
     reg luma_out_reg = 1'b0;
     reg chroma_out_reg = 1'b0;
     reg cvbs_out_reg = 1'b0;
@@ -940,7 +956,6 @@ module coco_cvbs_ntsc #(
     wire [7:0] component_pr_sum =
         {1'b0,component_pr_sigma[6:0]} +
         {1'b0,component_pr_dac_level};
-
     assign luma_out = luma_out_reg;
     assign chroma_out = chroma_out_reg;
     assign cvbs_out = cvbs_out_reg;
@@ -959,6 +974,11 @@ module coco_cvbs_ntsc #(
             cvbs_sigma <= 6'd16;
             component_pb_sigma <= 8'd0;
             component_pr_sigma <= 8'd0;
+            component_midpoint_phase <= 1'b0;
+            component_pb_midpoint <= 1'b1;
+            component_pr_midpoint <= 1'b1;
+            component_pb_midpoint_output <= 1'b1;
+            component_pr_midpoint_output <= 1'b1;
             luma_out_reg <= 1'b0;
             chroma_out_reg <= 1'b0;
             cvbs_out_reg <= 1'b0;
@@ -974,18 +994,27 @@ module coco_cvbs_ntsc #(
             cvbs_dac_level <= cvbs_level_135;
             component_pb_dac_level <= component_pb_level_135;
             component_pr_dac_level <= component_pr_level_135;
+            component_midpoint_phase <= ~component_midpoint_phase;
+            // Register comparisons with the levels, then delay once more
+            // to align the neutral flags with the sigma carry output.
+            component_pb_midpoint <= (component_pb_level_135 == 7'd64);
+            component_pr_midpoint <= (component_pr_level_135 == 7'd64);
+            component_pb_midpoint_output <= component_pb_midpoint;
+            component_pr_midpoint_output <= component_pr_midpoint;
             luma_sync_270 <= (luma_level_135 == LUMA_SYNC_Q2);
             luma_sync_270_d <= luma_sync_270;
             if (dac_line_start &&
                 ((RGB_SOG_OUTPUT && RGB_SCANLINE_PHASE_ALTERNATION) ||
+                 LUMA_SCANLINE_PHASE_ALTERNATION ||
                  CVBS_SVIDEO_SCANLINE_PHASE_ALTERNATION))
                 dac_line_phase <= ~dac_line_phase;
             // Phase-lock only the signals containing luma.  The event lands
             // in the horizontal sync tip, so the accumulator transient is
-            // invisible; Pb/Pr and S-Video chroma retain continuous phase.
+            // invisible; S-Video chroma retains continuous phase.
             luma_sigma <= dac_line_start ?
                           (((RGB_SOG_OUTPUT &&
                              RGB_SCANLINE_PHASE_ALTERNATION) ||
+                             LUMA_SCANLINE_PHASE_ALTERNATION ||
                              CVBS_SVIDEO_SCANLINE_PHASE_ALTERNATION) ?
                            luma_alternate_seed : {1'b0,luma_phase_lfsr[6:0]}) :
                           luma_sum;
@@ -994,23 +1023,37 @@ module coco_cvbs_ntsc #(
                           (CVBS_SVIDEO_SCANLINE_PHASE_ALTERNATION ?
                            cvbs_seed : {1'b0,luma_phase_lfsr[4:0]}) :
                           cvbs_sum;
-            // Keep colour-difference error continuous in component mode.
-            // RGB mode restarts both channels during sync for the scanline
-            // phase experiment, before either channel has picture output.
-            component_pb_sigma <= (dac_line_start && RGB_SOG_OUTPUT &&
-                                   RGB_SCANLINE_PHASE_ALTERNATION) ?
-                                  rgb_blue_seed : component_pb_sum;
-            component_pr_sigma <= (dac_line_start && RGB_SOG_OUTPUT &&
-                                   RGB_SCANLINE_PHASE_ALTERNATION) ?
-                                  rgb_red_seed : component_pr_sum;
+            // Restart baseband colour DACs only during horizontal sync.
+            // Opposite midpoint phases avoid in-phase Pb/Pr switching on grey.
+            // S-Video's modulated chroma DAC above remains continuous.
+            component_pb_sigma <= (dac_line_start &&
+                                  ((RGB_SOG_OUTPUT && RGB_SCANLINE_PHASE_ALTERNATION) ||
+                                   COMPONENT_DAC_PHASE_STAGGER)) ?
+                                  (COMPONENT_DAC_PHASE_STAGGER ? 8'd42 : rgb_blue_seed) :
+                                  component_pb_sum;
+            component_pr_sigma <= (dac_line_start &&
+                                  ((RGB_SOG_OUTPUT && RGB_SCANLINE_PHASE_ALTERNATION) ||
+                                   COMPONENT_DAC_PHASE_STAGGER)) ?
+                                  (COMPONENT_DAC_PHASE_STAGGER ? 8'd85 : rgb_red_seed) :
+                                  component_pr_sum;
             if (dac_line_start)
                 luma_phase_lfsr <= {luma_phase_lfsr[14:0],
                                     luma_phase_feedback};
             luma_out_reg <= luma_sigma[7];
             chroma_out_reg <= chroma_sigma[5];
             cvbs_out_reg <= cvbs_sigma[5];
-            component_pb_out_reg <= component_pb_sigma[7];
-            component_pr_out_reg <= component_pr_sigma[7];
+            // At midpoint, ordinary sigma-delta output is a 50% square wave
+            // whose phase remembers preceding colours. Use fixed opposite
+            // phases instead, while preserving the accumulator underneath.
+            // Each 13.5-MHz sample spans 20 DAC clocks, so a neutral sample
+            // still emits exactly ten pulses. Coloured samples keep their
+            // original output bits and accumulated quantisation error.
+            component_pb_out_reg <= (COMPONENT_DAC_PHASE_STAGGER &&
+                                     component_pb_midpoint_output) ?
+                                    component_midpoint_phase : component_pb_sigma[7];
+            component_pr_out_reg <= (COMPONENT_DAC_PHASE_STAGGER &&
+                                     component_pr_midpoint_output) ?
+                                    ~component_midpoint_phase : component_pr_sigma[7];
         end
     end
 endmodule
