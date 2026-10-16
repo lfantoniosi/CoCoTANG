@@ -19,6 +19,7 @@ module coco_pia1_dac (
     reg [7:0] port_a_ddr = 8'h00;
     reg [7:0] control_a = 8'h00;
     reg [7:0] control_b = 8'h00;
+    reg [7:0] mux_control_a = 8'h00, mux_control_b = 8'h00;
 
     // 108 MHz / (2 * 1125) = 48 kHz.  The HDMI packet engine samples PCM on
     // each rising edge of this clock.
@@ -30,6 +31,8 @@ module coco_pia1_dac (
             port_a_ddr <= 8'h00;
             control_a <= 8'h00;
             control_b <= 8'h00;
+            mux_control_a <= 8'h00;
+            mux_control_b <= 8'h00;
             audio_divider <= 11'd0;
             audio_clk <= 1'b0;
         end else begin
@@ -41,7 +44,11 @@ module coco_pia1_dac (
             end
 
             if (e_fall && !cpu_rw_n) begin
-                if (cpu_addr == 16'hff21)
+                if (cpu_addr == 16'hff01)
+                    mux_control_a <= cpu_data;
+                else if (cpu_addr == 16'hff03)
+                    mux_control_b <= cpu_data;
+                else if (cpu_addr == 16'hff21)
                     control_a <= cpu_data;
                 else if (cpu_addr == 16'hff23)
                     control_b <= cpu_data;
@@ -63,11 +70,17 @@ module coco_pia1_dac (
     // write would turn joystick movement into loud noise.  The CoCo programs
     // CRB to manual-output mode ($34=low, $3c=high) for this signal.
     assign sound_enable = control_b[5] && control_b[4] && control_b[3];
-    assign pwm_sample = sound_enable ? {port_a_pins[7:2], 2'b00} : 8'h80;
+    // PIA0 CA2/CB2 select the analogue source. The SSC manual selects
+    // cartridge input with $FF01=$34, $FF03=$3f. CB2 at PIA1 still enables
+    // sound, but the six-bit DAC must not contribute in that mux position.
+    wire dac_selected = (mux_control_a[5:3] != 3'b111) &&
+                        (mux_control_b[5:3] != 3'b111);
+    assign pwm_sample = (sound_enable && dac_selected) ?
+                        {port_a_pins[7:2], 2'b00} : 8'h80;
 
     // Convert the CoCo's unsigned six-bit DAC to signed 16-bit PCM.  DAC 32
     // is digital zero, while DAC 0/63 become -32768/+31744 respectively.
-    assign pcm_sample = sound_enable
+    assign pcm_sample = sound_enable && dac_selected
                       ? {~port_a_pins[7], port_a_pins[6:2], 10'b0}
                       : 16'h0000;
 endmodule

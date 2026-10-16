@@ -23,7 +23,9 @@ if {$::env(COCOTANG_TOP) eq "top_coco3_ntsc_svideo" ||
     set_option -place_option 1
 } elseif {$::env(COCOTANG_TOP) eq "top_coco3_rgb"} {
     set_option -place_option 0
-    set_option -route_option 0
+    set_option -route_option 1
+} elseif {$::env(COCOTANG_TOP) eq "top_coco3"} {
+    set_option -place_option 2
 }
 set_option -use_mspi_as_gpio 1
 set_option -use_sspi_as_gpio 1

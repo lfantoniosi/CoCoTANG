@@ -1,51 +1,52 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Module name="top_coco3" Register="117" Lut="94" T_Register="4316(117)" T_Alu="1078(0)" T_Lut="6235(94)" T_MULTADDALU18X18="1(0)" T_Bsram="31(0)" T_Ssram="22(0)">
- <SubModule name="clocks" Register="20" Alu="7" Lut="24" T_Register="20(20)" T_Alu="7(7)" T_Lut="24(24)">
+<Module name="top_coco3" Register="117" Lut="99" T_Register="4513(117)" T_Alu="1063(0)" T_Lut="6484(99)" T_MULTADDALU18X18="1(0)" T_Bsram="46(0)" T_Ssram="22(0)">
+ <SubModule name="clocks" Register="20" Alu="7" Lut="25" T_Register="20(20)" T_Alu="7(7)" T_Lut="25(25)">
   <SubModule name="sdram_pll"/>
   <SubModule name="video_pll"/>
  </SubModule>
  <SubModule name="bus_mux" Register="30" Lut="17" T_Register="30(30)" T_Lut="17(17)"/>
  <SubModule name="mux_reset_filter" Register="3" Lut="1" T_Register="3(3)" T_Lut="1(1)"/>
  <SubModule name="artifact_control" Register="27" Alu="20" Lut="18" T_Register="27(27)" T_Alu="20(20)" T_Lut="18(18)"/>
- <SubModule name="pia1_audio_shadow" Register="28" Lut="35" T_Register="28(28)" T_Lut="35(35)"/>
- <SubModule name="orchestra90" Register="16" Alu="32" Lut="31" T_Register="16(16)" T_Alu="32(32)" T_Lut="31(31)"/>
+ <SubModule name="pia1_audio_shadow" Register="34" Lut="41" T_Register="34(34)" T_Lut="41(41)"/>
+ <SubModule name="orchestra90" Register="16" Alu="32" Lut="33" T_Register="16(16)" T_Alu="32(32)" T_Lut="33(33)"/>
  <SubModule name="line_audio_dac" Register="10" Alu="8" T_Register="10(10)" T_Alu="8(8)"/>
- <SubModule name="machine" Register="68" Alu="25" Lut="53" T_Register="2206(68)" T_Alu="606(25)" T_Lut="2423(53)" T_MULTADDALU18X18="1(0)" T_Bsram="14(0)" T_Ssram="14(0)">
-  <SubModule name="timing" Register="41" Alu="32" Lut="13" T_Register="41(41)" T_Alu="32(32)" T_Lut="13(13)"/>
-  <SubModule name="registers" Register="425" Lut="528" T_Register="425(425)" T_Lut="528(528)"/>
-  <SubModule name="scanlines" Register="1501" Alu="434" Lut="1601" MULTADDALU18X18="1" Bsram="12" Ssram="14" T_Register="1501(1501)" T_Alu="434(434)" T_Lut="1645(1601)" T_MULTADDALU18X18="1(1)" T_Bsram="14(12)" T_Ssram="14(14)">
+ <SubModule name="machine" Register="90" Alu="25" Lut="56" T_Register="2453(90)" T_Alu="661(25)" T_Lut="2687(56)" T_MULTADDALU18X18="1(0)" T_Bsram="29(0)" T_Ssram="14(0)">
+  <SubModule name="timing" Register="43" Alu="4" Lut="66" T_Register="43(43)" T_Alu="4(4)" T_Lut="66(66)"/>
+  <SubModule name="registers" Register="425" Lut="527" T_Register="425(425)" T_Lut="527(527)"/>
+  <SubModule name="compatibility_capture" Register="254" Alu="113" Lut="154" Bsram="15" T_Register="254(254)" T_Alu="113(113)" T_Lut="154(154)" T_Bsram="15(15)"/>
+  <SubModule name="scanlines" Register="1500" Alu="434" Lut="1648" MULTADDALU18X18="1" Bsram="12" Ssram="14" T_Register="1500(1500)" T_Alu="434(434)" T_Lut="1696(1648)" T_MULTADDALU18X18="1(1)" T_Bsram="14(12)" T_Ssram="14(14)">
    <SubModule name="font" Bsram="2" T_Bsram="2(2)"/>
-   <SubModule name="artifact_decoder" Lut="44" T_Lut="44(44)"/>
+   <SubModule name="artifact_decoder" Lut="48" T_Lut="48(48)"/>
   </SubModule>
-  <SubModule name="native_video" Register="171" Alu="115" Lut="184" T_Register="171(171)" T_Alu="115(115)" T_Lut="184(184)"/>
+  <SubModule name="native_video" Register="141" Alu="85" Lut="188" T_Register="141(141)" T_Alu="85(85)" T_Lut="188(188)"/>
  </SubModule>
  <SubModule name="startup" Register="13" Lut="26" T_Register="13(13)" T_Lut="26(26)"/>
- <SubModule name="sdram_controller" Register="90" Alu="14" Lut="73" T_Register="90(90)" T_Alu="14(14)" T_Lut="73(73)"/>
- <SubModule name="memory" Register="191" Alu="101" Lut="204" Bsram="16" Ssram="8" T_Register="414(191)" T_Alu="115(101)" T_Lut="524(204)" T_Bsram="16(16)" T_Ssram="8(8)">
-  <SubModule name="startup_test" Register="26" Lut="54" T_Register="26(26)" T_Lut="54(54)"/>
-  <SubModule name="loader" Register="23" Alu="14" Lut="27" T_Register="80(23)" T_Alu="14(14)" T_Lut="113(27)">
+ <SubModule name="sdram_controller" Register="90" Alu="14" Lut="75" T_Register="90(90)" T_Alu="14(14)" T_Lut="75(75)"/>
+ <SubModule name="memory" Register="191" Alu="101" Lut="204" Bsram="16" Ssram="8" T_Register="414(191)" T_Alu="115(101)" T_Lut="527(204)" T_Bsram="16(16)" T_Ssram="8(8)">
+  <SubModule name="startup_test" Register="26" Lut="55" T_Register="26(26)" T_Lut="55(55)"/>
+  <SubModule name="loader" Register="23" Alu="14" Lut="25" T_Register="80(23)" T_Alu="14(14)" T_Lut="111(25)">
    <SubModule name="reader" Register="57" Lut="86" T_Register="57(57)" T_Lut="86(86)"/>
   </SubModule>
-  <SubModule name="arbiter" Register="117" Lut="153" T_Register="117(117)" T_Lut="153(153)"/>
+  <SubModule name="arbiter" Register="117" Lut="157" T_Register="117(117)" T_Lut="157(157)"/>
  </SubModule>
- <SubModule name="glenside_ide_enabled.ide" T_Register="430(0)" T_Alu="16(0)" T_Lut="1197(0)" T_Bsram="1(0)">
-  <SubModule name="ata" Register="199" Lut="616" T_Register="199(199)" T_Lut="616(616)" T_Bsram="1(0)">
+ <SubModule name="glenside_ide_enabled.ide" T_Register="430(0)" T_Alu="16(0)" T_Lut="1204(0)" T_Bsram="1(0)">
+  <SubModule name="ata" Register="199" Lut="611" T_Register="199(199)" T_Lut="611(611)" T_Bsram="1(0)">
    <SubModule name="sector_buffer" Bsram="1" T_Bsram="1(1)"/>
   </SubModule>
-  <SubModule name="card" Register="231" Alu="16" Lut="581" T_Register="231(231)" T_Alu="16(16)" T_Lut="581(581)"/>
+  <SubModule name="card" Register="231" Alu="16" Lut="593" T_Register="231(231)" T_Alu="16(16)" T_Lut="593(593)"/>
  </SubModule>
- <SubModule name="hdmi_output" Register="31" Alu="43" Lut="106" T_Register="685(31)" T_Alu="121(43)" T_Lut="1522(106)">
-  <SubModule name="artifact_osd" Register="33" Alu="6" Lut="346" T_Register="33(33)" T_Alu="6(6)" T_Lut="346(346)"/>
-  <SubModule name="encoder" Register="68" Alu="13" Lut="70" T_Register="621(68)" T_Alu="72(13)" T_Lut="1070(70)">
-   <SubModule name="true_hdmi_output.packet_picker" Register="426" Lut="331" T_Register="466(426)" T_Alu="19(0)" T_Lut="339(331)">
+ <SubModule name="hdmi_output" Register="31" Alu="43" Lut="102" T_Register="685(31)" T_Alu="121(43)" T_Lut="1506(102)">
+  <SubModule name="artifact_osd" Register="33" Alu="6" Lut="332" T_Register="33(33)" T_Alu="6(6)" T_Lut="332(332)"/>
+  <SubModule name="encoder" Register="68" Alu="13" Lut="73" T_Register="621(68)" T_Alu="72(13)" T_Lut="1072(73)">
+   <SubModule name="true_hdmi_output.packet_picker" Register="426" Lut="333" T_Register="466(426)" T_Alu="19(0)" T_Lut="341(333)">
     <SubModule name="audio_clock_regeneration_packet" Register="40" Alu="19" Lut="8" T_Register="40(40)" T_Alu="19(19)" T_Lut="8(8)"/>
    </SubModule>
-   <SubModule name="true_hdmi_output.packet_assembler" Register="45" Alu="4" Lut="336" T_Register="45(45)" T_Alu="4(4)" T_Lut="336(336)"/>
-   <SubModule name="tmds_gen[0].tmds_channel" Register="14" Alu="12" Lut="114" T_Register="14(14)" T_Alu="12(12)" T_Lut="114(114)"/>
-   <SubModule name="tmds_gen[1].tmds_channel" Register="14" Alu="12" Lut="112" T_Register="14(14)" T_Alu="12(12)" T_Lut="112(112)"/>
-   <SubModule name="tmds_gen[2].tmds_channel" Register="14" Alu="12" Lut="99" T_Register="14(14)" T_Alu="12(12)" T_Lut="99(99)"/>
+   <SubModule name="true_hdmi_output.packet_assembler" Register="45" Alu="4" Lut="344" T_Register="45(45)" T_Alu="4(4)" T_Lut="344(344)"/>
+   <SubModule name="tmds_gen[0].tmds_channel" Register="14" Alu="12" Lut="115" T_Register="14(14)" T_Alu="12(12)" T_Lut="115(115)"/>
+   <SubModule name="tmds_gen[1].tmds_channel" Register="14" Alu="12" Lut="105" T_Register="14(14)" T_Alu="12(12)" T_Lut="105(105)"/>
+   <SubModule name="tmds_gen[2].tmds_channel" Register="14" Alu="12" Lut="94" T_Register="14(14)" T_Alu="12(12)" T_Lut="94(94)"/>
   </SubModule>
   <SubModule name="serializer_inst"/>
  </SubModule>
- <SubModule name="analog_encoder" Register="227" Alu="139" Lut="250" T_Register="227(227)" T_Alu="139(139)" T_Lut="250(250)"/>
+ <SubModule name="analog_encoder" Register="171" Alu="69" Lut="225" T_Register="171(171)" T_Alu="69(69)" T_Lut="225(225)"/>
 </Module>

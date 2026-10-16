@@ -2742,8 +2742,8 @@
 			)
 		)
 		(property "Value" "ADDRMUX_IN"
-			(at 0 17.62 0)
-			(layer "F.Fab")
+			(at 2.3482 12.0356 90)
+			(layer "F.SilkS")
 			(uuid "8ec8e599-06ab-4b50-9be2-ed59f3e1318a")
 			(effects
 				(font

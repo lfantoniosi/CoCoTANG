@@ -12,6 +12,25 @@
         <File path="src/bus/input_filter.v" type="file.verilog" enable="1"/>
         <File path="src/bus/coco_bus_mux.v" type="file.verilog" enable="1"/>
         <File path="src/audio/coco_orchestra90.v" type="file.verilog" enable="1"/>
+        <File path="src/audio/coco_ssc_psg.v" type="file.verilog" enable="1"/>
+        <File path="src/audio/coco_ssc_tts.v" type="file.verilog" enable="1"/>
+        <File path="src/audio/coco_ssc_tts_rom.v" type="file.verilog" enable="1"/>
+        <File path="src/audio/coco_ssc_speech.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/ssc_speech/controller.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/ssc_speech/ctrlrom.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/ssc_speech/filter.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/ssc_speech/pwmdac.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/ssc_speech/source.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/ssc_speech/speech256_top.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/ssc_speech/spmul.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/ssc_speech/xlat.v" type="file.verilog" enable="1"/>
+        <File path="src/audio/coco_psg_mix.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/jt49/jt49.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/jt49/jt49_cen.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/jt49/jt49_div.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/jt49/jt49_eg.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/jt49/jt49_exp.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/jt49/jt49_noise.v" type="file.verilog" enable="1"/>
         <File path="src/audio/coco_pia1_dac.v" type="file.verilog" enable="1"/>
         <File path="src/video/sigma_delta_dac.v" type="file.verilog" enable="1"/>
         <File path="src/memory/spi_flash_reader.v" type="file.verilog" enable="1"/>

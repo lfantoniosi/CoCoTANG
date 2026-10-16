@@ -7,6 +7,28 @@ Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco_startup.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/bus/input_filter.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/bus/coco_bus_mux.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/audio/coco_orchestra90.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/audio/coco_ssc_psg.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/audio/coco_ssc_tts.v'
+WARN  (EX2478) : Non-net output port 'busy' cannot be initialized at declaration in SystemVerilog mode("/Users/felipe/src/fpga/CoCoTANG/fpga/src/audio/coco_ssc_tts.v":7)
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/audio/coco_ssc_tts_rom.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/audio/coco_ssc_speech.v'
+WARN  (EX2478) : Non-net output port 'loading' cannot be initialized at declaration in SystemVerilog mode("/Users/felipe/src/fpga/CoCoTANG/fpga/src/audio/coco_ssc_speech.v":8)
+WARN  (EX2478) : Non-net output port 'pcm' cannot be initialized at declaration in SystemVerilog mode("/Users/felipe/src/fpga/CoCoTANG/fpga/src/audio/coco_ssc_speech.v":9)
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/ssc_speech/controller.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/ssc_speech/ctrlrom.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/ssc_speech/filter.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/ssc_speech/pwmdac.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/ssc_speech/source.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/ssc_speech/speech256_top.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/ssc_speech/spmul.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/ssc_speech/xlat.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/audio/coco_psg_mix.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/jt49/jt49.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/jt49/jt49_cen.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/jt49/jt49_div.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/jt49/jt49_eg.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/jt49/jt49_exp.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/jt49/jt49_noise.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/audio/coco_pia1_dac.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/sigma_delta_dac.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/spi_flash_reader.v'
@@ -26,6 +48,7 @@ Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_regi
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_mode_debug.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/ntsc_artifact_decode.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v'
+WARN  (EX2478) : Non-net output port 'display_valid' cannot be initialized at declaration in SystemVerilog mode("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":1309)
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_native_video.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/coco3.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/debug/cpu_bus_logger.v'
@@ -58,33 +81,39 @@ Compiling module 'input_filter'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/bus/in
 Compiling module 'artifact_mode_control(INITIAL_MODE=2'b01)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/artifact_mode_control.v":4)
 Compiling module 'coco_pia1_dac'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/audio/coco_pia1_dac.v":5)
 Compiling module 'coco_orchestra90'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/audio/coco_orchestra90.v":3)
+Compiling module 'coco_psg_mix(ENABLED=0)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/audio/coco_psg_mix.v":4)
 Compiling module 'sigma_delta_dac'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/sigma_delta_dac.v":1)
 Compiling module 'coco3(DISTO_2MB=1,NOCAN3_8MB=1)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/coco3.v":4)
 Compiling module 'gime_timing'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_timing.v":1)
 Compiling module 'gime_registers(DISTO_2MB=1,NOCAN3_8MB=1)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_registers.v":1)
 Compiling module 'gime_mode_debug'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_mode_debug.v":1)
-Compiling module 'gime_scanline_buffer'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":3)
-Extracting RAM for identifier 'hdmi_line0'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":188)
-Extracting RAM for identifier 'hdmi_line1'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":188)
-Extracting RAM for identifier 'cvbs_line0'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":189)
-Extracting RAM for identifier 'cvbs_line1'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":189)
-Extracting RAM for identifier 'cvbs_line2'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":189)
-Extracting RAM for identifier 'compatibility_css_raster'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":358)
-Extracting RAM for identifier 'compatibility_border_left'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":408)
-Extracting RAM for identifier 'compatibility_border_right_rgb'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":409)
+Compiling module 'gime_compat_capture'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":1303)
+Extracting RAM for identifier 'field0'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":1314)
+Extracting RAM for identifier 'field1'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":1314)
+Extracting RAM for identifier 'field2'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":1314)
+WARN  (EX3791) : Expression size 9 truncated to fit in target size 8("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":1443)
+Compiling module 'gime_scanline_buffer'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":4)
+Extracting RAM for identifier 'hdmi_line0'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":191)
+Extracting RAM for identifier 'hdmi_line1'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":191)
+Extracting RAM for identifier 'cvbs_line0'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":192)
+Extracting RAM for identifier 'cvbs_line1'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":192)
+Extracting RAM for identifier 'cvbs_line2'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":192)
+Extracting RAM for identifier 'compatibility_css_raster'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":362)
+Extracting RAM for identifier 'compatibility_border_left'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":413)
+Extracting RAM for identifier 'compatibility_border_right_rgb'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":414)
 Compiling module 'coco3_char_rom'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/coco3_char_rom.v":3)
 Extracting RAM for identifier 'memory'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/coco3_char_rom.v":8)
 Compiling module 'ntsc_artifact_decode'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/ntsc_artifact_decode.v":5)
-WARN  (EX3791) : Expression size 4 truncated to fit in target size 3("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":1037)
-WARN  (EX3791) : Expression size 11 truncated to fit in target size 10("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":1056)
-WARN  (EX3791) : Expression size 4 truncated to fit in target size 3("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":1070)
-WARN  (EX3791) : Expression size 11 truncated to fit in target size 10("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":1077)
-Compiling module 'gime_native_video'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_native_video.v":1)
-WARN  (EX3791) : Expression size 9 truncated to fit in target size 8("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_native_video.v":77)
-WARN  (EX3791) : Expression size 10 truncated to fit in target size 9("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_native_video.v":188)
-WARN  (EX3791) : Expression size 9 truncated to fit in target size 8("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_native_video.v":246)
-WARN  (EX3791) : Expression size 9 truncated to fit in target size 8("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_native_video.v":258)
-WARN  (EX3791) : Expression size 10 truncated to fit in target size 9("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_native_video.v":266)
+WARN  (EX3791) : Expression size 4 truncated to fit in target size 3("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":1060)
+WARN  (EX3791) : Expression size 11 truncated to fit in target size 10("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":1079)
+WARN  (EX3791) : Expression size 4 truncated to fit in target size 3("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":1093)
+WARN  (EX3791) : Expression size 11 truncated to fit in target size 10("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v":1100)
+Compiling module 'gime_native_video(USE_CPU_VIDEO_CLOCK=1)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_native_video.v":1)
+WARN  (EX3791) : Expression size 9 truncated to fit in target size 8("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_native_video.v":80)
+WARN  (EX3791) : Expression size 10 truncated to fit in target size 9("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_native_video.v":196)
+WARN  (EX3791) : Expression size 9 truncated to fit in target size 8("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_native_video.v":262)
+WARN  (EX3791) : Expression size 9 truncated to fit in target size 8("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_native_video.v":274)
+WARN  (EX3791) : Expression size 10 truncated to fit in target size 9("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_native_video.v":282)
 Compiling module 'coco_startup'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco_startup.v":1)
 Compiling module 'sdram'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/sdram.v":27)
 WARN  (EX3791) : Expression size 16 truncated to fit in target size 15("/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/sdram.v":301)
@@ -100,9 +129,9 @@ Compiling module 'glenside_ide(IDE_BASE=16'b1111111101010000,CPU_ENABLE_PREDECOD
 Compiling module 'glenside_ata(IDE_BASE=16'b1111111101010000,CPU_ENABLE_PREDECODED=1)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/glenside_ata.v":7)
 Compiling module 'glenside_sector_buffer'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/glenside_sector_buffer.v":3)
 Compiling module 'sd_spi_block'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/sd_spi_block.v":6)
-WARN  (EX3791) : Expression size 8 truncated to fit in target size 7("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":625)
+WARN  (EX3791) : Expression size 8 truncated to fit in target size 7("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":684)
 Compiling module 'coco3_hdmi(LOG_ADDR_WIDTH=13,LOG_COUNT_WIDTH=14,LOG_PAGE_WIDTH=7,LOG_DEPTH=4092,ENABLE_DEBUG_OVERLAY=32'b00000000000000000000000000000000,GIME_TRACE_MODE=32'b00000000000000000000000000000000)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco3_hdmi.sv":3)
-WARN  (EX3791) : Expression size 10 truncated to fit in target size 9("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco3_hdmi.sv":128)
+WARN  (EX3791) : Expression size 10 truncated to fit in target size 9("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco3_hdmi.sv":129)
 Compiling module 'artifact_mode_osd'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/artifact_mode_osd.sv":3)
 Compiling module 'hdmi(VIDEO_ID_CODE=2,DYNAMIC_480_576=1'b1,AUDIO_RATE=48000)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/hdmi.sv":4)
 Compiling module 'packet_picker(VIDEO_ID_CODE=2,VIDEO_RATE=27000000.0,IT_CONTENT=1'b1,AUDIO_BIT_WIDTH=16,AUDIO_RATE=48000,VENDOR_NAME=64'b0101010101101110011010110110111001101111011101110110111000000000,PRODUCT_DESCRIPTION=128'b01000110010100000100011101000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000,SOURCE_DEVICE_INFORMATION=8'b00000000)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/packet_picker.sv":4)
@@ -119,10 +148,10 @@ Compiling module 'tmds_channel'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/
 Compiling module 'tmds_channel(CN=1)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/tmds_channel.sv":4)
 Compiling module 'tmds_channel(CN=2)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/tmds_channel.sv":4)
 Compiling module 'serializer(VIDEO_RATE=0)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/serializer.sv":3)
-Compiling module 'coco_cvbs_ntsc(CANONICAL_640_INPUT=1,RGB_SOG_OUTPUT=32'b00000000000000000000000000000000,RGB_SCANLINE_PHASE_ALTERNATION=32'b00000000000000000000000000000000,COMPONENT_DAC_PHASE_STAGGER=32'b00000000000000000000000000000001,LUMA_SCANLINE_PHASE_ALTERNATION=32'b00000000000000000000000000000001,LUMA_DAC_EVEN_LEVELS=1,CVBS_SVIDEO_SCANLINE_PHASE_ALTERNATION=32'b00000000000000000000000000000000,CVBS_LUMA_FILTER=32'b00000000000000000000000000000000,CVBS_LUMA_NOTCH=32'b00000000000000000000000000000000,CVBS_CHROMA_FILTER=32'b00000000000000000000000000000000)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_cvbs_ntsc.v":7)
+Compiling module 'coco_cvbs_ntsc(CANONICAL_640_INPUT=1,RGB_SOG_OUTPUT=32'b00000000000000000000000000000001,RGB_SCANLINE_PHASE_ALTERNATION=32'b00000000000000000000000000000001,COMPONENT_DAC_PHASE_STAGGER=32'b00000000000000000000000000000000,LUMA_SCANLINE_PHASE_ALTERNATION=32'b00000000000000000000000000000000,LUMA_DAC_EVEN_LEVELS=1,CVBS_SVIDEO_SCANLINE_PHASE_ALTERNATION=32'b00000000000000000000000000000000,CVBS_LUMA_FILTER=32'b00000000000000000000000000000000,CVBS_LUMA_NOTCH=32'b00000000000000000000000000000000,CVBS_CHROMA_FILTER=32'b00000000000000000000000000000000)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_cvbs_ntsc.v":7)
 NOTE  (EX0101) : Current top module is "top_coco3"
 [5%] Running netlist conversion ...
-WARN  (CV0016) : Input s2 is unused("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":33)
+WARN  (CV0016) : Input s2 is unused("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":35)
 Running device independent optimization ...
 [10%] Optimizing Phase 0 completed
 [15%] Optimizing Phase 1 completed
@@ -142,7 +171,8 @@ WARN  (NL0002) : The module "audio_info_frame" instantiated to "audio_info_frame
 WARN  (NL0002) : The module "audio_sample_packet" instantiated to "audio_sample_packet" is swept in optimizing("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/packet_picker.sv":160)
 WARN  (NL0002) : The module "auxiliary_video_information_info_frame" instantiated to "auxiliary_video_information_info_frame" is swept in optimizing("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/packet_picker.sv":167)
 WARN  (NL0002) : The module "source_product_description_info_frame" instantiated to "source_product_description_info_frame" is swept in optimizing("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/packet_picker.sv":170)
-WARN  (NL0002) : The module "gime_mode_debug" instantiated to "debug_modes" is swept in optimizing("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/coco3.v":199)
+WARN  (NL0002) : The module "gime_mode_debug" instantiated to "debug_modes" is swept in optimizing("/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/coco3.v":201)
+WARN  (NL0002) : The module "coco_psg_mix" instantiated to "psg_audio_mix" is swept in optimizing("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":225)
 [95%] Generate netlist file "/Users/felipe/src/fpga/CoCoTANG/fpga/impl/gwsynthesis/CoCoTANG.vg" completed
 [100%] Generate report file "/Users/felipe/src/fpga/CoCoTANG/fpga/impl/gwsynthesis/CoCoTANG_syn.rpt.html" completed
 GowinSynthesis finish

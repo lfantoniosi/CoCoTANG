@@ -6,6 +6,7 @@ OUTPUT := $(ROOT)/impl/pnr/CoCoTANG.fs
 PAL_OUTPUT := $(ROOT)/impl/pnr/CoCoTANG-pal.fs
 ORCHESTRA90_OUTPUT := $(ROOT)/impl/pnr/CoCoTANG-orchestra90.fs
 NTSC_SVIDEO_OUTPUT := $(ROOT)/impl/pnr/CoCoTANG-ntsc-svideo.fs
+SSC_PSG_DISK := $(ROOT)/results/SSCPSG.DSK
 VIDEO_MODES := rgb ypbpr cvbs
 VIDEO_OUTPUTS := $(addprefix $(ROOT)/impl/pnr/CoCoTANG-,$(addsuffix .fs,$(VIDEO_MODES)))
 VIDEO_TOP_rgb := top_coco3_rgb
@@ -50,6 +51,7 @@ ROM_OFFSET ?= 1048576
 .PHONY: $(addprefix build-,$(VIDEO_MODES)) $(addprefix rebuild-,$(VIDEO_MODES)) \
  $(addprefix timing-,$(VIDEO_MODES)) $(addprefix program-,$(VIDEO_MODES)) \
  $(addprefix reprogram-,$(VIDEO_MODES))
+.PHONY: ssc-psg-dsk
 
 build: $(OUTPUT)
 
@@ -100,6 +102,13 @@ ntsc-svideo-timing:
 	python3 scripts/check_timing.py impl/pnr/CoCoTANG-ntsc-svideo_tr_content.html
 
 test:
+	python3 tests/ssc_psg/test_tts.py
+	iverilog -g2012 -s tb_coco_ssc_speech -o /private/tmp/cocotang_tb_ssc_speech tests/tb_coco_ssc_speech.v src/audio/coco_ssc_psg.v src/audio/coco_ssc_speech.v src/audio/coco_ssc_tts.v src/audio/coco_ssc_tts_rom.v src/third_party/jt49/*.v src/third_party/ssc_speech/*.v
+	vvp /private/tmp/cocotang_tb_ssc_speech
+	iverilog -g2012 -s tb_coco_ssc_audio -o /private/tmp/cocotang_tb_ssc_audio tests/tb_coco_ssc_audio.sv tests/tb_coco3_hdmi_border_handoff.sv src/audio/coco_ssc_psg.v src/audio/coco_psg_mix.v src/audio/coco_orchestra90.v src/audio/coco_pia1_dac.v src/third_party/jt49/*.v src/video/sigma_delta_dac.v src/video/coco3_hdmi.sv src/video/artifact_mode_osd.sv src/video/hdmi/audio_sample_packet.sv
+	vvp /private/tmp/cocotang_tb_ssc_audio
+	iverilog -g2012 -s tb_coco_ssc_psg -o /private/tmp/cocotang_tb_ssc_psg tests/tb_coco_ssc_psg.v src/audio/coco_ssc_psg.v src/third_party/jt49/*.v
+	vvp /private/tmp/cocotang_tb_ssc_psg
 	iverilog -g2012 -s tb_coco_orchestra90 -o /private/tmp/cocotang_tb_orchestra90 tests/tb_coco_orchestra90.sv tests/tb_coco3_hdmi_border_handoff.sv src/audio/coco_orchestra90.v src/video/sigma_delta_dac.v src/video/coco3_hdmi.sv src/video/artifact_mode_osd.sv src/video/hdmi/audio_sample_packet.sv
 	vvp /private/tmp/cocotang_tb_orchestra90
 	iverilog -g2012 -o /private/tmp/cocotang_tb_sd_spi tests/tb_sd_spi_block.v src/storage/sd_spi_block.v
@@ -234,6 +243,18 @@ $(RAM8M_DISK): tests/ram8m/RAM8M.BAS $(RAM8M_BIN)
 
 ram8m-dsk: $(RAM8M_DISK)
 
+$(SSC_PSG_DISK): $(wildcard tests/ssc_psg/*.BAS)
+	@mkdir -p "$(ROOT)/results"
+	decb dskini "$@"
+	decb copy -0 -a -l tests/ssc_psg/PSGTEST.BAS "$@,PSGTEST.BAS"
+	decb copy -0 -a -l tests/ssc_psg/PSGAUTO.BAS "$@,PSGAUTO.BAS"
+	decb copy -0 -a -l tests/ssc_psg/SPEAK2.BAS "$@,SPEAK2.BAS"
+	decb copy -0 -a -l tests/ssc_psg/SAY.BAS "$@,SAY.BAS"
+	decb copy -0 -a -l tests/ssc_psg/SPEAK.BAS "$@,SPEAK.BAS"
+	decb copy -0 -a -l tests/ssc_psg/SSCDETEC.BAS "$@,SSCDETEC.BAS"
+
+ssc-psg-dsk: $(SSC_PSG_DISK)
+
 $(PALETTE_BRIDGE_BIN): tests/palette_bridge/palrot.asm
 	lwasm --6809 --decb --list=$(ROOT)/results/PALROT.lst -o "$@" "$<"
 
@@ -314,6 +335,9 @@ define run-gowin
 	 COCOTANG_PROJECT="$(1)" COCOTANG_TOP="$(2)" COCOTANG_OUTPUT="$(3)" \
 	 "$(GW_SH)" "$(BUILD_TCL)"
 endef
+
+src/audio/coco_ssc_tts_rom.v: scripts/gen_ssc_tts.py src/third_party/nrl_tts/eng_to_ipa.json src/third_party/nrl_tts/ipa_to_sp0256.json
+	python3 scripts/gen_ssc_tts.py
 
 $(OUTPUT): $(PROJECT) $(BUILD_TCL) $(shell find src -type f) | check-tools
 	$(call run-gowin,CoCoTANG.gprj,top_coco3,CoCoTANG)

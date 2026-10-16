@@ -19,13 +19,15 @@ module top_coco3 #(
     parameter integer DEBUG_OVERLAY=0,
     // 0/1: simultaneous S-Video and CVBS; 2: Y/Pb/Pr component;
     // 3: RGB with composite sync on green (Y=G/SoG, Pb=B, Pr=R).
-    parameter integer ANALOG_VIDEO_MODE=2,
+    parameter integer ANALOG_VIDEO_MODE=3,
     parameter integer PAL_CHROMA_OUTPUT=0,
     // 0=OFF, 1=ON (blue/orange), 2=REVERSE (orange/blue).
     parameter [1:0] INITIAL_ARTIFACT_MODE=2'd1,
     parameter integer DISTO_2MB=1,
     parameter integer NOCAN3_8MB=1,
     parameter integer ENABLE_ORCHESTRA90=1,
+    parameter integer ENABLE_SSC_PSG=0,
+    parameter integer ENABLE_SSC_SPEECH=0,
     // Glenside task-file occupies IDE_BASE..IDE_BASE+$0f; $FF50 is standard.
     parameter integer ENABLE_GLENSIDE_IDE=1,
     parameter [15:0] IDE_BASE=16'hff50
@@ -185,24 +187,42 @@ module top_coco3 #(
         .pcm_sample(pia1_pcm_sample),.audio_clk(pia1_audio_clk));
     wire [15:0] hdmi_pcm_left,hdmi_pcm_right;
     wire [15:0] line_audio_pcm;
+    wire [15:0] base_audio_left,base_audio_right,base_audio_mono;
+    wire signed [15:0] ssc_psg_pcm,ssc_speech_pcm;
+    reg signed [15:0] ssc_audio_pcm=0;
+    wire signed [16:0] ssc_audio_sum=
+        $signed({ssc_psg_pcm[15],ssc_psg_pcm})+
+        $signed({ssc_speech_pcm[15],ssc_speech_pcm});
+    always @(posedge clk108 or negedge pia1_audio_reset_n) begin
+        if(!pia1_audio_reset_n) ssc_audio_pcm<=0;
+        else if(ssc_audio_sum[16]!=ssc_audio_sum[15])
+            ssc_audio_pcm<=ssc_audio_sum[16] ? 16'h8000 : 16'h7fff;
+        else ssc_audio_pcm<=ssc_audio_sum[15:0];
+    end
     // The physical sigma-delta DAC takes unsigned eight-bit samples.
     // Register the mix in the CPU domain so the faster DAC samples a held
     // value rather than the carry transitions of the mono summing logic.
     reg [7:0] orchestra90_mono_sample=8'h80;
-    generate if(ENABLE_ORCHESTRA90)begin: mono_audio
+    generate if(ENABLE_ORCHESTRA90 || ENABLE_SSC_PSG)begin: mono_audio
         always @(posedge clk108 or negedge pia1_audio_reset_n)begin
             if(!pia1_audio_reset_n)orchestra90_mono_sample<=8'h80;
             else orchestra90_mono_sample<={~line_audio_pcm[15],line_audio_pcm[14:8]};
         end
     end endgenerate
-    wire [7:0] line_audio_sample=ENABLE_ORCHESTRA90 ?
+    wire [7:0] line_audio_sample=(ENABLE_ORCHESTRA90 || ENABLE_SSC_PSG) ?
         orchestra90_mono_sample : pia1_pwm_sample;
     coco_orchestra90 #(.ENABLED(ENABLE_ORCHESTRA90)) orchestra90(
         .clk(clk108),.reset_n(pia1_audio_reset_n),
         .e_fall(e_fall),.cpu_rw_n(rw_n),
         .cpu_addr(address),.cpu_data(cpu_write_data),.mono_pcm(pia1_pcm_sample),
+        .left_pcm(base_audio_left),.right_pcm(base_audio_right),
+        .mono_mix_pcm(base_audio_mono));
+    coco_psg_mix #(.ENABLED(ENABLE_SSC_PSG)) psg_audio_mix(
+        .clk(clk108),.reset_n(pia1_audio_reset_n),
+        .base_left(base_audio_left),.base_right(base_audio_right),
+        .base_mono(base_audio_mono),.psg_pcm(ssc_audio_pcm),
         .left_pcm(hdmi_pcm_left),.right_pcm(hdmi_pcm_right),
-        .mono_mix_pcm(line_audio_pcm));
+        .mono_pcm(line_audio_pcm));
     sigma_delta_dac line_audio_dac(.clk(clk270),
         .reset_n(pia1_audio_reset_n),.sample(line_audio_sample),
         .bit_out(audio_out));
@@ -396,6 +416,7 @@ module top_coco3 #(
     // valid read/write qualifier.  Hold the snapshot through E falling, just
     // as the memory service holds its transaction tag.
     reg ide_cycle_active=1'b0;
+    reg ssc_cycle_active=1'b0;
     reg ide_cycle_rw_n=1'b1;
     reg [15:0] ide_address_pipe=16'hffff;
     reg [2:0] sam_s_pipe=3'd0;
@@ -409,21 +430,55 @@ module top_coco3 #(
     always @(posedge clk108 or negedge board_reset_n) begin
         if (!board_reset_n) begin
             ide_cycle_active<=1'b0;
+            ssc_cycle_active<=1'b0;
             ide_cycle_rw_n<=1'b1;
             ide_address_pipe<=16'hffff;
             sam_s_pipe<=3'd0;
         end else begin
             if (bus_address_valid) begin
                 ide_address_pipe<=address;
-                sam_s_pipe<=ide_live_selected ? 3'd0 : machine_sam_s;
+                sam_s_pipe<=(ide_live_selected || ssc_live_selected) ? 3'd0 : machine_sam_s;
             end
             if (bus_snapshot_valid) begin
                 ide_cycle_active<=ide_live_selected;
+                ssc_cycle_active<=ssc_live_selected;
                 ide_cycle_rw_n<=rw_n;
-            end else if (e_fall)
+            end else if (e_fall) begin
                 ide_cycle_active<=1'b0;
+                ssc_cycle_active<=1'b0;
+            end
         end
     end
+
+    wire ssc_live_selected=ENABLE_SSC_PSG &&
+        (address==16'hff7d || address==16'hff7e);
+    wire [7:0] ssc_rdata;
+    wire ssc_raw_data_oe;
+    reg ssc_read_hold=0;
+    reg [7:0] ssc_read_latched=8'hff;
+    always @(posedge clk108 or negedge board_reset_n) begin
+        if(!board_reset_n) begin
+            ssc_read_hold<=0;ssc_read_latched<=8'hff;
+        end else if(ssc_raw_data_oe && e_core) begin
+            ssc_read_hold<=1;
+            ssc_read_latched<=ssc_rdata;
+        end else if(!e_core && !e_fall) ssc_read_hold<=0;
+    end
+    wire ssc_data_oe=(ssc_raw_data_oe && e_core) || (ssc_read_hold && e_fall);
+    generate if(ENABLE_SSC_PSG) begin:ssc_enabled
+        coco_ssc_psg #(.ENABLE_SPEECH(ENABLE_SSC_SPEECH),.DECODE_ADDRESS(0)) ssc(.clk(clk108),.reset_n(pia1_audio_reset_n),
+            .cpu_enable(cpu_bus_active && ssc_cycle_active),.e(e_core),
+            .e_fall(e_fall),.cpu_addr(ide_address_pipe),
+            .cpu_rw_n(ide_cycle_rw_n),.cpu_wdata(cpu_write_data),
+            .audio_clk(pia1_audio_clk),.cpu_rdata(ssc_rdata),
+            .cpu_data_oe(ssc_raw_data_oe),.psg_pcm(ssc_psg_pcm),
+            .speech_pcm(ssc_speech_pcm));
+    end else begin:ssc_disabled
+        assign ssc_rdata=8'hff;
+        assign ssc_raw_data_oe=0;
+        assign ssc_psg_pcm=0;
+        assign ssc_speech_pcm=0;
+    end endgenerate
 
     wire [7:0] ide_rdata;
     wire ide_raw_data_oe;
@@ -498,10 +553,14 @@ module top_coco3 #(
     // Keep IDE data isolated from the continuously changing GIME read bus.
     // ATA data-port reads are back-to-back, so an IDE byte must remain intact
     // until its E phase has completed.
-    wire [7:0] fpga_read_data=ide_data_oe ? ide_read_latched :
+    // The SSC byte and its read-hold flag are captured together. Select
+    // that held byte directly; E still controls output enable independently.
+    // This keeps the live E/decode path off the output-register data mux.
+    wire [7:0] fpga_read_data=ssc_read_hold ? ssc_read_latched :
+        ide_data_oe ? ide_read_latched :
         (core_data_oe ? core_rdata_pipe : memory_rdata_pipe);
     wire fpga_data_oe=cpu_bus_active &&
-        (ide_data_oe || core_data_oe || memory_data_oe);
+        (ssc_data_oe || ide_data_oe || core_data_oe || memory_data_oe);
 
     wire [7:0] cpu_pin_data,cpu_pin_oen;
     genvar cpu_data_bit;

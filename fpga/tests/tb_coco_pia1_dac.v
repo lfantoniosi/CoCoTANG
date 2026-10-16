@@ -54,6 +54,15 @@ module tb_coco_pia1_dac;
         pia_write(16'hff20,8'h80);
         check(6'h20,1'b1,8'h80,16'h0000);
 
+        // The SSC manual selects cartridge audio, not the PIA six-bit DAC.
+        // Even with sound enabled and DAC at full scale, it must add no DC.
+        pia_write(16'hff20,8'hfc);
+        pia_write(16'hff01,8'h34);
+        pia_write(16'hff03,8'h3f);
+        check(6'h3f,1'b1,8'h80,16'h0000);
+        pia_write(16'hff03,8'h37);
+        check(6'h3f,1'b1,8'hfc,16'h7c00);
+
         // CRB $34 drives CB2 low.  DAC changes used by joystick polling must
         // remain visible internally while both physical audio outputs mute.
         pia_write(16'hff23,8'h34);
