@@ -3,7 +3,7 @@
 // latency. Both copies of every HDMI row must meet the earlier deadline;
 // analog alone can pass even when the first HDMI copy is already black.
 module tb_gime_text_hdmi_slots #(
- parameter CPU_CYCLE=120,COLUMNS=80,VIDEO_SLOT_CYCLES=31
+ parameter CPU_CYCLE=120,COLUMNS=80,VIDEO_SLOT_CYCLES=31,RGB_COCO_TIMING=0,SCANNED_ROWS=192
 );
  reg clk=0,hdmi_clk=0,cvbs_clk=0,reset_n=0;
  always #5 clk=~clk;
@@ -60,7 +60,7 @@ module tb_gime_text_hdmi_slots #(
   .memory_data(memory_data),.memory_valid(memory_valid)
  );
 
- coco_cvbs_ntsc #(.CANONICAL_640_INPUT(1)) analog(
+ coco_cvbs_ntsc #(.CANONICAL_640_INPUT(1),.RGB_SOG_OUTPUT(RGB_COCO_TIMING)) analog(
   .clk135(cvbs_clk),.clk270(cvbs_clk),.reset_n(reset_n),
   .video_50hz(1'b0),.high_resolution(1'b1),.compatibility_mode(1'b0),
   .framebuffer_data(cvbs_pixel),.border_rgb(6'h3f),
@@ -69,16 +69,24 @@ module tb_gime_text_hdmi_slots #(
   .vertical_left_border_rgb(6'h3f),.vertical_right_border_rgb(6'h3f),
   .active_height(8'd192),.source_x(cvbs_x),.source_y(c_y),
   .source_valid(cvbs_valid),.prefetch_y(c_prefetch),.prefetch_valid(c_prefetch_valid));
- reg [6:0] phase=0;
+ // Exercise the same fractional master phase and E-fall slot opening as
+ // the hardware, rather than an idealized fixed 60/120-clock CPU cycle.
+ wire cpu_e,cpu_q,cpu_e_fall;
+ reg [4:0] slot_count=0;
+ gime_timing timing(.clk(clk),.reset_n(reset_n),.fast_mode(CPU_CYCLE==60),
+  .e(cpu_e),.q(cpu_q),.e_fall(cpu_e_fall));
+ always @(posedge clk)if(!reset_n)slot_count<=0;
+ else if(cpu_e_fall)slot_count<=VIDEO_SLOT_CYCLES;
+ else if(slot_count!=0)slot_count<=slot_count-1'b1;
+ wire [4:0] phase=timing.phase;
  reg cpu_req=0;
  wire cpu_ack,rd,wr,refresh;
  reg busy=0,data_ready=0;
  integer latency=0;
  reg [15:0] random_state=16'h1639;
  always @(posedge clk)begin
-  if(!reset_n)begin phase<=0;cpu_req<=0;busy<=0;latency<=0;data_ready<=0;end
+  if(!reset_n)begin cpu_req<=0;busy<=0;latency<=0;data_ready<=0;end
   else begin
-   phase<=phase==CPU_CYCLE-1?0:phase+1'b1;
    random_state<={random_state[14:0],random_state[15]^random_state[13]^random_state[12]^random_state[10]};
    // Sustained queued RAM writes, as during a disk transfer into memory.
    if(cpu_ack)cpu_req<=0;
@@ -90,17 +98,17 @@ module tb_gime_text_hdmi_slots #(
   end
  end
  cpu_sdram_arbiter arb(.clk(clk),.reset_n(reset_n),
-  .e(phase>=CPU_CYCLE/2),.q(phase>=CPU_CYCLE/4&&phase<CPU_CYCLE*3/4),
+  .e(cpu_e),.q(cpu_q),
   .cpu_req(cpu_req),.cpu_wr(1'b1),.cpu_addr(23'h10000),.cpu_wdata(8'h41),
   .cpu_ack(cpu_ack),.video_req(memory_request),.video_addr(memory_addr),
-  .video_slot_open(phase>0&&phase<=VIDEO_SLOT_CYCLES),.refresh_slot_open(phase>0&&phase<=VIDEO_SLOT_CYCLES),
+  .video_slot_open(slot_count!=0),.refresh_slot_open(slot_count!=0),
   .video_ack(memory_valid),.video_rdata(memory_data),
   .loader_req(1'b0),.loader_wr(1'b0),.loader_addr(23'd0),.loader_wdata(8'd0),
   .rd(rd),.wr(wr),.refresh(refresh),.dout(16'h3841),.dout32(32'h38413841),
   .data_ready(data_ready),.busy(busy),.enabled(1'b1));
  reg checking=0;
  integer hdmi_hits=0,hdmi_misses=0;
- always @(negedge hdmi_clk)if(checking && hdmi_valid && h_y<48 && hdmi_x==300)begin
+ always @(negedge hdmi_clk)if(checking && hdmi_valid && h_y<SCANNED_ROWS && hdmi_x==300)begin
   if(!dut.h_read_valid)begin
    hdmi_misses=hdmi_misses+1;
    $display("HDMI MISS hy=%0d source=%0d state=%0d fill=%0d tags=%0d/%0d valid=%b%b phase=%0d",
@@ -110,10 +118,11 @@ module tb_gime_text_hdmi_slots #(
    if(hdmi_pixel!==24'hffffff)$fatal(1,"HDMI returned a black/corrupt text pixel");
   end
  end
- integer hits=0,misses=0,parity;
+ integer hits=0,misses=0,parity,analog_seen_y=-1;
 
- always @(negedge cvbs_clk)if(checking&&analog.sample_phase==5)begin
-  if(cvbs_valid&&c_y<48&&cvbs_x==300)begin
+ always @(negedge cvbs_clk)if(checking)begin
+  if(cvbs_valid&&c_y<SCANNED_ROWS&&cvbs_x>=300&&analog_seen_y!=c_y)begin
+   analog_seen_y=c_y;
    if(!dut.c_read_valid)misses=misses+1;
    else begin
     hits=hits+1;
@@ -132,19 +141,19 @@ module tb_gime_text_hdmi_slots #(
    force analog.sample_phase=0;
    @(negedge cvbs_clk);reset_n=1;
    release analog.h_sample;release analog.v_line;release analog.sample_phase;
-   hits=0;misses=0;hdmi_hits=0;hdmi_misses=0;checking=1;
-   wait(analog.v_line==93&&analog.h_sample==0);
+   hits=0;misses=0;analog_seen_y=-1;hdmi_hits=0;hdmi_misses=0;checking=1;
+   wait(analog.v_line==45+SCANNED_ROWS&&analog.h_sample==0);
    @(negedge cvbs_clk);checking=0;
    $display("columns=%0d CPU cycle=%0d field=%0d analog hits=%0d misses=%0d",
             COLUMNS,CPU_CYCLE,field_phase,hits,misses);
    $display("HDMI hits=%0d misses=%0d",hdmi_hits,hdmi_misses);
-   if(hdmi_hits!=96||hdmi_misses!=0)$fatal(1,"Native text HDMI missed row deadlines");
-   if(hits!=48||misses!=0)$fatal(1,"Analog text missed its row deadlines");
+   if(hdmi_hits!=2*SCANNED_ROWS||hdmi_misses!=0)$fatal(1,"Native text HDMI missed row deadlines");
+   if(hits!=SCANNED_ROWS||misses!=0)$fatal(1,"Analog text missed its row deadlines");
   end
  endtask
  initial begin
   for(parity=0;parity<2;parity=parity+1)run_phase(parity);
   $display("tb_gime_text_hdmi_slots PASS");$finish;
  end
- initial begin #20000000;$fatal(1,"timeout");end
+ initial begin #50000000;$fatal(1,"timeout");end
 endmodule

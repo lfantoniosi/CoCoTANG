@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 // Replay both alternating analogue field phases against the HDMI producer.
 // PMODE 4's full artifact pass must finish before each analogue row starts.
-module tb_gime_pmode4_analog;
+module tb_gime_pmode4_analog #(parameter RGB_COCO_TIMING=0);
  reg clk=0,hdmi_clk=0,cvbs_clk=0,reset_n=0;
  always #5 clk=~clk;
  always #20 hdmi_clk=~hdmi_clk;
@@ -58,7 +58,7 @@ module tb_gime_pmode4_analog;
   .memory_data(32'hffffffff),.memory_valid(memory_valid)
  );
 
- coco_cvbs_ntsc #(.CANONICAL_640_INPUT(1)) analog(
+ coco_cvbs_ntsc #(.CANONICAL_640_INPUT(1),.RGB_SOG_OUTPUT(RGB_COCO_TIMING)) analog(
   .clk135(cvbs_clk),.clk270(cvbs_clk),.reset_n(reset_n),
   .video_50hz(1'b0),.high_resolution(1'b1),.compatibility_mode(1'b1),
   .framebuffer_data(cvbs_pixel),.border_rgb(6'h3f),
@@ -75,8 +75,10 @@ module tb_gime_pmode4_analog;
  end
  integer hits=0,misses=0,parity,selection;
  reg checking=0;
- always @(negedge cvbs_clk)if(checking&&analog.sample_phase==5)begin
-  if(cvbs_valid&&c_y<4&&cvbs_x==300)begin
+ integer analog_seen_y=-1;
+ always @(negedge cvbs_clk)if(checking)begin
+  if(cvbs_valid&&c_y<4&&cvbs_x>=300&&analog_seen_y!=c_y)begin
+   analog_seen_y=c_y;
    if(!dut.c_read_valid)misses=misses+1;
    else begin
     hits=hits+1;
@@ -97,7 +99,7 @@ module tb_gime_pmode4_analog;
    force analog.sample_phase=0;
    @(negedge cvbs_clk);reset_n=1;
    release analog.h_sample;release analog.v_line;release analog.sample_phase;
-   hits=0;misses=0;checking=1;
+   hits=0;misses=0;analog_seen_y=-1;checking=1;
    wait(analog.v_line==49&&analog.h_sample==0);
    @(negedge cvbs_clk);checking=0;
    $display("artifact=%0d field phase=%0d hit rows=%0d missed rows=%0d",

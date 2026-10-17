@@ -905,15 +905,16 @@ reg configuration_pending=1'b1;
      // Dirty displayed rows are intentionally still accepted by
      // h_display_cached above, so a same-tag refill request is the upcoming
      // prefetch row and is safe to update in place.
-     // Never replace the bank currently being scanned.  A raster-time mode
+     // Protect the displayed row throughout horizontal blanking as well as
+     // visible pixels: HDMI still needs its second doubled scanline. A raster-time mode
      // change may invalidate the other cache tag without advancing the
      // round-robin pointer; blindly using h_next_bank in that case writes
      // into the displayed row and produces black/partially updated pixels
      // from the left edge until the fill catches scanout.
      fill_h_bank<=(h_valid0&&h_tag0==h_pending_y)?0:
                   (h_valid1&&h_tag1==h_pending_y)?1:
-                  (hd_v_s&&h_valid0&&h_tag0==hd_y_s)?1:
-                  (hd_v_s&&h_valid1&&h_tag1==hd_y_s)?0:h_next_bank;
+                  (hd_pa_s&&h_valid0&&h_tag0==hd_y_s)?1:
+                  (hd_pa_s&&h_valid1&&h_tag1==hd_y_s)?0:h_next_bank;
      fill_c_bank<=(c_valid0&&c_tag0==h_pending_y)?0:
                   (c_valid1&&c_tag1==h_pending_y)?1:
                   (c_valid2&&c_tag2==h_pending_y)?2:c_replacement_bank_q;
@@ -1258,9 +1259,16 @@ reg configuration_pending=1'b1;
  reg [9:0] c_read_addr=0;
  wire [9:0] c_next_read_addr=cvbs_display_valid ?
         (cvbs_read_x==10'd639 ? 10'd639 : cvbs_read_x+1'b1) : 10'd0;
- // The prefetch after pixel 639 is already in blanking. Let its low address
- // wrap so the last-pixel clamp stays off the LUT-RAM read path.
- wire [5:0] c_next_page_addr=cvbs_display_valid ? cvbs_read_x[5:0]+6'd1 : 6'd0;
+ // Arm the last-dot clamp at x=638, when normal read-ahead already
+ // selects offset 63. It is then ready throughout x=639 without adding a
+ // wide pixel-coordinate comparison to the 135-MHz LUT-RAM read path.
+ reg c_last_read_dot=0;
+ always @(posedge cvbs_read_clk)
+  c_last_read_dot<=cvbs_display_valid && cvbs_read_x[9:1]==9'd319;
+ // Clamp both parts of the final read-ahead address. Wrapping only the low
+ // bits here displayed pixel 576 while the high page remained at 9.
+ wire [5:0] c_next_page_addr=cvbs_display_valid ?
+        (c_last_read_dot ? 6'd63 : cvbs_read_x[5:0]+6'd1) : 6'd0;
  genvar cvbs_page;
  generate for(cvbs_page=0;cvbs_page<10;cvbs_page=cvbs_page+1)begin:cvbs_pages
   (* syn_ramstyle = "distributed_ram" *) reg [5:0] line0[0:63],line1[0:63],line2[0:63];

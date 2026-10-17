@@ -156,10 +156,14 @@ test:
 	vvp /private/tmp/cocotang_tb_gime_compat_video
 	iverilog -g2012 -s tb_gime_css_alignment -o /private/tmp/cocotang_tb_gime_css_alignment tests/tb_gime_css_alignment.sv src/coco3/gime_native_video.v src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
 	vvp /private/tmp/cocotang_tb_gime_css_alignment
-	iverilog -g2012 -s tb_gime_text_hdmi_slots -o /private/tmp/cocotang_tb_text_hdmi_slots tests/tb_gime_text_hdmi_slots.sv src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v src/video/coco_cvbs_ntsc.v src/memory/cpu_sdram_arbiter.v
+	iverilog -g2012 -s tb_gime_text_hdmi_slots -o /private/tmp/cocotang_tb_text_hdmi_slots tests/tb_gime_text_hdmi_slots.sv src/coco3/gime_scanline_buffer.v src/coco3/gime_timing.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v src/video/coco_cvbs_ntsc.v src/memory/cpu_sdram_arbiter.v
 	vvp /private/tmp/cocotang_tb_text_hdmi_slots
+	iverilog -g2012 -Ptb_gime_text_hdmi_slots.RGB_COCO_TIMING=1 -s tb_gime_text_hdmi_slots -o /private/tmp/cocotang_tb_text_hdmi_slots_rgb tests/tb_gime_text_hdmi_slots.sv src/coco3/gime_scanline_buffer.v src/coco3/gime_timing.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v src/video/coco_cvbs_ntsc.v src/memory/cpu_sdram_arbiter.v
+	vvp /private/tmp/cocotang_tb_text_hdmi_slots_rgb
 	iverilog -g2012 -s tb_gime_pmode4_analog -o /private/tmp/cocotang_tb_gime_pmode4_analog tests/tb_gime_pmode4_analog.sv src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v src/video/coco_cvbs_ntsc.v
 	vvp /private/tmp/cocotang_tb_gime_pmode4_analog
+	iverilog -g2012 -Ptb_gime_pmode4_analog.RGB_COCO_TIMING=1 -s tb_gime_pmode4_analog -o /private/tmp/cocotang_tb_gime_pmode4_analog_rgb tests/tb_gime_pmode4_analog.sv src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v src/video/coco_cvbs_ntsc.v
+	vvp /private/tmp/cocotang_tb_gime_pmode4_analog_rgb
 	iverilog -g2012 -s tb_gime_compat_capture -o /private/tmp/cocotang_tb_gime_compat_capture tests/tb_gime_compat_capture.sv src/coco3/gime_scanline_buffer.v
 	vvp /private/tmp/cocotang_tb_gime_compat_capture
 	iverilog -g2012 -o /private/tmp/cocotang_tb_gime_registers tests/tb_gime_registers.v src/coco3/gime_registers.v
@@ -170,6 +174,8 @@ test:
 	vvp /private/tmp/cocotang_tb_gime_nocan3
 	iverilog -g2012 -o /private/tmp/cocotang_tb_artifact_decode tests/tb_ntsc_artifact_decode.v src/video/ntsc_artifact_decode.v
 	vvp /private/tmp/cocotang_tb_artifact_decode
+	iverilog -g2012 -s tb_rgb_coco_aperture -o /private/tmp/cocotang_tb_rgb_aperture tests/tb_rgb_coco_aperture.sv src/video/coco_cvbs_ntsc.v
+	vvp /private/tmp/cocotang_tb_rgb_aperture
 	iverilog -g2012 -o /private/tmp/cocotang_tb_rgb_phase tests/tb_rgb_scanline_dac_phase.v src/video/coco_cvbs_ntsc.v
 	vvp /private/tmp/cocotang_tb_rgb_phase
 	iverilog -g2012 -s tb_luma_scanline_dac_phase -o /private/tmp/cocotang_tb_luma_phase tests/tb_luma_scanline_dac_phase.sv src/video/coco_cvbs_ntsc.v
