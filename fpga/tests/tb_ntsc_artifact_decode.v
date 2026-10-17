@@ -23,11 +23,11 @@ module tb_ntsc_artifact_decode;
     neighborhood=i;odd_pixel=j;#1;
     if(color_index==4'h9)begin
      blue_seen=blue_seen+1;
-     if(rgb!==6'h07)begin $display("blue saturation wrong: %h",rgb);errors=errors+1;end
+     if(rgb!==6'h1b)begin $display("light blue wrong: %h",rgb);errors=errors+1;end
     end
     if(color_index==4'ha)begin
      orange_seen=orange_seen+1;
-     if(rgb!==6'h34)begin $display("orange saturation wrong: %h",rgb);errors=errors+1;end
+     if(rgb!==6'h39)begin $display("light orange wrong: %h",rgb);errors=errors+1;end
     end
    end
   end

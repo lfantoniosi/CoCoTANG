@@ -1,7 +1,7 @@
 // MAME-compatible NTSC artifact lookup for the MC6847/GIME PMODE 4 stream.
 // Each output dot depends on the six monochrome dots x-2 through x+3.  The
 // correction ROM is the table used by MAME's mc6847 artifacter; only the
-// final palette is quantized to the GIME renderer's RGB222 line-buffer format.
+// final analog palette is quantized to the GIME renderer's RGB222 line-buffer format.
 module ntsc_artifact_decode (
     input      [5:0] neighborhood,
     input            odd_pixel,
@@ -30,8 +30,8 @@ module ntsc_artifact_decode (
                 4:rgb=6'h2a;  5:rgb=6'h24;  6:rgb=6'h05;  7:rgb=6'h29;
                 // RGB222: give PMODE 4's blue and orange their full blue/red
                 // channel while keeping the six-bit scanline cache unchanged.
-                8:rgb=6'h1a;  9:rgb=6'h07; 10:rgb=6'h34; 11:rgb=6'h2a;
-               12:rgb=6'h1a; 13:rgb=6'h14; 14:rgb=6'h05; default:rgb=6'h3e;
+                8:rgb=6'h1f;  9:rgb=6'h07; 10:rgb=6'h34; 11:rgb=6'h2a;
+               12:rgb=6'h1f; 13:rgb=6'h14; 14:rgb=6'h05; default:rgb=6'h3e;
             endcase
         end else begin
             case(color)
