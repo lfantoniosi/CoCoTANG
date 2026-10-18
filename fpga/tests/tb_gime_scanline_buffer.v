@@ -12,6 +12,10 @@ module tb_gime_scanline_buffer;
  wire cvbs_vertical_border_valid;
  integer transactions=0,errors=0,i,timeout,raster;
  integer graphics_gm,graphics_css,graphics_palette,graphics_dot,graphics_x;
+ integer sg_mode,sg_css,sg_row,sg_column;
+ integer font_gm,font_character,font_row,font_index,font_inverse;
+ reg [7:0] font_reference[0:1535];
+ reg [7:0] font_expected,font_observed;
  reg [3:0] graphics_index;
  reg [5:0] graphics_expected;
  integer responder_delay=0;reg slow_memory=0;
@@ -193,8 +197,8 @@ module tb_gime_scanline_buffer;
     $display("SG4 foreground pixel %0d wrong got %02h expected %02h",i,
      dut.c_valid0?dut.cvbs_line0[i]:dut.cvbs_line1[i],mapped(6'd54));
     errors=errors+1;i=10;end
-  if(dut.c_valid0 ? dut.cvbs_line0[10]!==mapped(6'd2):
-                    dut.cvbs_line1[10]!==mapped(6'd2))begin
+  if(dut.c_valid0 ? dut.cvbs_line0[10]!==6'd0:
+                    dut.cvbs_line1[10]!==6'd0)begin
    $display("SG4 top-right quadrant should be background");errors=errors+1;end
   // In the 640-dot configuration compatibility video still occupies the
   // centered 512-dot aperture, but it is point-replicated: each 256-wide VDG
@@ -205,10 +209,10 @@ module tb_gime_scanline_buffer;
     $display("SG4 HDMI 2x foreground pixel %0d was filtered",i);
     errors=errors+1;i=8;end
   if((dut.h_valid0&&dut.h_tag0==0 ? dut.hdmi_line0[8] : dut.hdmi_line1[8])
-      !==dut.expand_rgb222(mapped(6'd2)))begin
+      !==24'h000000)begin
    $display("SG4 HDMI exact 2x boundary is wrong: %h expected %h bank=%b tags=%0d/%0d",
     dut.h_valid0&&dut.h_tag0==0 ? dut.hdmi_line0[8] : dut.hdmi_line1[8],
-    dut.expand_rgb222(mapped(6'd2)),dut.h_valid0,dut.h_tag0,dut.h_tag1);
+    24'h000000,dut.h_valid0,dut.h_tag0,dut.h_tag1);
    errors=errors+1;end
 
   // Mega-Bug selects 128x96 SAM addressing.  Compatibility DMA geometry is
@@ -661,6 +665,27 @@ module tb_gime_scanline_buffer;
   release dut.source_x;release dut.fill_gm;release dut.character;
   release dut.fill_bit_plane;release dut.fill_compatibility;release dut.glyph_cache;
 
+  // All empty semigraphics blocks are true black: SG4 and SG6, both
+  // colour sets, every vertical subdivision and both horizontal halves.
+  force dut.fill_compatibility=1;force dut.fill_bit_plane=0;
+  force dut.character=8'h80;
+  for(sg_mode=0;sg_mode<2;sg_mode=sg_mode+1)begin
+   force dut.fill_gm=sg_mode;
+   for(sg_css=0;sg_css<2;sg_css=sg_css+1)begin
+    force dut.pixel_compatibility_css=sg_css;
+    for(sg_row=0;sg_row<12;sg_row=sg_row+1)begin
+     force dut.glyph_line=sg_row;
+     for(sg_column=0;sg_column<8;sg_column=sg_column+4)begin
+      force dut.source_x=sg_column;#1;
+      if(dut.decoded_code!==6'd0)$fatal(1,"SG background must be black: mode=%0d CSS=%0d row=%0d x=%0d",sg_mode,sg_css,sg_row,sg_column);
+     end
+    end
+   end
+  end
+  release dut.source_x;release dut.glyph_line;release dut.pixel_compatibility_css;
+  release dut.fill_gm;release dut.character;release dut.fill_bit_plane;
+  release dut.fill_compatibility;
+
   // A VDG CSS write changes individual bytes without invalidating a row.
   compatibility_mode=1;compatibility_css=0;#1;
   signature_without_css=dut.live_signature;
@@ -894,6 +919,49 @@ module tb_gime_scanline_buffer;
         errors=errors+1;graphics_x=512;
        end
      end
+
+  // Exercise the real ROM address, synchronous read and polarity logic
+  // against XRoar's independent, unencoded GIME reference.
+  $readmemh("tests/data/gime_font_xroar.hex",font_reference);
+  @(negedge clk);reset_n=0;hdmi_prefetch_valid=0;cvbs_prefetch_valid=0;
+  repeat(4)@(negedge clk);
+  reset_n=1;
+  force dut.fill_compatibility=1;
+  force dut.fill_bit_plane=0;
+  force dut.fill_attributes=0;
+  force dut.fill_bitmap_valid=1;
+  for(font_gm=0;font_gm<4;font_gm=font_gm+1)
+   for(font_character=0;font_character<128;font_character=font_character+1)
+    for(font_row=0;font_row<12;font_row=font_row+1)begin
+     @(negedge clk);
+     force dut.fill_gm=font_gm;
+     force dut.cached_byte=font_character;
+     force dut.glyph_line=font_row;
+     dut.state=5'd5;
+     repeat(3)@(posedge clk);
+     #1;
+     font_index=font_character;
+     font_inverse=((font_character>>6)&1)^((font_gm>>1)&1);
+     if(font_index<32)begin
+      font_index=font_index|((font_gm&1)?96:64);
+      font_inverse=font_inverse^(font_gm&1);
+     end else if(font_index>=96)font_index=font_index^64;
+     font_expected=font_reference[font_index*12+font_row]^
+                   (font_inverse?8'hff:8'h00);
+     font_observed=(~dut.glyph_cache)^
+       (dut.compatibility_inverse(font_gm[1:0],font_character[6:5])?8'hff:8'h00);
+     if(font_observed!==font_expected)
+      $fatal(1,"Compatibility font GM=%0d char=%02x row=%0d got=%02x expected=%02x",
+             font_gm,font_character,font_row,font_observed,font_expected);
+    end
+  release dut.fill_compatibility;
+  release dut.fill_bit_plane;
+  release dut.fill_attributes;
+  release dut.fill_bitmap_valid;
+  release dut.fill_gm;
+  release dut.cached_byte;
+  release dut.glyph_line;
+  $display("Compatibility font: all 6144 glyph rows match XRoar");
 
   if(errors==0)$display("tb_gime_scanline_buffer PASS");
   else $display("tb_gime_scanline_buffer FAIL: %0d",errors);

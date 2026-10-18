@@ -174,7 +174,7 @@ test:
 	vvp /private/tmp/cocotang_tb_gime_nocan3
 	iverilog -g2012 -o /private/tmp/cocotang_tb_artifact_decode tests/tb_ntsc_artifact_decode.v src/video/ntsc_artifact_decode.v
 	vvp /private/tmp/cocotang_tb_artifact_decode
-	iverilog -g2012 -s tb_rgb_coco_aperture -o /private/tmp/cocotang_tb_rgb_aperture tests/tb_rgb_coco_aperture.sv src/video/coco_cvbs_ntsc.v
+	iverilog -g2012 -s tb_rgb_coco_aperture -o /private/tmp/cocotang_tb_rgb_aperture tests/tb_rgb_coco_aperture.sv src/video/coco_cvbs_ntsc.v src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
 	vvp /private/tmp/cocotang_tb_rgb_aperture
 	iverilog -g2012 -o /private/tmp/cocotang_tb_rgb_phase tests/tb_rgb_scanline_dac_phase.v src/video/coco_cvbs_ntsc.v
 	vvp /private/tmp/cocotang_tb_rgb_phase

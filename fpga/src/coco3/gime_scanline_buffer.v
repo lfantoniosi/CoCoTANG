@@ -548,8 +548,9 @@ module gime_scanline_buffer (
     else semigraphics_pixel=source_x[2]?character[0]:character[1];
     semigraphics_color=character[6:4];
    end
-   decoded_code=semigraphics_pixel?vdg_code(semigraphics_color):
-                                    (pixel_compatibility_css?6'd4:6'd2);
+   // Empty SG4/SG6 blocks are black in either colour set. The dark
+   // green/orange alphanumeric background codes do not apply to blocks.
+   decoded_code=semigraphics_pixel?vdg_code(semigraphics_color):6'd0;
   end else begin
    decoded_pixel=(~decoded_pixel)^inverse_character;
    // VDG alpha text is routed through GIME palette entries 12-15.  The

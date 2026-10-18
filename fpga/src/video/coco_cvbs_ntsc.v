@@ -174,28 +174,38 @@ module coco_cvbs_ntsc #(
     localparam RGB_DOT_TIMING = RGB_SOG_OUTPUT && RGB_COCO_APERTURE &&
                                CANONICAL_640_INPUT && !STREAMING_INPUT;
     // 135 MHz * (28/264) = 14.3181818 MHz for native 640-dot RGB.
-    // Compatibility's 640 canonical dots occupy 512 native-dot periods:
-    // step 35 instead of 28 gives the original 256-dot VDG aperture.
-    // Advance in clk135 ticks, preserving every source dot (9/10 clocks
-    // native, 7/8 compatibility), without changing sync or row scheduling.
+    // Compatibility expands each pair of original dots into 3+2 canonical
+    // samples. Hold them for 7+6+6 and 10+9 clk135 ticks respectively:
+    // every original dot is exactly 19 clocks, without subpixel jitter.
+    // The 4864-clock body is 36 clocks wider than the exact CoCo cadence.
     reg [9:0] rgb_dot_x=0;
+    reg [9:0] rgb_cache_x=0;
     reg [8:0] rgb_dot_fraction=0;
+    reg [2:0] rgb_compat_phase=0;
     reg rgb_dot_active=0;
     wire [9:0] rgb_dot_sum={1'b0,rgb_dot_fraction}+
-                          (picture_high_resolution ? 10'd28 : 10'd35);
+                          (picture_high_resolution ? 10'd28 : 10'd1);
+    wire [3:0] rgb_compat_period=rgb_compat_phase==0 ? 4'd7 :
+                                 rgb_compat_phase==3 ? 4'd10 :
+                                 rgb_compat_phase==4 ? 4'd9 : 4'd6;
+    wire [9:0] rgb_dot_period=picture_high_resolution ? 10'd264 :
+                             {6'd0,rgb_compat_period};
     // Advance the body by 75 clk135 ticks: approximately eight native
     // CoCo hi-res pixels. Keep its dot cadence and width unchanged.
     wire [9:0] rgb_picture_left=(picture_high_resolution ? 10'd168 : 10'd229)+standard_shift;
     wire [3:0] rgb_picture_phase=picture_high_resolution ? 4'd8 : 4'd1;
     always @(posedge clk135 or negedge reset_n)begin
-        if(!reset_n)begin rgb_dot_x<=0;rgb_dot_fraction<=0;rgb_dot_active<=0;end
+        if(!reset_n)begin rgb_dot_x<=0;rgb_cache_x<=0;rgb_dot_fraction<=0;rgb_compat_phase<=0;rgb_dot_active<=0;end
         else if(h_sample==0&&sample_phase==0)begin
-            rgb_dot_x<=0;rgb_dot_fraction<=0;rgb_dot_active<=0;
+            rgb_dot_x<=0;rgb_cache_x<=0;rgb_dot_fraction<=0;rgb_compat_phase<=0;rgb_dot_active<=0;
         end else if(h_sample==rgb_picture_left&&sample_phase==rgb_picture_phase)begin
-            rgb_dot_x<=0;rgb_dot_fraction<=0;rgb_dot_active<=1;
+            rgb_dot_x<=0;rgb_cache_x<=0;rgb_dot_fraction<=0;rgb_compat_phase<=0;rgb_dot_active<=1;
         end else if(rgb_dot_active)begin
-            if(rgb_dot_sum>=10'd264)begin
-                rgb_dot_fraction<=rgb_dot_sum-10'd264;
+            if(rgb_dot_sum>=rgb_dot_period)begin
+                rgb_dot_fraction<=rgb_dot_sum-rgb_dot_period;
+                if(!picture_high_resolution)
+                    rgb_compat_phase<=rgb_compat_phase==4 ? 0 : rgb_compat_phase+1'b1;
+                rgb_cache_x<=rgb_dot_x;
                 rgb_dot_x<=rgb_dot_x+1'b1;
                 if(rgb_dot_x==10'd639)rgb_dot_active<=0;
             end else rgb_dot_fraction<=rgb_dot_sum[8:0];
@@ -239,7 +249,12 @@ module coco_cvbs_ntsc #(
     wire [8:0] picture_y_full = v_line - field_picture_top;
     wire [7:0] picture_y = picture_y_full[7:0];
     assign framebuffer_addr = in_picture ? {picture_y, picture_x[7:0]} : 16'd0;
-    assign source_x = picture_x;
+    // The canonical scanline cache reads one address ahead. Compensate
+    // that address bias for RGB compatibility timing so the 3+2 groups
+    // above line up with the actual returned pixels, including page edges.
+    // At the left edge samples zero and one belong to the same VDG dot.
+    assign source_x = RGB_DOT_TIMING && !picture_high_resolution ?
+                      rgb_cache_x : picture_x;
     assign source_y = picture_y;
     assign source_valid = in_picture;
     assign prefetch_y = (v_line < field_picture_top) ? 8'd0 : picture_y+1'b1;

@@ -1,5 +1,8 @@
-// Character generator from the BSD-licensed CoCo3FPGA/MiSTer core.
-// Bank 0 is the native GIME font; bank 1 is the compatibility MC6847 font.
+// Native bank from the BSD-licensed CoCo3FPGA/MiSTer core.
+// Compatibility bank uses XRoar's GIME font, encoded for the existing
+// character/inverse mapping by scripts/update_compat_font.py. See the
+// attributed reference in tests/data/gime_font_xroar.hex.
+// Bank 0 is native GIME text; bank 1 is GIME compatibility text.
 module coco3_char_rom (
     input clk,
     input [11:0] addr,
