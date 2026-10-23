@@ -11,7 +11,7 @@
     (via_costs 50)
     (plane_via_costs 5)
     (start_ripup_costs 50)
-    (start_pass_no 23346)
+    (start_pass_no 33815)
     (layer_rule F.Cu
       (active on)
       (preferred_direction vertical)
@@ -33,7 +33,6 @@
     (clearance 152.4 (type "kicad_default"))
     (clearance 152.4 (type GND))
     (clearance 152.4 (type +5V))
-    (clearance 152.4 (type +3.3V))
     (clearance 152.4 (type kicad))
   )
   (padstack "Via[0-1]_457.2:203.2_um"
@@ -86,19 +85,9 @@
     )
   )
   (class "kicad_default"
-    "@kicad-selection-only@@KEYINT" "@kicad-selection-only@@~{SLENB}" "@kicad-selection-only@@A15" "@kicad-selection-only@@A14" "@kicad-selection-only@@A13" "@kicad-selection-only@@A8" "@kicad-selection-only@@A9" "@kicad-selection-only@@A10"
-    "@kicad-selection-only@@A11" "@kicad-selection-only@@A12" "@kicad-selection-only@@MP7_33" "@kicad-selection-only@@MP6_33" "@kicad-selection-only@@MP5_33" "@kicad-selection-only@@MP4_33" "@kicad-selection-only@@MP3_33" "@kicad-selection-only@@MP2_33"
-    "@kicad-selection-only@@A6" "@kicad-selection-only@@MP0_33" "@kicad-selection-only@@MSEL1" "@kicad-selection-only@@A0" "@kicad-selection-only@@A1" "@kicad-selection-only@@A2" "@kicad-selection-only@@A3" "@kicad-selection-only@@A4"
-    "@kicad-selection-only@@A5" "@kicad-selection-only@@A7" "@kicad-selection-only@@MSEL0" "@kicad-selection-only@@Net-(Q8-Pad1)" "@kicad-selection-only@@FIRQ_33" "@kicad-selection-only@@~{HALT}" "@kicad-selection-only@@~{NMI}" "@kicad-selection-only@@~{RESET}"
-    "@kicad-selection-only@@E" "@kicad-selection-only@@Q" "@kicad-selection-only@@~{CART}" "@kicad-selection-only@@D0" "@kicad-selection-only@@D1" "@kicad-selection-only@@D2" "@kicad-selection-only@@D3" "@kicad-selection-only@@D4"
-    "@kicad-selection-only@@D5" "@kicad-selection-only@@D6" "@kicad-selection-only@@D7" "@kicad-selection-only@@R{slash}~{W}" "@kicad-selection-only@@S0" "@kicad-selection-only@@S1" "@kicad-selection-only@@S2" "@kicad-selection-only@@~{DATAEN}"
-    "@kicad-selection-only@@DATADIR" "@kicad-selection-only@@CLK" "@kicad-selection-only@@SERNT" "@kicad-selection-only@@AUDIO_33" "@kicad-selection-only@@Net-(Q7-Pad1)" "@kicad-selection-only@@~{IRQ}" "@kicad-selection-only@@~{HS_33}" "@kicad-selection-only@@~{FS_33}"
-    "@kicad-selection-only@@unconnected-(U5-85_IOT4B-Pad4)" "@kicad-selection-only@@S0_33" "@kicad-selection-only@@S2_33" "@kicad-selection-only@@MSEL0_33" "@kicad-selection-only@@MSEL1_33" "@kicad-selection-only@@IRQ_33" "@kicad-selection-only@@D7_33" "@kicad-selection-only@@D6_33"
-    "@kicad-selection-only@@D5_33" "@kicad-selection-only@@D4_33" "@kicad-selection-only@@D3_33" "@kicad-selection-only@@D2_33" "@kicad-selection-only@@D1_33" "@kicad-selection-only@@D0_33" "@kicad-selection-only@@E_33" "@kicad-selection-only@@S1_33"
-    "@kicad-selection-only@@RESET_33" "@kicad-selection-only@@unconnected-(U5-80_IOT27A-Pad37)" "@kicad-selection-only@@Q_33" "@kicad-selection-only@@Net-(D2-K)" "@kicad-selection-only@@MSEL2" "@kicad-selection-only@@unconnected-(U3-Pin_7-Pad7)" "@kicad-selection-only@@unconnected-(U3-Pin_9-Pad9)" "@kicad-selection-only@@unconnected-(U3-Pin_10-Pad10)"
-    "@kicad-selection-only@@unconnected-(U3-Pin_11-Pad11)" "@kicad-selection-only@@unconnected-(U3-Pin_12-Pad12)" "@kicad-selection-only@@unconnected-(U3-Pin_13-Pad13)" "@kicad-selection-only@@unconnected-(U3-Pin_14-Pad14)" "@kicad-selection-only@@~{HS}" "@kicad-selection-only@@Net-(Q9-Pad1)" "@kicad-selection-only@@~{FIRQ}" "@kicad-selection-only@@unconnected-(J1-Pin_5-Pad5)"
-    "@kicad-selection-only@@unconnected-(J1-Pin_6-Pad6)" "@kicad-selection-only@@unconnected-(J1-Pin_33-Pad33)" "@kicad-selection-only@@unconnected-(J1-Pin_36-Pad36)" "@kicad-selection-only@@unconnected-(J1-Pin_38-Pad38)" "@kicad-selection-only@@TSC" "@kicad-selection-only@@~{FS}" "@kicad-selection-only@@R_CVBS_33" "@kicad-selection-only@@B_CHR_33"
-    "@kicad-selection-only@@G_Y_33" "@kicad-selection-only@@unconnected-(U3-Pin_15-Pad15)" "@kicad-selection-only@@MP1_33"
+    "@kicad-selection-only@@R{slash}~{W}" "@kicad-selection-only@@~{CTS}" "@kicad-selection-only@@~{SCS}" "@kicad-selection-only@@~{SLENB}" "@kicad-selection-only@@S0" "@kicad-selection-only@@S1" "@kicad-selection-only@@S2" "@kicad-selection-only@@~{DATAEN}"
+    "@kicad-selection-only@@DATADIR" "@kicad-selection-only@@~{MRD}" "@kicad-selection-only@@~{ROM}" "@kicad-selection-only@@~{MENEN}" "@kicad-selection-only@@PIA0" "@kicad-selection-only@@PIA1" "@kicad-selection-only@@~{EXTROM}" "@kicad-selection-only@@G2A"
+    "@kicad-selection-only@@G2B" "@kicad-selection-only@@unconnected-(J28-Pin_7-Pad7)" "@kicad-selection-only@@unconnected-(U1-Y7-Pad7)"
     (clearance_class "kicad_default")
     (via_rule "kicad_default")
     (rule
@@ -109,7 +98,7 @@
     )
   )
   (class GND
-    "@kicad-selection-only@03db7467-0967-4fbf-932c-c5b8ac1806b2,07bd9e68-18a4-467c-849a-0a84d283dd98,280e3cf2-bbf0-4d7e-aa59-bf3d5f65ef8f,302081e9-2c0c-4c4f-9ca0-9b87087b3c7a,3911fb4a-c342-45df-a5e6-cb9907e84a03,478c36ba-e166-4837-94e6-968d3293fad7,516119ee-d038-4406-88b9-66ca0bd459dd,68c26d0c-f8c8-47ca-b578-85571edafe9f,81cf1b71-04e8-4838-a839-986bd6cec870,8e37314a-1635-46ec-bb0b-1ca0080936ad,bc22484d-219c-4df6-8f37-e0539f288434,ca384f2a-5b48-4654-8be6-6abc02228264,d038429f-2377-407c-b148-83029ccd7c31,d087a908-ac65-4f4a-b0d0-a2360cb35613,d72ee81e-7e6a-4cae-ae56-e3660ae49fcc,da0b821a-ac7f-41a8-b430-32b4d625a481,dae0598b-c213-4471-9785-9721a3bb5c32,db150dba-7b8c-4bc4-b293-48c791789946,05a04421-cd77-488b-a493-76861f983b37,28016e9c-109b-4d46-8a99-e4efd86724c1,554da7c0-c0ee-439f-88e8-4b6a6ef54009,5a7e7170-4e5a-4bc2-948c-aa084e87a75b,894c13a1-13e4-46d8-9431-5f39e9043b60,9d490f8c-9672-4c17-b0b0-111f686568ce,b4676bb1-748e-44c9-b99f-be49aa23eb3b,b4c41237-8885-4c0e-99c4-a0ee88181d6b,d7b886f8-eb55-49ee-8ab2-aa8038de3ad9,d9d43a8b-260d-42fa-bf66-dcfdf671d421,da258694-0e86-4418-9d30-6cefe6a45810,ef375821-7a15-4118-b483-5ad33c74fbf0,0338c009-ce27-46d8-9e16-36bd7574d678,08ab1d10-9500-4ad1-bbc7-b3ea13f02553,23af3f31-7121-41c0-9412-5a73d0fd1edd,946b4162-61a7-44d1-bc6c-d3e958aac539,b04054ab-0c36-4882-94da-fd53f475e83f,bf456def-2a75-414f-985c-259e67f1c3a7@GND"
+    "@kicad-selection-only@3fee36fc-2fd5-4de9-baa6-29d3532c1e28,ba55e665-bdf5-487a-ac17-6561d7c6a01c,bdc4d0ee-c98d-4b85-bb34-17c9b6de9d3c,cfb4c97f-aa52-4016-ba53-a3703d4172de,ef1dc85b-51fb-4ccd-b94b-bf882fd112ef,ef705b1d-2028-45ed-893b-d2d1a034df1b,0fcce07f-06ba-4388-8d31-eed545c958ec,201b224c-c0eb-4b06-8560-8b112bb9b9d4,62b137e2-21ca-4855-aea2-06e373c49bc9,6fed321e-c17c-42f1-a933-9217d8388c21,159147e0-16a4-437f-9049-5319e937bf03,794533be-0ec2-462a-b971-43fc3ed1f907@GND"
     (clearance_class default)
     (via_rule GND)
     (rule
@@ -120,7 +109,7 @@
     )
   )
   (class +5V
-    "@kicad-selection-only@15f1f3b5-05d9-4562-9148-837f1b96e13e,4888b312-f6b0-4420-a1c6-ff1ea830e24e,9f4684e0-1a76-4a3d-8bb0-6b5cb29d615a,3123e14a-1246-47e6-845d-d8a4b8a557b1,9c531f29-f38b-4cf0-9877-8af4d34548e1,7dde2aba-67d4-49d8-a795-0ad14ca2dbb4@+5V"
+    "@kicad-selection-only@390ef43c-f52f-4b9b-aa3f-90b6c5748d1b,509e730e-f7da-4033-8ae6-9ed1fb2345c1,51cf3caa-aba0-42a7-b754-d1722b0deb20,baa3ab3d-56db-4b5d-8782-207471b47e7a,6b6df753-af0c-44f8-8ea9-65380f295ab7,883c9af7-d933-4ac3-8859-5078b45e0fbc,8d6d6a7f-005e-4651-b2df-632861c72ea2,f2646971-3cfc-492c-8a6a-ba4a193052f6,5f1c5b21-ac2a-4414-ae3c-426c1bd995ae,cf5eed13-a604-4f41-99a6-1d9b9d1c463b@+5V"
     (clearance_class default)
     (via_rule +5V)
     (rule
@@ -131,7 +120,6 @@
     )
   )
   (class +3.3V
-    "@kicad-selection-only@25d4977a-c95f-4e93-b3f9-08ab16c16291,27b9d4b6-7405-49fe-b1c4-917faeeedfed,54f075c0-6956-40c4-a952-f9a67eb26b15,23867dd1-dec4-45be-8605-8dfb5ed2541c,5dd76a4e-29fc-4336-be4a-c9dc344d1830,9446e699-27af-4bc1-bf2a-34fe27208c93,a1635a75-7740-419f-9c37-1ce41c79a390,aec21665-7a8d-4454-9184-fd6754bba48a,b44eee36-05fc-44b4-960d-966bb1553a8d,b74af3ec-1167-4001-84a0-91a91bf42e05,26834d28-4490-4da6-9af5-5710474d6ec1,2d2ed3f4-343e-40cb-9e5d-22182085344b,40b15e21-d47f-494f-817b-23def1b61007,6baace2b-8750-4341-b4fb-86f594de9bc4,8b300936-5e33-415a-b785-4dd6310099f6,a1a602eb-41c7-4693-bbd3-75d401781d56,a2a5188e-1ce2-4280-b9c5-3fe0a8b6a100,b44ddbdf-4f90-4cb2-b6a2-de59e5b0c9d8,bf105f8b-c7ad-4ee1-823b-68d2b644cdc9,c707ca58-8c4f-4f03-9893-0cda383a4c71,c8b17d35-d17f-47b0-b84a-213cc5658843,124f0339-e4bd-4b06-9ce7-2fdcfe7e987c,5bdaa579-7363-4789-bc60-7dcebaa48612,74093962-8daf-4d3f-bc82-ba59514d71d3,9d8e7c66-f5dd-4fe9-bdaf-eb3466bf8194,ba9e4d7d-7dc5-4c1f-829f-f163d3905ef7@+3.3V"
     (clearance_class default)
     (via_rule +3.3V)
     (rule
