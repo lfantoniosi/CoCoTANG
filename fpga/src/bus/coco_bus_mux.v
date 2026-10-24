@@ -105,15 +105,15 @@ module coco_bus_mux #(
         end
     end
 
-    // U10 routes A15,A14,A13 through MP5,MP6,MP7 respectively.  Publish the
+    // U10 routes A15,A14,A13 through MP0,MP1,MP2 respectively.  Publish the
     // address directly from the two settled address-bank registers instead
     // of waiting for the third (control) bank.  This advances the external
     // SAM S decode by one complete mux-bank interval while E is still low,
     // giving devices such as the MC6821 their required select setup time.
     // snapshot remains the atomic source for all control signals and its
     // valid pulse still marks completion of the complete transaction scan.
-    wire [7:0] high_addr = {address_high[5], address_high[6], address_high[7],
-                            address_high[4:0]};
+    wire [7:0] high_addr = {address_high[0], address_high[1], address_high[2],
+                            address_high[7:3]};
     assign msel = select_reg;
     assign addr = {high_addr, address_low};
     assign rw_n = snapshot[16];

@@ -1,5 +1,7 @@
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 PROJECT := $(ROOT)/CoCoTANG.gprj
+DATA_TEST_PROJECT := $(ROOT)/CoCoTANG-data-test.gprj
+DATA_TEST_OUTPUT := $(ROOT)/impl/pnr/CoCoTANG-data-test.fs
 PAL_PROJECT := $(ROOT)/CoCoTANG-pal.gprj
 BUILD_TCL := $(ROOT)/scripts/build.tcl
 OUTPUT := $(ROOT)/impl/pnr/CoCoTANG.fs
@@ -43,6 +45,27 @@ PROGRAMMER_BOARD ?= tangnano20k
 ROM_OFFSET ?= 1048576
 
 .DEFAULT_GOAL := build
+.PHONY: data-test-build data-test-rebuild data-test-timing data-test-program data-test-reprogram test-data-bus
+
+data-test-build: $(DATA_TEST_OUTPUT)
+
+data-test-rebuild: check-tools
+	$(call run-gowin,CoCoTANG-data-test.gprj,top_coco3_data_test,CoCoTANG-data-test)
+
+data-test-timing:
+	python3 scripts/check_timing.py impl/pnr/CoCoTANG-data-test_tr_content.html
+
+data-test-program: $(DATA_TEST_OUTPUT)
+	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(DATA_TEST_OUTPUT)"
+
+data-test-reprogram:
+	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(DATA_TEST_OUTPUT)"
+
+test-data-bus:
+	iverilog -g2012 -s tb_cpu_data_sweep -o /private/tmp/cocotang_tb_cpu_data_sweep tests/tb_cpu_data_sweep.sv src/top_coco3_data_test.v
+	vvp /private/tmp/cocotang_tb_cpu_data_sweep
+	iverilog -g2012 -s tb_cpu_bus_probe_screen -o /private/tmp/cocotang_tb_cpu_bus_probe_screen tests/tb_cpu_bus_probe_screen.sv src/video/cpu_bus_probe_hdmi.sv
+	vvp /private/tmp/cocotang_tb_cpu_bus_probe_screen
 .PHONY: ram8m-dsk orchestra90-build orchestra90-rebuild orchestra90-timing orchestra90-program orchestra90-reprogram build rebuild contras-debug-build contras-debug-rebuild pal-build pal-rebuild ntsc-svideo-build \
  ntsc-svideo-rebuild test timing pal-timing ntsc-svideo-timing program \
  reprogram pal-program pal-reprogram ntsc-svideo-program \
@@ -354,6 +377,9 @@ src/audio/coco_ssc_tts_rom.v: scripts/gen_ssc_tts.py src/third_party/nrl_tts/eng
 
 $(OUTPUT): $(PROJECT) $(BUILD_TCL) $(shell find src -type f) | check-tools
 	$(call run-gowin,CoCoTANG.gprj,top_coco3,CoCoTANG)
+
+$(DATA_TEST_OUTPUT): $(DATA_TEST_PROJECT) $(BUILD_TCL) $(shell find src -type f) | check-tools
+	$(call run-gowin,CoCoTANG-data-test.gprj,top_coco3_data_test,CoCoTANG-data-test)
 
 $(VIDEO_OUTPUTS): $(ROOT)/impl/pnr/CoCoTANG-%.fs: $(PAL_PROJECT) $(BUILD_TCL) $(shell find src -type f) | check-tools
 	$(call run-gowin,CoCoTANG-pal.gprj,$(VIDEO_TOP_$*),CoCoTANG-$*)

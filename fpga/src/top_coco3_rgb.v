@@ -2,7 +2,7 @@
 module top_coco3_rgb (
     input clkin,input s1,input s2,input [7:0] mp,output [1:0] msel,
     inout [7:0] cpu_data,output irq_n_in,output firq_n_in,output audio_out,
-    output halt_drive,output e_out,output q_out,output hs_n,output fs_n,
+    output reset_drive,output e_out,output q_out,output hs_n,output fs_n,
     output [2:0] sam_s,output y_out,output pb_out,output cvbs_out,
     output tmds_clk_p,output tmds_clk_n,
     output [2:0] tmds_data_p,output [2:0] tmds_data_n,

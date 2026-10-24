@@ -37,7 +37,7 @@ module top_coco3 #(
 ) (
     input clkin,input s1,input s2,input [7:0] mp,output [1:0] msel,
     inout [7:0] cpu_data,output irq_n_in,output firq_n_in,output audio_out,
-    output halt_drive,output e_out,output q_out,output hs_n,output fs_n,
+    output reset_drive,output e_out,output q_out,output hs_n,output fs_n,
     output [2:0] sam_s,output y_out,output pb_out,output cvbs_out,
     output tmds_clk_p,output tmds_clk_n,
     output [2:0] tmds_data_p,output [2:0] tmds_data_n,
@@ -371,11 +371,11 @@ module top_coco3 #(
             if (release_pending && e_fall) cpu_release<=1;
         end
     end
-    assign halt_drive=!cpu_release;
+    assign reset_drive=!cpu_release;
     wire cpu_bus_active=cpu_release;
     // Keep the SDRAM read engine alive during the post-loader CPU hold.  A
     // reset 6809 presents FFFE, so this preloads the high reset-vector byte
-    // well before HALT is released.  Writes and the physical FPGA data driver
+    // well before RESET is released.  Writes and the physical FPGA data driver
     // remain disabled until cpu_release, preventing any held/reset bus state
     // from modifying memory or contending with the motherboard.
     wire cpu_memory_service=system_ready;

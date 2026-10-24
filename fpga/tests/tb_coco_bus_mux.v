@@ -13,7 +13,7 @@ module tb_coco_bus_mux;
     // for 17 ns after MSEL changes.
     always @(msel) case(msel)
       2'b00: mp <= #17 8'ha3;
-      2'b01: mp <= #17 {1'b0,1'b1,1'b1,1'b1,4'h5}; // A15..8 = d5
+      2'b01: mp <= #17 {5'b10101,1'b0,1'b1,1'b1}; // Remapped A15..8 = d5
       2'b10: mp <= #17 8'b10110111;
       default: mp <= #17 8'hff;
     endcase

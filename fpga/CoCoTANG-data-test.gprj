@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE gowin-fpga-project>
+<Project>
+    <Template>FPGA</Template>
+    <Version>5</Version>
+    <Device name="GW2AR-18C" pn="GW2AR-LV18QN88C8/I7">gw2ar18c-000</Device>
+    <FileList>
+        <File path="src/gowin_rpll/clk108.v" type="file.verilog" enable="1"/>
+        <File path="src/gowin_rpll/clk270.v" type="file.verilog" enable="1"/>
+        <File path="src/coco_clocks.v" type="file.verilog" enable="1"/>
+        <File path="src/video/cpu_bus_probe_hdmi.sv" type="file.verilog" enable="1"/>
+        <File path="src/video/hdmi/hdmi.sv" type="file.verilog" enable="1"/>
+        <File path="src/video/hdmi/tmds_channel.sv" type="file.verilog" enable="1"/>
+        <File path="src/video/hdmi/serializer.sv" type="file.verilog" enable="1"/>
+
+        <File path="src/top_coco3_data_test.v" type="file.verilog" enable="1"/>
+        <File path="src/top_coco3_data_test.cst" type="file.cst" enable="1"/>
+        <File path="src/top_coco3_data_test.sdc" type="file.sdc" enable="1"/>
+    </FileList>
+</Project>

@@ -12,27 +12,27 @@
   <Part Number>: GW2AR-LV18QN88C8/I7
   <Device>: GW2AR-18
   <Device Version>: C
-  <Created Time>:Sat Oct 17 21:59:20 2026
+  <Created Time>:Sat Oct 24 00:27:30 2026
 
 
 2. PnR Details
 
   Running placement:
-    Placement Phase 0: CPU time = 0h 0m 0.637s, Elapsed time = 0h 0m 0.638s
-    Placement Phase 1: CPU time = 0h 0m 0.102s, Elapsed time = 0h 0m 0.102s
+    Placement Phase 0: CPU time = 0h 0m 0.644s, Elapsed time = 0h 0m 0.645s
+    Placement Phase 1: CPU time = 0h 0m 0.105s, Elapsed time = 0h 0m 0.105s
     Placement Phase 2: CPU time = 0h 0m 1s, Elapsed time = 0h 0m 1s
     Placement Phase 3: CPU time = 0h 0m 7s, Elapsed time = 0h 0m 7s
     Total Placement: CPU time = 0h 0m 10s, Elapsed time = 0h 0m 10s
  Running routing:
     Routing Phase 0: CPU time = 0h 0m 0.002s, Elapsed time = 0h 0m 0.002s
-    Routing Phase 1: CPU time = 0h 0m 0.791s, Elapsed time = 0h 0m 0.792s
-    Routing Phase 2: CPU time = 0h 0m 19s, Elapsed time = 0h 0m 19s
+    Routing Phase 1: CPU time = 0h 0m 0.774s, Elapsed time = 0h 0m 0.775s
+    Routing Phase 2: CPU time = 0h 0m 16s, Elapsed time = 0h 0m 16s
     Routing Phase 3: CPU time = 0h 0m 0s, Elapsed time = 0h 0m 0s
-    Total Routing: CPU time = 0h 0m 19s, Elapsed time = 0h 0m 19s
+    Total Routing: CPU time = 0h 0m 16s, Elapsed time = 0h 0m 16s
  Generate output files:
-    CPU time = 0h 0m 0.698s, Elapsed time = 0h 0m 0.698s
+    CPU time = 0h 0m 0.714s, Elapsed time = 0h 0m 0.714s
 
- Total Time and Memory Usage: CPU time = 0h 0m 30s, Elapsed time = 0h 0m 30s, Peak memory usage = 553MB
+ Total Time and Memory Usage: CPU time = 0h 0m 27s, Elapsed time = 0h 0m 27s, Peak memory usage = 561MB
 
 
 3. Resource Usage Summary
@@ -48,7 +48,7 @@
     --Logic Register as FF    | 6151/15552                          |  40%
     --I/O Register as Latch   | 0/363                               |  0%
     --I/O Register as FF      | 61/363                              |  17%
-  CLS                         | 8652/10368                          |  84%
+  CLS                         | 8659/10368                          |  84%
   I/O Port                    | 53/66                               |  81%
   I/O Buf                     | 48                                  | -
     --Input Buf               | 11                                  | -
@@ -143,7 +143,7 @@ msel[1]           | -         | 20/6          | Y          | out   | IOL51[B] | 
 irq_n_in          | -         | 19/6          | Y          | out   | IOL51[A] | -               | LVCMOS33   | 8     | NONE      | NA        | NA         | OFF        | NA         | OFF             | NA            | 3.3       
 firq_n_in         | -         | 75/1          | Y          | out   | IOT34[A] | -               | LVCMOS33   | 8     | NONE      | NA        | NA         | OFF        | NA         | NA              | NA            | 3.3       
 audio_out         | -         | 55/3          | Y          | out   | IOR36[B] | SSPI_CS_N/D0    | LVCMOS33   | 8     | NONE      | NA        | NA         | OFF        | NA         | OFF             | NA            | 3.3       
-halt_drive        | -         | 42/4          | Y          | out   | IOB42[B] | -               | LVCMOS33   | 8     | DOWN      | NA        | NA         | OFF        | NA         | NA              | NA            | 3.3       
+reset_drive       | -         | 42/4          | Y          | out   | IOB42[B] | -               | LVCMOS33   | 8     | DOWN      | NA        | NA         | OFF        | NA         | NA              | NA            | 3.3       
 e_out             | -         | 51/3          | Y          | out   | IOR45[A] | RPLL2_T_in      | LVCMOS33   | 8     | DOWN      | NA        | NA         | OFF        | NA         | OFF             | NA            | 3.3       
 q_out             | -         | 76/1          | Y          | out   | IOT30[B] | GCLKC_1         | LVCMOS33   | 8     | DOWN      | NA        | NA         | OFF        | NA         | NA              | NA            | 3.3       
 hs_n              | -         | 73/1          | Y          | out   | IOT40[A] | -               | LVCMOS33   | 8     | UP        | NA        | NA         | OFF        | NA         | NA              | NA            | 3.3       
@@ -274,7 +274,7 @@ Loc./Bank| Signal            | Dir.  | Site     | CFG             | IO Type  | D
 38/4     | tmds_data_n[1]    | out   | IOB34[B] | -               | LVCMOS33D | 8     | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3  
 39/4     | tmds_data_p[2]    | out   | IOB40[A] | -               | LVCMOS33D | 8     | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3  
 40/4     | tmds_data_n[2]    | out   | IOB40[B] | -               | LVCMOS33D | 8     | NONE      | NA        | NA         | NA         | NA         | NA              | NA            | 3.3  
-42/4     | halt_drive        | out   | IOB42[B] | -               | LVCMOS33 | 8     | DOWN      | NA        | NA         | OFF        | NA         | NA              | NA            | 3.3  
+42/4     | reset_drive       | out   | IOB42[B] | -               | LVCMOS33 | 8     | DOWN      | NA        | NA         | OFF        | NA         | NA              | NA            | 3.3  
 41/4     | sam_s[1]          | out   | IOB43[A] | -               | LVCMOS33 | 8     | DOWN      | NA        | NA         | OFF        | NA         | NA              | NA            | 3.3  
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 p1/7     | IO_sdram_dq[0]    | io    | IOL3[A]  | -               | LVTTL33  | -     | UP        | -         | -          | -          | -          | -               | -             | -    
