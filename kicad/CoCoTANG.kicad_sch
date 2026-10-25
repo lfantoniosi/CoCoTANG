@@ -28812,7 +28812,7 @@
 		(fields_autoplaced yes)
 		(uuid "192a7582-db13-40cd-a290-f1f6b4baf0d4")
 		(property "Reference" "U6"
-			(at 115.824 383.286 0)
+			(at 115.824 383.54 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -28821,8 +28821,8 @@
 				)
 			)
 		)
-		(property "Value" "74HCT139"
-			(at 115.824 385.826 0)
+		(property "Value" "74HC139"
+			(at 115.824 386.08 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -35286,7 +35286,7 @@
 				)
 			)
 		)
-		(property "Value" "74HCT139"
+		(property "Value" "74HC139"
 			(at 116.586 198.12 0)
 			(show_name no)
 			(do_not_autoplace no)

@@ -727,7 +727,7 @@
     "last_paths": {
       "idf": "",
       "netlist": "",
-      "plot": "gerber_extkey",
+      "plot": "gerber_main_20261058/",
       "specctra_dsn": "CoCoTANG.dsn",
       "step": "",
       "vrml": ""

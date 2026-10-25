@@ -47,14 +47,16 @@ For one CoCoTANG installation, you need **one main board, one address mux board,
 
 Use the same PIA Gerber ZIP to fabricate both PIA cards. Upload each desired board's ZIP separately to your PCB manufacturer and select the quantities above, subject to the manufacturer's minimum order quantity.
 
+Select **1.2 mm PCB thickness** when ordering the adapter boards. The thinner boards reduce the installed profile and help the assembly fit under the keyboard.
+
 ## Motherboard compatibility
 
 Tandy used several motherboard layouts for the CoCo 2. Identify your motherboard before ordering boards: the CPU and address mux adapters must fit its layout. Only the revisions marked compatible below are currently supported; other layouts may need different adapters.
 
 | Motherboard revision | Compatible | Main board Gerber ZIP |
 | --- | --- | --- |
-| [20261043](fpga/docs/20261043.jpg) | Yes | [gerber_cpu_20261043.zip](kicad/gerber/gerber_main_20261043.zip) |
-| [20261058](fpga/docs/20261058.jpg) | Yes | [gerber_cpu_20261058.zip](kicad/gerber/gerber_main_20261058.zip) |
+| [20261043](fpga/docs/20261043.jpg) | Yes | [gerber_main_20261043.zip](kicad/gerber/gerber_main_20261043.zip) |
+| [20261058](fpga/docs/20261058.jpg) | Yes | [gerber_main_20261058.zip](kicad/gerber/gerber_main_20261058.zip) |
 | [20261044](fpga/docs/20261044.jpg) | No | — |
 | [20261045](fpga/docs/20261045.jpg) | No | — |
 | [20261059](fpga/docs/20261059.jpg) | No | — |
@@ -65,23 +67,34 @@ Tandy used several motherboard layouts for the CoCo 2. Identify your motherboard
 
 Both main-board versions (**20261043** and **20261058**) use the same components and quantities; only the PCB layout differs. Use the fabrication drawing and silkscreen for the version you are assembling.
 
+### Logic families and supply voltages
+
+Use **HCT** parts for the 5 V logic: U9/U16 (74HCT245, depending on the main-board version), U1 (74HCT138), U22 (74HCT11), and U7 (74HCT30). Their TTL-compatible inputs accept the logic levels used at the motherboard interface. The table below gives the manufacturer part numbers, matching DigiKey part numbers, and TSSOP packages.
+
+**U3/U6 are 74HC139 decoders powered from 3.3 V**, with their select inputs driven by the FPGA. Keep the HC version here: [74HCT139 is specified for a 4.5–5.5 V supply](https://assets.nexperia.com/documents/data-sheet/74HC_HCT139.pdf). A 3.3 V supply makes HC139 suitable for this 3.3 V logic domain; it does not turn HC into a generally TTL-compatible family. The KiCad labels now identify both decoder instances as HC139.
+
+The four **74LVC245** buffers on each main board remain LVC parts for the 3.3 V interface; their reference designators are listed for both layouts below. Their TSSOP ordering code is **SN74LVC245APWR**.
+
 ### Main board — both versions
 
-| Qty | Value | Description | DigiKey P/N | References | Alternative link |
-| ---: | --- | --- | --- | --- | --- |
-| 1 | Tang Nano 20K | Tang Nano 20K FPGA Board | N/A | U5 | [AliExpress](https://www.aliexpress.com/item/1005010280135538.html) |
-| 6 | 0.1 µF | CAP CER 0805 0.1UF 100VDC X7R | [399-C0805F104K1RACAUTOCT-ND](https://www.digikey.com/en/products/detail/kemet/C0805F104K1RACAUTO/26735352) | C2,C3,C4,C5,C6,C7 | |
-| 3 | MMBT3904-TP | TRANS NPN 40V 0.2A SOT-23 | [MMBT3904TPMSCT-ND](https://www.digikey.com/en/products/detail/mcc-micro-commercial-components/MMBT3904-TP/717280) | Q7,Q8,Q9 | |
-| 1 | SS14 | DIODE SCHOTTKY 40V 1A DO214AC | [SS14CT-ND](https://www.digikey.com/en/products/detail/onsemi/SS14/965474) | D2 | |
-| 3 | 10K | RES 10K OHM 1% 1/8W 0805 | [311-10.0KCRCT-ND](https://www.digikey.com/en/products/detail/yageo/RC0805FR-0710KL/727535) | R2,R4,R6 | |
-| 3 | 4.7K | RES 4.7K OHM 1% 1/8W 0805 | [311-4.70KCRCT-ND](https://www.digikey.com/en/products/detail/yageo/RC0805FR-074K7L/730876) | R3,R5,R7 | |
-| 2 | 47K | RES SMD 47K OHM 1% 1/8W 0805 | [YAG3735CT-ND](https://www.digikey.com/en/products/detail/yageo/AC0805FR-0747KL/6006584) | R8,R9 | |
-| 2 | 4.7K | RES ARRAY 8 RES 4.7K OHM 9SIP | [4609X-101-472LF-ND](https://www.digikey.ca/en/products/detail/bourns-inc/4609X-101-472LF/3593671) | RN1,RN2 | |
-| 4 | SN74LVC245AN | IC TXRX 1.65V/3.6V 20-TSSOP | [296-1233-1-ND](https://www.digikey.com/en/products/detail/texas-instruments/SN74LVC245APWR/276501) | U8,U10,U11,U12 | |
-| 1 | SN74HC245PWR | IC TXRX 2V/6V 20-TSSOP | [296-8279-1-ND](https://www.digikey.com/en/products/detail/texas-instruments/SN74HC245PWR/376997) | U9 | |
-| 1 | 74HC139 | IC DECODER/DEMUX 1X2:4 16-TSSOP | [1727-6580-1-ND](https://www.digikey.com/en/products/detail/nexperia-usa-inc/74HC139PW-118/2813773) | U3 | |
-| 1 | SIL FEMALE HDR | MACHINE PIN SOCKET 40P 2.54MM PI | [SMC-1A-40-1-GT-HT](https://www.digikey.com/en/products/detail/adam-tech/SMC-1A-40-1-GT-HT/9831942) | U5 | [AliExpress](https://www.aliexpress.com/item/1005008648234734.html) |
-| 1 | DIP-40 SOCKET | MACHINE PIN SOCKET, IC, DIP, 40P | [ICM-640-1-GT-HT](https://www.digikey.com/en/products/detail/adam-tech/ICM-640-1-GT-HT/9832971) | J1 | [AliExpress](https://www.aliexpress.com/item/1005006139495909.html) |
+The reference columns identify the same components on each layout. Lists follow the same order across both columns. The three interrupt/reset resistors and the additional R/W pull-up are listed separately. The other adapter boards below are shared between both versions.
+
+| Qty | Value | Description | DigiKey P/N | 20261043 references | 20261058 references | Alternative link |
+| ---: | --- | --- | --- | --- | --- | --- |
+| 1 | Tang Nano 20K | Tang Nano 20K FPGA Board | N/A | U5 | U17 | [AliExpress](https://www.aliexpress.com/item/1005010280135538.html) |
+| 6 | 0.1 µF | CAP CER 0805 0.1UF 100VDC X7R | [399-C0805F104K1RACAUTOCT-ND](https://www.digikey.com/en/products/detail/kemet/C0805F104K1RACAUTO/26735352) | C2, C3, C4, C5, C6, C7 | C13, C16, C19, C14, C18, C15 |  |
+| 3 | MMBT3904-TP | TRANS NPN 40V 0.2A SOT-23 | [MMBT3904TPMSCT-ND](https://www.digikey.com/en/products/detail/mcc-micro-commercial-components/MMBT3904-TP/717280) | Q7, Q8, Q9 | Q1, Q3, Q6 |  |
+| 1 | SS14 | DIODE SCHOTTKY 40V 1A DO214AC | [SS14CT-ND](https://www.digikey.com/en/products/detail/onsemi/SS14/965474) | D2 | D4 |  |
+| 3 | 10K | RES 10K OHM 1% 1/8W 0805 | [311-10.0KCRCT-ND](https://www.digikey.com/en/products/detail/yageo/RC0805FR-0710KL/727535) | R2, R4, R6 | R14, R18, R15 |  |
+| 3 | 4.7K | RES 4.7K OHM 1% 1/8W 0805 | [311-4.70KCRCT-ND](https://www.digikey.com/en/products/detail/yageo/RC0805FR-074K7L/730876) | R3, R5, R7 | R20, R22, R21 |  |
+| 1 | 4.7K | R/W pull-up, 1% 1/8W 0805 | [311-4.70KCRCT-ND](https://www.digikey.com/en/products/detail/yageo/RC0805FR-074K7L/730876) | R19 | R13 |  |
+| 2 | 47K | RES SMD 47K OHM 1% 1/8W 0805 | [YAG3735CT-ND](https://www.digikey.com/en/products/detail/yageo/AC0805FR-0747KL/6006584) | R8, R9 | R25, R26 |  |
+| 2 | 4.7K | RES ARRAY 8 RES 4.7K OHM 9SIP | [4609X-101-472LF-ND](https://www.digikey.ca/en/products/detail/bourns-inc/4609X-101-472LF/3593671) | RN1, RN2 | RN4, RN3 |  |
+| 4 | SN74LVC245APWR | 8-bit bus transceiver, 1.65–3.6 V, TSSOP-20 | [296-1233-1-ND](https://www.digikey.com/en/products/detail/texas-instruments/SN74LVC245APWR/276501) | U8, U10, U11, U12 | U4, U13, U15, U14 |  |
+| 1 | SN74HCT245PWR | 8-bit bus transceiver, TTL inputs, 4.5–5.5 V, TSSOP-20 | [296-8404-1-ND](https://www.digikey.com/en/products/detail/texas-instruments/SN74HCT245PWR/376998) | U9 | U16 |  |
+| 1 | 74HC139PW,118 | Dual 2-to-4 decoder, CMOS inputs, 2–6 V; used at 3.3 V, TSSOP-16 | [1727-6580-1-ND](https://www.digikey.com/en/products/detail/nexperia-usa-inc/74HC139PW-118/2813773) | U3 | U6 |  |
+| 1 | SIL FEMALE HDR | MACHINE PIN SOCKET 40P 2.54MM PI | [SMC-1A-40-1-GT-HT](https://www.digikey.com/en/products/detail/adam-tech/SMC-1A-40-1-GT-HT/9831942) | U5 | U17 | [AliExpress](https://www.aliexpress.com/item/1005008648234734.html) |
+| 1 | DIP-40 SOCKET | MACHINE PIN SOCKET, IC, DIP, 40P | [ICM-640-1-GT-HT](https://www.digikey.com/en/products/detail/adam-tech/ICM-640-1-GT-HT/9832971) | J1 | J19 | [AliExpress](https://www.aliexpress.com/item/1005006139495909.html) |
 
 ### PIA0 adapter
 
@@ -89,7 +102,7 @@ Both main-board versions (**20261043** and **20261058**) use the same components
 | ---: | --- | --- | --- | --- | --- |
 | 1 | 0.1 µF | CAP CER 0805 0.1UF 100VDC X7R | [399-C0805F104K1RACAUTOCT-ND](https://www.digikey.com/en/products/detail/kemet/C0805F104K1RACAUTO/26735352) | C1 | |
 | 1 | DIP-40 SOCKET | MACHINE PIN SOCKET, IC, DIP, 40P | [ICM-640-1-GT-HT](https://www.digikey.com/en/products/detail/adam-tech/ICM-640-1-GT-HT/9832971) | J4 | [AliExpress](https://www.aliexpress.com/item/1005006139495909.html) |
-| 1 | 74HC30 | IC NAND 1-CIR 8-IN 14-TSSOP | [1727-6596-1-ND](https://www.digikey.com/en/products/detail/nexperia-usa-inc/74HC30PW-118/1230294) | U7 | |
+| 1 | 74HCT30PW,118 | 8-input NAND gate, TTL inputs, 4.5–5.5 V, TSSOP-14 | [1727-6632-1-ND](https://www.digikey.com/en/products/detail/nexperia-usa-inc/74HCT30PW-118/1230819) | U7 | |
 | 2 | 1,800 pF | CAP CER 1800PF 250V C0G/NP0 0805 | [490-GCM21A5C2E182FX01DCT-ND](https://www.digikey.ca/en/products/detail/murata-electronics/GCM21A5C2E182FX01D/17845644) | C10,C12 | |
 | 2 | SD103BW | DIODE SCHOTTKY 30V 0.35A SOD123F | [4878-SD103BWCT-ND](https://www.digikey.com/en/products/detail/diotec-semiconductor/SD103BW/22600375) | D1,D3 | |
 
@@ -104,15 +117,15 @@ Both main-board versions (**20261043** and **20261058**) use the same components
 | Qty | Value | Description | DigiKey P/N | References | Alternative link |
 | ---: | --- | --- | --- | --- | --- |
 | 2 | 0.1 µF | CAP CER 0805 0.1UF 100VDC X7R | [399-C0805F104K1RACAUTOCT-ND](https://www.digikey.com/en/products/detail/kemet/C0805F104K1RACAUTO/26735352) | C32,C33 | |
-| 1 | SN74HC138PWR | IC DECODER/DEMUX 1X3:8 16-TSSOP | [296-8228-1-ND](https://www.digikey.com/en/products/detail/texas-instruments/SN74HC138PWR/377034) | U1 | |
-| 1 | 74HC11 | IC AND 3-CIR 3-IN 14-TSSOP | [296-13611-1-ND](https://www.digikey.com/en/products/detail/texas-instruments/SN74HC11PWR/498520) | U22 | |
-| 1 | DIP-16 SOCKET | CONN IC DIP SOCKET 16POS GOLD | [SA163000](https://www.digikey.com/en/products/detail/on-shore-technology-inc/SA163000/3313525) | J28 | |
+| 1 | SN74HCT138PWR | 3-to-8 decoder, TTL inputs, 4.5–5.5 V, TSSOP-16 | [296-8388-1-ND](https://www.digikey.com/en/products/detail/texas-instruments/SN74HCT138PWR/377055) | U1 | |
+| 1 | 74HCT11PW,118 | Triple 3-input AND gate, TTL inputs, 4.5–5.5 V, TSSOP-14 | [1727-7964-1-ND](https://www.digikey.com/en/products/detail/nexperia-usa-inc/74HCT11PW-118/1230602) | U22 | |
+| 1 | DIP-16 SOCKET | CONN IC DIP SOCKET 16POS GOLD | [SA163000](https://www.digikey.com/en/products/detail/on-shore-technology-inc/SA163000/3313525) | J28 | [AliExpress](https://www.aliexpress.com/item/32866483409.html) |
 
 ### HDB-DOS cartridge
 
 | Qty | Value | Description | DigiKey P/N | References | Alternative link |
 | ---: | --- | --- | --- | --- | --- |
-| 1 | DIP-28 SOCKET | CONN IC DIP SOCKET 28POS GOLD | [110-41-628-41-001000](https://www.digikey.com/en/products/detail/mill-max-manufacturing-corp/110-41-628-41-001000/2538108) | U2 | |
+| 1 | DIP-28 SOCKET | CONN IC DIP SOCKET 28POS GOLD | [110-41-628-41-001000](https://www.digikey.com/en/products/detail/mill-max-manufacturing-corp/110-41-628-41-001000/2538108) | U2 | [AliExpress](https://www.aliexpress.com/item/32866483409.html) |
 | 1 | 0.1 µF | CAP CER 0805 0.1UF 100VDC X7R | [399-C0805F104K1RACAUTOCT-ND](https://www.digikey.com/en/products/detail/kemet/C0805F104K1RACAUTO/26735352) | C34 | |
 | 1 | AT28C64B-15PU | IC EEPROM 64KBIT PARALLEL 28DIP | [AT28C64B-15PU-ND](https://www.digikey.com/en/products/detail/microchip-technology/AT28C64B-15PU/1008529) | U2 | |
 
@@ -130,13 +143,13 @@ Both main-board versions (**20261043** and **20261058**) use the same components
 | 1 | 4.7 µF | CAP CER 4.7UF 16V X7R 0805 | [732-7666-1-ND](https://www.digikey.com/en/products/detail/w%C3%BCrth-elektronik/885012207053/5453521) | C25 | |
 | 1 | 100K | RES 100K OHM 1% 1/8W 0805 | [541-3978-1-ND](https://www.digikey.com/en/products/detail/vishay-dale/CRCW0805100KFKEAC/7928661) | R24 | |
 | 3 | MMBT3904-TP | TRANS NPN 40V 0.2A SOT-23 | [MMBT3904TPMSCT-ND](https://www.digikey.com/en/products/detail/mcc-micro-commercial-components/MMBT3904-TP/717280) | Q2,Q4,Q5 | |
-| 1 | DIN-5 FEMALE | D5 PIN DIN SOCKET 180 DEGREE | [4654-FC680805-ND](https://www.digikey.ca/en/products/detail/cliff-electronic-components-ltd/FC680805/24420883) | J24 | |
+| 1 | DIN-5 FEMALE | D5 PIN DIN SOCKET 180 DEGREE | [4654-FC680805-ND](https://www.digikey.ca/en/products/detail/cliff-electronic-components-ltd/FC680805/24420883) | J24 | [AliExpress](https://www.aliexpress.com/item/32981543684.html)|
 
 ## Assembly
 
 Print the [fabrication drawing](fpga/docs/fab.pdf) and use it with the board silkscreen to identify component positions. Check diode orientation before soldering. The main-board bill of materials applies to both supported versions; component positions differ between layouts.
 
-Several adapters have oversized socket holes. They require machined-pin sockets whose pins extend through the adapter to connect to the motherboard socket while holding the original IC above it. This arrangement keeps the assembly low enough to fit under the keyboard.
+Several adapters have oversized socket holes. They require machined-pin sockets whose pins extend through the adapter to connect to the motherboard socket while holding the original IC above it. Use 1.2 mm PCBs to reduce the overall assembly height and improve clearance under the keyboard.
 
 1. Locate and desolder the CPU, VDG, SAM, PIA0, PIA1, and 74LS138.
 2. Keep the SAM, VDG, and 74LS138 as spares; the FPGA replaces their functions.
