@@ -11,7 +11,7 @@
     (via_costs 50)
     (plane_via_costs 5)
     (start_ripup_costs 100)
-    (start_pass_no 24610)
+    (start_pass_no 26614)
     (layer_rule F.Cu
       (active on)
       (preferred_direction horizontal)
@@ -31,6 +31,8 @@
     (clearance 76.2 (type smd_to_turn_gap))
     (clearance 152.4 (type smd))
     (clearance 152.4 (type "kicad_default"))
+    (clearance 152.4 (type GND))
+    (clearance 152.4 (type +3.3V))
     (clearance 152.4 (type kicad))
   )
   (padstack "Via[0-1]_457.2:203.2_um"
@@ -107,7 +109,10 @@
     )
   )
   (class "kicad_default"
-    PA6 PB5 PB4 PB3 PB6
+    "AUDIO_RCA" "unconnected-(J6-Pin_1-Pad1)" "unconnected-(J6-Pin_2-Pad2)" "unconnected-(J6-Pin_3-Pad3)" "unconnected-(J6-Pin_4-Pad4)" "unconnected-(J6-Pin_5-Pad5)" "unconnected-(J6-Pin_6-Pad6)" "unconnected-(J6-Pin_7-Pad7)"
+    "unconnected-(J6-Pin_8-Pad8)" "unconnected-(J6-Pin_9-Pad9)" "unconnected-(J6-Pin_10-Pad10)" "unconnected-(J22-Pin_1-Pad1)" "unconnected-(J22-Pin_2-Pad2)" "Net-(Q2-Pad1)" "AUDIO_33" "Net-(C24-Pad2)"
+    "R_CVBS_33" "Net-(Q5-Pad1)" "B_CHR_33" "G_Y_33" "Net-(Q4-Pad2)" "R_CVBS" "Net-(Q2-Pad2)" "G_Y"
+    "Net-(JP2-A)" "B_CHR" "Net-(Q4-Pad1)" "Net-(Q5-Pad2)" "unconnected-(J20-Pin_1-Pad1)" "unconnected-(J20-Pin_2-Pad2)" "unconnected-(J11-Pin_1-Pad1)" "unconnected-(J11-Pin_2-Pad2)"
     (clearance_class "kicad_default")
     (via_rule "kicad_default")
     (rule
@@ -118,6 +123,7 @@
     )
   )
   (class GND
+    GND
     (clearance_class default)
     (via_rule GND)
     (rule
@@ -128,6 +134,7 @@
     )
   )
   (class +3.3V
+    +3.3V
     (clearance_class default)
     (via_rule +3.3V)
     (rule

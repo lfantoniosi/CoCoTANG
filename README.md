@@ -53,8 +53,8 @@ Tandy used several motherboard layouts for the CoCo 2. Identify your motherboard
 
 | Motherboard revision | Compatible | Main board Gerber ZIP |
 | --- | --- | --- |
-| [20261043](fpga/docs/20261043.jpg) | Yes | [gerber_cpu_20261043.zip](kicad/gerber/gerber_cpu_20261043.zip) |
-| [20261058](fpga/docs/20261058.jpg) | Yes | [gerber_cpu_20261058.zip](kicad/gerber/gerber_cpu_20261058.zip) |
+| [20261043](fpga/docs/20261043.jpg) | Yes | [gerber_cpu_20261043.zip](kicad/gerber/gerber_main_20261043.zip) |
+| [20261058](fpga/docs/20261058.jpg) | Yes | [gerber_cpu_20261058.zip](kicad/gerber/gerber_main_20261058.zip) |
 | [20261044](fpga/docs/20261044.jpg) | No | — |
 | [20261045](fpga/docs/20261045.jpg) | No | — |
 | [20261059](fpga/docs/20261059.jpg) | No | — |
