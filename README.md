@@ -147,7 +147,9 @@ Several adapters have oversized socket holes. They require machined-pin sockets 
 7. Fit the CPU and PIAs to their adapters, install the adapters, and connect the boards as shown in the [installed prototype](fpga/docs/installed_prototype.jpg). To connect a jumper lead to a lifted joystick pin, remove the plastic housing at one end and gently widen the metal contact to fit.
 8. Program the Tang Nano 20K with the desired `.fs` bitstream and CoCo 3 ROM, following the programming instructions below.
 9. If using the optional HDB-DOS cartridge, program its EEPROM with [hdblba.rom](fpga/roms/hdblba.rom).
-10. Turn on the computer. The boot screen should look like this:
+10. Turn on the computer. The boot screen should look like the example below.
+
+![Installed CoCoTANG prototype showing the adapter boards and wiring](fpga/docs/installed_prototype.jpg)
 
 ![CoCoTANG boot screen](fpga/docs/CoCoTANG-RGB.jpg)
 
