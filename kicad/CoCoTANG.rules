@@ -10,19 +10,19 @@
     (vias on)
     (via_costs 50)
     (plane_via_costs 5)
-    (start_ripup_costs 50)
-    (start_pass_no 33815)
+    (start_ripup_costs 100)
+    (start_pass_no 24610)
     (layer_rule F.Cu
-      (active on)
-      (preferred_direction vertical)
-      (preferred_direction_trace_costs 1.0)
-      (against_preferred_direction_trace_costs 2.6)
-    )
-    (layer_rule B.Cu
       (active on)
       (preferred_direction horizontal)
       (preferred_direction_trace_costs 1.0)
-      (against_preferred_direction_trace_costs 1.6)
+      (against_preferred_direction_trace_costs 2.3)
+    )
+    (layer_rule B.Cu
+      (active on)
+      (preferred_direction vertical)
+      (preferred_direction_trace_costs 1.0)
+      (against_preferred_direction_trace_costs 1.8)
     )
   )
   (rule
@@ -31,8 +31,6 @@
     (clearance 76.2 (type smd_to_turn_gap))
     (clearance 152.4 (type smd))
     (clearance 152.4 (type "kicad_default"))
-    (clearance 152.4 (type GND))
-    (clearance 152.4 (type +5V))
     (clearance 152.4 (type kicad))
   )
   (padstack "Via[0-1]_457.2:203.2_um"
@@ -44,20 +42,44 @@
     )
     (attach off)
   )
+  (padstack "Via[0-1]_558.8:304.8_um"
+    (shape
+      (circle F.Cu 558.8 0.0 0.0)
+    )
+    (shape
+      (circle B.Cu 558.8 0.0 0.0)
+    )
+    (attach off)
+  )
   (via 
     "Via[0-1]_457.2:203.2_um" "Via[0-1]_457.2:203.2_um" default
+  )
+  (via 
+    "Via[0-1]_558.8:304.8_um" "Via[0-1]_558.8:304.8_um" default
   )
   (via 
     "Via[0-1]_457.2:203.2_um-kicad_default" "Via[0-1]_457.2:203.2_um" "kicad_default"
   )
   (via 
+    "Via[0-1]_558.8:304.8_um-kicad_default" "Via[0-1]_558.8:304.8_um" "kicad_default"
+  )
+  (via 
     "Via[0-1]_457.2:203.2_um-GND" "Via[0-1]_457.2:203.2_um" default
+  )
+  (via 
+    "Via[0-1]_558.8:304.8_um-GND" "Via[0-1]_558.8:304.8_um" default
   )
   (via 
     "Via[0-1]_457.2:203.2_um-+5V" "Via[0-1]_457.2:203.2_um" default
   )
   (via 
+    "Via[0-1]_558.8:304.8_um-+5V" "Via[0-1]_558.8:304.8_um" default
+  )
+  (via 
     "Via[0-1]_457.2:203.2_um-+3.3V" "Via[0-1]_457.2:203.2_um" default
+  )
+  (via 
+    "Via[0-1]_558.8:304.8_um-+3.3V" "Via[0-1]_558.8:304.8_um" default
   )
   (via_rule
     default "Via[0-1]_457.2:203.2_um"
@@ -66,13 +88,13 @@
     "kicad_default" "Via[0-1]_457.2:203.2_um-kicad_default"
   )
   (via_rule
-    GND "Via[0-1]_457.2:203.2_um-GND"
+    GND "Via[0-1]_558.8:304.8_um-GND"
   )
   (via_rule
-    +5V "Via[0-1]_457.2:203.2_um-+5V"
+    +5V "Via[0-1]_558.8:304.8_um-+5V"
   )
   (via_rule
-    +3.3V "Via[0-1]_457.2:203.2_um-+3.3V"
+    +3.3V "Via[0-1]_558.8:304.8_um-+3.3V"
   )
   (class default
     (clearance_class default)
@@ -85,9 +107,7 @@
     )
   )
   (class "kicad_default"
-    "@kicad-selection-only@@R{slash}~{W}" "@kicad-selection-only@@~{CTS}" "@kicad-selection-only@@~{SCS}" "@kicad-selection-only@@~{SLENB}" "@kicad-selection-only@@S0" "@kicad-selection-only@@S1" "@kicad-selection-only@@S2" "@kicad-selection-only@@~{DATAEN}"
-    "@kicad-selection-only@@DATADIR" "@kicad-selection-only@@~{MRD}" "@kicad-selection-only@@~{ROM}" "@kicad-selection-only@@~{MENEN}" "@kicad-selection-only@@PIA0" "@kicad-selection-only@@PIA1" "@kicad-selection-only@@~{EXTROM}" "@kicad-selection-only@@G2A"
-    "@kicad-selection-only@@G2B" "@kicad-selection-only@@unconnected-(J28-Pin_7-Pad7)" "@kicad-selection-only@@unconnected-(U1-Y7-Pad7)"
+    PA6 PB5 PB4 PB3 PB6
     (clearance_class "kicad_default")
     (via_rule "kicad_default")
     (rule
@@ -98,22 +118,10 @@
     )
   )
   (class GND
-    "@kicad-selection-only@3fee36fc-2fd5-4de9-baa6-29d3532c1e28,ba55e665-bdf5-487a-ac17-6561d7c6a01c,bdc4d0ee-c98d-4b85-bb34-17c9b6de9d3c,cfb4c97f-aa52-4016-ba53-a3703d4172de,ef1dc85b-51fb-4ccd-b94b-bf882fd112ef,ef705b1d-2028-45ed-893b-d2d1a034df1b,0fcce07f-06ba-4388-8d31-eed545c958ec,201b224c-c0eb-4b06-8560-8b112bb9b9d4,62b137e2-21ca-4855-aea2-06e373c49bc9,6fed321e-c17c-42f1-a933-9217d8388c21,159147e0-16a4-437f-9049-5319e937bf03,794533be-0ec2-462a-b971-43fc3ed1f907@GND"
     (clearance_class default)
     (via_rule GND)
     (rule
-      (width 152.4)
-    )
-    (circuit 
-      (use_layer F.Cu B.Cu)
-    )
-  )
-  (class +5V
-    "@kicad-selection-only@390ef43c-f52f-4b9b-aa3f-90b6c5748d1b,509e730e-f7da-4033-8ae6-9ed1fb2345c1,51cf3caa-aba0-42a7-b754-d1722b0deb20,baa3ab3d-56db-4b5d-8782-207471b47e7a,6b6df753-af0c-44f8-8ea9-65380f295ab7,883c9af7-d933-4ac3-8859-5078b45e0fbc,8d6d6a7f-005e-4651-b2df-632861c72ea2,f2646971-3cfc-492c-8a6a-ba4a193052f6,5f1c5b21-ac2a-4414-ae3c-426c1bd995ae,cf5eed13-a604-4f41-99a6-1d9b9d1c463b@+5V"
-    (clearance_class default)
-    (via_rule +5V)
-    (rule
-      (width 152.4)
+      (width 254.0)
     )
     (circuit 
       (use_layer F.Cu B.Cu)
@@ -123,7 +131,17 @@
     (clearance_class default)
     (via_rule +3.3V)
     (rule
-      (width 152.4)
+      (width 254.0)
+    )
+    (circuit 
+      (use_layer F.Cu B.Cu)
+    )
+  )
+  (class +5V
+    (clearance_class default)
+    (via_rule +5V)
+    (rule
+      (width 254.0)
     )
     (circuit 
       (use_layer F.Cu B.Cu)

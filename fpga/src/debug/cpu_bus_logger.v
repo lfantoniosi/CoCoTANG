@@ -8,13 +8,16 @@ module cpu_bus_logger #(
     parameter integer LOG_RING_MODE=0,
     parameter integer LOG_DEDUP=0,
     // Restrict start/rebase triggers to reads; capture still includes writes.
-    parameter integer LOG_READS_ONLY=0
+    parameter integer LOG_READS_ONLY=0,
+    parameter integer LOG_RAM_TRIGGER_ONLY=0
 ) (
     input clk,input reset_n,input capture_enable,input capture_clear,
     input nmi_event,input bus_reset_n,
     input e_fall,input q,input rw_n,input [15:0] address,
     input [7:0] cpu_data,input [7:0] expected_data,input [2:0] s,
     input data_oe,input memory_wait,
+    // Decoder-qualified RAM read; sampled with the trigger address.
+    input ram_read,
     input [5:0] mmu_task0_page,input [5:0] mmu_task1_page,
     input mmu_task,input mmu_enabled,
     output reg log_we,output reg [LOG_ADDR_WIDTH-1:0] log_addr,
@@ -34,6 +37,14 @@ module cpu_bus_logger #(
     reg [LOG_ADDR_WIDTH-1:0] ring_write_pointer=0;
     reg nmi_pending=0,end_reached=0;
     reg trigger_match=0;
+    reg sample_ram_read=0;
+    // Keep the address trap as parallel small decodes, rather than a
+    // carry-chain comparison shared with the memory-address decoder.
+    (* syn_keep = "true" *) wire [3:0] trigger_address_parts;
+    assign trigger_address_parts[0]=address[3:0]==LOG_START_ADDRESS[3:0];
+    assign trigger_address_parts[1]=address[7:4]==LOG_START_ADDRESS[7:4];
+    assign trigger_address_parts[2]=address[11:8]==LOG_START_ADDRESS[11:8];
+    assign trigger_address_parts[3]=address[15:12]==LOG_START_ADDRESS[15:12];
 
     always @(posedge clk or negedge reset_n) begin
         if (!reset_n) begin
@@ -42,6 +53,7 @@ module cpu_bus_logger #(
             sample_mmu_task0<=6'h3f;sample_mmu_task1<=6'h3f;
             sample_mmu_task<=0;sample_mmu_enabled<=0;
             trigger_match<=0;
+            sample_ram_read<=0;
         end else begin
             sample_address<=address; sample_data<=cpu_data;
             sample_expected<=expected_data; sample_s<=s;
@@ -49,8 +61,9 @@ module cpu_bus_logger #(
             sample_mmu_task1<=mmu_task1_page;
             sample_mmu_task<=mmu_task;sample_mmu_enabled<=mmu_enabled;
             sample_rw_n<=rw_n;
+            sample_ram_read<=ram_read;
             trigger_match<=(LOG_READS_ONLY==0 || rw_n) &&
-                           address==LOG_START_ADDRESS;
+                           &trigger_address_parts;
         end
     end
 
@@ -108,7 +121,8 @@ module cpu_bus_logger #(
                                   ring_write_pointer+1'b1;
                     end
                     observation_valid<=0;
-                end else if(e_fall && trigger_match) begin
+                end else if(e_fall && trigger_match &&
+                            (LOG_RAM_TRIGGER_ONLY==0 || sample_ram_read)) begin
                     // Every eligible access to the start address starts a
                     // fresh trace, including a later hit after a loader pass.
                     log_we<=1;log_addr<=0;log_data<=entry;log_count<=1;

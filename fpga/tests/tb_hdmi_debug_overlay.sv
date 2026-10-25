@@ -1,21 +1,28 @@
 `timescale 1ns/1ps
-module tb_hdmi_debug_overlay;
+module tb_hdmi_debug_overlay #(
+    parameter integer LOG_ADDR_WIDTH=9,LOG_COUNT_WIDTH=9,
+    parameter integer LOG_PAGE_WIDTH=2,LOG_DEPTH=512
+);
     logic [9:0] x=0,y=0;
     logic enable=1;
     logic [319:0] debug_data=320'd0;
     logic pixel_clk=0,debug_clk=0,log_we=0;
-    logic [8:0] log_addr=0,log_count=0;
-    logic [1:0] log_page=0;
+    logic [LOG_ADDR_WIDTH-1:0] log_addr=0;
+    logic [LOG_COUNT_WIDTH-1:0] log_count=0;
+    logic [LOG_PAGE_WIDTH-1:0] log_page=0;
     logic [47:0] log_data=0;
     logic [23:0] rgb_in=24'h123456;
     logic [23:0] rgb_out;
     integer errors=0;
+    integer test_count,test_page,expected_start;
 
-    hdmi_debug_overlay #(.EXTENDED_HEADER(2)) dut(
+    hdmi_debug_overlay #(.EXTENDED_HEADER(2),.LOG_ADDR_WIDTH(LOG_ADDR_WIDTH),
+        .LOG_COUNT_WIDTH(LOG_COUNT_WIDTH),.LOG_PAGE_WIDTH(LOG_PAGE_WIDTH),
+        .LOG_DEPTH(LOG_DEPTH)) dut(
         .pixel_clk(pixel_clk),.x(x),.y(y),.enable(enable),
         .debug_data(debug_data),.debug_clk(debug_clk),.log_we(log_we),
         .log_addr(log_addr),.log_data(log_data),.log_count(log_count),
-        .log_base(9'd0),
+        .log_base({LOG_ADDR_WIDTH{1'b0}}),
         .log_page(log_page),
         .debug_status(5'b11111),
         .interrupt_status(4'b0000),
@@ -70,19 +77,34 @@ module tb_hdmi_debug_overlay;
         log_we=1; @(negedge debug_clk); @(posedge debug_clk); #1; log_we=0;
         repeat (4) @(posedge pixel_clk);
         check(2,24,24'hffffff);      // Reads remain white.
-        log_addr=9'd114;
+        // With 115 entries, the tail page displays entries 1 through 114.
+        log_addr=1;
         log_data={1'b1,1'b1,16'ha05a,8'h1f,8'h1f,
                   1'b1,1'b1,6'h05,6'h06};
         log_we=1; @(negedge debug_clk); @(posedge debug_clk); #1;
-        log_we=0; log_count=9'd115;
+        log_we=0; log_count=115;
         repeat (4) @(posedge pixel_clk);
-        log_page=2'd1;
+        log_page=1;
         repeat (4) @(posedge pixel_clk);
         check(2,24,24'hffffff);      // Page one starts with local entry 00.
         enable=0;
         check(58,16,24'h123456);     // S2/debug disable path.
+        // Exhaustively compare page bounds with the original tail-page
+        // division, including every boundary and the full capture count.
+        for(test_count=0;test_count<=LOG_DEPTH &&
+            test_count<2**LOG_COUNT_WIDTH;test_count=test_count+1)begin
+            log_count=test_count;
+            repeat(4)@(posedge pixel_clk);
+            for(test_page=0;test_page<2**LOG_PAGE_WIDTH;test_page=test_page+1)begin
+                log_page=test_page;#1;
+                expected_start=(test_count>114 && test_page==(test_count-1)/114) ?
+                    test_count-114 : test_page*114;
+                if(dut.page_start_index!==expected_start)
+                    $fatal(1,"Page address changed for count=%0d page=%0d",test_count,test_page);
+            end
+        end
         if (errors==0) $display("tb_hdmi_debug_overlay PASS");
-        else $display("tb_hdmi_debug_overlay FAIL: %0d",errors);
+        else $fatal(1,"tb_hdmi_debug_overlay FAIL: %0d",errors);
         $finish;
     end
 endmodule

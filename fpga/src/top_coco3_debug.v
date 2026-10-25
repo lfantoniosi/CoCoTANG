@@ -1,5 +1,5 @@
-// Debug build uses the trace settings declared by top_coco3.
-module top_coco3_contras_debug (
+// Separate address-triggered trace image; normal prototype keeps logging off.
+module top_coco3_debug (
     input clkin,input s1,input s2,input [7:0] mp,output [1:0] msel,
     inout [7:0] cpu_data,output irq_n_in,output firq_n_in,output audio_out,
     output reset_drive,output e_out,output q_out,output hs_n,output fs_n,
@@ -15,9 +15,14 @@ module top_coco3_contras_debug (
     output [1:0] O_sdram_ba,output [3:0] O_sdram_dqm
 );
     top_coco3 #(
-        .LOG_DEPTH(4092),
+        .LOG_DEPTH(2048),
+        .LOG_START_ADDRESS(16'h2f55),
+        .LOG_READS_ONLY(1),
+        .LOG_RAM_TRIGGER_ONLY(1),
         .LOG_AUTO_START(1),
         .ENABLE_BUS_LOGGER(1),
-        .DEBUG_OVERLAY(1)
+        .DEBUG_OVERLAY(1),
+        // Make room for trace RAM without changing the normal core defaults.
+        .ENABLE_SSC_SPEECH(0)
     ) core (.*);
 endmodule

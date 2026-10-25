@@ -13,6 +13,8 @@ module tb_gime_scanline_buffer;
  integer transactions=0,errors=0,i,timeout,raster;
  integer graphics_gm,graphics_css,graphics_palette,graphics_dot,graphics_x;
  integer sg_mode,sg_css,sg_row,sg_column;
+ integer alpha_palette,alpha_css,alpha_inverse,alpha_x;
+ reg [7:0] alpha_glyph;
  integer font_gm,font_character,font_row,font_index,font_inverse;
  reg [7:0] font_reference[0:1535];
  reg [7:0] font_expected,font_observed;
@@ -880,6 +882,44 @@ module tb_gime_scanline_buffer;
   end
   release dut.state;release dut.h_pending;release dut.h_pending_y;
   release dut.coalesce_count;
+
+  // Alpha text must use programmable entries 12/13 (CSS=0) and 14/15
+  // (CSS=1), including true black backgrounds in the ROM default palette.
+  // Check the completed HDMI and analog line buffers against an independent
+  // font row, for normal/inverse characters and both default/custom colors.
+  $readmemh("tests/data/gime_font_xroar.hex",font_reference);
+  for(alpha_palette=0;alpha_palette<2;alpha_palette=alpha_palette+1)
+   for(alpha_css=0;alpha_css<2;alpha_css=alpha_css+1)
+    for(alpha_inverse=0;alpha_inverse<2;alpha_inverse=alpha_inverse+1)begin
+     @(negedge clk);reset_n=0;hdmi_prefetch_valid=0;cvbs_prefetch_valid=0;
+     compatibility_mode=1;compatibility_an_g=0;bit_plane=0;
+     compatibility_gm=0;compatibility_css=alpha_css;compatibility_sam_mode=0;
+     horizontal_offset=0;screen_base=0;hdmi_prefetch_y=2;active_height=192;
+     palettes[12*6+:6]=alpha_palette?6'd9:6'd0;
+     palettes[13*6+:6]=alpha_palette?6'd63:6'd18;
+     palettes[14*6+:6]=alpha_palette?6'd45:6'd0;
+     palettes[15*6+:6]=alpha_palette?6'd36:6'd38;
+     memory_data=alpha_inverse?32'h41414141:32'h01010101;
+     alpha_glyph=font_reference[65*12+2]^(alpha_inverse?8'hff:8'h00);
+     repeat(4)@(negedge clk);
+     reset_n=1;hdmi_prefetch_valid=1;wait_hdmi_line();#1;
+     for(alpha_x=0;alpha_x<640;alpha_x=alpha_x+1)begin
+      graphics_index=12+alpha_css*2+alpha_glyph[7-((alpha_x*2/5)%8)];
+      graphics_expected=mapped(palettes[graphics_index*6+:6]);
+      if((dut.c_valid0?dut.cvbs_line0[alpha_x]:dut.cvbs_line1[alpha_x])
+          !==graphics_expected)
+       $fatal(1,"Alpha analog color: CSS=%0d inverse=%0d palette=%0d x=%0d",
+           alpha_css,alpha_inverse,alpha_palette,alpha_x);
+     end
+     for(alpha_x=0;alpha_x<512;alpha_x=alpha_x+1)begin
+      graphics_index=12+alpha_css*2+alpha_glyph[7-((alpha_x/2)%8)];
+      graphics_expected=mapped(palettes[graphics_index*6+:6]);
+      if((dut.h_valid0?dut.hdmi_line0[alpha_x]:dut.hdmi_line1[alpha_x])
+          !==dut.expand_rgb222(graphics_expected))
+       $fatal(1,"Alpha HDMI color: CSS=%0d inverse=%0d palette=%0d x=%0d",
+           alpha_css,alpha_inverse,alpha_palette,alpha_x);
+     end
+    end
 
   // Exercise every VDG graphics packing, including PMODE 1-4, with both
   // CSS banks and two distinct programmable palettes. Solid source colours

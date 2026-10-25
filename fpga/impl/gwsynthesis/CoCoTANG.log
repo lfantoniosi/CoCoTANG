@@ -70,7 +70,7 @@ Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco3_hdm
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/artifact_mode_control.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3_orchestra90.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v'
-Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3_contras_debug.v'
+Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3_debug.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3_pal.v'
 Analyzing Verilog file '/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3_ntsc_svideo.v'
 Compiling module 'top_coco3'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":4)
@@ -205,7 +205,7 @@ Compiling module 'glenside_ide(IDE_BASE=16'b1111111101010000,CPU_ENABLE_PREDECOD
 Compiling module 'glenside_ata(IDE_BASE=16'b1111111101010000,CPU_ENABLE_PREDECODED=1)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/glenside_ata.v":7)
 Compiling module 'glenside_sector_buffer'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/glenside_sector_buffer.v":3)
 Compiling module 'sd_spi_block'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/sd_spi_block.v":6)
-WARN  (EX3791) : Expression size 8 truncated to fit in target size 7("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":691)
+WARN  (EX3791) : Expression size 8 truncated to fit in target size 7("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":709)
 Compiling module 'coco3_hdmi(LOG_ADDR_WIDTH=13,LOG_COUNT_WIDTH=14,LOG_PAGE_WIDTH=7,LOG_DEPTH=4092,ENABLE_DEBUG_OVERLAY=32'b00000000000000000000000000000000,GIME_TRACE_MODE=32'b00000000000000000000000000000000)'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco3_hdmi.sv":3)
 WARN  (EX3791) : Expression size 10 truncated to fit in target size 9("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco3_hdmi.sv":130)
 Compiling module 'artifact_mode_osd'("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/artifact_mode_osd.sv":3)
@@ -234,7 +234,7 @@ WARN  (EX3791) : Expression size 10 truncated to fit in target size 9("/Users/fe
 WARN  (EX3791) : Expression size 4 truncated to fit in target size 3("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_cvbs_ntsc.v":207)
 NOTE  (EX0101) : Current top module is "top_coco3"
 [5%] Running netlist conversion ...
-WARN  (CV0016) : Input s2 is unused("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":38)
+WARN  (CV0016) : Input s2 is unused("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":39)
 Running device independent optimization ...
 [10%] Optimizing Phase 0 completed
 [15%] Optimizing Phase 1 completed
@@ -250,7 +250,7 @@ Running technical mapping ...
 [75%] Tech-Mapping Phase 2 completed
 [80%] Tech-Mapping Phase 3 completed
 [90%] Tech-Mapping Phase 4 completed
-WARN  (NL0002) : The module "artifact_mode_osd" instantiated to "analog_status_osd" is swept in optimizing("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":798)
+WARN  (NL0002) : The module "artifact_mode_osd" instantiated to "analog_status_osd" is swept in optimizing("/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v":816)
 WARN  (NL0002) : The module "audio_info_frame" instantiated to "audio_info_frame" is swept in optimizing("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/packet_picker.sv":173)
 WARN  (NL0002) : The module "audio_sample_packet" instantiated to "audio_sample_packet" is swept in optimizing("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/packet_picker.sv":160)
 WARN  (NL0002) : The module "auxiliary_video_information_info_frame" instantiated to "auxiliary_video_information_info_frame" is swept in optimizing("/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/packet_picker.sv":167)

@@ -9,6 +9,7 @@ module top_coco3 #(
     parameter integer LOG_RING_MODE=0,
     parameter integer LOG_DEDUP=0,
     parameter integer LOG_READS_ONLY=0, // Read-only trigger; capture logs R/W.
+    parameter integer LOG_RAM_TRIGGER_ONLY=0,
     parameter integer LOG_AUTO_START=0,
     parameter integer LOG_NMI_TRIGGER=0,
     // Set to 1 only for bus-debug builds.  At the default 0, the generate
@@ -49,10 +50,17 @@ module top_coco3 #(
     inout [31:0] IO_sdram_dq,output [10:0] O_sdram_addr,
     output [1:0] O_sdram_ba,output [3:0] O_sdram_dqm
 );
-    localparam integer LOG_ADDR_WIDTH=13,LOG_COUNT_WIDTH=14,LOG_PAGE_WIDTH=7;
+    localparam integer LOG_ADDR_WIDTH=ENABLE_BUS_LOGGER!=0 ?
+        (LOG_DEPTH>1 ? $clog2(LOG_DEPTH) : 1) : 13;
+    // The legacy display header reads bits 8:0 even for a one-page trace.
+    localparam integer LOG_COUNT_WIDTH=ENABLE_BUS_LOGGER!=0 ?
+        (LOG_DEPTH<512 ? 9 : $clog2(LOG_DEPTH+1)) : 14;
     // Two fixed status rows plus one column-heading row leave 57 trace rows
     // in each half of the 60-row HDMI debugger.
     localparam integer ENTRIES_PER_PAGE=114;
+    localparam integer LOG_PAGE_COUNT=(LOG_DEPTH+ENTRIES_PER_PAGE-1)/ENTRIES_PER_PAGE;
+    localparam integer LOG_PAGE_WIDTH=ENABLE_BUS_LOGGER!=0 ?
+        (LOG_PAGE_COUNT>1 ? $clog2(LOG_PAGE_COUNT) : 1) : 7;
     localparam [LOG_PAGE_WIDTH-1:0] LAST_PAGE=(LOG_DEPTH-1)/ENTRIES_PER_PAGE;
 
     wire clk108,clk108p,clk270,clk135,clk27,board_reset_n,clocks_locked;
@@ -592,12 +600,21 @@ module top_coco3 #(
     wire [LOG_COUNT_WIDTH-1:0] log_count;
     reg log_capture_active=(LOG_AUTO_START!=0),log_capture_clear=0;
     generate if (ENABLE_BUS_LOGGER!=0) begin:logger_enabled
+      // Freeze the RAM/ROM classification with the completed bus snapshot.
+      // Later address/MMU changes must not reclassify the captured cycle.
+      reg cycle_ram_read=0;
+      always @(posedge clk108 or negedge board_reset_n) begin
+        if(!board_reset_n)cycle_ram_read<=0;
+        else if(bus_snapshot_valid)
+          cycle_ram_read<=cpu_mem_read && !cpu_mem_is_rom;
+      end
       cpu_bus_logger #(.LOG_ADDR_WIDTH(LOG_ADDR_WIDTH),
         .LOG_COUNT_WIDTH(LOG_COUNT_WIDTH),.LOG_DEPTH(LOG_DEPTH),
         .LOG_START_ADDRESS(LOG_START_ADDRESS),
         .LOG_END_ADDRESS(LOG_END_ADDRESS),
         .LOG_RING_MODE(LOG_RING_MODE),.LOG_DEDUP(LOG_DEDUP),
-        .LOG_READS_ONLY(LOG_READS_ONLY)) logger(
+        .LOG_READS_ONLY(LOG_READS_ONLY),
+        .LOG_RAM_TRIGGER_ONLY(LOG_RAM_TRIGGER_ONLY)) logger(
         .clk(clk108),.reset_n(board_reset_n),
         .capture_enable(cpu_release && log_capture_active),
         .capture_clear(log_capture_clear),
@@ -609,6 +626,7 @@ module top_coco3 #(
         .rw_n(rw_n),.address(address),.cpu_data(cpu_data_in),
         .expected_data(fpga_read_data),.s(sam_s),.data_oe(fpga_data_oe),
         .memory_wait(cpu_memory_wait),
+        .ram_read(cycle_ram_read),
         .mmu_task0_page(mmu_task0_page_debug),
         .mmu_task1_page(mmu_task1_page_debug),
         .mmu_task(mmu_task_debug),.mmu_enabled(mmu_enabled_debug),

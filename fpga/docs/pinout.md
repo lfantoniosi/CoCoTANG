@@ -60,7 +60,8 @@ as pin 76. The constraint uses pin 76; correct the symbol before a PCB respin.
 
 For the prototype with FPGA pin 42 connected to CPU RESET, build the
 standalone tester with `make data-test-build` and load it with
-`make data-test-program`. Its separate constraints name pin 42 `reset_drive`
+`make data-test-program-sram` for a temporary SRAM test, or
+`make data-test-program` to store it in flash. Its separate constraints name pin 42 `reset_drive`
 and keep RESET asserted throughout the test.
 
 The tester sweeps data from `$00` through `$FF`, holding each value for about
@@ -74,7 +75,37 @@ side checks the complete external path.
 S2 toggles run/hold. In hold mode, S1 advances the byte and S code by one;
 in run mode, S1 restarts both sweeps at zero.
 
+For manual input tests, power off and remove the CPU before attaching
+jumpers. Ground R/W and verify `RW:0` and `DRIVE:0` on HDMI before grounding
+individual data pins. The FPGA releases its data outputs with R/W low,
+allowing each CPU-side data pin to be checked through the transceiver using
+`FPGA IN`. Keep untested inputs at known levels; floating pins do not give
+reliable results.
+
+With the CPU removed, each address line can also be grounded individually
+and checked in `CPU ADDRESS` and the decoded address bit fields. The tester
+samples the address bus; it does not drive an address pattern. The raw high
+mux byte is remapped, so its bit order differs from the decoded A15–A8 field.
+See the [README diagnostic procedure](../../README.md#using-the-tester-to-diagnose-the-board)
+for expected values and fault symptoms. Power off before removing jumpers
+or reinstalling the CPU, and remove the R/W ground before normal operation.
+
 Use `make test-data-bus` for the engine and HDMI screen simulations,
 `make data-test-rebuild` for a forced FPGA rebuild, and `make data-test-timing`
 to check the routed clock report. The image is
 `impl/pnr/CoCoTANG-data-test.fs`.
+
+## Address-triggered trace image
+
+`make debug-program` builds and programs a separate logger image,
+`impl/pnr/CoCoTANG-debug.fs`. The normal core keeps its logger disabled.
+Capture starts on a RAM-mapped read of the address configured by
+`LOG_START_ADDRESS` in `src/top_coco3_debug.v` (currently `$2F55`), includes
+that read, and retains up to 2,048 entries. Another RAM read of that address
+restarts the trace. ROM reads and writes to that address do not trigger or
+restart capture; subsequent trace entries include both RAM and ROM accesses.
+The HDMI overlay is enabled; SSC speech is omitted to free block RAM.
+
+The debug project selects `src/debug/gime_timing_trace.v`; `make test`
+checks its shorter carry chain against the normal timing RTL cycle by cycle,
+along with the RAM trigger and HDMI trace paging.

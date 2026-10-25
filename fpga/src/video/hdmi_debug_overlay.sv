@@ -120,7 +120,7 @@ module hdmi_debug_overlay #(
     logic [LOG_ADDR_WIDTH:0] entry_index_sum;
     logic [LOG_ADDR_WIDTH:0] entry_index_full;
     logic [LOG_ADDR_WIDTH:0] page_start_index;
-    logic [LOG_COUNT_WIDTH-1:0] tail_page_index;
+    logic [LOG_PAGE_WIDTH+7:0] selected_page_start;
     logic [6:0] page_entry_index;
     logic [47:0] entry = 48'd0;
     wire entry_is_nmi=entry[45:30]==16'hfffc &&
@@ -269,12 +269,14 @@ module hdmi_debug_overlay #(
         page_entry_index={1'b0,character_row}-TRACE_FIRST_ROW;
         if (character_column >= 7'd45)
             page_entry_index=page_entry_index+TRACE_ROWS_PER_COLUMN;
-        tail_page_index=display_count==0 ? 0 :
-                        (display_count-1)/TRACE_ENTRIES_PER_PAGE;
-        if(log_page==tail_page_index &&
+        // The tail page contains count-1. Use its bounds instead of a
+        // constant divider in the display-memory address path.
+        selected_page_start=log_page*TRACE_ENTRIES_PER_PAGE;
+        if(display_count>selected_page_start &&
+           display_count<=selected_page_start+TRACE_ENTRIES_PER_PAGE &&
            display_count>TRACE_ENTRIES_PER_PAGE)
             page_start_index=display_count-TRACE_ENTRIES_PER_PAGE;
-        else page_start_index=log_page*TRACE_ENTRIES_PER_PAGE;
+        else page_start_index=selected_page_start;
         entry_index_full=page_start_index+page_entry_index;
         entry_index_sum={1'b0,display_base}+entry_index_full[LOG_ADDR_WIDTH:0];
         if(entry_index_sum>=LOG_DEPTH)
