@@ -31,3 +31,20 @@ duplicating that matrix failed timing. Do not reintroduce the rejected SSC/IDE,
 SDRAM-sampling or CPU bus-retiming experiments. Parameter-disabled shared
 changes have disturbed RGB synthesis results; verify the approved RGB
 configuration payload when changing this boundary.
+
+# PAL isolation
+
+PAL analog timing work uses CoCoTANG-pal-analog.gprj and only src/pal/ variants.
+Do not modify CoCoTANG-pal.gprj: it remains the shared RGB/YPbPr project.
+Keep src/pal/ out of other project file lists and common source dependencies.
+The PAL-only build_options.json records the existing PAL options (place1,
+route1, replication enabled, maxfan16); copying it to the PAL project's own
+process config preserves settings rather than tuning placement. Do not
+change these values to solve timing. RGB/CVBS sources and images must match
+their confirmed baselines. PAL was hardware-confirmed on 2026-10-26 using
+pal-narrow-phase-test.fs, saved with its exact source archive and timing as
+impl/pnr/stable-pal*. Preserve the phase-selection and narrow signed-rounding
+implementation, project identity and source paths of this confirmed build.
+
+The user selected this confirmed version as the PAL baseline. Leave the PAL
+carrier continuous; no additional frame/chroma phase alignment is authorized.

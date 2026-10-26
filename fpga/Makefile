@@ -1,6 +1,8 @@
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 PROJECT := $(ROOT)/CoCoTANG.gprj
 PAL_PROJECT := $(ROOT)/CoCoTANG-pal.gprj
+PAL_ANALOG_PROJECT := $(ROOT)/CoCoTANG-pal-analog.gprj
+PAL_ANALOG_CONFIG := $(ROOT)/src/pal/build_options.json
 CVBS_PROJECT := $(ROOT)/CoCoTANG-cvbs-minimal.gprj
 CVBS_OUTPUT := $(ROOT)/impl/pnr/CoCoTANG-cvbs-minimal.fs
 DATA_TEST_PROJECT := $(ROOT)/CoCoTANG-data-test.gprj
@@ -20,8 +22,9 @@ VIDEO_PROJECT_rgb := CoCoTANG-pal.gprj
 VIDEO_PROJECT_ypbpr := CoCoTANG-pal.gprj
 VIDEO_PROJECT_cvbs := CoCoTANG-cvbs-minimal.gprj
 # CVBS variants are deliberately absent from normal/RGB source dependencies.
-COMMON_SOURCE_FILES := $(filter-out src/top_coco3_data_test.v src/top_coco3_data_test.cst src/top_coco3_data_test.sdc src/video/cpu_bus_probe_hdmi.sv,$(shell find src -type f ! -path 'src/cvbs/*'))
+COMMON_SOURCE_FILES := $(filter-out src/top_coco3_data_test.v src/top_coco3_data_test.cst src/top_coco3_data_test.sdc src/video/cpu_bus_probe_hdmi.sv,$(shell find src -type f ! -path 'src/cvbs/*' ! -path 'src/pal/*'))
 CVBS_SOURCE_FILES := $(COMMON_SOURCE_FILES) $(ROOT)/src/cvbs/minimal_top_coco3.v $(ROOT)/src/cvbs/video/coco_cvbs_ntsc_lut.v
+PAL_SOURCE_FILES := $(COMMON_SOURCE_FILES) $(ROOT)/src/pal/minimal_top_coco3.v $(ROOT)/src/pal/video/coco_cvbs_ntsc_lut.v $(PAL_ANALOG_CONFIG)
 PAL_ROM ?= /Users/felipe/src/retro/coco_roms/coco3p.rom
 RAM8M_DISK := $(ROOT)/results/RAM8M.DSK
 RAM8M_BIN := $(ROOT)/results/RAM8M.BIN
@@ -95,7 +98,8 @@ contras-debug-rebuild: check-tools
 pal-build: $(PAL_OUTPUT)
 
 pal-rebuild: check-tools
-	$(call run-gowin,CoCoTANG-pal.gprj,top_coco3_pal,CoCoTANG-pal)
+	cp "$(PAL_ANALOG_CONFIG)" "$(ROOT)/impl/CoCoTANG-pal-analog_process_config.json"
+	$(call run-gowin,CoCoTANG-pal-analog.gprj,top_coco3_pal,CoCoTANG-pal)
 
 ntsc-svideo-build: $(NTSC_SVIDEO_OUTPUT)
 
@@ -362,8 +366,9 @@ $(CVBS_OUTPUT): $(CVBS_PROJECT) $(BUILD_TCL) $(CVBS_SOURCE_FILES) | check-tools
 $(ROOT)/impl/pnr/CoCoTANG-contras-debug.fs: $(PAL_PROJECT) $(BUILD_TCL) $(COMMON_SOURCE_FILES) | check-tools
 	$(call run-gowin,CoCoTANG-pal.gprj,top_coco3_contras_debug,CoCoTANG-contras-debug)
 
-$(PAL_OUTPUT): $(PAL_PROJECT) $(BUILD_TCL) $(COMMON_SOURCE_FILES) | check-tools
-	$(call run-gowin,CoCoTANG-pal.gprj,top_coco3_pal,CoCoTANG-pal)
+$(PAL_OUTPUT): $(PAL_ANALOG_PROJECT) $(BUILD_TCL) $(PAL_SOURCE_FILES) | check-tools
+	cp "$(PAL_ANALOG_CONFIG)" "$(ROOT)/impl/CoCoTANG-pal-analog_process_config.json"
+	$(call run-gowin,CoCoTANG-pal-analog.gprj,top_coco3_pal,CoCoTANG-pal)
 
 # CVBS-only regression suite; none of these variants enters an RGB project.
 .PHONY: test-cvbs test-cvbs-project test-cvbs-video
@@ -443,3 +448,7 @@ test-data-bus:
 
 $(DATA_TEST_OUTPUT): $(DATA_TEST_PROJECT) $(BUILD_TCL) src/top_coco3_data_test.v src/top_coco3_data_test.cst src/top_coco3_data_test.sdc src/video/cpu_bus_probe_hdmi.sv src/coco_clocks.v src/gowin_rpll/clk108.v src/gowin_rpll/clk270.v src/video/hdmi/hdmi.sv src/video/hdmi/tmds_channel.sv src/video/hdmi/serializer.sv | check-tools
 	$(call run-gowin,CoCoTANG-data-test.gprj,top_coco3_data_test,CoCoTANG-data-test)
+
+.PHONY: test-pal
+test-pal:
+	python3 tests/check_pal_project.py

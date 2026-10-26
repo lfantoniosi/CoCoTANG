@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE gowin-fpga-project>
+<Project>
+    <Template>FPGA</Template>
+    <Version>5</Version>
+    <Device name="GW2AR-18C" pn="GW2AR-LV18QN88C8/I7">gw2ar18c-000</Device>
+    <FileList>
+        <File path="src/gowin_rpll/clk108.v" type="file.verilog" enable="1"/>
+        <File path="src/gowin_rpll/clk270.v" type="file.verilog" enable="1"/>
+        <File path="src/coco_clocks.v" type="file.verilog" enable="1"/>
+        <File path="src/coco_startup.v" type="file.verilog" enable="1"/>
+        <File path="src/bus/input_filter.v" type="file.verilog" enable="1"/>
+        <File path="src/bus/coco_bus_mux.v" type="file.verilog" enable="1"/>
+        <File path="src/audio/coco_orchestra90.v" type="file.verilog" enable="1"/>
+        <File path="src/audio/coco_ssc_psg.v" type="file.verilog" enable="1"/>
+        <File path="src/audio/coco_ssc_tts.v" type="file.verilog" enable="1"/>
+        <File path="src/audio/coco_ssc_tts_rom.v" type="file.verilog" enable="1"/>
+        <File path="src/audio/coco_ssc_speech.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/ssc_speech/controller.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/ssc_speech/ctrlrom.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/ssc_speech/filter.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/ssc_speech/pwmdac.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/ssc_speech/source.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/ssc_speech/speech256_top.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/ssc_speech/spmul.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/ssc_speech/xlat.v" type="file.verilog" enable="1"/>
+        <File path="src/audio/coco_psg_mix.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/jt49/jt49.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/jt49/jt49_cen.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/jt49/jt49_div.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/jt49/jt49_eg.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/jt49/jt49_exp.v" type="file.verilog" enable="1"/>
+        <File path="src/third_party/jt49/jt49_noise.v" type="file.verilog" enable="1"/>
+        <File path="src/audio/coco_pia1_dac.v" type="file.verilog" enable="1"/>
+        <File path="src/video/sigma_delta_dac.v" type="file.verilog" enable="1"/>
+        <File path="src/memory/spi_flash_reader.v" type="file.verilog" enable="1"/>
+        <File path="src/memory/coco_flash_loader.v" type="file.verilog" enable="1"/>
+        <File path="src/memory/coco_sdram_startup_test.v" type="file.verilog" enable="1"/>
+        <File path="src/memory/sdram.v" type="file.verilog" enable="1"/>
+        <File path="src/memory/cpu_sdram_arbiter.v" type="file.verilog" enable="1"/>
+        <File path="src/memory/coco3_memory.v" type="file.verilog" enable="1"/>
+        <File path="src/storage/sd_spi_block.v" type="file.verilog" enable="1"/>
+        <File path="src/storage/glenside_sector_buffer.v" type="file.verilog" enable="1"/>
+        <File path="src/storage/glenside_ata.v" type="file.verilog" enable="1"/>
+        <File path="src/storage/glenside_ide.v" type="file.verilog" enable="1"/>
+        <File path="src/coco3/mc6847_char_rom.v" type="file.verilog" enable="1"/>
+        <File path="src/coco3/coco3_char_rom.v" type="file.verilog" enable="1"/>
+        <File path="src/coco3/gime_timing.v" type="file.verilog" enable="1"/>
+        <File path="src/coco3/gime_registers.v" type="file.verilog" enable="1"/>
+        <File path="src/coco3/gime_mode_debug.v" type="file.verilog" enable="1"/>
+        <File path="src/video/ntsc_artifact_decode.v" type="file.verilog" enable="1"/>
+        <File path="src/coco3/gime_scanline_buffer.v" type="file.verilog" enable="1"/>
+        <File path="src/coco3/gime_native_video.v" type="file.verilog" enable="1"/>
+        <File path="src/coco3/coco3.v" type="file.verilog" enable="1"/>
+        <File path="src/debug/cpu_bus_logger.v" type="file.verilog" enable="1"/>
+        <File path="src/pal/video/coco_cvbs_ntsc_lut.v" type="file.verilog" enable="1"/>
+        <File path="src/video/hdmi/audio_clock_regeneration_packet.sv" type="file.verilog" enable="1"/>
+        <File path="src/video/hdmi/audio_info_frame.sv" type="file.verilog" enable="1"/>
+        <File path="src/video/hdmi/audio_sample_packet.sv" type="file.verilog" enable="1"/>
+        <File path="src/video/hdmi/auxiliary_video_information_info_frame.sv" type="file.verilog" enable="1"/>
+        <File path="src/video/hdmi/source_product_description_info_frame.sv" type="file.verilog" enable="1"/>
+        <File path="src/video/hdmi/packet_assembler.sv" type="file.verilog" enable="1"/>
+        <File path="src/video/hdmi/packet_picker.sv" type="file.verilog" enable="1"/>
+        <File path="src/video/hdmi/tmds_channel.sv" type="file.verilog" enable="1"/>
+        <File path="src/video/hdmi/hdmi.sv" type="file.verilog" enable="1"/>
+        <File path="src/video/hdmi/serializer.sv" type="file.verilog" enable="1"/>
+        <File path="src/video/hdmi_debug_overlay.sv" type="file.verilog" enable="1"/>
+        <File path="src/video/artifact_mode_osd.sv" type="file.verilog" enable="1"/>
+        <File path="src/video/coco3_hdmi.sv" type="file.verilog" enable="1"/>
+        <File path="src/video/artifact_mode_control.v" type="file.verilog" enable="1"/>
+        <File path="src/top_coco3_orchestra90.v" type="file.verilog" enable="1"/>
+        <File path="src/pal/minimal_top_coco3.v" type="file.verilog" enable="1"/>
+        <File path="src/top_coco3_contras_debug.v" type="file.verilog" enable="1"/>
+        <File path="src/top_coco3_pal.v" type="file.verilog" enable="1"/>
+        <File path="src/top_coco3_ntsc_svideo.v" type="file.verilog" enable="1"/>
+        <File path="src/top_coco3_rgb.v" type="file.verilog" enable="1"/>
+        <File path="src/top_coco3_ypbpr.v" type="file.verilog" enable="1"/>
+        <File path="src/top_coco3.cst" type="file.cst" enable="1"/>
+        <File path="src/top_coco3_pal.sdc" type="file.sdc" enable="1"/>
+    </FileList>
+</Project>
