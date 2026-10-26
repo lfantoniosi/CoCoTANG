@@ -70,7 +70,7 @@ module top_coco3 #(
         .clk108p(clk108p),.clk270(clk270),.clk135(clk135),.clk27(clk27),
         .board_reset_n(board_reset_n),.clocks_locked(clocks_locked));
 
-    reg cpu_release=0;
+    wire cpu_release;
     wire [15:0] address;
     wire rw_n;
     wire e_core,q_core,e_rise,e_fall;
@@ -364,21 +364,9 @@ module top_coco3 #(
         .din(sd_din),.wdm(sd_wdm),.dout(sd_dout),.dout32(sd_dout32),
         .data_ready(sd_data_ready),.busy(sd_busy),.enabled(sdram_enabled));
 
-    localparam integer RESET_HOLD_WIDTH=$clog2(RESET_HOLD_CYCLES+1);
-    reg [RESET_HOLD_WIDTH-1:0] reset_hold_count=0;
-    reg release_pending=0;
-    always @(posedge clk108 or negedge board_reset_n) begin
-        if (!board_reset_n) begin
-            reset_hold_count<=0; release_pending<=0; cpu_release<=0;
-        end else if (!system_ready) begin
-            reset_hold_count<=0; release_pending<=0; cpu_release<=0;
-        end else if (!cpu_release) begin
-            if (reset_hold_count<RESET_HOLD_CYCLES)
-                reset_hold_count<=reset_hold_count+1'b1;
-            else release_pending<=1;
-            if (release_pending && e_fall) cpu_release<=1;
-        end
-    end
+    coco_cpu_reset_hold #(.HOLD_CYCLES(RESET_HOLD_CYCLES)) cpu_reset_hold(
+        .clk(clk108),.reset_n(board_reset_n),.system_ready(system_ready),
+        .e_fall(e_fall),.cpu_release(cpu_release));
     assign reset_drive=!cpu_release;
     wire cpu_bus_active=cpu_release;
     // Keep the SDRAM read engine alive during the post-loader CPU hold.  A
@@ -878,4 +866,45 @@ module top_coco3 #(
     wire unused_inputs=mux_slenb_n ^ mux_nmi_n ^ native_hblank ^
         native_vblank ^ ^native_red ^ ^native_green ^ ^native_blue ^ e_rise ^
         ^pia1_dac_level;
+endmodule
+
+// Keep the startup hold and E-edge release cycle-exact while splitting the
+// counter's carry path. This block runs at 108 MHz, independently of video.
+module coco_cpu_reset_hold #(
+    parameter integer HOLD_CYCLES=10800000
+) (
+    input wire clk,input wire reset_n,input wire system_ready,input wire e_fall,
+    output reg cpu_release=0
+);
+    localparam integer COUNT_WIDTH=HOLD_CYCLES>0 ? $clog2(HOLD_CYCLES+1) : 1;
+    reg [COUNT_WIDTH-1:0] count=0;
+    reg release_pending=0;
+    wire [COUNT_WIDTH-1:0] next_count;
+    generate if(COUNT_WIDTH>8)begin:split_counter
+        // Predict the low-byte carry one cycle ahead. At count xxFF this
+        // registered flag is already set, so the upper increment never
+        // waits for the low-byte carry chain. Stall/reset with the counter.
+        reg carry=0;
+        always @(posedge clk or negedge reset_n)begin
+            if(!reset_n)carry<=0;
+            else if(!system_ready)carry<=0;
+            else if(!cpu_release && count<HOLD_CYCLES)
+                carry<=count[7:0]==8'hfe;
+        end
+        assign next_count[7:0]=count[7:0]+1'b1;
+        assign next_count[COUNT_WIDTH-1:8]=count[COUNT_WIDTH-1:8]+carry;
+    end else begin:short_counter
+        assign next_count=count+1'b1;
+    end endgenerate
+    always @(posedge clk or negedge reset_n)begin
+        if(!reset_n)begin
+            count<=0;release_pending<=0;cpu_release<=0;
+        end else if(!system_ready)begin
+            count<=0;release_pending<=0;cpu_release<=0;
+        end else if(!cpu_release)begin
+            if(count<HOLD_CYCLES)count<=next_count;
+            else release_pending<=1;
+            if(release_pending && e_fall)cpu_release<=1;
+        end
+    end
 endmodule

@@ -64,6 +64,11 @@ test-data-bus:
  $(addprefix timing-,$(VIDEO_MODES)) $(addprefix program-,$(VIDEO_MODES)) \
  $(addprefix reprogram-,$(VIDEO_MODES))
 .PHONY: test-ssc-toggle
+.PHONY: test-reset-hold
+
+test-reset-hold:
+	iverilog -g2012 -s tb_cpu_reset_hold -o /private/tmp/cocotang_tb_reset_hold tests/tb_cpu_reset_hold.sv src/top_coco3.v
+	vvp /private/tmp/cocotang_tb_reset_hold
 
 build: $(OUTPUT)
 
