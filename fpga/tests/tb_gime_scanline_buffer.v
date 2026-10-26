@@ -419,6 +419,33 @@ module tb_gime_scanline_buffer;
   end
   dut.h_pending=0;release dut.state;
 
+  // A replacement pointer may still name the displayed bank after a
+  // prefetched entry was invalidated. Keep protecting that bank in HBORD:
+  // the second HDMI copy of the current row has not necessarily run yet.
+  @(negedge clk);
+  force dut.state=5'd0;force dut.configuration_pending=0;
+  force dut.hd_v_s=0;force dut.hd_pa_s=1;force dut.hd_y_s=8'd31;
+  force dut.h_valid0=1;force dut.h_tag0=8'd31;force dut.h_valid1=0;
+  force dut.h_next_bank=0;
+  dut.h_pending=1;dut.h_pending_y=8'd32;dut.coalesce_count=7;
+  @(posedge clk);#1;
+  if(dut.fill_h_bank!==1)begin
+   $display("HDMI HBORD fill replaced displayed bank 0");errors=errors+1;
+  end
+  @(negedge clk);
+  force dut.h_valid0=0;force dut.h_valid1=1;force dut.h_tag1=8'd31;
+  force dut.h_next_bank=1;
+  dut.h_pending=1;dut.h_pending_y=8'd32;dut.coalesce_count=7;
+  @(posedge clk);#1;
+  if(dut.fill_h_bank!==0)begin
+   $display("HDMI HBORD fill replaced displayed bank 1");errors=errors+1;
+  end
+  dut.h_pending=0;dut.coalesce_count=0;
+  release dut.h_next_bank;release dut.h_tag1;release dut.h_tag0;
+  release dut.h_valid1;release dut.h_valid0;
+  release dut.hd_y_s;release dut.hd_pa_s;release dut.hd_v_s;
+  release dut.configuration_pending;release dut.state;
+
   // Scrolling writes commonly dirty the row which has already been
   // prefetched while the preceding row is being shown twice by HDMI.  Keep
   // that immutable row for this raster pass instead of immediately

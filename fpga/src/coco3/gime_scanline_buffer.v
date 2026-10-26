@@ -1,7 +1,7 @@
 // Unified CoCo 3 scanline renderer. Mode decoding and row addressing follow
 // the MiSTer/Gary Becker CoCo3FPGA core. Native video renders live scanlines;
 // compatibility graphics retain beam-time raw bytes and CSS for scanout.
-module gime_scanline_buffer (
+module gime_scanline_buffer #(parameter integer CVBS_REGISTERED_READ_ADDRESS=0) (
  input clk,input reset_n,input bit_plane,input [3:0] hres,input [1:0] cres,
  input [7:0] active_height,
  input [2:0] lines_per_row_code,input [3:0] vertical_scroll,
@@ -31,6 +31,7 @@ module gime_scanline_buffer (
  output reg [5:0] hdmi_vertical_right_border_data,
  output reg hdmi_vertical_border_valid,
  input cvbs_read_clk,input [9:0] cvbs_read_x,input [7:0] cvbs_display_y,
+ input [9:0] cvbs_read_address,
  input cvbs_display_valid,input [7:0] cvbs_prefetch_y,input cvbs_prefetch_valid,
  input [8:0] cvbs_border_raster_y,
  output reg [5:0] cvbs_pixel_data,output reg [5:0] cvbs_border_data,
@@ -923,8 +924,8 @@ reg configuration_pending=1'b1;
      // from the left edge until the fill catches scanout.
      fill_h_bank<=(h_valid0&&h_tag0==h_pending_y)?0:
                   (h_valid1&&h_tag1==h_pending_y)?1:
-                  (hd_v_s&&h_valid0&&h_tag0==hd_y_s)?1:
-                  (hd_v_s&&h_valid1&&h_tag1==hd_y_s)?0:h_next_bank;
+                  (hd_pa_s&&h_valid0&&h_tag0==hd_y_s)?1:
+                  (hd_pa_s&&h_valid1&&h_tag1==hd_y_s)?0:h_next_bank;
      fill_c_bank<=(c_valid0&&c_tag0==h_pending_y)?0:
                   (c_valid1&&c_tag1==h_pending_y)?1:
                   (c_valid2&&c_tag2==h_pending_y)?2:c_replacement_bank_q;
@@ -1267,11 +1268,12 @@ reg configuration_pending=1'b1;
  reg [1:0] c_read_bank=0;
  reg c_read_valid=0;
  reg [9:0] c_read_addr=0;
- wire [9:0] c_next_read_addr=cvbs_display_valid ?
+ wire [9:0] c_next_read_addr=CVBS_REGISTERED_READ_ADDRESS ? cvbs_read_address : cvbs_display_valid ?
         (cvbs_read_x==10'd639 ? 10'd639 : cvbs_read_x+1'b1) : 10'd0;
  // The prefetch after pixel 639 is already in blanking. Let its low address
  // wrap so the last-pixel clamp stays off the LUT-RAM read path.
- wire [5:0] c_next_page_addr=cvbs_display_valid ? cvbs_read_x[5:0]+6'd1 : 6'd0;
+ wire [5:0] c_next_page_addr=CVBS_REGISTERED_READ_ADDRESS ? cvbs_read_address[5:0] :
+        cvbs_display_valid ? cvbs_read_x[5:0]+6'd1 : 6'd0;
  genvar cvbs_page;
  generate for(cvbs_page=0;cvbs_page<10;cvbs_page=cvbs_page+1)begin:cvbs_pages
   (* syn_ramstyle = "distributed_ram" *) reg [5:0] line0[0:63],line1[0:63],line2[0:63];

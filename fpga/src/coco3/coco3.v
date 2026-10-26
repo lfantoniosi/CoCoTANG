@@ -4,7 +4,8 @@
 module coco3 #(
     parameter integer DEBUG_S2_VIDEO_MODE = 0,
     parameter integer DISTO_2MB = 0,
-    parameter integer NOCAN3_8MB = 0
+    parameter integer NOCAN3_8MB = 0,
+    parameter integer CVBS_REGISTERED_READ_ADDRESS = 0
 ) (
     input             clk,
     input             reset_n,
@@ -74,6 +75,7 @@ module coco3 #(
     input             hdmi_active_50hz,
     input       [8:0] hdmi_border_raster_y,
     input             cvbs_read_clk,
+    input       [9:0] cvbs_read_address,
     input       [9:0] cvbs_source_x,
     input       [7:0] cvbs_source_y,
     input             cvbs_source_valid,
@@ -371,7 +373,7 @@ module coco3 #(
         .renderer_valid(renderer_memory_valid),
         .memory_request(video_memory_request),.memory_addr(video_memory_addr),
         .memory_valid(video_memory_valid),.memory_data(video_memory_data32));
-    gime_scanline_buffer scanlines (
+    gime_scanline_buffer #(.CVBS_REGISTERED_READ_ADDRESS(CVBS_REGISTERED_READ_ADDRESS)) scanlines (
         .clk(clk),.reset_n(core_reset_n),
         .bit_plane(effective_bit_plane),
         .hres(effective_hres),
@@ -420,6 +422,7 @@ module coco3 #(
         .hdmi_active_50hz(hdmi_active_50hz),
         .hdmi_border_raster_y(hdmi_border_raster_y),
         .cvbs_read_clk(cvbs_read_clk),.cvbs_read_x(cvbs_source_x),
+        .cvbs_read_address(cvbs_read_address),
         .cvbs_display_y(cvbs_source_y),.cvbs_display_valid(cvbs_source_valid),
         .cvbs_prefetch_y(cvbs_prefetch_y),.cvbs_prefetch_valid(cvbs_prefetch_valid),
         .cvbs_border_raster_y(cvbs_border_raster_y),

@@ -175,6 +175,9 @@ module top_coco3 #(
     wire [7:0] cvbs_source_y_raw,cvbs_prefetch_y_raw;
     wire cvbs_source_valid_raw,cvbs_prefetch_valid_raw;
     reg [9:0] cvbs_source_x=0;
+    reg [9:0] cvbs_read_address=0;
+    wire [9:0] cvbs_request_x={cvbs_source_x_raw[9:1],
+                              cvbs_source_x_raw[0] && !cvbs_last_request};
     reg [7:0] cvbs_source_y=0,cvbs_prefetch_y=0;
     reg cvbs_source_valid=0,cvbs_prefetch_valid=0;
     reg [7:0] cpu_write_data=8'hff;
@@ -255,7 +258,8 @@ module top_coco3 #(
     wire gime_keyint_n=!mux_keyint_n;
     wire gime_serint_n=!mux_sernt_n;
 
-    coco3 #(.DISTO_2MB(DISTO_2MB),.NOCAN3_8MB(NOCAN3_8MB)) machine(
+    coco3 #(.DISTO_2MB(DISTO_2MB),.NOCAN3_8MB(NOCAN3_8MB),
+        .CVBS_REGISTERED_READ_ADDRESS(1)) machine(
         .clk(clk108),.reset_n(board_reset_n),
         .cpu_reset_n(cpu_release),
         .s2(1'b0),.artifact_mode(artifact_mode_video),
@@ -298,6 +302,7 @@ module top_coco3 #(
         .hdmi_active_50hz(hdmi_video_50hz),
         .hdmi_border_raster_y(hdmi_border_raster_y),
         .cvbs_source_x(cvbs_source_x),.cvbs_source_y(cvbs_source_y),
+        .cvbs_read_address(cvbs_read_address),
         .cvbs_source_valid(cvbs_source_valid),
         .cvbs_prefetch_y(cvbs_prefetch_y),
         .cvbs_prefetch_valid(cvbs_prefetch_valid),
@@ -810,14 +815,15 @@ module top_coco3 #(
         if(!board_reset_n) begin
             cvbs_source_x<=0;cvbs_source_y<=0;cvbs_source_valid<=0;
             cvbs_prefetch_y<=0;cvbs_prefetch_valid<=0;
-            cvbs_last_request<=0;
+            cvbs_last_request<=0;cvbs_read_address<=0;
         end else begin
             // Arm at 638 before the final dot's request reaches this stage.
             // Both 638 and 640 have a zero LSB, so the one-clock flag delay
             // changes only request 639. Leave the line RAM read path intact.
             cvbs_last_request<=cvbs_source_x_raw[9:1]==9'd319;
-            cvbs_source_x<={cvbs_source_x_raw[9:1],
-                cvbs_source_x_raw[0] && !cvbs_last_request};
+            cvbs_source_x<=cvbs_request_x;
+            cvbs_read_address<=cvbs_source_valid_raw ?
+                (cvbs_request_x==10'd639 ? 10'd639 : cvbs_request_x+1'b1) : 10'd0;
             cvbs_source_y<=cvbs_source_y_raw;
             cvbs_source_valid<=cvbs_source_valid_raw;
             cvbs_prefetch_y<=cvbs_prefetch_y_raw;
