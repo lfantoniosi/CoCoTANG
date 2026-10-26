@@ -1,0 +1,11 @@
+{
+  "src/cvbs/minimal_top_coco3.v": "e1e4c745c0a9a05eb3d98db78b91b698569d6e2033651c333feda50f15b39253",
+  "src/cvbs/video/coco_cvbs_ntsc_lut.v": "1f884074be497f446b70aef5021a6146feb72d86f3fe4503f75fcd8dfba4c9a6",
+  "CoCoTANG-cvbs-minimal.gprj": "bc105b0b20e630961a60f931c23944706a591d2ad161a93f1a055112ae2d8de4",
+  "scripts/build.tcl": "8cabbb07a866e37a4cd25d2ea6b8b481946a6ab64be1bb79c0a09f05f3d869e1",
+  "impl/pnr/cvbs-video-only-test.fs": "838b58b4553802227d5159b54326c944f450e75dcee9e0dbf513b559f4568891",
+  "base_commit": "882a256e9cf870a4acf67c544424ebb3c6a52d80",
+  "hardware_confirmation": "User confirmed cvbs-video-only-test.fs works on 2026-10-26 after boot/Boink test request.",
+  "configuration_payload_sha256": "0a91d426eae89dc50e47e4693a00b1734fff27c34dc927b5b0c614b4863780dd",
+  "normal_cvbs_rebuild": "Confirmed identical configuration payload after normal-target promotion."
+}

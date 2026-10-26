@@ -189,6 +189,12 @@ Use **two jumper wires**, one from each lifted pin, to connect the joystick seco
 
 While the CPU is removed, you can replace the MC6809E with an HD6309E. NitrOS-9 supports the HD6309's native mode, and compatible applications can use its additional instructions. Choose the disk image that matches your installed CPU.
 
+## Audio / Video
+
+CoCoTANG Audio/Video board can be assembled on the same place as the RF module and it has a 5-pin din output. 
+You can use a cable like [this](https://www.aliexpress.com/item/1005003227813806.html) (use the 5-pin version) to connect into a RGB monitor or Composite / S-Video. For S-Video you can use [this](https://www.aliexpress.com/item/1005005067988142.html) Y cable to connect to the mini-din 4.
+
+
 ## Preparing the microSD card
 
 Download the appropriate CPU version of the [CF disk image](https://drive.google.com/file/d/1-FzbW95mYzfBBA8JGILCE1EUJpi1Im-F/view?usp=sharing) and write it to the microSD card used by CoCoTANG. These images require HDB-DOS, supplied by the optional cartridge or another supported ROM source.

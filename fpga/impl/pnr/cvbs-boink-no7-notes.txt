@@ -1,0 +1,8 @@
+Diagnostic candidate: #7 field-phase alignment disabled; all other CVBS timing fixes retained.
+Built in /private/tmp/cocotang-cvbs-boink-no-phase7/fpga from the same RTL as src/cvbs.
+RGB shared source/project/placement remain unchanged.
+108.102 / 135.369 / 323.740 MHz: all clocks pass.
+Boink hardware confirmation pending.
+Flash: openFPGALoader -b tangnano20k -f impl/pnr/cvbs-boink-no7.fs
+The working-directory rebuild from the same RTL misses timing (106.314 / 134.291 MHz).
+Use the explicitly named preserved image for the diagnostic; do not replace it with that rebuild.

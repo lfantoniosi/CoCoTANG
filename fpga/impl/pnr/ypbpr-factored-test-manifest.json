@@ -1,0 +1,25 @@
+{
+  "src/ypbpr/minimal_top_coco3.v": "134a08353236433ffb5b69fa1b1cb56c9592f7d6fd82821e9aeba340dae64f3b",
+  "src/ypbpr/video/coco_cvbs_ntsc_lut.v": "b37d1edb2465aea9e9b232c980d94db9c2256ad369e1e877d1c239f14cd6dabf",
+  "src/ypbpr/build_options.json": "3931cc4aa5c53a3f686a19a51848a98762f9014b2e8d11e5e5b2d2dfc2e18978",
+  "CoCoTANG-ypbpr-analog.gprj": "18ef93455ec36e214870aa0903ec6027d561a7dfa146ed0b553474a529ff9023",
+  "scripts/build.tcl": "8cabbb07a866e37a4cd25d2ea6b8b481946a6ab64be1bb79c0a09f05f3d869e1",
+  "Makefile": "5689a720ca2a85c1e271a5f3d2c0af33e4183fc533158239cd9cc15f8b805f16",
+  "tests/check_ypbpr_project.py": "898406f990d3510aa1e566c7341028bbcac50d5640f4a53d7ea12ed01729f08b",
+  "tests/tb_ypbpr_isolated.sv": "1ba9300447fd4430eb460c0a06c42c525f81366f35ece38ed92523ed2616acdf",
+  "tests/tb_ypbpr_dac_equivalence.sv": "95a9bf15b9bbacb0b96724cf09756c54a9b6f8c28ac754b3117c548eba68535b",
+  "impl/pnr/ypbpr-factored-test.fs": "f65abaab71351fd12cad42da0f1115bb17a2ebc4e7eef46b6e7b4c705e1d8038",
+  "base_commit": "f9cb379f426daa68a24dbf3e76e6027f413c04a9",
+  "placement_options": {
+    "Place_Option": "1",
+    "Route_Option": "1",
+    "Replicate_Resources": true,
+    "Route_Maxfan": 16
+  },
+  "hardware_status": "Hardware-confirmed by user: very stable colors and Boink runs successfully on the factored YPbPr candidate (2026-10-26).",
+  "timing_mhz": {
+    "clk108": 108.114,
+    "clk135": 146.944,
+    "clk270": 307.572
+  }
+}

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE gowin-synthesis-project>
+<Project>
+    <Version>beta</Version>
+    <Device id="GW2AR-18C" package="QFN88" speed="8" partNumber="GW2AR-LV18QN88C8/I7"/>
+    <FileList>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/gowin_rpll/clk108.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/gowin_rpll/clk270.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco_clocks.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco_startup.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/bus/input_filter.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/bus/coco_bus_mux.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/audio/coco_orchestra90.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/audio/coco_ssc_psg.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/audio/coco_ssc_tts.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/audio/coco_ssc_tts_rom.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/audio/coco_ssc_speech.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/ssc_speech/controller.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/ssc_speech/ctrlrom.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/ssc_speech/filter.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/ssc_speech/pwmdac.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/ssc_speech/source.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/ssc_speech/speech256_top.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/ssc_speech/spmul.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/ssc_speech/xlat.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/audio/coco_psg_mix.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/jt49/jt49.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/jt49/jt49_cen.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/jt49/jt49_div.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/jt49/jt49_eg.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/jt49/jt49_exp.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/third_party/jt49/jt49_noise.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/audio/coco_pia1_dac.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/sigma_delta_dac.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/spi_flash_reader.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_flash_loader.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco_sdram_startup_test.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/sdram.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/cpu_sdram_arbiter.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/memory/coco3_memory.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/sd_spi_block.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/glenside_sector_buffer.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/glenside_ata.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/storage/glenside_ide.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/mc6847_char_rom.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/coco3_char_rom.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/debug/gime_timing_trace.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_registers.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_mode_debug.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/ntsc_artifact_decode.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_scanline_buffer.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/gime_native_video.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/coco3/coco3.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/debug/cpu_bus_logger.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco_cvbs_ntsc.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/audio_clock_regeneration_packet.sv" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/audio_info_frame.sv" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/audio_sample_packet.sv" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/auxiliary_video_information_info_frame.sv" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/source_product_description_info_frame.sv" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/packet_assembler.sv" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/packet_picker.sv" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/tmds_channel.sv" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/hdmi.sv" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi/serializer.sv" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/hdmi_debug_overlay.sv" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/artifact_mode_osd.sv" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/coco3_hdmi.sv" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/video/artifact_mode_control.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3_orchestra90.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3_debug.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3_pal.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3_ntsc_svideo.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3_rgb.v" type="verilog"/>
+        <File path="/Users/felipe/src/fpga/CoCoTANG/fpga/src/top_coco3_ypbpr.v" type="verilog"/>
+    </FileList>
+    <OptionList>
+        <Option type="disable_insert_pad" value="0"/>
+        <Option type="global_freq" value="100.000"/>
+        <Option type="looplimit" value="2000"/>
+        <Option type="output_file" value="/Users/felipe/src/fpga/CoCoTANG/fpga/impl/gwsynthesis/CoCoTANG-debug.vg"/>
+        <Option type="print_all_synthesis_warning" value="0"/>
+        <Option type="ram_rw_check" value="0"/>
+        <Option type="top_module" value="top_coco3_debug"/>
+        <Option type="vcc" value="1.0"/>
+        <Option type="verilog_language" value="sysv-2017"/>
+        <Option type="vhdl_language" value="vhdl-1993"/>
+    </OptionList>
+</Project>

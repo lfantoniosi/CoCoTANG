@@ -1,0 +1,9 @@
+Hardware confirmation: user reported cvbs-video-only-test.fs works on 2026-10-26 after boot/Boink test request.
+Exact preserved image: stable-cvbs.fs
+Source archive: stable-cvbs-source.tar.gz
+Hashes and original shared-source commit: stable-cvbs-manifest.json
+Build identity: CoCoTANG-cvbs-minimal.gprj / top_coco3_ntsc_svideo / CoCoTANG-cvbs-minimal
+#7 field-phase alignment is disabled. All shared CPU, memory, peripheral and HDMI logic remains original.
+All clocks pass; clk108=108.036 MHz, clk135=141.809 MHz, clk270=278.944 MHz. Tight clk108 margin.
+No placement options changed. RGB FPGA payload remains approved D.
+Normal make rebuild-cvbs reproduced the exact confirmed configuration payload. Regression suite make test-cvbs passed.

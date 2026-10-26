@@ -1,0 +1,10 @@
+CVBS video-only diagnostic; hardware confirmation pending.
+Only two source substitutions from CoCoTANG-pal.gprj: analog encoder and analog read-address wiring in top.
+CPU, SDRAM, SSC, IDE, GIME, HDMI and placement options unchanged.
+CVBS smoothing/notch/chroma filters disabled; #7 field alignment remains disabled.
+Horizontal sample/read counters replace combinational scaling; RGB222 conversion uses exact lookup tables.
+Original S-Video Y/C and raster requests match bit-for-bit across NTSC/PAL native/compatibility and 192/199/225 heights. Unfiltered original CVBS also matches bit-for-bit.
+108=108.036 MHz (very tight margin),135=141.809 MHz,270=278.944 MHz; all clocks pass, setup/hold violations=0.
+Approved RGB configuration still identical to rgb-accuracy-d.fs.
+Flash: openFPGALoader -b tangnano20k -f impl/pnr/cvbs-video-only-test.fs
+Full power cycle afterward. No hardware stability claim.

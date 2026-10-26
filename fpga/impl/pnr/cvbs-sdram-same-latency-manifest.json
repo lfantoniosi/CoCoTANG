@@ -1,0 +1,13 @@
+{
+  "src/cvbs/top_coco3.v": "4ee0aad8507143b7c9146ca58e505694ad0be4749b3e9d4eca54dad8a3fa0589",
+  "src/cvbs/memory/sdram.v": "24127333614b40f8720bfc7cb0bf241f36da7f045550dccddd6e5574d262d9e6",
+  "src/cvbs/video/coco_cvbs_ntsc.v": "bc2c9d3b830d20894a833891b823faa9ccd15c5a572b98997cd64ca02b69a17d",
+  "src/cvbs/storage/glenside_ide.v": "2acc4c63d271b1b16d0a82a2338c5cea62133d272e908123aab40e962bfcc50d",
+  "src/cvbs/storage/glenside_ata.v": "bb6935258e09db85fe9c2dfce9f0fb5cccd13525c8fb61bb73dbe628bbe4b40e",
+  "src/cvbs/audio/coco_ssc_psg.v": "a463f6fa31f60d613baeb107dce6357a9eb202199fcceb90d23103af2579a3f6",
+  "src/cvbs/audio/coco_ssc_speech.v": "8b300d680ec82d8a836865895c117d79ed12279fa37366dcd5b7336e8da0875f",
+  "src/cvbs/audio/coco_ssc_tts.v": "380cf283d244e6b76413316af6befd9e42bb9e851c2042847d2581d117e3dbb0",
+  "CoCoTANG-cvbs-memory-test.gprj": "e8c02e620cc4179ec5eedbbf4ea47ab818942c6f3753f69025cf237f3104ad2e",
+  "scripts/build.tcl": "8cabbb07a866e37a4cd25d2ea6b8b481946a6ab64be1bb79c0a09f05f3d869e1",
+  "impl/pnr/cvbs-sdram-same-latency.fs": "53e638280d14359708f1fb4789f9a1ebccca5501ce0e60de02c1093915b3d83d"
+}

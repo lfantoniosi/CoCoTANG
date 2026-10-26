@@ -1,0 +1,34 @@
+RGB accuracy alternatives based on committed 15808b3.
+All retain #4/#8/#9, add the cycle-verified #5/#6 countdown implementation,
+and keep SSC enabled. No placement/routing/fanout settings were changed.
+
+A: SSC RAM writes registered. Timing FAILED (108:92.308, 135:111.369 MHz).
+B: A plus analog read-ahead arithmetic moved into existing input stage.
+   Timing PASSED (108:108.023, 135:135.662 MHz).
+C: B plus protect the displayed HDMI bank through horizontal blanking (#3).
+   Timing PASSED (108:108.047, 135:135.103 MHz).
+D: C with original, unmodified SSC implementation.
+   Timing PASSED (108:108.083, 135:135.067 MHz).
+
+Suggested hardware order: D, C, B. A is saved only as a rejected comparison.
+Power-cycle after flashing each image. Check boot, Boink on both displays,
+PMODE3 on HDMI, Dragon Fire, and the analog right edge during horizontal scroll.
+Reported clock passes do not establish hardware stability.
+
+Validation:
+- Pixel/sync cadence equivalent to the original #5/#6 implementation.
+- Analog read retiming produces identical pixels with unchanged cycle latency.
+- HDMI blanking-bank regression fails without #3 and passes with #3.
+- PMODE3: 192 rows in each of two field alignments; both HDMI copies checked.
+- Shared renderer, compatibility font and SG4/SG6 regression passes.
+- SSC PSG and speech regressions pass with registered writes.
+
+Source snapshots: /private/tmp/cocotang-accuracy-{a,b,c,d}/fpga
+Each image has an adjacent timing HTML and a patch against 15808b3.
+No alternatives have been committed or merged into the normal core.
+
+Image SHA256 values:
+rgb-accuracy-a.fs 81568080ca6f360c600c4069e280a1b606457d3f80f5c74b388aa9f817c46298
+rgb-accuracy-b.fs 62f1bdc8bbb77cf84fc74bc52e6a29cb2063b27fae1319479a4cd220b3ec3b90
+rgb-accuracy-c.fs f3f6f1f953e7652ba7b665fbd079dc1b8f1db894ba7f242fe10ee38d1e4594e8
+rgb-accuracy-d.fs 03db87b5c94844796ac214015c8b8a63df37e64586617b41d32c0e0b617cd286

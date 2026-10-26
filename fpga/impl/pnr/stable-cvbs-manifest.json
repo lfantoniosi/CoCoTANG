@@ -1,0 +1,12 @@
+{
+  "src/cvbs/minimal_top_coco3.v": "a666973fc133627a584db02f3ca76da4cbe038692883b4af23e42709a8409a13",
+  "src/cvbs/video/coco_cvbs_ntsc_lut.v": "05b42fe34b1e89c468ab9261fb06526439230e971c773e617641fc078ccb5744",
+  "CoCoTANG-cvbs-minimal.gprj": "bc105b0b20e630961a60f931c23944706a591d2ad161a93f1a055112ae2d8de4",
+  "scripts/build.tcl": "8cabbb07a866e37a4cd25d2ea6b8b481946a6ab64be1bb79c0a09f05f3d869e1",
+  "impl/pnr/cvbs-phase7-test.fs": "f56ea88372645085fd0aa775b30426b1e916aedf70608ab705037dd9ebd5085f",
+  "baseline_configuration_sha256": "0a91d426eae89dc50e47e4693a00b1734fff27c34dc927b5b0c614b4863780dd",
+  "hardware_status": "User confirmed #7 CVBS phase-alignment image works on 2026-10-26.",
+  "base_commit": "882a256e9cf870a4acf67c544424ebb3c6a52d80",
+  "configuration_payload_sha256": "3dd3c0cf0e7e9173d9a90bd23d8969e50d455c09b7a3423d0e5b02ebae83f06b",
+  "previous_confirmed_image": "impl/pnr/stable-cvbs-before-phase7.fs"
+}

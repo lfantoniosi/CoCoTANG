@@ -1,0 +1,39 @@
+PAL-only timing implementation: hardware-confirmed on 2026-10-26
+
+CoCoTANG-pal-analog.gprj replaces two sources from the original shared project.
+RGB/YPbPr keep CoCoTANG-pal.gprj; CVBS keeps its approved project and sources.
+CPU, SDRAM, SSC, IDE, GIME, IRQ and HDMI logic are unchanged.
+
+The analog path uses the approved CVBS counter/read-address and RGB222 lookup
+improvements. Composite smoothing is disabled; NTSC field alignment is off.
+PAL DDS frequency, alternating V phase, swinging burst and S-Video waveform
+are preserved. Existing PAL-chroma/machine-clock behavior is unchanged.
+
+The current PAL encoder selects line inversion with carrier phase bits and
+uses five-bit chroma sign arithmetic with exact fractional rounding. It
+preserves the original eleven-bit wrap and register latency. All 65536 signed
+operand/phase combinations match the original arithmetic; full waveform
+comparisons cover both raster standards, native/compatibility geometry and
+192/199/225-line modes. PAL carrier/line inversion tests pass.
+
+build_options.json preserves the previous PAL placement settings: place1,
+route1, replication=true, maxfan16. No other builds load this configuration.
+
+Build: make pal-rebuild
+Timing: make pal-timing
+Tests: make test-pal
+Confirmed baseline: impl/pnr/stable-pal.fs
+Original tested image: impl/pnr/pal-narrow-phase-test.fs
+108=108.224 MHz, 135=138.553 MHz, 270=279.161 MHz. All clocks pass;
+setup/hold violated endpoints=0. The user confirmed this image works after testing the replacement for the
+PAL build that corrupted Boink on both displays.
+
+Flash the confirmed baseline and fully power-cycle the CoCo:
+openFPGALoader -b tangnano20k -f impl/pnr/stable-pal.fs
+
+Rejected candidates:
+- pal-isolated-test.fs passed timing but corrupted Boink on both outputs.
+- phase mapping alone missed 108/135 timing (99.616/133.211 MHz).
+- phase mapping with a wide selected sign missed timing (99.309/124.600 MHz).
+- narrow sign with original PAL inversion missed timing (104.703/134.716 MHz).
+These failures do not establish the cause of the hardware corruption.

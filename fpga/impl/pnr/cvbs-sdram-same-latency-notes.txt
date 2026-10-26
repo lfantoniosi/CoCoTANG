@@ -1,0 +1,9 @@
+REJECTED ON HARDWARE: crashes on boot.
+CVBS diagnostic; hardware confirmation pending. #7 disabled.
+Falling-edge SDRAM data/ready capture with registered command; original busy and arbiter acknowledgement cycles retained.
+Original and revised controllers: 24-request arbiter integration completes at 3546580ps for both.
+Full225-line cache tests with real memory front end, arbiter and CPU E/Q traffic pass at slow/fast speeds for both controllers. These do not reproduce hardware corruption.
+108=108.835 MHz,135=139.330 MHz,270=303.224 MHz; all clocks pass, setup/hold violations=0.
+RGB shared RTL, project, build settings and saved FPGA configuration unchanged.
+Flash: openFPGALoader -b tangnano20k -f impl/pnr/cvbs-sdram-same-latency.fs
+Power-cycle after flashing.

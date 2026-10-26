@@ -1,0 +1,25 @@
+{
+  "src/pal/minimal_top_coco3.v": "134a08353236433ffb5b69fa1b1cb56c9592f7d6fd82821e9aeba340dae64f3b",
+  "src/pal/video/coco_cvbs_ntsc_lut.v": "6a17e4cf0dda5543707d4cd8e0ab7deae418e01892aaa70b5beb7b2dfcab1e2c",
+  "src/pal/build_options.json": "62162798978a981b5511238c5ccc5f0c1fd3f6951dbe8d4a35ddb8b9a3b7eed0",
+  "CoCoTANG-pal-analog.gprj": "2ee605613d811c6894dfee91d1d7f53134310c49ed509895efdae7bb4e314a7b",
+  "scripts/build.tcl": "8cabbb07a866e37a4cd25d2ea6b8b481946a6ab64be1bb79c0a09f05f3d869e1",
+  "Makefile": "90a9c9fc6f63e2fe07f35ace94ac380e79df3c3f0da6df8fa3755321147d4e53",
+  "tests/check_pal_project.py": "b67fdd154f7318a2baf49a738befaf0ac57fe2769065e4506472f39a5440fd3c",
+  "tests/tb_pal_isolated.sv": "094affe0d784850f50de5579f2509bebd0a1bb3aeff16f67b73336d2576b3c1a",
+  "impl/pnr/pal-narrow-phase-test.fs": "089fb99ab2dd6b3de5b45f2d3acf4837a44801cf6bb1548e42328a30d62ab721",
+  "base_commit": "16de248cf58ad694e84e9912c9a57249087b00fa",
+  "placement_options": {
+    "Place_Option": "1",
+    "Route_Option": "1",
+    "Replicate_Resources": true,
+    "Route_Maxfan": 16
+  },
+  "hardware_status": "Confirmed by user on 2026-10-26: this candidate works after the prior PAL build corrupted Boink on both displays.",
+  "timing_mhz": {
+    "clk108": 108.224,
+    "clk135": 138.553,
+    "clk270": 279.161
+  },
+  "impl/pnr/stable-pal.fs": "089fb99ab2dd6b3de5b45f2d3acf4837a44801cf6bb1548e42328a30d62ab721"
+}

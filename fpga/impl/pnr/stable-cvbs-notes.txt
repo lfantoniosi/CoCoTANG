@@ -1,0 +1,7 @@
+User confirmed #7 CVBS phase-alignment image works on 2026-10-26.
+#7 composite-only phase alignment enabled; underlying DDS and S-Video Y/C remain continuous.
+Shared chroma-matrix result reused with exact fractional rounding.
+clk108=108.074 MHz,clk135=136.898 MHz,clk270=301.752 MHz; all clocks pass; setup/hold violations=0.
+RGB source/project/FPGA payload unchanged from approved D. Placement settings unchanged.
+Normal CVBS/S-Video build/program targets select this confirmed source/project.
+Previous confirmed image: stable-cvbs-before-phase7.fs

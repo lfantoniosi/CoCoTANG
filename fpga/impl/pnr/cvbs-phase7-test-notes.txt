@@ -1,0 +1,8 @@
+Composite-only field-phase alignment enabled on confirmed CVBS video-only baseline.
+S-Video DDS/carrier and Y/C waveform continuous; raster/HDMI/CPU/peripherals unchanged.
+Shared chroma matrix with exact fractional-rounding correction.
+clk108=108.074 MHz,clk135=136.898 MHz,clk270=301.752 MHz; all clocks pass, setup/hold violations=0.
+RGB shared source/project and saved FPGA payload remain approved D.
+Hardware validation pending. Rollback remains stable-cvbs.fs (phase alignment off).
+Flash: openFPGALoader -b tangnano20k -f impl/pnr/cvbs-phase7-test.fs
+Full power cycle afterward, then test boot/Boink and stationary composite pattern.

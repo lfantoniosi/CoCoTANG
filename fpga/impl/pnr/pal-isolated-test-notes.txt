@@ -1,0 +1,10 @@
+Isolated PAL analog encoding candidate; hardware confirmation pending.
+Two source substitutions only; original CPU/SDRAM/SSC/IDE/GIME/HDMI logic unchanged.
+Horizontal/read counters, RGB222 LUT conversion, no composite smoothing filters.
+Original PAL DDS, line phase inversion and swinging burst preserved; NTSC field alignment disabled.
+Original PAL placement settings preserved: place1,route1,replicate=true,maxfan16.
+108=108.257MHz,135=139.817MHz,270=302.990MHz; all clocks pass; setup/hold violations=0.
+PAL S-Video waveforms and raster requests match original for native/compatibility modes, both raster standards and 192/199/225-line geometry. Unfiltered composite output also matches exactly.
+RGB and confirmed CVBS configuration payloads and sources unchanged.
+Flash: openFPGALoader -b tangnano20k -f impl/pnr/pal-isolated-test.fs
+Full power cycle afterward. Existing PAL-chroma/NTSC-machine clock behavior is unchanged.

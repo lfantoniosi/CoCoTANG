@@ -1,0 +1,6 @@
+REJECTED ON HARDWARE: Boink corrupted; HDMI scanlines missing. #7 disabled.
+Later SDRAM input capture + CPU read-source selection from atomic address event.
+All clocks pass: 108=111.383,135=136.778,270=306.304 MHz.
+Normal RGB uses approved shared source and FPGA payload.
+Flash: openFPGALoader -b tangnano20k -f impl/pnr/cvbs-memory-capture-test.fs
+Power-cycle the CoCo before testing boot, BASIC, Boink and PMODE.

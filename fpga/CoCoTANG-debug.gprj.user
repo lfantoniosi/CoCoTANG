@@ -1,0 +1,27 @@
+<?xml version="1" encoding="UTF-8"?>
+<!DOCTYPE ProjectUserData>
+<UserConfig>
+    <Version>1.0</Version>
+    <FlowState>
+        <Process ID="Synthesis" State="2"/>
+        <Process ID="Pnr" State="2"/>
+        <Process ID="Gao" State="2"/>
+        <Process ID="Rtl_Gao" State="2"/>
+        <Process ID="Gvio" State="0"/>
+        <Process ID="Place" State="2"/>
+    </FlowState>
+    <ResultFileList>
+        <ResultFile ResultFileType="RES.netlist" ResultFilePath="impl/gwsynthesis/CoCoTANG-debug.vg"/>
+        <ResultFile ResultFileType="RES.pnr.bitstream" ResultFilePath="impl/pnr/CoCoTANG-debug.fs"/>
+        <ResultFile ResultFileType="RES.pnr.pin.rpt" ResultFilePath="impl/pnr/CoCoTANG-debug.pin.html"/>
+        <ResultFile ResultFileType="RES.pnr.posp.bin" ResultFilePath="impl/pnr/CoCoTANG-debug.db"/>
+        <ResultFile ResultFileType="RES.pnr.pwr.rpt" ResultFilePath="impl/pnr/CoCoTANG-debug.power.html"/>
+        <ResultFile ResultFileType="RES.pnr.report" ResultFilePath="impl/pnr/CoCoTANG-debug.rpt.html"/>
+        <ResultFile ResultFileType="RES.pnr.timing.paths" ResultFilePath="impl/pnr/CoCoTANG-debug.timing_paths"/>
+        <ResultFile ResultFileType="RES.pnr.timing.rpt" ResultFilePath="impl/pnr/CoCoTANG-debug.tr.html"/>
+        <ResultFile ResultFileType="RES.syn.report" ResultFilePath="impl/gwsynthesis/CoCoTANG-debug_syn.rpt.html"/>
+        <ResultFile ResultFileType="RES.syn.resource" ResultFilePath="impl/gwsynthesis/CoCoTANG-debug_syn_rsc.xml"/>
+    </ResultFileList>
+    <Ui></Ui>
+    <FpUi></FpUi>
+</UserConfig>

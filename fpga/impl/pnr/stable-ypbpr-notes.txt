@@ -1,0 +1,73 @@
+YPbPr-only analog timing work: hardware-confirmed baseline
+
+The separate CoCoTANG-ypbpr-analog.gprj substitutes only the top and encoder
+from src/ypbpr/. RGB, CVBS and PAL retain their confirmed projects and sources.
+The initial implementation ports the confirmed PAL analog counters/read
+address and exact RGB222 lookup conversion, without enabling PAL chroma.
+Shared CPU, SDRAM, SSC, IDE, GIME, IRQ and HDMI logic are unchanged.
+Component Y/Pb/Pr levels, register latency and DAC phase settings are preserved.
+
+Original placement settings are copied to this project's own process config:
+place1, route1, replication=true, maxfan16. No placement tuning is permitted.
+
+Build: make rebuild-ypbpr
+Timing: make timing-ypbpr
+Tests: make test-ypbpr
+
+A timing pass is not hardware confirmation. Save each passing candidate with
+its exact sources and test cold boot and Boink on both component and HDMI.
+
+Timing experiments:
+- Initial isolated PAL-derived analog logic: 108=104.806, 135=113.659,
+  270=227.747 MHz. All waveform tests pass; not offered for hardware testing.
+- Exact registered RGB222-to-component lookup: 108=102.655, 135=137.923,
+  270=262.847 MHz. All component bits and DAC tests match the original.
+- Current trial moves neutral/colour carry selection before the last IO flop,
+  predicting the existing phase and next sigma carry. The output latency and
+  accumulator residue remain unchanged; waveform comparisons pass.
+
+The early output selection trial passed 270 MHz (364.787 MHz), but clk108
+106.610 MHz and clk135 134.475 MHz missed timing. The current trial combines
+the Pb/Pr tables to share colour decoding. The component DAC comparison also
+checks both phase settings over resets, sync restarts and 80000 abrupt level
+transitions, with bit-identical output to the original encoder.
+
+The combined Pb/Pr ROM synthesized to the same implementation and timing as
+the separate tables. The next trial moves the picture/blank selection into
+the preceding component-level register, preserving the original picture flag
+alignment and output latency. Full waveform and DAC transition tests pass.
+
+Passing candidate: impl/pnr/ypbpr-early-blank-test.fs
+clk108=108.251, clk135=135.288, clk270=328.907 MHz; all clocks meet timing,
+zero setup/hold violated endpoints. Hardware boot/Boink confirmation pending.
+RGB/CVBS/PAL sources, images and placement settings are unchanged.
+Flash, then fully power-cycle the CoCo before boot/Boink and hi-res testing:
+openFPGALoader -b tangnano20k -f impl/pnr/ypbpr-early-blank-test.fs
+
+Hardware result: ypbpr-early-blank-test.fs is REJECTED. The user reports RAM
+seems to fail and the machine crashes. A timing pass did not establish
+hardware stability; the cause remains unconfirmed.
+
+Next trial factors the RGB222 component matrix into four-input correction
+lookups and two-input channel levels. Lookup parts are registered in the
+existing encoder stage and summed in the existing mod stage. Every reachable
+result is 1..127, so seven-bit modular arithmetic exactly preserves all
+levels without saturation. No extra output latency or shared logic change.
+
+Passing replacement candidate: impl/pnr/ypbpr-factored-test.fs
+clk108=108.114, clk135=146.944, clk270=307.572 MHz; all clocks meet timing,
+zero setup/hold violated endpoints. Full component and DAC equivalence tests
+pass. The 108-MHz margin remains narrow; hardware stability is unconfirmed.
+Flash, fully power-cycle, and check cold boot/BASIC stability before Boink:
+openFPGALoader -b tangnano20k -f impl/pnr/ypbpr-factored-test.fs
+The earlier ypbpr-early-blank-test.fs is rejected; do not treat it as stable.
+
+Hardware feedback: the user reports very stable colors with the factored
+candidate. Cold-boot/BASIC and Boink stability remain unconfirmed. Preserve
+this exact candidate and source archive while completing hardware checks.
+
+Confirmed baseline: impl/pnr/stable-ypbpr.fs
+The user confirmed very stable colors and successful Boink on the factored
+candidate. Exact build sources, timing, placement options and manifest are
+preserved as stable-ypbpr*. The preceding early-blank candidate remains
+rejected. No further implementation changes were made after confirmation.
