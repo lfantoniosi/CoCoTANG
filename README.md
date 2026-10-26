@@ -191,7 +191,21 @@ While the CPU is removed, you can replace the MC6809E with an HD6309E. NitrOS-9 
 
 ## Audio / Video
 
-CoCoTANG Audio/Video board can be assembled on the same place as the RF module and it has a 5-pin din output. 
+### HDMI
+
+You can use [this](https://www.aliexpress.com/item/1005002515211106.html) HDMI flat cable to expose the HDMI port outside the CoCo2 case. Being as flat just let it go through some port. Choose a model like A1-A4.
+
+### Audio Video Board
+
+Besides the HDMI output CoCoTANG Audio/Video board can be assembled on the same place as the RF module and it has a 5-pin din output. 
+
+![5-pin-din](fpga/docs/5-pin-din.jpg)
+
+There are 3 possible outputs:
+* Composite (CVBS) / S-Video (Y/CHR) / Audio
+* YPbPr (Y/B/R) / Audio
+* RGB SyncOnGreen (R/G/B) / Audio
+
 You can use a cable like [this](https://www.aliexpress.com/item/1005003227813806.html) (use the 5-pin version) to connect into a RGB monitor or Composite / S-Video. For S-Video you can use [this](https://www.aliexpress.com/item/1005005067988142.html) Y cable to connect to the mini-din 4.
 
 
