@@ -229,7 +229,7 @@ In custom builds, `ENABLE_SSC_SPEECH=0` removes speech while retaining the PSG; 
 
 Orchestra-90 audio is enabled by default and provides two 8-bit DACs without the cartridge ROM. Software writes unsigned samples to **`$FF7A` (left)** and **`$FF7B` (right)**; `128` is the digital midpoint. Each channel holds its last sample until the next write. These are write-only DACs: reading the addresses does not change their values or provide readback.
 
-Orchestra-90 requires no additional cartridge ROM or audio hardware. The standard image includes it; the `orchestra90-*` Make targets provide a separately named RGB image with the same audio support.
+Orchestra-90 requires no additional cartridge ROM or audio hardware. It is enabled by default in every normal machine image; no separate Orchestra-90 build is needed.
 
 HDMI sends stereo PCM at 48 kHz. The existing CoCo PIA DAC is mixed equally into both channels at its normal gain; each Orchestra-90 DAC contributes at half gain, and the mixer clips at the signed PCM limits to prevent overflow. Both Orchestra-90 channels reset to the midpoint so they contribute silence before software uses them. The analog `audio_out` pin carries a mono mix of both Orchestra-90 channels and the CoCo PIA DAC. Each Orchestra-90 channel contributes at quarter gain to this downmix, while the CoCo PIA DAC keeps its normal gain; the sum is clipped before conversion to the physical 8-bit sigma-delta DAC.
 
@@ -260,7 +260,7 @@ Each mode has its own bitstream and fixed video-mode setting, independent of the
 | --- | --- | --- | --- |
 | RGB with sync on green | `make program-rgb` | `make reprogram-rgb` | `CoCoTANG-rgb.fs` |
 | YPbPr component | `make program-ypbpr` | `make reprogram-ypbpr` | `CoCoTANG-ypbpr.fs` |
-| NTSC CVBS and S-Video | `make program-cvbs` | `make reprogram-cvbs` | `CoCoTANG-cvbs.fs` |
+| NTSC CVBS and S-Video | `make program-cvbs` | `make reprogram-cvbs` | `CoCoTANG-cvbs-minimal.fs` |
 
 Run these commands from `fpga/`. To build without programming, use `make build-rgb`, `make build-ypbpr`, or `make build-cvbs`. Use `make rebuild-rgb`, `make rebuild-ypbpr`, or `make rebuild-cvbs` to force a rebuild, and the corresponding `make timing-rgb`, `make timing-ypbpr`, or `make timing-cvbs` to check the routed timing. The `reprogram-*` targets never rebuild; their named image must already exist.
 
@@ -268,11 +268,20 @@ The artifact/SSC status banner is off on analog outputs by default. Set `ENABLE_
 
 ### Rebuild every variation
 
-Run `make rebuild-all` from `fpga/` to force synthesis and place-and-route for all nine images: the standard, PAL, RGB, YPbPr, CVBS/S-Video, NTSC S-Video, Orchestra-90, standalone data tester, and debug images. Builds run sequentially, even with `make -j`, because Gowin shares the `impl/` directory between projects. The target stops if a build fails and does not program the board.
+Run these commands from `fpga/`:
+
+```sh
+make build-all     # build missing or outdated images
+make rebuild-all   # force synthesis and place-and-route for every image
+```
+
+Both targets cover six images: standard, RGB, YPbPr, CVBS/S-Video, PAL, and the standalone bus tester. The NTSC S-Video targets share the confirmed CVBS image, so it is built once. Logger/debug images are excluded.
+
+Builds run sequentially, even with `make -j`, because Gowin shares the `impl/` directory between projects. Every variant is attempted, and routed timing is checked after each successful build. The target returns a failure status if any build or timing check fails; it never programs the board or changes placement settings. Per-variant logs and `summary.json` are written to `fpga/impl/build-all/` or `fpga/impl/rebuild-all/`.
 
 ### Debug and bus testing
 
-`make debug-program` builds and programs a separate image with the bus logger and HDMI trace overlay enabled. The normal image keeps the logger disabled. Configure the capture address in `fpga/src/top_coco3_debug.v`; see the [trace image notes](fpga/docs/pinout.md#address-triggered-trace-image) for trigger and capture behaviour.
+The standalone bus tester is included in the aggregate builds. The normal production images keep the bus logger disabled; logger/debug projects are not restored by the aggregate targets.
 
 For board bring-up, `make data-test-program-sram` builds the standalone bus tester if needed and loads it into FPGA SRAM for a temporary test. Use `make data-test-program` to store the tester in flash. It holds the CPU in reset and displays the data sweep and bus readback over HDMI. See the [bus tester notes](fpga/docs/pinout.md#standalone-bus-tester) for controls and verification commands.
 

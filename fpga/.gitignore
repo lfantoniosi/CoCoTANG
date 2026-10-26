@@ -6,3 +6,12 @@
 /impl/**/CoCoTANG-ypbpr*
 /impl/**/CoCoTANG-cvbs*
 /CoCoTANG-ntsc-svideo.gprj.user
+
+/impl/build-all/
+/impl/rebuild-all/
+/impl/.all-builds.lock
+
+/CoCoTANG-data-test.gprj.user
+/impl/**/CoCoTANG-data-test*
+
+/CoCoTANG-cvbs*.gprj.user

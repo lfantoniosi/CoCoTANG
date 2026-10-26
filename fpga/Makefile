@@ -1,17 +1,27 @@
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 PROJECT := $(ROOT)/CoCoTANG.gprj
 PAL_PROJECT := $(ROOT)/CoCoTANG-pal.gprj
+CVBS_PROJECT := $(ROOT)/CoCoTANG-cvbs-minimal.gprj
+CVBS_OUTPUT := $(ROOT)/impl/pnr/CoCoTANG-cvbs-minimal.fs
+DATA_TEST_PROJECT := $(ROOT)/CoCoTANG-data-test.gprj
+DATA_TEST_OUTPUT := $(ROOT)/impl/pnr/CoCoTANG-data-test.fs
 BUILD_TCL := $(ROOT)/scripts/build.tcl
 OUTPUT := $(ROOT)/impl/pnr/CoCoTANG.fs
 PAL_OUTPUT := $(ROOT)/impl/pnr/CoCoTANG-pal.fs
-ORCHESTRA90_OUTPUT := $(ROOT)/impl/pnr/CoCoTANG-orchestra90.fs
-NTSC_SVIDEO_OUTPUT := $(ROOT)/impl/pnr/CoCoTANG-ntsc-svideo.fs
+NTSC_SVIDEO_OUTPUT := $(CVBS_OUTPUT)
 SSC_PSG_DISK := $(ROOT)/results/SSCPSG.DSK
 VIDEO_MODES := rgb ypbpr cvbs
-VIDEO_OUTPUTS := $(addprefix $(ROOT)/impl/pnr/CoCoTANG-,$(addsuffix .fs,$(VIDEO_MODES)))
+OTHER_VIDEO_MODES := $(filter-out cvbs,$(VIDEO_MODES))
+VIDEO_OUTPUTS := $(addprefix $(ROOT)/impl/pnr/CoCoTANG-,$(addsuffix .fs,$(OTHER_VIDEO_MODES)))
 VIDEO_TOP_rgb := top_coco3_rgb
 VIDEO_TOP_ypbpr := top_coco3_ypbpr
 VIDEO_TOP_cvbs := top_coco3_ntsc_svideo
+VIDEO_PROJECT_rgb := CoCoTANG-pal.gprj
+VIDEO_PROJECT_ypbpr := CoCoTANG-pal.gprj
+VIDEO_PROJECT_cvbs := CoCoTANG-cvbs-minimal.gprj
+# CVBS variants are deliberately absent from normal/RGB source dependencies.
+COMMON_SOURCE_FILES := $(filter-out src/top_coco3_data_test.v src/top_coco3_data_test.cst src/top_coco3_data_test.sdc src/video/cpu_bus_probe_hdmi.sv,$(shell find src -type f ! -path 'src/cvbs/*'))
+CVBS_SOURCE_FILES := $(COMMON_SOURCE_FILES) $(ROOT)/src/cvbs/minimal_top_coco3.v $(ROOT)/src/cvbs/video/coco_cvbs_ntsc_lut.v
 PAL_ROM ?= /Users/felipe/src/retro/coco_roms/coco3p.rom
 RAM8M_DISK := $(ROOT)/results/RAM8M.DSK
 RAM8M_BIN := $(ROOT)/results/RAM8M.BIN
@@ -43,7 +53,7 @@ PROGRAMMER_BOARD ?= tangnano20k
 ROM_OFFSET ?= 1048576
 
 .DEFAULT_GOAL := build
-.PHONY: ram8m-dsk orchestra90-build orchestra90-rebuild orchestra90-timing orchestra90-program orchestra90-reprogram build rebuild contras-debug-build contras-debug-rebuild pal-build pal-rebuild ntsc-svideo-build \
+.PHONY: ram8m-dsk build rebuild contras-debug-build contras-debug-rebuild pal-build pal-rebuild ntsc-svideo-build \
  ntsc-svideo-rebuild test timing pal-timing ntsc-svideo-timing program \
  reprogram pal-program pal-reprogram ntsc-svideo-program \
  ntsc-svideo-reprogram rom pal-rom palette-bridge-dsk contras-palette-test-dsk \
@@ -55,23 +65,27 @@ ROM_OFFSET ?= 1048576
 
 build: $(OUTPUT)
 
+# Build production images and the standalone tester; CVBS/S-Video share one image.
+# The runner serializes Gowin even when this target is invoked with -j.
+.PHONY: build-all rebuild-all
+build-all:
+	+python3 scripts/build_all.py build --make "$(MAKE)"
+
+rebuild-all:
+	+python3 scripts/build_all.py rebuild --make "$(MAKE)"
+
 # Fixed video modes use wrappers and separate images, independent of the
 # default ANALOG_VIDEO_MODE in top_coco3.v. CVBS also provides separate Y/C.
-$(addprefix build-,$(VIDEO_MODES)): build-%: $(ROOT)/impl/pnr/CoCoTANG-%.fs
+$(addprefix build-,$(OTHER_VIDEO_MODES)): build-%: $(ROOT)/impl/pnr/CoCoTANG-%.fs
 
-$(addprefix rebuild-,$(VIDEO_MODES)): rebuild-%: check-tools
-	$(call run-gowin,CoCoTANG-pal.gprj,$(VIDEO_TOP_$*),CoCoTANG-$*)
+$(addprefix rebuild-,$(OTHER_VIDEO_MODES)): rebuild-%: check-tools
+	$(call run-gowin,$(VIDEO_PROJECT_$*),$(VIDEO_TOP_$*),CoCoTANG-$*)
 
-$(addprefix timing-,$(VIDEO_MODES)): timing-%:
+$(addprefix timing-,$(OTHER_VIDEO_MODES)): timing-%:
 	python3 scripts/check_timing.py impl/pnr/CoCoTANG-$*_tr_content.html
 
 rebuild: check-tools
 	$(call run-gowin,CoCoTANG.gprj,top_coco3,CoCoTANG)
-
-orchestra90-build: $(ORCHESTRA90_OUTPUT)
-
-orchestra90-rebuild: check-tools
-	$(call run-gowin,CoCoTANG-pal.gprj,top_coco3_orchestra90,CoCoTANG-orchestra90)
 
 contras-debug-build: $(ROOT)/impl/pnr/CoCoTANG-contras-debug.fs
 
@@ -85,21 +99,17 @@ pal-rebuild: check-tools
 
 ntsc-svideo-build: $(NTSC_SVIDEO_OUTPUT)
 
-ntsc-svideo-rebuild: check-tools
-	$(call run-gowin,CoCoTANG-pal.gprj,top_coco3_ntsc_svideo,CoCoTANG-ntsc-svideo)
+ntsc-svideo-rebuild: rebuild-cvbs
 
 # Inspect the last routed build without programming the board or rebuilding.
 timing:
 	python3 scripts/check_timing.py impl/pnr/CoCoTANG_tr_content.html
 
-orchestra90-timing:
-	python3 scripts/check_timing.py impl/pnr/CoCoTANG-orchestra90_tr_content.html
-
 pal-timing:
 	python3 scripts/check_timing.py impl/pnr/CoCoTANG-pal_tr_content.html
 
 ntsc-svideo-timing:
-	python3 scripts/check_timing.py impl/pnr/CoCoTANG-ntsc-svideo_tr_content.html
+	python3 scripts/check_timing.py impl/pnr/CoCoTANG-cvbs-minimal_tr_content.html
 
 test-ssc-toggle:
 	python3 tests/test_ssc_toggle.py "$(GOWIN_IDE)/simlib/gw2a/prim_sim.v"
@@ -211,17 +221,11 @@ program: $(OUTPUT)
 reprogram:
 	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(OUTPUT)"
 
-$(addprefix program-,$(VIDEO_MODES)): program-%: $(ROOT)/impl/pnr/CoCoTANG-%.fs
+$(addprefix program-,$(OTHER_VIDEO_MODES)): program-%: $(ROOT)/impl/pnr/CoCoTANG-%.fs
 	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$<"
 
-$(addprefix reprogram-,$(VIDEO_MODES)): reprogram-%:
+$(addprefix reprogram-,$(OTHER_VIDEO_MODES)): reprogram-%:
 	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(ROOT)/impl/pnr/CoCoTANG-$*.fs"
-
-orchestra90-program: $(ORCHESTRA90_OUTPUT)
-	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(ORCHESTRA90_OUTPUT)"
-
-orchestra90-reprogram:
-	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(ORCHESTRA90_OUTPUT)"
 
 pal-program: $(PAL_OUTPUT)
 	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(PAL_OUTPUT)"
@@ -346,20 +350,96 @@ endef
 src/audio/coco_ssc_tts_rom.v: scripts/gen_ssc_tts.py src/third_party/nrl_tts/eng_to_ipa.json src/third_party/nrl_tts/ipa_to_sp0256.json
 	python3 scripts/gen_ssc_tts.py
 
-$(OUTPUT): $(PROJECT) $(BUILD_TCL) $(shell find src -type f) | check-tools
+$(OUTPUT): $(PROJECT) $(BUILD_TCL) $(COMMON_SOURCE_FILES) | check-tools
 	$(call run-gowin,CoCoTANG.gprj,top_coco3,CoCoTANG)
 
-$(VIDEO_OUTPUTS): $(ROOT)/impl/pnr/CoCoTANG-%.fs: $(PAL_PROJECT) $(BUILD_TCL) $(shell find src -type f) | check-tools
-	$(call run-gowin,CoCoTANG-pal.gprj,$(VIDEO_TOP_$*),CoCoTANG-$*)
+$(VIDEO_OUTPUTS): $(ROOT)/impl/pnr/CoCoTANG-%.fs: $(PAL_PROJECT) $(BUILD_TCL) $(COMMON_SOURCE_FILES) | check-tools
+	$(call run-gowin,$(VIDEO_PROJECT_$*),$(VIDEO_TOP_$*),CoCoTANG-$*)
 
-$(ROOT)/impl/pnr/CoCoTANG-contras-debug.fs: $(PAL_PROJECT) $(BUILD_TCL) $(shell find src -type f) | check-tools
+$(CVBS_OUTPUT): $(CVBS_PROJECT) $(BUILD_TCL) $(CVBS_SOURCE_FILES) | check-tools
+	$(call run-gowin,CoCoTANG-cvbs-minimal.gprj,top_coco3_ntsc_svideo,CoCoTANG-cvbs-minimal)
+
+$(ROOT)/impl/pnr/CoCoTANG-contras-debug.fs: $(PAL_PROJECT) $(BUILD_TCL) $(COMMON_SOURCE_FILES) | check-tools
 	$(call run-gowin,CoCoTANG-pal.gprj,top_coco3_contras_debug,CoCoTANG-contras-debug)
 
-$(PAL_OUTPUT): $(PAL_PROJECT) $(BUILD_TCL) $(shell find src -type f) | check-tools
+$(PAL_OUTPUT): $(PAL_PROJECT) $(BUILD_TCL) $(COMMON_SOURCE_FILES) | check-tools
 	$(call run-gowin,CoCoTANG-pal.gprj,top_coco3_pal,CoCoTANG-pal)
 
-$(NTSC_SVIDEO_OUTPUT): $(PAL_PROJECT) $(BUILD_TCL) $(shell find src -type f) | check-tools
-	$(call run-gowin,CoCoTANG-pal.gprj,top_coco3_ntsc_svideo,CoCoTANG-ntsc-svideo)
+# CVBS-only regression suite; none of these variants enters an RGB project.
+.PHONY: test-cvbs test-cvbs-project test-cvbs-video
+CVBS_TEST_VIDEO := src/cvbs/video/coco_cvbs_ntsc_lut.v
+CVBS_TEST_CACHE := src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
 
-$(ORCHESTRA90_OUTPUT): $(PAL_PROJECT) $(BUILD_TCL) $(shell find src -type f) | check-tools
-	$(call run-gowin,CoCoTANG-pal.gprj,top_coco3_orchestra90,CoCoTANG-orchestra90)
+test-cvbs: test-cvbs-project test-cvbs-minimal test-cvbs-video
+
+test-cvbs-project:
+	python3 tests/check_cvbs_project.py
+
+test-cvbs-video:
+	iverilog -g2012 -s tb_cvbs_field_phase -o /private/tmp/cocotang_tb_cvbs_field_phase tests/tb_cvbs_field_phase.sv $(CVBS_TEST_VIDEO)
+	vvp /private/tmp/cocotang_tb_cvbs_field_phase
+	iverilog -g2012 -s tb_cvbs_field_cadence -o /private/tmp/cocotang_tb_cvbs_field_cadence tests/tb_cvbs_field_cadence.sv $(CVBS_TEST_VIDEO)
+	vvp /private/tmp/cocotang_tb_cvbs_field_cadence
+	iverilog -g2012 -s tb_cvbs_incremental_dots -o /private/tmp/cocotang_tb_cvbs_dots tests/tb_cvbs_incremental_dots.sv $(CVBS_TEST_VIDEO)
+	vvp /private/tmp/cocotang_tb_cvbs_dots
+	iverilog -g2012 -s tb_cvbs_cached_scanlines -o /private/tmp/cocotang_tb_cvbs_cache tests/tb_cvbs_cached_scanlines.sv $(CVBS_TEST_CACHE) $(CVBS_TEST_VIDEO)
+	vvp /private/tmp/cocotang_tb_cvbs_cache
+	iverilog -g2012 -s tb_cvbs_cached_scanlines -Ptb_cvbs_cached_scanlines.ROWS=4 -Ptb_cvbs_cached_scanlines.GM=7 -Ptb_cvbs_cached_scanlines.ARTIFACT=1 -o /private/tmp/cocotang_tb_cvbs_artifact tests/tb_cvbs_cached_scanlines.sv $(CVBS_TEST_CACHE) $(CVBS_TEST_VIDEO)
+	vvp /private/tmp/cocotang_tb_cvbs_artifact
+	iverilog -g2012 -s tb_cvbs_boink_pixels -o /private/tmp/cocotang_tb_cvbs_boink_pixels tests/tb_cvbs_boink_pixels.sv $(CVBS_TEST_CACHE) $(CVBS_TEST_VIDEO)
+	vvp /private/tmp/cocotang_tb_cvbs_boink_pixels
+
+.PHONY: test-cvbs-contention
+test-cvbs-contention:
+	python3 tests/check_cvbs_memory_contention.py
+
+.PHONY: rebuild-cvbs-minimal
+rebuild-cvbs-minimal: rebuild-cvbs
+
+.PHONY: test-cvbs-minimal
+test-cvbs-minimal:
+	python3 tests/check_minimal_cvbs.py
+
+# Keep the confirmed output base name: changing build identity can disturb
+# Gowin results even when the RTL is unchanged. S-Video uses the same image.
+build-cvbs: $(CVBS_OUTPUT)
+
+rebuild-cvbs: check-tools
+	$(call run-gowin,CoCoTANG-cvbs-minimal.gprj,top_coco3_ntsc_svideo,CoCoTANG-cvbs-minimal)
+
+timing-cvbs:
+	python3 scripts/check_timing.py impl/pnr/CoCoTANG-cvbs-minimal_tr_content.html
+
+program-cvbs: $(CVBS_OUTPUT)
+	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(CVBS_OUTPUT)"
+
+reprogram-cvbs:
+	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(CVBS_OUTPUT)"
+
+# Standalone board tester: separate source list; normal video cores unchanged.
+.PHONY: data-test-build data-test-rebuild data-test-timing data-test-program data-test-program-sram data-test-reprogram test-data-bus
+data-test-build: $(DATA_TEST_OUTPUT)
+
+data-test-rebuild: check-tools
+	$(call run-gowin,CoCoTANG-data-test.gprj,top_coco3_data_test,CoCoTANG-data-test)
+
+data-test-timing:
+	python3 scripts/check_timing.py impl/pnr/CoCoTANG-data-test_tr_content.html
+
+data-test-program: $(DATA_TEST_OUTPUT)
+	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(DATA_TEST_OUTPUT)"
+
+data-test-program-sram: $(DATA_TEST_OUTPUT)
+	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -m "$(DATA_TEST_OUTPUT)"
+
+data-test-reprogram:
+	"$(OPENFPGALOADER)" -b "$(PROGRAMMER_BOARD)" -f "$(DATA_TEST_OUTPUT)"
+
+test-data-bus:
+	iverilog -g2012 -s tb_cpu_data_sweep -o /private/tmp/cocotang_tb_cpu_data_sweep tests/tb_cpu_data_sweep.sv src/top_coco3_data_test.v
+	vvp /private/tmp/cocotang_tb_cpu_data_sweep
+	iverilog -g2012 -s tb_cpu_bus_probe_screen -o /private/tmp/cocotang_tb_cpu_bus_probe_screen tests/tb_cpu_bus_probe_screen.sv src/video/cpu_bus_probe_hdmi.sv
+	vvp /private/tmp/cocotang_tb_cpu_bus_probe_screen
+
+$(DATA_TEST_OUTPUT): $(DATA_TEST_PROJECT) $(BUILD_TCL) src/top_coco3_data_test.v src/top_coco3_data_test.cst src/top_coco3_data_test.sdc src/video/cpu_bus_probe_hdmi.sv src/coco_clocks.v src/gowin_rpll/clk108.v src/gowin_rpll/clk270.v src/video/hdmi/hdmi.sv src/video/hdmi/tmds_channel.sv src/video/hdmi/serializer.sv | check-tools
+	$(call run-gowin,CoCoTANG-data-test.gprj,top_coco3_data_test,CoCoTANG-data-test)
