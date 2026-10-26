@@ -155,9 +155,9 @@ Several adapters have oversized socket holes. They require machined-pin sockets 
 2. Keep the SAM, VDG, and 74LS138 as spares; the FPGA replaces their functions.
 3. Install sockets in the motherboard. Do not solder the adapter boards directly to it.
 4. Check clearance around the adapters. Some original capacitors marked `104` are oversized, and nearby radial capacitors may also interfere. Where necessary, desolder and reposition their leads before bending the capacitors closer to the motherboard.
-5. Populate the adapter boards, checking diode orientation.
-6. Desolder and lift the middle pin of each joystick connector. These grounded pins are used for the second joystick button.
-7. Fit the CPU and PIAs to their adapters, install the adapters, and connect the boards as shown in the [installed prototype](fpga/docs/installed_prototype.jpg). To connect a jumper lead to a lifted joystick pin, remove the plastic housing at one end and gently widen the metal contact to fit.
+5. Populate the adapter boards, checking diode orientation. Configure each PIA adapter as described in [PIA adapter configuration](#pia-adapter-configuration).
+6. Modify pin 5 of each joystick connector and wire it to the PIA0 adapter as described in [Joystick second-button support](#joystick-second-button-support).
+7. Fit the CPU and PIAs to their adapters, install the adapters, and connect the boards as shown in the [installed prototype](fpga/docs/installed_prototype.jpg).
 8. Program the Tang Nano 20K with the desired `.fs` bitstream and CoCo 3 ROM, following the programming instructions below.
 9. If using the optional HDB-DOS cartridge, program its EEPROM with [hdblba.rom](fpga/roms/hdblba.rom).
 10. Turn on the computer. The boot screen should look like the example below.
@@ -165,6 +165,25 @@ Several adapters have oversized socket holes. They require machined-pin sockets 
 ![Installed CoCoTANG prototype showing the adapter boards and wiring](fpga/docs/installed_prototype.jpg)
 
 ![CoCoTANG boot screen](fpga/docs/CoCoTANG-RGB.jpg)
+
+### PIA adapter configuration
+
+Both PIAs use the same adapter PCB, but they require different component populations and jumper settings:
+
+- **PIA0:** populate the adapter's logic IC, diodes, and capacitors listed in the PIA0 bill of materials, and set the selection jumper to **PIA0**. The photo below shows PIA0 fitted with the **SC67331P** chip.
+- **PIA1:** fit the PIA socket; the additional logic IC, diodes, and capacitors are not required. This adapter brings out only two signal pins. Set its selection jumper to **PIA1**.
+
+The new PIA PCB also includes a pinout for an external keyboard. Populate and connect the external keyboard header **only on PIA0**.
+
+![PIA0 and PIA1 adapters showing their installed configuration and wiring](fpga/docs/pias.jpg)
+
+### Joystick second-button support
+
+To support a second button on each joystick, disconnect **pin 5 of each joystick connector** from its original motherboard ground connection. Desolder the pin, pull it clear of the motherboard, and bend it upward as shown below. Keep the lifted pin clear of its original pad.
+
+Use **two jumper wires**, one from each lifted pin, to connect the joystick second-button signals to the corresponding connections on the **PIA0 adapter (SC67331P in the PIA photo above)**. To attach a jumper lead to a lifted pin, remove the plastic housing at that end and gently widen the metal contact to fit.
+
+![Joystick connector pin 5 lifted from the motherboard and connected with jumper wires](fpga/docs/joy_button.jpg)
 
 ## CPU choice: MC6809E or HD6309E
 
