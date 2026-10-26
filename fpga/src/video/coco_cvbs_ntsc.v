@@ -6,6 +6,9 @@
 // three first-order, one-bit DACs. The composite levels are deliberately the
 // same as the proven pin-51 2N3904/75-ohm circuit: sync=0, blank=10, white=32.
 module coco_cvbs_ntsc #(
+    // Opt in only for composite builds; RGB/component retain the original
+    // continuous carrier and burst paths.
+    parameter integer CVBS_FIELD_PHASE_ALIGN = 0,
     parameter integer STREAMING_INPUT = 0,
     parameter integer CANONICAL_640_INPUT = 0,
     // Experimental PAL chroma over the existing CoCo/HDMI line timing.  This
@@ -284,6 +287,21 @@ module coco_cvbs_ntsc #(
     reg [2:0] carrier_octant = 3'd0;
     reg [25:0] pal_carrier_acc = 26'd0;
     reg pal_v_invert = 1'b0;
+    // At 858 samples/line, the field origin differs only by 180 degrees.
+    // Align composite picture and burst without disturbing the S-Video DDS.
+    wire cvbs_phase_flip;
+    generate if (CVBS_FIELD_PHASE_ALIGN && !PAL_CHROMA_OUTPUT) begin:cvbs_field_phase
+        reg phase_flip=0;
+        always @(posedge clk135)begin
+            if(!reset_n)phase_flip<=0;
+            else if(!video_50hz_active &&
+                    v_line==0 && h_sample==0 && sample_phase==0)
+                phase_flip<=carrier_octant[2];
+        end
+        assign cvbs_phase_flip=phase_flip;
+    end else begin:continuous_field_phase
+        assign cvbs_phase_flip=1'b0;
+    end endgenerate
     wire [2:0] carrier_phase = PAL_CHROMA_OUTPUT ?
                                pal_carrier_acc[25:23] : carrier_octant;
 
@@ -605,18 +623,24 @@ module coco_cvbs_ntsc #(
         (PAL_CHROMA_OUTPUT && pal_v_invert) ? cvbs_mod_difference3 : cvbs_mod_sum3;
     wire signed [10:0] cvbs_pal_difference3=
         (PAL_CHROMA_OUTPUT && pal_v_invert) ? cvbs_mod_sum3 : cvbs_mod_difference3;
+    wire [2:0] cvbs_mod_carrier=mod_carrier ^
+        {(!PAL_CHROMA_OUTPUT && !video_50hz_active && cvbs_phase_flip),2'b00};
+    wire signed [5:0] cvbs_unfiltered_picture_chroma=
+        rgb_chroma(mod_x4,pal_picture_y4,pal_picture_sum3,
+                   pal_picture_difference3,cvbs_mod_carrier);
     wire signed [5:0] cvbs_picture_chroma=
         rgb_chroma(cvbs_mod_x4,cvbs_pal_y4,cvbs_pal_sum3,
-                   cvbs_pal_difference3,mod_carrier);
+                   cvbs_pal_difference3,cvbs_mod_carrier);
     // PAL burst swings +/-45 degrees about the negative U axis.  The two
     // octant offsets correspond to -U+V and -U-V respectively; NTSC keeps
     // its original 180-degree burst unchanged.
     wire [2:0] burst_phase_offset = PAL_CHROMA_OUTPUT ?
         (pal_v_invert ? 3'd5 : 3'd3) : 3'd4;
     wire signed [5:0] mod_burst_chroma =
-        chroma8(mod_carrier + burst_phase_offset,2'd3);
+        chroma8(cvbs_mod_carrier + burst_phase_offset,2'd3);
     wire signed [5:0] mod_selected_chroma = mod_burst ?
-        mod_burst_chroma : (CVBS_CHROMA_FILTER ? cvbs_picture_chroma : mod_picture_chroma);
+        mod_burst_chroma : (CVBS_CHROMA_FILTER ? cvbs_picture_chroma :
+            CVBS_FIELD_PHASE_ALIGN ? cvbs_unfiltered_picture_chroma : mod_picture_chroma);
 
     reg level_sync = 1'b1;
     reg level_burst = 1'b0;
@@ -670,9 +694,12 @@ module coco_cvbs_ntsc #(
                             level_picture ? selected_luma_level_q2 :
                                             LUMA_BLANK_Q2;
     // The receiver derives hue and saturation from the picture-to-burst ratio.
+    wire signed [5:0] svideo_burst_chroma=
+        chroma8(level_carrier + burst_phase_offset,2'd3);
     wire [5:0] chroma_level = level_picture ?
         add_svideo_level(CHROMA_CENTER,svideo_picture_chroma) :
-        level_burst ? add_level(CHROMA_CENTER,level_chroma) :
+        level_burst ? add_level(CHROMA_CENTER,
+            CVBS_FIELD_PHASE_ALIGN ? svideo_burst_chroma : level_chroma) :
         CHROMA_CENTER;
     wire [5:0] composite_level = level_sync ? LEVEL_SYNC :
         level_burst ? add_level(LEVEL_BLANK,level_chroma) :
