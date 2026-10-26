@@ -145,6 +145,12 @@ The reference columns identify the same components on each layout. Lists follow 
 | 3 | MMBT3904-TP | TRANS NPN 40V 0.2A SOT-23 | [MMBT3904TPMSCT-ND](https://www.digikey.com/en/products/detail/mcc-micro-commercial-components/MMBT3904-TP/717280) | Q2,Q4,Q5 | |
 | 1 | DIN-5 FEMALE | D5 PIN DIN SOCKET 180 DEGREE | [4654-FC680805-ND](https://www.digikey.ca/en/products/detail/cliff-electronic-components-ltd/FC680805/24420883) | J24 | [AliExpress](https://www.aliexpress.com/item/32981543684.html)|
 
+## Boards Interconnection
+| Qty | Value | Description | DigiKey P/N | References | Alternative link |
+| ---: | --- | --- | --- | --- | --- |
+| 2 | PRPC040SBAN-M71RC | CONN HEADER R/A 40POS 2.54MM | [S1111EC-40-ND](https://www.digikey.ca/en/products/detail/sullins-connector-solutions/PRPC040SBAN-M71RC/2775294) | 
+| 1 |1950 | JUMPER WIRE F TO F 6" 28AWG | [1528-1961-ND](https://www.digikey.ca/en/products/detail/adafruit-industries-llc/1950/6827084)
+
 ## Assembly
 
 Print the [fabrication drawing](fpga/docs/fab.pdf) and use it with the board silkscreen to identify component positions. Check diode orientation before soldering. The main-board bill of materials applies to both supported versions; component positions differ between layouts.
@@ -159,7 +165,7 @@ Several adapters have oversized socket holes. They require machined-pin sockets 
 6. Modify pin 5 of each joystick connector and wire it to the PIA0 adapter as described in [Joystick second-button support](#joystick-second-button-support).
 7. Fit the CPU and PIAs to their adapters, install the adapters, and connect the boards as shown in the [installed prototype](fpga/docs/installed_prototype.jpg).
 8. Program the Tang Nano 20K with the desired `.fs` bitstream and CoCo 3 ROM, following the programming instructions below.
-9. If using the optional HDB-DOS cartridge, program its EEPROM with [hdblba.rom](fpga/roms/hdblba.rom).
+9. If using the optional HDB-DOS cartridge, program its EEPROM with [hdblba.rom](fpga/roms/hdblba.rom) using an EEPROM programmer.
 10. Turn on the computer. The boot screen should look like the example below.
 
 ![Installed CoCoTANG prototype showing the adapter boards and wiring](fpga/docs/installed_prototype.jpg)
