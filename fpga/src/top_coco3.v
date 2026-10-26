@@ -9,7 +9,6 @@ module top_coco3 #(
     parameter integer LOG_RING_MODE=0,
     parameter integer LOG_DEDUP=0,
     parameter integer LOG_READS_ONLY=0, // Read-only trigger; capture logs R/W.
-    parameter integer LOG_RAM_TRIGGER_ONLY=0,
     parameter integer LOG_AUTO_START=0,
     parameter integer LOG_NMI_TRIGGER=0,
     // Set to 1 only for bus-debug builds.  At the default 0, the generate
@@ -50,17 +49,10 @@ module top_coco3 #(
     inout [31:0] IO_sdram_dq,output [10:0] O_sdram_addr,
     output [1:0] O_sdram_ba,output [3:0] O_sdram_dqm
 );
-    localparam integer LOG_ADDR_WIDTH=ENABLE_BUS_LOGGER!=0 ?
-        (LOG_DEPTH>1 ? $clog2(LOG_DEPTH) : 1) : 13;
-    // The legacy display header reads bits 8:0 even for a one-page trace.
-    localparam integer LOG_COUNT_WIDTH=ENABLE_BUS_LOGGER!=0 ?
-        (LOG_DEPTH<512 ? 9 : $clog2(LOG_DEPTH+1)) : 14;
+    localparam integer LOG_ADDR_WIDTH=13,LOG_COUNT_WIDTH=14,LOG_PAGE_WIDTH=7;
     // Two fixed status rows plus one column-heading row leave 57 trace rows
     // in each half of the 60-row HDMI debugger.
     localparam integer ENTRIES_PER_PAGE=114;
-    localparam integer LOG_PAGE_COUNT=(LOG_DEPTH+ENTRIES_PER_PAGE-1)/ENTRIES_PER_PAGE;
-    localparam integer LOG_PAGE_WIDTH=ENABLE_BUS_LOGGER!=0 ?
-        (LOG_PAGE_COUNT>1 ? $clog2(LOG_PAGE_COUNT) : 1) : 7;
     localparam [LOG_PAGE_WIDTH-1:0] LAST_PAGE=(LOG_DEPTH-1)/ENTRIES_PER_PAGE;
 
     wire clk108,clk108p,clk270,clk135,clk27,board_reset_n,clocks_locked;
@@ -70,7 +62,7 @@ module top_coco3 #(
         .clk108p(clk108p),.clk270(clk270),.clk135(clk135),.clk27(clk27),
         .board_reset_n(board_reset_n),.clocks_locked(clocks_locked));
 
-    wire cpu_release;
+    reg cpu_release=0;
     wire [15:0] address;
     wire rw_n;
     wire e_core,q_core,e_rise,e_fall;
@@ -364,14 +356,26 @@ module top_coco3 #(
         .din(sd_din),.wdm(sd_wdm),.dout(sd_dout),.dout32(sd_dout32),
         .data_ready(sd_data_ready),.busy(sd_busy),.enabled(sdram_enabled));
 
-    coco_cpu_reset_hold #(.HOLD_CYCLES(RESET_HOLD_CYCLES)) cpu_reset_hold(
-        .clk(clk108),.reset_n(board_reset_n),.system_ready(system_ready),
-        .e_fall(e_fall),.cpu_release(cpu_release));
+    localparam integer RESET_HOLD_WIDTH=$clog2(RESET_HOLD_CYCLES+1);
+    reg [RESET_HOLD_WIDTH-1:0] reset_hold_count=0;
+    reg release_pending=0;
+    always @(posedge clk108 or negedge board_reset_n) begin
+        if (!board_reset_n) begin
+            reset_hold_count<=0; release_pending<=0; cpu_release<=0;
+        end else if (!system_ready) begin
+            reset_hold_count<=0; release_pending<=0; cpu_release<=0;
+        end else if (!cpu_release) begin
+            if (reset_hold_count<RESET_HOLD_CYCLES)
+                reset_hold_count<=reset_hold_count+1'b1;
+            else release_pending<=1;
+            if (release_pending && e_fall) cpu_release<=1;
+        end
+    end
     assign reset_drive=!cpu_release;
     wire cpu_bus_active=cpu_release;
     // Keep the SDRAM read engine alive during the post-loader CPU hold.  A
     // reset 6809 presents FFFE, so this preloads the high reset-vector byte
-    // well before RESET is released.  Writes and the physical FPGA data driver
+    // well before HALT is released.  Writes and the physical FPGA data driver
     // remain disabled until cpu_release, preventing any held/reset bus state
     // from modifying memory or contending with the motherboard.
     wire cpu_memory_service=system_ready;
@@ -588,21 +592,12 @@ module top_coco3 #(
     wire [LOG_COUNT_WIDTH-1:0] log_count;
     reg log_capture_active=(LOG_AUTO_START!=0),log_capture_clear=0;
     generate if (ENABLE_BUS_LOGGER!=0) begin:logger_enabled
-      // Freeze the RAM/ROM classification with the completed bus snapshot.
-      // Later address/MMU changes must not reclassify the captured cycle.
-      reg cycle_ram_read=0;
-      always @(posedge clk108 or negedge board_reset_n) begin
-        if(!board_reset_n)cycle_ram_read<=0;
-        else if(bus_snapshot_valid)
-          cycle_ram_read<=cpu_mem_read && !cpu_mem_is_rom;
-      end
       cpu_bus_logger #(.LOG_ADDR_WIDTH(LOG_ADDR_WIDTH),
         .LOG_COUNT_WIDTH(LOG_COUNT_WIDTH),.LOG_DEPTH(LOG_DEPTH),
         .LOG_START_ADDRESS(LOG_START_ADDRESS),
         .LOG_END_ADDRESS(LOG_END_ADDRESS),
         .LOG_RING_MODE(LOG_RING_MODE),.LOG_DEDUP(LOG_DEDUP),
-        .LOG_READS_ONLY(LOG_READS_ONLY),
-        .LOG_RAM_TRIGGER_ONLY(LOG_RAM_TRIGGER_ONLY)) logger(
+        .LOG_READS_ONLY(LOG_READS_ONLY)) logger(
         .clk(clk108),.reset_n(board_reset_n),
         .capture_enable(cpu_release && log_capture_active),
         .capture_clear(log_capture_clear),
@@ -614,7 +609,6 @@ module top_coco3 #(
         .rw_n(rw_n),.address(address),.cpu_data(cpu_data_in),
         .expected_data(fpga_read_data),.s(sam_s),.data_oe(fpga_data_oe),
         .memory_wait(cpu_memory_wait),
-        .ram_read(cycle_ram_read),
         .mmu_task0_page(mmu_task0_page_debug),
         .mmu_task1_page(mmu_task1_page_debug),
         .mmu_task(mmu_task_debug),.mmu_enabled(mmu_enabled_debug),
@@ -811,12 +805,19 @@ module top_coco3 #(
     // clk135 boundary.  There are ten clk135 clocks per CVBS sample, so this
     // one-clock staging still leaves the scanline RAM response comfortably
     // ahead of the sample which consumes it.
+    reg cvbs_last_request=0;
     always @(posedge clk135 or negedge board_reset_n) begin
         if(!board_reset_n) begin
             cvbs_source_x<=0;cvbs_source_y<=0;cvbs_source_valid<=0;
             cvbs_prefetch_y<=0;cvbs_prefetch_valid<=0;
+            cvbs_last_request<=0;
         end else begin
-            cvbs_source_x<=cvbs_source_x_raw;
+            // Arm at 638 before the final dot's request reaches this stage.
+            // Both 638 and 640 have a zero LSB, so the one-clock flag delay
+            // changes only request 639. Leave the line RAM read path intact.
+            cvbs_last_request<=cvbs_source_x_raw[9:1]==9'd319;
+            cvbs_source_x<={cvbs_source_x_raw[9:1],
+                cvbs_source_x_raw[0] && !cvbs_last_request};
             cvbs_source_y<=cvbs_source_y_raw;
             cvbs_source_valid<=cvbs_source_valid_raw;
             cvbs_prefetch_y<=cvbs_prefetch_y_raw;
@@ -824,7 +825,6 @@ module top_coco3 #(
         end
     end
     coco_cvbs_ntsc #(.STREAMING_INPUT(0),.CANONICAL_640_INPUT(1),
-        .CVBS_FIELD_PHASE_ALIGN(ANALOG_VIDEO_MODE<=1),
         .PAL_CHROMA_OUTPUT(PAL_CHROMA_OUTPUT),
         .RGB_SOG_OUTPUT(ANALOG_VIDEO_MODE==3),
         .RGB_SCANLINE_PHASE_ALTERNATION(ANALOG_VIDEO_MODE==3),
@@ -867,45 +867,4 @@ module top_coco3 #(
     wire unused_inputs=mux_slenb_n ^ mux_nmi_n ^ native_hblank ^
         native_vblank ^ ^native_red ^ ^native_green ^ ^native_blue ^ e_rise ^
         ^pia1_dac_level;
-endmodule
-
-// Keep the startup hold and E-edge release cycle-exact while splitting the
-// counter's carry path. This block runs at 108 MHz, independently of video.
-module coco_cpu_reset_hold #(
-    parameter integer HOLD_CYCLES=10800000
-) (
-    input wire clk,input wire reset_n,input wire system_ready,input wire e_fall,
-    output reg cpu_release=0
-);
-    localparam integer COUNT_WIDTH=HOLD_CYCLES>0 ? $clog2(HOLD_CYCLES+1) : 1;
-    reg [COUNT_WIDTH-1:0] count=0;
-    reg release_pending=0;
-    wire [COUNT_WIDTH-1:0] next_count;
-    generate if(COUNT_WIDTH>8)begin:split_counter
-        // Predict the low-byte carry one cycle ahead. At count xxFF this
-        // registered flag is already set, so the upper increment never
-        // waits for the low-byte carry chain. Stall/reset with the counter.
-        reg carry=0;
-        always @(posedge clk or negedge reset_n)begin
-            if(!reset_n)carry<=0;
-            else if(!system_ready)carry<=0;
-            else if(!cpu_release && count<HOLD_CYCLES)
-                carry<=count[7:0]==8'hfe;
-        end
-        assign next_count[7:0]=count[7:0]+1'b1;
-        assign next_count[COUNT_WIDTH-1:8]=count[COUNT_WIDTH-1:8]+carry;
-    end else begin:short_counter
-        assign next_count=count+1'b1;
-    end endgenerate
-    always @(posedge clk or negedge reset_n)begin
-        if(!reset_n)begin
-            count<=0;release_pending<=0;cpu_release<=0;
-        end else if(!system_ready)begin
-            count<=0;release_pending<=0;cpu_release<=0;
-        end else if(!cpu_release)begin
-            if(count<HOLD_CYCLES)count<=next_count;
-            else release_pending<=1;
-            if(release_pending && e_fall)cpu_release<=1;
-        end
-    end
 endmodule

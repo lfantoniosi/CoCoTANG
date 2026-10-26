@@ -82,7 +82,8 @@ module coco_bus_mux #(
                             bank <= 2'd1;
                         end
                         2'd1: begin
-                            address_high <= mp;
+                            // Normalize the new board wiring to the original latch layout.
+                            address_high <= {mp[2:0],mp[7:3]};
                             address_ready_reg <= 1'b1;
                             select_reg <= 2'b10;
                             bank <= 2'd2;
@@ -105,15 +106,15 @@ module coco_bus_mux #(
         end
     end
 
-    // U10 routes A15,A14,A13 through MP0,MP1,MP2 respectively.  Publish the
+    // The latch stores A15,A14,A13 in bits 5,6,7 respectively. Publish the
     // address directly from the two settled address-bank registers instead
     // of waiting for the third (control) bank.  This advances the external
     // SAM S decode by one complete mux-bank interval while E is still low,
     // giving devices such as the MC6821 their required select setup time.
     // snapshot remains the atomic source for all control signals and its
     // valid pulse still marks completion of the complete transaction scan.
-    wire [7:0] high_addr = {address_high[0], address_high[1], address_high[2],
-                            address_high[7:3]};
+    wire [7:0] high_addr = {address_high[5], address_high[6], address_high[7],
+                            address_high[4:0]};
     assign msel = select_reg;
     assign addr = {high_addr, address_low};
     assign rw_n = snapshot[16];

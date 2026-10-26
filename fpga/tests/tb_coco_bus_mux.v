@@ -1,23 +1,27 @@
 `timescale 1ns/1ps
 module tb_coco_bus_mux;
     reg clk=0,reset_n=0,scan_start=0; reg [7:0] mp=8'ha3;
+    reg [7:0] low_data=8'ha3,high_data={5'b10101,1'b0,1'b1,1'b1};
+    reg [7:0] control_data=8'b10110111;
     wire [1:0] msel; wire [15:0] addr;
-    wire rw_n,cpu_reset_n,slenb_n,sernt_n,cart_n,keyint_n,halt_n,nmi_n,valid;
+    wire rw_n,cpu_reset_n,slenb_n,sernt_n,cart_n,keyint_n,halt_n,nmi_n,valid,ready;
     coco_bus_mux dut(.clk(clk),.reset_n(reset_n),.scan_start(scan_start),
       .mp(mp),.msel(msel),.addr(addr),
       .rw_n(rw_n),.cpu_reset_n(cpu_reset_n),.slenb_n(slenb_n),.sernt_n(sernt_n),
       .cart_n(cart_n),.keyint_n(keyint_n),.halt_n(halt_n),.nmi_n(nmi_n),
-      .snapshot_valid(valid));
+      .address_ready(ready),.snapshot_valid(valid));
     always #5 clk=~clk;
     // Model decoder/buffer propagation: the previous bank remains visible
     // for 17 ns after MSEL changes.
-    always @(msel) case(msel)
-      2'b00: mp <= #17 8'ha3;
-      2'b01: mp <= #17 {5'b10101,1'b0,1'b1,1'b1}; // Remapped A15..8 = d5
-      2'b10: mp <= #17 8'b10110111;
+    always @(msel or low_data or high_data or control_data) case(msel)
+      2'b00: mp <= #17 low_data;
+      2'b01: mp <= #17 high_data;
+      2'b10: mp <= #17 control_data;
       default: mp <= #17 8'hff;
     endcase
     integer valid_count=0;
+    integer pattern;
+    reg [7:0] cpu_high,previous_controls;
     always @(posedge valid) valid_count=valid_count+1;
     initial begin
       repeat(3) @(posedge clk); reset_n=1;
@@ -37,6 +41,31 @@ module tb_coco_bus_mux;
       // It must remain idle until another Q-aligned scan_start pulse.
       repeat(30) @(posedge clk);
       if(valid_count!=1) $fatal(1,"scanner republished without scan_start");
+      // Sweep every CPU high byte. Encode the physical U10 wiring at the
+      // input, then check CPU order and both publication boundaries.
+      for(pattern=0;pattern<256;pattern=pattern+1)begin
+        @(negedge clk);
+        previous_controls={nmi_n,halt_n,keyint_n,cart_n,sernt_n,slenb_n,cpu_reset_n,rw_n};
+        cpu_high=pattern;
+        high_data={cpu_high[4:0],cpu_high[5],cpu_high[6],cpu_high[7]};
+        low_data=~cpu_high;
+        control_data=cpu_high^8'h96;
+        repeat(3)@(negedge clk);
+        scan_start=1;
+        @(negedge clk);scan_start=0;
+        wait(ready);@(negedge clk);
+        if(valid || msel!==2'b10 || addr!=={cpu_high,low_data})
+          $fatal(1,"high-bank publication pattern=%02x addr=%04x",cpu_high,addr);
+        if(dut.address_high!=={cpu_high[5],cpu_high[6],cpu_high[7],cpu_high[4:0]})
+          $fatal(1,"high byte was not normalized to the original latch layout");
+        if({nmi_n,halt_n,keyint_n,cart_n,sernt_n,slenb_n,cpu_reset_n,rw_n}!==previous_controls)
+          $fatal(1,"controls changed before the control bank was captured");
+        wait(valid);@(negedge clk);
+        if(addr!=={cpu_high,low_data} ||
+           {nmi_n,halt_n,keyint_n,cart_n,sernt_n,slenb_n,cpu_reset_n,rw_n}!==control_data)
+          $fatal(1,"atomic snapshot pattern=%02x",cpu_high);
+      end
+      if(valid_count!=257)$fatal(1,"missing/extra snapshots: %0d",valid_count);
       $display("tb_coco_bus_mux PASS"); $finish;
     end
 endmodule

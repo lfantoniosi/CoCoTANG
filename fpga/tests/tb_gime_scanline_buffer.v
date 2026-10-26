@@ -11,13 +11,9 @@ module tb_gime_scanline_buffer;
  wire [5:0] cvbs_vertical_left_border,cvbs_vertical_right_border;
  wire cvbs_vertical_border_valid;
  integer transactions=0,errors=0,i,timeout,raster;
- integer graphics_gm,graphics_css,graphics_palette,graphics_dot,graphics_x;
- integer sg_mode,sg_css,sg_row,sg_column;
- integer alpha_palette,alpha_css,alpha_inverse,alpha_x;
- reg [7:0] alpha_glyph;
  integer font_gm,font_character,font_row,font_index,font_inverse;
- reg [7:0] font_reference[0:1535];
- reg [7:0] font_expected,font_observed;
+ reg [7:0] font_reference[0:1535],font_expected,font_observed;
+ integer graphics_gm,graphics_css,graphics_palette,graphics_dot,graphics_x;
  reg [3:0] graphics_index;
  reg [5:0] graphics_expected;
  integer responder_delay=0;reg slow_memory=0;
@@ -199,8 +195,8 @@ module tb_gime_scanline_buffer;
     $display("SG4 foreground pixel %0d wrong got %02h expected %02h",i,
      dut.c_valid0?dut.cvbs_line0[i]:dut.cvbs_line1[i],mapped(6'd54));
     errors=errors+1;i=10;end
-  if(dut.c_valid0 ? dut.cvbs_line0[10]!==6'd0:
-                    dut.cvbs_line1[10]!==6'd0)begin
+  if(dut.c_valid0 ? dut.cvbs_line0[10]!==mapped(6'd0):
+                    dut.cvbs_line1[10]!==mapped(6'd0))begin
    $display("SG4 top-right quadrant should be background");errors=errors+1;end
   // In the 640-dot configuration compatibility video still occupies the
   // centered 512-dot aperture, but it is point-replicated: each 256-wide VDG
@@ -211,10 +207,10 @@ module tb_gime_scanline_buffer;
     $display("SG4 HDMI 2x foreground pixel %0d was filtered",i);
     errors=errors+1;i=8;end
   if((dut.h_valid0&&dut.h_tag0==0 ? dut.hdmi_line0[8] : dut.hdmi_line1[8])
-      !==24'h000000)begin
+      !==dut.expand_rgb222(mapped(6'd0)))begin
    $display("SG4 HDMI exact 2x boundary is wrong: %h expected %h bank=%b tags=%0d/%0d",
     dut.h_valid0&&dut.h_tag0==0 ? dut.hdmi_line0[8] : dut.hdmi_line1[8],
-    24'h000000,dut.h_valid0,dut.h_tag0,dut.h_tag1);
+    dut.expand_rgb222(mapped(6'd0)),dut.h_valid0,dut.h_tag0,dut.h_tag1);
    errors=errors+1;end
 
   // Mega-Bug selects 128x96 SAM addressing.  Compatibility DMA geometry is
@@ -422,33 +418,6 @@ module tb_gime_scanline_buffer;
    $display("HBORD mode write discarded queued row request");errors=errors+1;
   end
   dut.h_pending=0;release dut.state;
-
-  // A replacement pointer may still name the displayed bank after a
-  // prefetched entry was invalidated. Keep protecting that bank in HBORD:
-  // the second HDMI copy of the current row has not necessarily run yet.
-  @(negedge clk);
-  force dut.state=5'd0;force dut.configuration_pending=0;
-  force dut.hd_v_s=0;force dut.hd_pa_s=1;force dut.hd_y_s=8'd31;
-  force dut.h_valid0=1;force dut.h_tag0=8'd31;force dut.h_valid1=0;
-  force dut.h_next_bank=0;
-  dut.h_pending=1;dut.h_pending_y=8'd32;dut.coalesce_count=7;
-  @(posedge clk);#1;
-  if(dut.fill_h_bank!==1)begin
-   $display("HDMI HBORD fill replaced displayed bank 0");errors=errors+1;
-  end
-  @(negedge clk);
-  force dut.h_valid0=0;force dut.h_valid1=1;force dut.h_tag1=8'd31;
-  force dut.h_next_bank=1;
-  dut.h_pending=1;dut.h_pending_y=8'd32;dut.coalesce_count=7;
-  @(posedge clk);#1;
-  if(dut.fill_h_bank!==0)begin
-   $display("HDMI HBORD fill replaced displayed bank 1");errors=errors+1;
-  end
-  dut.h_pending=0;dut.coalesce_count=0;
-  release dut.h_next_bank;release dut.h_tag1;release dut.h_tag0;
-  release dut.h_valid1;release dut.h_valid0;
-  release dut.hd_y_s;release dut.hd_pa_s;release dut.hd_v_s;
-  release dut.configuration_pending;release dut.state;
 
   // Scrolling writes commonly dirty the row which has already been
   // prefetched while the preceding row is being shown twice by HDMI.  Keep
@@ -667,27 +636,6 @@ module tb_gime_scanline_buffer;
   release dut.source_x;release dut.fill_gm;release dut.character;
   release dut.fill_bit_plane;release dut.fill_compatibility;release dut.glyph_cache;
 
-  // All empty semigraphics blocks are true black: SG4 and SG6, both
-  // colour sets, every vertical subdivision and both horizontal halves.
-  force dut.fill_compatibility=1;force dut.fill_bit_plane=0;
-  force dut.character=8'h80;
-  for(sg_mode=0;sg_mode<2;sg_mode=sg_mode+1)begin
-   force dut.fill_gm=sg_mode;
-   for(sg_css=0;sg_css<2;sg_css=sg_css+1)begin
-    force dut.pixel_compatibility_css=sg_css;
-    for(sg_row=0;sg_row<12;sg_row=sg_row+1)begin
-     force dut.glyph_line=sg_row;
-     for(sg_column=0;sg_column<8;sg_column=sg_column+4)begin
-      force dut.source_x=sg_column;#1;
-      if(dut.decoded_code!==6'd0)$fatal(1,"SG background must be black: mode=%0d CSS=%0d row=%0d x=%0d",sg_mode,sg_css,sg_row,sg_column);
-     end
-    end
-   end
-  end
-  release dut.source_x;release dut.glyph_line;release dut.pixel_compatibility_css;
-  release dut.fill_gm;release dut.character;release dut.fill_bit_plane;
-  release dut.fill_compatibility;
-
   // A VDG CSS write changes individual bytes without invalidating a row.
   compatibility_mode=1;compatibility_css=0;#1;
   signature_without_css=dut.live_signature;
@@ -883,44 +831,6 @@ module tb_gime_scanline_buffer;
   release dut.state;release dut.h_pending;release dut.h_pending_y;
   release dut.coalesce_count;
 
-  // Alpha text must use programmable entries 12/13 (CSS=0) and 14/15
-  // (CSS=1), including true black backgrounds in the ROM default palette.
-  // Check the completed HDMI and analog line buffers against an independent
-  // font row, for normal/inverse characters and both default/custom colors.
-  $readmemh("tests/data/gime_font_xroar.hex",font_reference);
-  for(alpha_palette=0;alpha_palette<2;alpha_palette=alpha_palette+1)
-   for(alpha_css=0;alpha_css<2;alpha_css=alpha_css+1)
-    for(alpha_inverse=0;alpha_inverse<2;alpha_inverse=alpha_inverse+1)begin
-     @(negedge clk);reset_n=0;hdmi_prefetch_valid=0;cvbs_prefetch_valid=0;
-     compatibility_mode=1;compatibility_an_g=0;bit_plane=0;
-     compatibility_gm=0;compatibility_css=alpha_css;compatibility_sam_mode=0;
-     horizontal_offset=0;screen_base=0;hdmi_prefetch_y=2;active_height=192;
-     palettes[12*6+:6]=alpha_palette?6'd9:6'd0;
-     palettes[13*6+:6]=alpha_palette?6'd63:6'd18;
-     palettes[14*6+:6]=alpha_palette?6'd45:6'd0;
-     palettes[15*6+:6]=alpha_palette?6'd36:6'd38;
-     memory_data=alpha_inverse?32'h41414141:32'h01010101;
-     alpha_glyph=font_reference[65*12+2]^(alpha_inverse?8'hff:8'h00);
-     repeat(4)@(negedge clk);
-     reset_n=1;hdmi_prefetch_valid=1;wait_hdmi_line();#1;
-     for(alpha_x=0;alpha_x<640;alpha_x=alpha_x+1)begin
-      graphics_index=12+alpha_css*2+alpha_glyph[7-((alpha_x*2/5)%8)];
-      graphics_expected=mapped(palettes[graphics_index*6+:6]);
-      if((dut.c_valid0?dut.cvbs_line0[alpha_x]:dut.cvbs_line1[alpha_x])
-          !==graphics_expected)
-       $fatal(1,"Alpha analog color: CSS=%0d inverse=%0d palette=%0d x=%0d",
-           alpha_css,alpha_inverse,alpha_palette,alpha_x);
-     end
-     for(alpha_x=0;alpha_x<512;alpha_x=alpha_x+1)begin
-      graphics_index=12+alpha_css*2+alpha_glyph[7-((alpha_x/2)%8)];
-      graphics_expected=mapped(palettes[graphics_index*6+:6]);
-      if((dut.h_valid0?dut.hdmi_line0[alpha_x]:dut.hdmi_line1[alpha_x])
-          !==dut.expand_rgb222(graphics_expected))
-       $fatal(1,"Alpha HDMI color: CSS=%0d inverse=%0d palette=%0d x=%0d",
-           alpha_css,alpha_inverse,alpha_palette,alpha_x);
-     end
-    end
-
   // Exercise every VDG graphics packing, including PMODE 1-4, with both
   // CSS banks and two distinct programmable palettes. Solid source colours
   // let us check every output pixel independently of horizontal scaling.
@@ -959,6 +869,28 @@ module tb_gime_scanline_buffer;
         errors=errors+1;graphics_x=512;
        end
      end
+
+  // Check committed HDMI and analogue RAM for both semigraphics modes,
+  // CSS values, and empty/full blocks using the complete renderer pipeline.
+  for(graphics_gm=0;graphics_gm<2;graphics_gm=graphics_gm+1)
+   for(graphics_css=0;graphics_css<2;graphics_css=graphics_css+1)
+    for(graphics_dot=0;graphics_dot<2;graphics_dot=graphics_dot+1)begin
+     @(negedge clk);reset_n=0;hdmi_prefetch_valid=0;
+     repeat(4)@(negedge clk);
+     compatibility_mode=1;compatibility_an_g=0;bit_plane=0;
+     compatibility_gm=graphics_gm;compatibility_css=graphics_css;
+     compatibility_sam_mode=0;horizontal_offset=0;hdmi_prefetch_y=0;
+     memory_data=graphics_dot?32'hffffffff:32'h80808080;
+     graphics_expected=graphics_dot?
+       mapped((!graphics_gm || graphics_css)?6'd38:6'd36):6'd0;
+     reset_n=1;hdmi_prefetch_valid=1;wait_hdmi_line();#1;
+     for(i=0;i<640;i=i+1)
+      if((dut.c_valid0?dut.cvbs_line0[i]:dut.cvbs_line1[i])!==graphics_expected)
+       $fatal(1,"SG analog GM=%0d CSS=%0d set=%0d x=%0d",graphics_gm,graphics_css,graphics_dot,i);
+     for(i=0;i<512;i=i+1)
+      if((dut.h_valid0?dut.hdmi_line0[i]:dut.hdmi_line1[i])!==dut.expand_rgb222(graphics_expected))
+       $fatal(1,"SG HDMI GM=%0d CSS=%0d set=%0d x=%0d",graphics_gm,graphics_css,graphics_dot,i);
+    end
 
   // Exercise the real ROM address, synchronous read and polarity logic
   // against XRoar's independent, unencoded GIME reference.

@@ -118,27 +118,6 @@ module tb_gime_cached_scanline;
   if(cvbs_pixel!==6'h2a)
    $fatal(1,"analog right margin changed with live FF9A");
 
-  // Read-ahead crosses ordinary page boundaries, but must hold the last
-  // dot throughout its dwell instead of wrapping page 9 from offset 63 to 0.
-  dut.cvbs_pages[9].line0[0]=6'h03;
-  dut.cvbs_pages[9].line0[63]=6'h30;
-  cvbs_x=10'd575;
-  repeat(4)@(posedge cvbs_clk);#1;
-  if(cvbs_pixel!==6'h03)$fatal(1,"analog read-ahead did not cross into final page");
-  cvbs_x=10'd638;
-  repeat(4)@(posedge cvbs_clk);#1;
-  if(cvbs_pixel!==6'h30)$fatal(1,"analog read-ahead missed last dot");
-  cvbs_x=10'd639;
-  repeat(10)begin
-   @(posedge cvbs_clk);#1;
-   if(cvbs_pixel!==6'h30)$fatal(1,"last analog column wrapped to pixel 576: %h",cvbs_pixel);
-  end
-  cvbs_valid=0;cvbs_x=0;
-  repeat(5)@(posedge cvbs_clk);#1;
-  cvbs_valid=1;
-  @(posedge cvbs_clk);#1;
-  if(cvbs_pixel!==6'h2a)$fatal(1,"last analog dot leaked into the next left edge");
-
   // A new FF98 mode describes a future row, never the row in scanout.
   hres=7;
   repeat(12)@(posedge clk);

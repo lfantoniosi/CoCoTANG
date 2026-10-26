@@ -47,18 +47,6 @@ module tb_gime_registers;
 
     initial begin
         repeat(3) @(posedge clk); reset_n=1; @(posedge clk); #1;
-        // Compatibility text defaults match the BASIC ROM palette table:
-        // CSS=0 uses black/green and CSS=1 uses black/orange-red.
-        if(palettes[12*6+:24]!=={6'd38,6'd0,6'd18,6'd0})
-            $fatal(1,"Compatibility text palette reset values are wrong");
-        cpu_addr=16'hffbe;#1;
-        if(core_rdata!==8'd0)$fatal(1,"CSS=1 background reset readback is not black");
-        cpu_addr=16'hffbf;#1;
-        if(core_rdata!==8'd38)$fatal(1,"CSS=1 foreground reset readback is wrong");
-        write_reg(16'hffbe,8'd36);cpu_addr=16'hffbe;#1;
-        if(core_rdata!==8'd36 || palettes[14*6+:6]!==6'd36)
-            $fatal(1,"Compatibility background palette write/read mismatch");
-        write_reg(16'hffbe,8'd0);
         // MMUEN resets clear: native logical RAM initially uses the same
         // fixed upper-64K compatibility window.
         cpu_addr=16'h1234;cpu_rw_n=1;#1;

@@ -548,9 +548,8 @@ module gime_scanline_buffer (
     else semigraphics_pixel=source_x[2]?character[0]:character[1];
     semigraphics_color=character[6:4];
    end
-   // Empty SG4/SG6 blocks are black in either colour set. The dark
-   // green/orange alphanumeric background codes do not apply to blocks.
-   decoded_code=semigraphics_pixel?vdg_code(semigraphics_color):6'd0;
+   decoded_code=semigraphics_pixel?vdg_code(semigraphics_color):
+                                    (pixel_compatibility_css?6'd4:6'd2);
   end else begin
    decoded_pixel=(~decoded_pixel)^inverse_character;
    // VDG alpha text is routed through GIME palette entries 12-15.  The
@@ -663,9 +662,20 @@ reg configuration_pending=1'b1;
  wire renderer_artifact=state==ARTIFACT_WRITE;
  // Artifact rows carry a tagged palette index; normal GIME/VDG pixels are
  // expanded before filtering so the HDMI cache retains eight-bit coverage.
- wire [23:0] renderer_hdmi_pixel=hdmi_pixel_latched;
+ // Pipeline semigraphics blanking independently of the existing colour
+ // decoder. Apply black at the RAM write command for both output mirrors.
+ (* syn_preserve = 1 *) reg semigraphics_black=0;
+ always @(posedge clk)begin
+  if(state==ROW_ADDRESS || (state==PIXEL_ADDRESS && !in_fill_aperture))
+   semigraphics_black<=0;
+  else if(state==DECODE_PIXEL)
+   semigraphics_black<=fill_compatibility && !fill_bit_plane &&
+                       character[7] && !semigraphics_pixel;
+ end
+ wire [23:0] renderer_hdmi_pixel=semigraphics_black && !renderer_artifact ?
+                                24'd0 : hdmi_pixel_latched;
  wire [5:0] renderer_cvbs_pixel=renderer_artifact?
-  artifact_pixel_latched:pixel_latched;
+  artifact_pixel_latched:semigraphics_black?6'd0:pixel_latched;
  reg hdmi_write_pending=0;
  reg hdmi_write_bank=0;
  reg [9:0] hdmi_write_x=0;
@@ -906,16 +916,15 @@ reg configuration_pending=1'b1;
      // Dirty displayed rows are intentionally still accepted by
      // h_display_cached above, so a same-tag refill request is the upcoming
      // prefetch row and is safe to update in place.
-     // Protect the displayed row throughout horizontal blanking as well as
-     // visible pixels: HDMI still needs its second doubled scanline. A raster-time mode
+     // Never replace the bank currently being scanned.  A raster-time mode
      // change may invalidate the other cache tag without advancing the
      // round-robin pointer; blindly using h_next_bank in that case writes
      // into the displayed row and produces black/partially updated pixels
      // from the left edge until the fill catches scanout.
      fill_h_bank<=(h_valid0&&h_tag0==h_pending_y)?0:
                   (h_valid1&&h_tag1==h_pending_y)?1:
-                  (hd_pa_s&&h_valid0&&h_tag0==hd_y_s)?1:
-                  (hd_pa_s&&h_valid1&&h_tag1==hd_y_s)?0:h_next_bank;
+                  (hd_v_s&&h_valid0&&h_tag0==hd_y_s)?1:
+                  (hd_v_s&&h_valid1&&h_tag1==hd_y_s)?0:h_next_bank;
      fill_c_bank<=(c_valid0&&c_tag0==h_pending_y)?0:
                   (c_valid1&&c_tag1==h_pending_y)?1:
                   (c_valid2&&c_tag2==h_pending_y)?2:c_replacement_bank_q;
@@ -1260,16 +1269,9 @@ reg configuration_pending=1'b1;
  reg [9:0] c_read_addr=0;
  wire [9:0] c_next_read_addr=cvbs_display_valid ?
         (cvbs_read_x==10'd639 ? 10'd639 : cvbs_read_x+1'b1) : 10'd0;
- // Arm the last-dot clamp at x=638, when normal read-ahead already
- // selects offset 63. It is then ready throughout x=639 without adding a
- // wide pixel-coordinate comparison to the 135-MHz LUT-RAM read path.
- reg c_last_read_dot=0;
- always @(posedge cvbs_read_clk)
-  c_last_read_dot<=cvbs_display_valid && cvbs_read_x[9:1]==9'd319;
- // Clamp both parts of the final read-ahead address. Wrapping only the low
- // bits here displayed pixel 576 while the high page remained at 9.
- wire [5:0] c_next_page_addr=cvbs_display_valid ?
-        (c_last_read_dot ? 6'd63 : cvbs_read_x[5:0]+6'd1) : 6'd0;
+ // The prefetch after pixel 639 is already in blanking. Let its low address
+ // wrap so the last-pixel clamp stays off the LUT-RAM read path.
+ wire [5:0] c_next_page_addr=cvbs_display_valid ? cvbs_read_x[5:0]+6'd1 : 6'd0;
  genvar cvbs_page;
  generate for(cvbs_page=0;cvbs_page<10;cvbs_page=cvbs_page+1)begin:cvbs_pages
   (* syn_ramstyle = "distributed_ram" *) reg [5:0] line0[0:63],line1[0:63],line2[0:63];

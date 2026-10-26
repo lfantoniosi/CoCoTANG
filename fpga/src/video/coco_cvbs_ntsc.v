@@ -1,14 +1,10 @@
 `timescale 1ns/1ps
 
 // NTSC encoder derived from the hardware-calibrated NTSCVideo generator.
-// The line raster uses a 13.5 MHz BT.601 grid; RGB can advance source dots
-// at the original CoCo rate independently of that grid. clk270 drives
+// clk135 is divided by ten to the 13.5 MHz BT.601 sample grid. clk270 drives
 // three first-order, one-bit DACs. The composite levels are deliberately the
 // same as the proven pin-51 2N3904/75-ohm circuit: sync=0, blank=10, white=32.
 module coco_cvbs_ntsc #(
-    // Opt in only for composite builds; RGB/component retain the original
-    // continuous carrier and burst paths.
-    parameter integer CVBS_FIELD_PHASE_ALIGN = 0,
     parameter integer STREAMING_INPUT = 0,
     parameter integer CANONICAL_640_INPUT = 0,
     // Experimental PAL chroma over the existing CoCo/HDMI line timing.  This
@@ -20,9 +16,6 @@ module coco_cvbs_ntsc #(
     // The component HAT then needs no component changes: Y=G/SoG, Pb=B,
     // and Pr=R.
     parameter integer RGB_SOG_OUTPUT = 0,
-    // Match NTSC CoCo RGB dot timing while retaining the shared line raster.
-    // Set to zero to restore the former BT.601-width RGB aperture.
-    parameter integer RGB_COCO_APERTURE = 1,
     // Restart the RGB DAC accumulators with staggered phases, alternating
     // each channel by half a cycle on successive scanlines.
     parameter integer RGB_SCANLINE_PHASE_ALTERNATION = 0,
@@ -174,90 +167,24 @@ module coco_cvbs_ntsc #(
         (field_odd ? 9'd262 : 9'd261);
     wire [9:0] line_last_sample = h_total-1'b1;
 
-    localparam RGB_DOT_TIMING = RGB_SOG_OUTPUT && RGB_COCO_APERTURE &&
-                               CANONICAL_640_INPUT && !STREAMING_INPUT;
-    // 135 MHz * (28/264) = 14.3181818 MHz for native 640-dot RGB.
-    // Compatibility expands each pair of original dots into 3+2 canonical
-    // samples. Hold them for 7+6+6 and 10+9 clk135 ticks respectively:
-    // every original dot is exactly 19 clocks, without subpixel jitter.
-    // The 4864-clock body is 36 clocks wider than the exact CoCo cadence.
-    reg [9:0] rgb_dot_x=0;
-    reg [9:0] rgb_cache_x=0;
-    reg [8:0] rgb_dot_fraction=0;
-    reg [2:0] rgb_compat_phase=0;
-    reg rgb_dot_active=0;
-    wire [9:0] rgb_dot_sum={1'b0,rgb_dot_fraction}+
-                          (picture_high_resolution ? 10'd28 : 10'd1);
-    wire [3:0] rgb_compat_period=rgb_compat_phase==0 ? 4'd7 :
-                                 rgb_compat_phase==3 ? 4'd10 :
-                                 rgb_compat_phase==4 ? 4'd9 : 4'd6;
-    wire [9:0] rgb_dot_period=picture_high_resolution ? 10'd264 :
-                             {6'd0,rgb_compat_period};
-    // Advance the body by 75 clk135 ticks: approximately eight native
-    // CoCo hi-res pixels. Keep its dot cadence and width unchanged.
-    wire [9:0] rgb_picture_left=(picture_high_resolution ? 10'd168 : 10'd229)+standard_shift;
-    wire [3:0] rgb_picture_phase=picture_high_resolution ? 4'd8 : 4'd1;
-    always @(posedge clk135 or negedge reset_n)begin
-        if(!reset_n)begin rgb_dot_x<=0;rgb_cache_x<=0;rgb_dot_fraction<=0;rgb_compat_phase<=0;rgb_dot_active<=0;end
-        else if(h_sample==0&&sample_phase==0)begin
-            rgb_dot_x<=0;rgb_cache_x<=0;rgb_dot_fraction<=0;rgb_compat_phase<=0;rgb_dot_active<=0;
-        end else if(h_sample==rgb_picture_left&&sample_phase==rgb_picture_phase)begin
-            rgb_dot_x<=0;rgb_cache_x<=0;rgb_dot_fraction<=0;rgb_compat_phase<=0;rgb_dot_active<=1;
-        end else if(rgb_dot_active)begin
-            if(rgb_dot_sum>=rgb_dot_period)begin
-                rgb_dot_fraction<=rgb_dot_sum-rgb_dot_period;
-                if(!picture_high_resolution)
-                    rgb_compat_phase<=rgb_compat_phase==4 ? 0 : rgb_compat_phase+1'b1;
-                rgb_cache_x<=rgb_dot_x;
-                rgb_dot_x<=rgb_dot_x+1'b1;
-                if(rgb_dot_x==10'd639)rgb_dot_active<=0;
-            end else rgb_dot_fraction<=rgb_dot_sum[8:0];
-        end
-    end
-    // Put RGB vertical sync two lines earlier, moving the displayed body
-    // down without delaying cache consumption or changing GIME raster IRQs.
-    // The registered mapping settles at the beginning of each scanline,
-    // before any equalizing/broad-sync pulse can differ from normal HS.
-    reg rgb_equalizing=0,rgb_broad_sync=0;
-    always @(posedge clk135 or negedge reset_n)begin
-        if(!reset_n)begin rgb_equalizing<=0;rgb_broad_sync<=0;end
-        else begin
-            // Only the sync sections are needed, not a full translated
-            // vertical counter. N+2 maps the broad pulse to lines 1..3.
-            rgb_equalizing<=v_line==0 || (v_line>=4&&v_line<7) ||
-                            v_line>=field_last_line-9'd1;
-            rgb_broad_sync<=v_line>=1&&v_line<4;
-        end
-    end
-    wire sync_equalizing=RGB_DOT_TIMING ? rgb_equalizing :
-                         (v_line<3 || (v_line>=6&&v_line<9));
-    wire sync_broad=RGB_DOT_TIMING ? rgb_broad_sync : (v_line>=3&&v_line<6);
-    wire horizontal_picture = RGB_DOT_TIMING ? rgb_dot_active :
-                              (h_sample>=picture_left&&h_sample<picture_right);
-    wire in_picture = horizontal_picture &&
+    wire in_picture = (h_sample >= picture_left) &&
+                      (h_sample < picture_right) &&
                       (v_line >= field_picture_top) &&
                       (v_line < field_picture_bottom);
-    wire in_vdg_window = (!RGB_DOT_TIMING || (!sync_equalizing&&!sync_broad)) &&
-                         (h_sample >= border_left) &&
+    wire in_vdg_window = (h_sample >= border_left) &&
                          (h_sample < border_right) &&
                          (v_line >= border_top) &&
                          (v_line <= field_last_line);
     wire [9:0] picture_offset = h_sample-picture_left;
     wire [11:0] canonical_x_sum = {2'b0,picture_offset}+
                                    ({2'b0,picture_offset}<<2);
-    wire [9:0] picture_x = RGB_DOT_TIMING ? rgb_dot_x :
-        picture_high_resolution ? picture_offset :
+    wire [9:0] picture_x = picture_high_resolution ? picture_offset :
         (CANONICAL_640_INPUT && !STREAMING_INPUT) ? canonical_x_sum[11:2] :
                                                    (picture_offset>>1);
     wire [8:0] picture_y_full = v_line - field_picture_top;
     wire [7:0] picture_y = picture_y_full[7:0];
     assign framebuffer_addr = in_picture ? {picture_y, picture_x[7:0]} : 16'd0;
-    // The canonical scanline cache reads one address ahead. Compensate
-    // that address bias for RGB compatibility timing so the 3+2 groups
-    // above line up with the actual returned pixels, including page edges.
-    // At the left edge samples zero and one belong to the same VDG dot.
-    assign source_x = RGB_DOT_TIMING && !picture_high_resolution ?
-                      rgb_cache_x : picture_x;
+    assign source_x = picture_x;
     assign source_y = picture_y;
     assign source_valid = in_picture;
     assign prefetch_y = (v_line < field_picture_top) ? 8'd0 : picture_y+1'b1;
@@ -268,15 +195,18 @@ module coco_cvbs_ntsc #(
     // Six pre-equalizing half-lines, six broad-sync half-lines and six
     // post-equalizing half-lines, followed by conventional horizontal sync.
     wire [9:0] h_half = h_total >> 1;
-    wire sync_tip = sync_equalizing ?
+    wire sync_tip = (v_line < 9'd3) ?
         ((h_sample < 10'd32) ||
          ((h_sample >= h_half) && (h_sample < h_half+10'd32))) :
-        sync_broad ?
+        (v_line < 9'd6) ?
         ((h_sample < h_half-10'd64) ||
          ((h_sample >= h_half) && (h_sample < h_total-10'd64))) :
+        (v_line < 9'd9) ?
+        ((h_sample < 10'd32) ||
+         ((h_sample >= h_half) && (h_sample < h_half+10'd32))) :
         (h_sample < H_SYNC);
 
-    wire in_burst = !sync_equalizing && !sync_broad &&
+    wire in_burst = (v_line >= 9'd9) &&
                     (h_sample >= BURST_START) && (h_sample < burst_end);
 
     // NTSC fSC is 455/2 times the line rate. At 135 MHz this accumulator
@@ -287,21 +217,6 @@ module coco_cvbs_ntsc #(
     reg [2:0] carrier_octant = 3'd0;
     reg [25:0] pal_carrier_acc = 26'd0;
     reg pal_v_invert = 1'b0;
-    // At 858 samples/line, the field origin differs only by 180 degrees.
-    // Align composite picture and burst without disturbing the S-Video DDS.
-    wire cvbs_phase_flip;
-    generate if (CVBS_FIELD_PHASE_ALIGN && !PAL_CHROMA_OUTPUT) begin:cvbs_field_phase
-        reg phase_flip=0;
-        always @(posedge clk135)begin
-            if(!reset_n)phase_flip<=0;
-            else if(!video_50hz_active &&
-                    v_line==0 && h_sample==0 && sample_phase==0)
-                phase_flip<=carrier_octant[2];
-        end
-        assign cvbs_phase_flip=phase_flip;
-    end else begin:continuous_field_phase
-        assign cvbs_phase_flip=1'b0;
-    end endgenerate
     wire [2:0] carrier_phase = PAL_CHROMA_OUTPUT ?
                                pal_carrier_acc[25:23] : carrier_octant;
 
@@ -623,24 +538,18 @@ module coco_cvbs_ntsc #(
         (PAL_CHROMA_OUTPUT && pal_v_invert) ? cvbs_mod_difference3 : cvbs_mod_sum3;
     wire signed [10:0] cvbs_pal_difference3=
         (PAL_CHROMA_OUTPUT && pal_v_invert) ? cvbs_mod_sum3 : cvbs_mod_difference3;
-    wire [2:0] cvbs_mod_carrier=mod_carrier ^
-        {(!PAL_CHROMA_OUTPUT && !video_50hz_active && cvbs_phase_flip),2'b00};
-    wire signed [5:0] cvbs_unfiltered_picture_chroma=
-        rgb_chroma(mod_x4,pal_picture_y4,pal_picture_sum3,
-                   pal_picture_difference3,cvbs_mod_carrier);
     wire signed [5:0] cvbs_picture_chroma=
         rgb_chroma(cvbs_mod_x4,cvbs_pal_y4,cvbs_pal_sum3,
-                   cvbs_pal_difference3,cvbs_mod_carrier);
+                   cvbs_pal_difference3,mod_carrier);
     // PAL burst swings +/-45 degrees about the negative U axis.  The two
     // octant offsets correspond to -U+V and -U-V respectively; NTSC keeps
     // its original 180-degree burst unchanged.
     wire [2:0] burst_phase_offset = PAL_CHROMA_OUTPUT ?
         (pal_v_invert ? 3'd5 : 3'd3) : 3'd4;
     wire signed [5:0] mod_burst_chroma =
-        chroma8(cvbs_mod_carrier + burst_phase_offset,2'd3);
+        chroma8(mod_carrier + burst_phase_offset,2'd3);
     wire signed [5:0] mod_selected_chroma = mod_burst ?
-        mod_burst_chroma : (CVBS_CHROMA_FILTER ? cvbs_picture_chroma :
-            CVBS_FIELD_PHASE_ALIGN ? cvbs_unfiltered_picture_chroma : mod_picture_chroma);
+        mod_burst_chroma : (CVBS_CHROMA_FILTER ? cvbs_picture_chroma : mod_picture_chroma);
 
     reg level_sync = 1'b1;
     reg level_burst = 1'b0;
@@ -694,12 +603,9 @@ module coco_cvbs_ntsc #(
                             level_picture ? selected_luma_level_q2 :
                                             LUMA_BLANK_Q2;
     // The receiver derives hue and saturation from the picture-to-burst ratio.
-    wire signed [5:0] svideo_burst_chroma=
-        chroma8(level_carrier + burst_phase_offset,2'd3);
     wire [5:0] chroma_level = level_picture ?
         add_svideo_level(CHROMA_CENTER,svideo_picture_chroma) :
-        level_burst ? add_level(CHROMA_CENTER,
-            CVBS_FIELD_PHASE_ALIGN ? svideo_burst_chroma : level_chroma) :
+        level_burst ? add_level(CHROMA_CENTER,level_chroma) :
         CHROMA_CENTER;
     wire [5:0] composite_level = level_sync ? LEVEL_SYNC :
         level_burst ? add_level(LEVEL_BLANK,level_chroma) :
@@ -856,12 +762,8 @@ module coco_cvbs_ntsc #(
             source_active <= in_picture;
             source_body <= (v_line >= field_picture_top) &&
                            (v_line < field_picture_bottom);
-            source_left_of_picture <= RGB_DOT_TIMING ?
-                (h_sample<rgb_picture_left || (h_sample==rgb_picture_left&&
-                                              sample_phase<=rgb_picture_phase)) :
-                (h_sample < picture_left);
-            source_left_of_right_edge <= RGB_DOT_TIMING ? rgb_dot_x<10'd640 :
-                                        (h_sample < picture_right);
+            source_left_of_picture <= (h_sample < picture_left);
+            source_left_of_right_edge <= (h_sample < picture_right);
             source_carrier <= carrier_phase;
             source_sample_tick <= (sample_phase == 4'd0);
 
