@@ -35,7 +35,7 @@ configuration payload when changing this boundary.
 # PAL isolation
 
 PAL analog timing work uses CoCoTANG-pal-analog.gprj and only src/pal/ variants.
-Do not modify CoCoTANG-pal.gprj: it remains the shared RGB/YPbPr project.
+Do not modify CoCoTANG-pal.gprj: it remains the shared RGB project.
 Keep src/pal/ out of other project file lists and common source dependencies.
 The PAL-only build_options.json records the existing PAL options (place1,
 route1, replication enabled, maxfan16); copying it to the PAL project's own
@@ -48,3 +48,15 @@ implementation, project identity and source paths of this confirmed build.
 
 The user selected this confirmed version as the PAL baseline. Leave the PAL
 carrier continuous; no additional frame/chroma phase alignment is authorized.
+
+# YPbPr isolation
+
+YPbPr timing experiments use CoCoTANG-ypbpr-analog.gprj and src/ypbpr/ only.
+Preserve the confirmed RGB/CVBS/PAL projects, source paths and payloads.
+The isolated YPbPr process config preserves place1, route1, replication=true
+and maxfan16 from the shared project's prior settings. Do not tune placement.
+The user confirmed very stable colors and successful Boink with
+ypbpr-factored-test.fs on 2026-10-26. It is preserved as impl/pnr/stable-ypbpr*
+with exact sources, timing and placement options. Preserve this factored
+component matrix, earlier DAC selection and component blanking alignment.
+The earlier ypbpr-early-blank-test.fs crashed and is rejected.

@@ -1,6 +1,8 @@
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 PROJECT := $(ROOT)/CoCoTANG.gprj
 PAL_PROJECT := $(ROOT)/CoCoTANG-pal.gprj
+YPBPR_ANALOG_PROJECT := $(ROOT)/CoCoTANG-ypbpr-analog.gprj
+YPBPR_ANALOG_CONFIG := $(ROOT)/src/ypbpr/build_options.json
 PAL_ANALOG_PROJECT := $(ROOT)/CoCoTANG-pal-analog.gprj
 PAL_ANALOG_CONFIG := $(ROOT)/src/pal/build_options.json
 CVBS_PROJECT := $(ROOT)/CoCoTANG-cvbs-minimal.gprj
@@ -19,11 +21,12 @@ VIDEO_TOP_rgb := top_coco3_rgb
 VIDEO_TOP_ypbpr := top_coco3_ypbpr
 VIDEO_TOP_cvbs := top_coco3_ntsc_svideo
 VIDEO_PROJECT_rgb := CoCoTANG-pal.gprj
-VIDEO_PROJECT_ypbpr := CoCoTANG-pal.gprj
+VIDEO_PROJECT_ypbpr := CoCoTANG-ypbpr-analog.gprj
 VIDEO_PROJECT_cvbs := CoCoTANG-cvbs-minimal.gprj
-# CVBS variants are deliberately absent from normal/RGB source dependencies.
-COMMON_SOURCE_FILES := $(filter-out src/top_coco3_data_test.v src/top_coco3_data_test.cst src/top_coco3_data_test.sdc src/video/cpu_bus_probe_hdmi.sv,$(shell find src -type f ! -path 'src/cvbs/*' ! -path 'src/pal/*'))
+# Isolated analog variants stay out of normal/RGB source dependencies.
+COMMON_SOURCE_FILES := $(filter-out src/top_coco3_data_test.v src/top_coco3_data_test.cst src/top_coco3_data_test.sdc src/video/cpu_bus_probe_hdmi.sv,$(shell find src -type f ! -path 'src/cvbs/*' ! -path 'src/pal/*' ! -path 'src/ypbpr/*'))
 CVBS_SOURCE_FILES := $(COMMON_SOURCE_FILES) $(ROOT)/src/cvbs/minimal_top_coco3.v $(ROOT)/src/cvbs/video/coco_cvbs_ntsc_lut.v
+YPBPR_SOURCE_FILES := $(COMMON_SOURCE_FILES) $(ROOT)/src/ypbpr/minimal_top_coco3.v $(ROOT)/src/ypbpr/video/coco_cvbs_ntsc_lut.v $(YPBPR_ANALOG_CONFIG)
 PAL_SOURCE_FILES := $(COMMON_SOURCE_FILES) $(ROOT)/src/pal/minimal_top_coco3.v $(ROOT)/src/pal/video/coco_cvbs_ntsc_lut.v $(PAL_ANALOG_CONFIG)
 PAL_ROM ?= /Users/felipe/src/retro/coco_roms/coco3p.rom
 RAM8M_DISK := $(ROOT)/results/RAM8M.DSK
@@ -82,6 +85,7 @@ rebuild-all:
 $(addprefix build-,$(OTHER_VIDEO_MODES)): build-%: $(ROOT)/impl/pnr/CoCoTANG-%.fs
 
 $(addprefix rebuild-,$(OTHER_VIDEO_MODES)): rebuild-%: check-tools
+	$(if $(filter ypbpr,$*),cp "$(YPBPR_ANALOG_CONFIG)" "$(ROOT)/impl/CoCoTANG-ypbpr-analog_process_config.json")
 	$(call run-gowin,$(VIDEO_PROJECT_$*),$(VIDEO_TOP_$*),CoCoTANG-$*)
 
 $(addprefix timing-,$(OTHER_VIDEO_MODES)): timing-%:
@@ -357,8 +361,12 @@ src/audio/coco_ssc_tts_rom.v: scripts/gen_ssc_tts.py src/third_party/nrl_tts/eng
 $(OUTPUT): $(PROJECT) $(BUILD_TCL) $(COMMON_SOURCE_FILES) | check-tools
 	$(call run-gowin,CoCoTANG.gprj,top_coco3,CoCoTANG)
 
-$(VIDEO_OUTPUTS): $(ROOT)/impl/pnr/CoCoTANG-%.fs: $(PAL_PROJECT) $(BUILD_TCL) $(COMMON_SOURCE_FILES) | check-tools
+$(filter-out $(ROOT)/impl/pnr/CoCoTANG-ypbpr.fs,$(VIDEO_OUTPUTS)): $(ROOT)/impl/pnr/CoCoTANG-%.fs: $(PAL_PROJECT) $(BUILD_TCL) $(COMMON_SOURCE_FILES) | check-tools
 	$(call run-gowin,$(VIDEO_PROJECT_$*),$(VIDEO_TOP_$*),CoCoTANG-$*)
+
+$(ROOT)/impl/pnr/CoCoTANG-ypbpr.fs: $(YPBPR_ANALOG_PROJECT) $(BUILD_TCL) $(YPBPR_SOURCE_FILES) | check-tools
+	cp "$(YPBPR_ANALOG_CONFIG)" "$(ROOT)/impl/CoCoTANG-ypbpr-analog_process_config.json"
+	$(call run-gowin,CoCoTANG-ypbpr-analog.gprj,top_coco3_ypbpr,CoCoTANG-ypbpr)
 
 $(CVBS_OUTPUT): $(CVBS_PROJECT) $(BUILD_TCL) $(CVBS_SOURCE_FILES) | check-tools
 	$(call run-gowin,CoCoTANG-cvbs-minimal.gprj,top_coco3_ntsc_svideo,CoCoTANG-cvbs-minimal)
@@ -452,3 +460,7 @@ $(DATA_TEST_OUTPUT): $(DATA_TEST_PROJECT) $(BUILD_TCL) src/top_coco3_data_test.v
 .PHONY: test-pal
 test-pal:
 	python3 tests/check_pal_project.py
+
+.PHONY: test-ypbpr
+test-ypbpr:
+	python3 tests/check_ypbpr_project.py
