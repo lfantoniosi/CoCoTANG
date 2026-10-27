@@ -21362,17 +21362,17 @@
 	)
 	(global_label "AUDIO_RCA"
 		(shape input)
-		(at 612.902 104.394 0)
+		(at 597.662 104.394 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left)
+			(justify right)
 		)
 		(uuid "9c5af2db-b8d4-4195-857c-acbc6082c3fb")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 626.1078 104.394 0)
+			(at 584.4562 104.394 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21380,7 +21380,7 @@
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left)
+				(justify right)
 			)
 		)
 	)
@@ -21770,17 +21770,17 @@
 	)
 	(global_label "R_CVBS"
 		(shape input)
-		(at 597.662 106.934 180)
+		(at 612.902 106.934 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right)
+			(justify left)
 		)
 		(uuid "a64d6c29-990c-4e7b-81c6-b5b0dd1ed49c")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 587.6011 106.934 0)
+			(at 622.9629 106.934 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -21788,7 +21788,7 @@
 				(font
 					(size 1.27 1.27)
 				)
-				(justify right)
+				(justify left)
 			)
 		)
 	)
@@ -25346,17 +25346,17 @@
 	)
 	(global_label "B_CHR"
 		(shape input)
-		(at 612.902 106.934 0)
+		(at 597.662 106.934 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left)
+			(justify right)
 		)
 		(uuid "eb952ee8-46b5-4fda-ad95-115b66c55fcb")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 621.9953 106.934 0)
+			(at 588.5687 106.934 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -25364,7 +25364,7 @@
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left)
+				(justify right)
 			)
 		)
 	)
@@ -26258,17 +26258,17 @@
 	)
 	(global_label "G_Y"
 		(shape input)
-		(at 597.662 104.394 180)
+		(at 612.902 104.394 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right)
+			(justify left)
 		)
 		(uuid "fad29d82-7aac-4001-bd6b-9494c5824799")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 591.3506 104.394 0)
+			(at 619.2134 104.394 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -26276,7 +26276,7 @@
 				(font
 					(size 1.27 1.27)
 				)
-				(justify right)
+				(justify left)
 			)
 		)
 	)
