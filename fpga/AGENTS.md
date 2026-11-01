@@ -10,6 +10,27 @@ adding standalone test projects or changing Makefile targets. Keep changes to
 other build settings separate from functional changes and describe them
 explicitly to the user.
 
+# RGB baseline
+
+The official RGB baseline was promoted on 2026-11-01 after the user confirmed
+good video and Boink with `rgb-ypbpr-lut-test.fs`. It is preserved as
+`impl/pnr/stable-rgb.fs`, with exact sources, timing, placement options and
+manifest in `impl/pnr/stable-rgb-*`. The active shared RGB RTL implements this
+YPbPr-base raster with a 336-bit inverse LUT recovering all 64 RGB222 colors
+exactly, including artifact colors. Preserve the aligned color/sync pipeline,
+calibrated DAC levels, alternating RGB DAC phases, mux settling/early address
+publication and equivalent refresh schedule. RGB still uses
+`CoCoTANG-pal.gprj`, `top_coco3_rgb`, and output `CoCoTANG-rgb`; no variant
+source dependencies or build settings were added. Routed Fmax is 108.156 MHz
+and 135.793 MHz, with zero setup/hold violations; 108 MHz slack is only 0.013 ns.
+`impl/pnr/rgb-accuracy-d.fs` remains the previous confirmed RGB rollback image.
+The earlier `stable-rgb.fs` and timing are retained as `stable-rgb-before-lut*`;
+pre-promotion shared working sources are in `rgb-before-lut-promotion-source.tar.gz`.
+The confirmed CVBS/PAL/YPbPr images and isolated source files remain unchanged.
+Shared mux/arbiter RTL changed in this RGB promotion; do not assume rebuilding
+other variants reproduces their confirmed payloads. Their exact source archives
+remain the authority for reproducing those images.
+
 # CVBS isolation
 
 The hardware-confirmed CVBS build uses `CoCoTANG-cvbs-minimal.gprj` with output
@@ -20,7 +41,7 @@ NTSC/S-Video targets must use this confirmed project; RGB must continue using
 its original project and shared RTL, with no `src/cvbs/` files or dependencies.
 
 Confirmed images are `impl/pnr/stable-cvbs.fs` and
-`impl/pnr/rgb-accuracy-d.fs`. The user confirmed the CVBS video-only baseline
+`impl/pnr/stable-rgb.fs`. The user confirmed the CVBS video-only baseline
 and then #7 composite-only field-phase alignment on 2026-10-26. #7 is enabled
 in the active CVBS top. The previous confirmed image and exact sources remain
 in `impl/pnr/stable-cvbs-before-phase7*` for rollback.

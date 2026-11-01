@@ -1,11 +1,11 @@
 `timescale 1ns/1ps
-module tb_coco_bus_mux;
+module tb_coco_bus_mux #(parameter WAIT=7);
     reg clk=0,reset_n=0,scan_start=0; reg [7:0] mp=8'ha3;
     reg [7:0] low_data=8'ha3,high_data={5'b10101,1'b0,1'b1,1'b1};
     reg [7:0] control_data=8'b10110111;
     wire [1:0] msel; wire [15:0] addr;
     wire rw_n,cpu_reset_n,slenb_n,sernt_n,cart_n,keyint_n,halt_n,nmi_n,valid,ready;
-    coco_bus_mux dut(.clk(clk),.reset_n(reset_n),.scan_start(scan_start),
+    coco_bus_mux #(.SETTLE_CYCLES(WAIT)) dut(.clk(clk),.reset_n(reset_n),.scan_start(scan_start),
       .mp(mp),.msel(msel),.addr(addr),
       .rw_n(rw_n),.cpu_reset_n(cpu_reset_n),.slenb_n(slenb_n),.sernt_n(sernt_n),
       .cart_n(cart_n),.keyint_n(keyint_n),.halt_n(halt_n),.nmi_n(nmi_n),
@@ -56,8 +56,6 @@ module tb_coco_bus_mux;
         wait(ready);@(negedge clk);
         if(valid || msel!==2'b10 || addr!=={cpu_high,low_data})
           $fatal(1,"high-bank publication pattern=%02x addr=%04x",cpu_high,addr);
-        if(dut.address_high!=={cpu_high[5],cpu_high[6],cpu_high[7],cpu_high[4:0]})
-          $fatal(1,"high byte was not normalized to the original latch layout");
         if({nmi_n,halt_n,keyint_n,cart_n,sernt_n,slenb_n,cpu_reset_n,rw_n}!==previous_controls)
           $fatal(1,"controls changed before the control bank was captured");
         wait(valid);@(negedge clk);

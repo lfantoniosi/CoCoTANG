@@ -1,0 +1,28 @@
+Experimental RGB output from the confirmed YPbPr encoder + exact inverse LUT.
+Hardware status: USER CONFIRMED on 2026-11-01: "seems good to me, boink working".
+Good video and Boink confirmed; no additional modes inferred.
+
+Repeated routed result:
+clk108: baseline 108.083 -> candidate 108.156 MHz; worst setup slack 0.007 -> 0.013 ns.
+clk135: baseline 135.067 -> candidate 135.793 MHz; Fmax-derived margin about 0.043 ns.
+Every clock passes; setup violated endpoints=0; hold violated endpoints=0.
+The 108 MHz gain is modest and its remaining margin is still very small.
+
+The same temporary project reproduced the approved rgb-accuracy-d.fs payload
+exactly before rebuilding this candidate. The candidate repeated with an identical
+configuration payload and identical timing. Thus the comparison is independent
+of the temporary build location.
+
+The YPbPr palette conversion is exact for all 64 possible RGB222 input colours.
+All artifact colours therefore retain their original analogue levels. HDMI and
+artifact decoding are unchanged. DAC pulse counts and alternating phase seeds,
+8192 rapid colour/control transitions, mux settling/publication at both supported
+wait settings, and an arbiter equivalence run were checked.
+
+This is the YPbPr scanout geometry with a synchronized inverse RGB output stage,
+not the confirmed RGB CoCo-dot aperture. It is suitable for a hardware trial.
+The normal RGB/CVBS/PAL/YPbPr sources and confirmed images are unchanged.
+The patch is for review; it has not been applied to the working tree.
+
+Project placement settings remain the approved RGB place1/route0/replication/maxfan16.
+No fanout limit, synthesis optimization, placement, routing, SDC or clock settings changed.

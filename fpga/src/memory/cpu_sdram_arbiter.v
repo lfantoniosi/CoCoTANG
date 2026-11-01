@@ -53,7 +53,8 @@ module cpu_sdram_arbiter #(
     reg byte_lane = 1'b0;
     reg saw_busy = 1'b0;
     reg [7:0] recovery_count = 8'd0;
-    reg [15:0] refresh_count = 16'd0;
+    localparam REFRESH_WIDTH = REFRESH_CYCLES>0 ? $clog2(REFRESH_CYCLES+1) : 1;
+    reg [REFRESH_WIDTH-1:0] refresh_count = 0;
     wire owner_req = (owner == OWNER_CPU) ? cpu_req :
                      (owner == OWNER_VIDEO) ? video_req : loader_req;
     // Match the real SAM's interleaved DMA. Background commands may begin
@@ -67,6 +68,18 @@ module cpu_sdram_arbiter #(
     // so tying refresh eligibility to video_enable loses the boot image
     // before the CPU can fetch its reset vector.
     wire refresh_background_slot = !e && !q && refresh_slot_open;
+
+    wire refresh_due=refresh_count==REFRESH_CYCLES;
+    wire refresh_grant=state==IDLE && !busy &&
+        !(video_req && video_background_slot) && !cpu_req && !loader_req &&
+        enabled && refresh_background_slot && refresh_due;
+    // This counter has no other writers. Keep the request/state priority
+    // mux off its increment/hold path without changing any grant timing.
+    always @(posedge clk or negedge reset_n)begin
+        if(!reset_n)refresh_count<=0;
+        else if(refresh_grant)refresh_count<=0;
+        else if(!refresh_due)refresh_count<=refresh_count+1'b1;
+    end
 
     task launch;
         input [1:0] selected_owner;
@@ -96,7 +109,6 @@ module cpu_sdram_arbiter #(
             byte_lane <= 1'b0;
             saw_busy <= 1'b0;
             recovery_count <= 8'd0;
-            refresh_count <= 16'd0;
             rd <= 1'b0;
             wr <= 1'b0;
             refresh <= 1'b0;
@@ -116,8 +128,6 @@ module cpu_sdram_arbiter #(
             cpu_ack <= 1'b0;
             video_ack <= 1'b0;
             loader_ack <= 1'b0;
-            if (refresh_count != REFRESH_CYCLES)
-                refresh_count <= refresh_count + 1'b1;
             if (state == IDLE)
                 recovery_count <= 8'd0;
             else if (recovery_count != 8'hff)
@@ -137,10 +147,9 @@ module cpu_sdram_arbiter #(
                     else if (loader_req)
                         launch(OWNER_LOADER,loader_wr,loader_addr,loader_wdata);
                     else if (enabled && refresh_background_slot &&
-                             refresh_count == REFRESH_CYCLES) begin
+                             refresh_due) begin
                         refresh <= 1'b1;
-                        refresh_count <= 16'd0;
-                        saw_busy <= 1'b0;
+                                    saw_busy <= 1'b0;
                         state <= ACTIVE_REFRESH;
                     end
                 end

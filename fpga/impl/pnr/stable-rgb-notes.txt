@@ -1,0 +1,17 @@
+Official RGB baseline, promoted 2026-11-01.
+User confirmed good video and Boink: "seems good to me, boink working".
+
+Active RTL matches the exact hardware-tested source hashes in stable-rgb-manifest.json.
+make rebuild-rgb reproduced the confirmed configuration payload exactly.
+make program-rgb programs this active RGB build.
+
+All clocks meet timing; clk108 Fmax 108.156 MHz; clk135 Fmax 135.793 MHz.
+Setup and hold violations: zero. clk108 setup slack remains small at 0.013 ns.
+Placement, routing, synthesis and clock settings unchanged.
+Inverse LUT: 336 bits, exact for all 64 RGB222 colors, preserving artifact levels.
+Uses YPbPr raster geometry and aligned color/sync output pipeline.
+
+Rollback: rgb-accuracy-d.fs; earlier stable image stable-rgb-before-lut.fs.
+Pre-promotion shared working RTL: rgb-before-lut-promotion-source.tar.gz.
+CVBS/PAL/YPbPr isolated files and confirmed images unchanged. Shared mux and arbiter
+changes mean their archived exact sources should be used to reproduce those payloads.

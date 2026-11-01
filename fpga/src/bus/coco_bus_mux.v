@@ -25,106 +25,66 @@ module coco_bus_mux #(
     // just after Q rises, once the address and external mux inputs are stable.
     localparam integer SETTLE_WIDTH =
         (SETTLE_CYCLES < 1) ? 1 : $clog2(SETTLE_CYCLES+1);
-    reg [1:0] select_reg = 2'b00;
-    reg [1:0] bank = 2'd0;
-    reg [SETTLE_WIDTH-1:0] settle_count = {SETTLE_WIDTH{1'b0}};
-    reg       scanning = 1'b0;
-    reg [7:0] address_low = 8'hff;
-    reg [7:0] address_high = 8'hff;
-    reg [23:0] snapshot = 24'hffffff;
-    reg address_ready_reg = 1'b0;
-    reg snapshot_valid_reg = 1'b0;
-    // Pipeline the terminal-count decode before it drives every capture CE.
-    // The selected mux bank is already held for SETTLE_CYCLES clocks, so this
-    // preserves the sampling instant while removing a high-fanout 270 MHz
-    // counter-to-CE path.
-    (* syn_preserve = 1 *) reg capture_bank = 1'b0;
+    // MSEL itself records the active phase: 00 idle, 01 high address,
+    // 10 controls. A separate bank/scanning state is unnecessary.
+    reg [1:0] select_reg=0;
+    reg [SETTLE_WIDTH-1:0] settle_count=0;
+    reg [7:0] address_low=8'hff,address_high=8'hff,snapshot=8'hff;
+    reg address_ready_reg=0,snapshot_valid_reg=0;
+    (* syn_preserve = 1 *) reg capture_bank=0;
+    wire capture_high=!scan_start && capture_bank && select_reg[0];
+    wire capture_controls=!scan_start && capture_bank && select_reg[1];
 
-    always @(posedge clk or negedge reset_n) begin
-        if (!reset_n) begin
-            select_reg <= 2'b00;
-            bank <= 2'd0;
-            settle_count <= {SETTLE_WIDTH{1'b0}};
-            scanning <= 1'b0;
-            address_low <= 8'hff;
-            address_high <= 8'hff;
-            snapshot <= 24'hffffff;
-            address_ready_reg <= 1'b0;
-            snapshot_valid_reg <= 1'b0;
-            capture_bank <= 1'b0;
+    // Local data enables avoid the scanner's nested priority mux. The
+    // capture edges and the external bank settling interval are unchanged.
+    always @(posedge clk or negedge reset_n)begin
+        if(!reset_n)begin
+            address_low<=8'hff;address_high<=8'hff;snapshot<=8'hff;
         end else begin
-            if (scan_start) begin
-                // Q rising begins acquisition of the active CPU cycle. Bank
-                // zero has remained selected throughout the idle interval,
-                // and the synchronizer has already delayed us beyond Q, so
-                // capture it immediately and start settling the high bank.
-                // This advances the address/S decode by another complete
-                // bank interval without shortening settling after an actual
-                // MSEL transition.
-                address_low <= mp;
-                select_reg <= 2'b01;
-                bank <= 2'd1;
-                settle_count <= {SETTLE_WIDTH{1'b0}};
-                scanning <= 1'b1;
-                capture_bank <= 1'b0;
-                address_ready_reg <= 1'b0;
-                snapshot_valid_reg <= 1'b0;
-            end else if (scanning) begin
-                // Use a bounded settling interval so input noise cannot
-                // prevent the scanner from ever completing.
-                if (capture_bank) begin
-                    capture_bank <= 1'b0;
-                    settle_count <= {SETTLE_WIDTH{1'b0}};
-                    case (bank)
-                        2'd0: begin
-                            address_low <= mp;
-                            select_reg <= 2'b01;
-                            bank <= 2'd1;
-                        end
-                        2'd1: begin
-                            // Normalize the new board wiring to the original latch layout.
-                            address_high <= {mp[2:0],mp[7:3]};
-                            address_ready_reg <= 1'b1;
-                            select_reg <= 2'b10;
-                            bank <= 2'd2;
-                        end
-                        default: begin
-                            // Publish one complete atomic snapshot, then hold
-                            // it until acquisition begins in the next cycle.
-                            snapshot <= {mp,address_high,address_low};
-                            snapshot_valid_reg <= 1'b1;
-                            select_reg <= 2'b00;
-                            bank <= 2'd0;
-                            scanning <= 1'b0;
-                        end
-                    endcase
-                end else if (settle_count == SETTLE_CYCLES-1)
-                    capture_bank <= 1'b1;
-                else
-                    settle_count <= settle_count + 1'b1;
-            end
+            if(scan_start)address_low<=mp;
+            if(capture_high)address_high<={mp[0],mp[1],mp[2],mp[7:3]};
+            if(capture_controls)snapshot<=mp;
+        end
+    end
+    always @(posedge clk or negedge reset_n)begin
+        if(!reset_n)begin
+            select_reg<=0;settle_count<=0;capture_bank<=0;
+            address_ready_reg<=0;snapshot_valid_reg<=0;
+        end else if(scan_start)begin
+            select_reg<=2'b01;settle_count<=0;capture_bank<=0;
+            address_ready_reg<=0;snapshot_valid_reg<=0;
+        end else if(|select_reg)begin
+            if(capture_bank)begin
+                settle_count<=0;capture_bank<=0;
+                if(select_reg[0])begin
+                    select_reg<=2'b10;address_ready_reg<=1;
+                end else begin
+                    select_reg<=0;snapshot_valid_reg<=1;
+                end
+            end else if(settle_count==SETTLE_CYCLES-1)
+                capture_bank<=1;
+            else settle_count<=settle_count+1'b1;
         end
     end
 
-    // The latch stores A15,A14,A13 in bits 5,6,7 respectively. Publish the
+    // The high-bank latch stores the CPU high byte directly. Publish the
     // address directly from the two settled address-bank registers instead
     // of waiting for the third (control) bank.  This advances the external
     // SAM S decode by one complete mux-bank interval while E is still low,
     // giving devices such as the MC6821 their required select setup time.
     // snapshot remains the atomic source for all control signals and its
     // valid pulse still marks completion of the complete transaction scan.
-    wire [7:0] high_addr = {address_high[5], address_high[6], address_high[7],
-                            address_high[4:0]};
+    wire [7:0] high_addr = address_high;
     assign msel = select_reg;
     assign addr = {high_addr, address_low};
-    assign rw_n = snapshot[16];
-    assign cpu_reset_n = snapshot[17];
-    assign slenb_n = snapshot[18];
-    assign sernt_n = snapshot[19];
-    assign cart_n = snapshot[20];
-    assign keyint_n = snapshot[21];
-    assign halt_n = snapshot[22];
-    assign nmi_n = snapshot[23];
+    assign rw_n = snapshot[0];
+    assign cpu_reset_n = snapshot[1];
+    assign slenb_n = snapshot[2];
+    assign sernt_n = snapshot[3];
+    assign cart_n = snapshot[4];
+    assign keyint_n = snapshot[5];
+    assign halt_n = snapshot[6];
+    assign nmi_n = snapshot[7];
     assign address_ready = address_ready_reg;
     assign snapshot_valid = snapshot_valid_reg;
 endmodule

@@ -1,0 +1,101 @@
+{
+  "created_utc": "2026-11-01T12:45:45.762764+00:00",
+  "hardware_status": "User confirmed good video and Boink working on 2026-11-01",
+  "baseline_image": "impl/pnr/rgb-accuracy-d.fs",
+  "baseline_payload_sha256": "b3281893ac4f6ef5c2aaf20207fcbde6b38f699dfc4dcfffef4db0d2a5aec541",
+  "candidate_payload_sha256": "374fdcdd2a527957facf8e07d5b5f7a8e2d098d0a8f3db265567b194e685915f",
+  "baseline_timing": {
+    "clkin": {
+      "target_mhz": 27.0,
+      "fmax_mhz": 516.91
+    },
+    "clk108": {
+      "target_mhz": 108.003,
+      "fmax_mhz": 108.083
+    },
+    "clk270": {
+      "target_mhz": 269.978,
+      "fmax_mhz": 362.105
+    },
+    "clk135": {
+      "target_mhz": 135.007,
+      "fmax_mhz": 135.067
+    },
+    "clk27": {
+      "target_mhz": 27.0,
+      "fmax_mhz": 56.839
+    },
+    "audio48k": {
+      "target_mhz": 0.048,
+      "fmax_mhz": 500.0
+    }
+  },
+  "candidate_timing": {
+    "clkin": {
+      "target_mhz": 27.0,
+      "fmax_mhz": 383.89
+    },
+    "clk108": {
+      "target_mhz": 108.003,
+      "fmax_mhz": 108.156
+    },
+    "clk270": {
+      "target_mhz": 269.978,
+      "fmax_mhz": 331.981
+    },
+    "clk135": {
+      "target_mhz": 135.007,
+      "fmax_mhz": 135.793
+    },
+    "clk27": {
+      "target_mhz": 27.0,
+      "fmax_mhz": 56.586
+    },
+    "audio48k": {
+      "target_mhz": 0.048,
+      "fmax_mhz": 412.57
+    }
+  },
+  "setup_violated_endpoints": 0,
+  "hold_violated_endpoints": 0,
+  "repeat_payload_equal": true,
+  "baseline_replay_payload_equal": true,
+  "pnr_options": {
+    "place_option": 1,
+    "route_option": 0,
+    "replicate_resources": true,
+    "route_maxfan": 16
+  },
+  "changed_rtl_files": [
+    "src/top_coco3.v",
+    "src/video/coco_cvbs_ntsc.v",
+    "src/memory/cpu_sdram_arbiter.v",
+    "src/bus/coco_bus_mux.v"
+  ],
+  "source_sha256": {
+    "src/top_coco3.v": "3cb7b1b1edbc0b88dc0914f22d62b2d9278ec54c8e0b1eeacb61d1b1e39929d5",
+    "src/video/coco_cvbs_ntsc.v": "5f1793a7793a6e039dd8b5521e4db8808a1e12591d4e6392ac9913d225d08a3d",
+    "src/memory/cpu_sdram_arbiter.v": "30b9d07f07a39543b0cecd4ef1cd17987986615df9786c7e1ef27315f774ccda",
+    "src/bus/coco_bus_mux.v": "0efded85a363ef0a51c85ffd25ea4f5c0e0e330d063d48ec5626d77d60520b24"
+  },
+  "protected_original_files_verified": 36,
+  "inverse_lut_bits": 336,
+  "inverse_palette_colours": 64,
+  "tests": [
+    "64 colour/DAC-density cases",
+    "8192 rapid colour/sync/blanking transitions",
+    "RGB alternating DAC phases",
+    "all 256 mux high bytes",
+    "30000 arbiter equivalence cycles",
+    "67840 incremental-raster/prefetch coordinate cases"
+  ],
+  "geometry": "YPbPr raster; original RGB CoCo-dot aperture is intentionally replaced",
+  "source_applied_to_working_tree": false,
+  "image_sha256": "8607d42c8380e272bbe3e1f4dea904c625eaf39a72fc2f1385dbba4723b61363",
+  "source_archive_sha256": "40362197962c603dbe658d91849e5d35a3d7b055759b77992115c83f56c99f61",
+  "hardware_confirmation": {
+    "date": "2026-11-01",
+    "user_report": "seems good to me, boink working",
+    "scope": "Good video and Boink; no additional modes inferred"
+  }
+}

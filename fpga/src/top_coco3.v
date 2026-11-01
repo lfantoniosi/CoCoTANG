@@ -172,6 +172,7 @@ module top_coco3 #(
     wire [7:0] hdmi_prefetch_y;
     wire hdmi_prefetch_valid;
     wire [9:0] cvbs_source_x_raw;
+    wire [9:0] cvbs_source_read_address_raw;
     wire [7:0] cvbs_source_y_raw,cvbs_prefetch_y_raw;
     wire cvbs_source_valid_raw,cvbs_prefetch_valid_raw;
     reg [9:0] cvbs_source_x=0;
@@ -823,7 +824,7 @@ module top_coco3 #(
             cvbs_last_request<=cvbs_source_x_raw[9:1]==9'd319;
             cvbs_source_x<=cvbs_request_x;
             cvbs_read_address<=cvbs_source_valid_raw ?
-                (cvbs_request_x==10'd639 ? 10'd639 : cvbs_request_x+1'b1) : 10'd0;
+                cvbs_source_read_address_raw : 10'd0;
             cvbs_source_y<=cvbs_source_y_raw;
             cvbs_source_valid<=cvbs_source_valid_raw;
             cvbs_prefetch_y<=cvbs_prefetch_y_raw;
@@ -831,16 +832,20 @@ module top_coco3 #(
         end
     end
     coco_cvbs_ntsc #(.STREAMING_INPUT(0),.CANONICAL_640_INPUT(1),
+        .CVBS_INCREMENTAL_DOTS(1),
+        .CVBS_FAST_PREFETCH(1),
+        .CVBS_FIELD_PHASE_ALIGN(0),
         .PAL_CHROMA_OUTPUT(PAL_CHROMA_OUTPUT),
-        .RGB_SOG_OUTPUT(ANALOG_VIDEO_MODE==3),
+        .RGB_SOG_OUTPUT(0),
+        .YPBPR_TO_RGB_LUT(ANALOG_VIDEO_MODE==3),
         .RGB_SCANLINE_PHASE_ALTERNATION(ANALOG_VIDEO_MODE==3),
         .COMPONENT_DAC_PHASE_STAGGER(ANALOG_VIDEO_MODE==2),
-        .LUMA_SCANLINE_PHASE_ALTERNATION(ANALOG_VIDEO_MODE<=2),
+        .LUMA_SCANLINE_PHASE_ALTERNATION(1),
         .LUMA_DAC_EVEN_LEVELS(1),
         .CVBS_SVIDEO_SCANLINE_PHASE_ALTERNATION(ANALOG_VIDEO_MODE<=1),
-        .CVBS_LUMA_FILTER(ANALOG_VIDEO_MODE<=1),
-        .CVBS_LUMA_NOTCH(ANALOG_VIDEO_MODE<=1),
-        .CVBS_CHROMA_FILTER(ANALOG_VIDEO_MODE<=1)) analog_encoder(
+        .CVBS_LUMA_FILTER(0),
+        .CVBS_LUMA_NOTCH(0),
+        .CVBS_CHROMA_FILTER(0)) analog_encoder(
         // Start on the same board reset as HDMI.  cpu_release is aligned to
         // the CoCo bus, not to video, and made the CVBS consumer enter the
         // shared two-line cache at an arbitrary scanline phase.
@@ -858,6 +863,7 @@ module top_coco3 #(
         .active_height(active_height),
         .framebuffer_addr(unused_cvbs_framebuffer_addr),
         .source_x(cvbs_source_x_raw),.source_y(cvbs_source_y_raw),
+        .source_read_address(cvbs_source_read_address_raw),
         .source_valid(cvbs_source_valid_raw),.prefetch_y(cvbs_prefetch_y_raw),
         .prefetch_valid(cvbs_prefetch_valid_raw),
         .border_raster_y(cvbs_border_raster_y),.luma_out(analog_luma),

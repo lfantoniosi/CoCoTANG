@@ -6,6 +6,11 @@
 // three first-order, one-bit DACs. The composite levels are deliberately the
 // same as the proven pin-51 2N3904/75-ohm circuit: sync=0, blank=10, white=32.
 module coco_cvbs_ntsc #(
+    // Opt in only for composite builds; RGB/component retain the original
+    // continuous carrier and burst paths.
+    parameter integer CVBS_FIELD_PHASE_ALIGN = 0,
+    parameter integer CVBS_INCREMENTAL_DOTS = 0,
+    parameter integer CVBS_FAST_PREFETCH = 0,
     parameter integer STREAMING_INPUT = 0,
     parameter integer CANONICAL_640_INPUT = 0,
     // Experimental PAL chroma over the existing CoCo/HDMI line timing.  This
@@ -17,6 +22,8 @@ module coco_cvbs_ntsc #(
     // The component HAT then needs no component changes: Y=G/SoG, Pb=B,
     // and Pr=R.
     parameter integer RGB_SOG_OUTPUT = 0,
+    // Experimental inverse LUT, using the proven YPbPr raster and matrix.
+    parameter integer YPBPR_TO_RGB_LUT = 0,
     // Match NTSC CoCo RGB dot timing while retaining the shared line raster.
     // Set to zero to restore the former BT.601-width RGB aperture.
     parameter integer RGB_COCO_APERTURE = 1,
@@ -67,6 +74,7 @@ module coco_cvbs_ntsc #(
     input  wire [7:0]  active_height,
     output wire [15:0] framebuffer_addr,
     output wire [9:0]  source_x,
+    output wire [9:0]  source_read_address,
     output wire [7:0]  source_y,
     output wire        source_valid,
     output wire [7:0]  prefetch_y,
@@ -246,14 +254,28 @@ module coco_cvbs_ntsc #(
     wire sync_equalizing=RGB_DOT_TIMING ? rgb_equalizing :
                          (v_line<3 || (v_line>=6&&v_line<9));
     wire sync_broad=RGB_DOT_TIMING ? rgb_broad_sync : (v_line>=3&&v_line<6);
+    localparam CVBS_DOT_COUNTERS=CVBS_INCREMENTAL_DOTS &&
+        CANONICAL_640_INPUT && !STREAMING_INPUT && !RGB_SOG_OUTPUT;
+    // Select constant-window comparisons, rather than adding the standard
+    // shift before comparing the live horizontal counter.
+    wire cvbs_native_window=video_50hz_active ?
+        (h_sample>=10'd161&&h_sample<10'd801) :
+        (h_sample>=10'd158&&h_sample<10'd798);
+    wire cvbs_compat_window=video_50hz_active ?
+        (h_sample>=10'd225&&h_sample<10'd737) :
+        (h_sample>=10'd222&&h_sample<10'd734);
+    wire cvbs_border_window=video_50hz_active ?
+        (h_sample>=10'd121&&h_sample<10'd841) :
+        (h_sample>=10'd118&&h_sample<10'd838);
     wire horizontal_picture = RGB_DOT_TIMING ? rgb_dot_active :
-                              (h_sample>=picture_left&&h_sample<picture_right);
+        CVBS_DOT_COUNTERS ? (picture_high_resolution?cvbs_native_window:cvbs_compat_window) :
+        (h_sample>=picture_left&&h_sample<picture_right);
     wire in_picture = horizontal_picture &&
                       (v_line >= field_picture_top) &&
                       (v_line < field_picture_bottom);
     wire in_vdg_window = (!RGB_DOT_TIMING || (!sync_equalizing&&!sync_broad)) &&
-                         (h_sample >= border_left) &&
-                         (h_sample < border_right) &&
+                         (CVBS_DOT_COUNTERS ? cvbs_border_window :
+                          (h_sample>=border_left&&h_sample<border_right)) &&
                          (v_line >= border_top) &&
                          (v_line <= field_last_line);
     wire [9:0] picture_offset = h_sample-picture_left;
@@ -263,6 +285,48 @@ module coco_cvbs_ntsc #(
         picture_high_resolution ? picture_offset :
         (CANONICAL_640_INPUT && !STREAMING_INPUT) ? canonical_x_sum[11:2] :
                                                    (picture_offset>>1);
+    // In CVBS builds, derive cache coordinates from the sample cadence
+    // instead of subtracting and scaling the live horizontal counter.
+    // Track both windows continuously so mid-line mode writes select the
+    // same coordinate as the original arithmetic implementation.
+    wire [9:0] cvbs_incremental_x;
+    generate if(CVBS_INCREMENTAL_DOTS && CANONICAL_640_INPUT &&
+                !STREAMING_INPUT && !RGB_SOG_OUTPUT)begin:cvbs_dot_counters
+        reg [9:0] native_x=0,compat_x=0;
+        reg [9:0] native_read_x=1,compat_read_x=1;
+        reg [1:0] compat_fraction=0;
+        reg native_running=0,compat_running=0;
+        always @(posedge clk135 or negedge reset_n)begin
+            if(!reset_n)begin
+                native_x<=0;compat_x<=0;compat_fraction<=0;
+                native_read_x<=1;compat_read_x<=1;
+                native_running<=0;compat_running<=0;
+            end else if(h_sample==0 || video_50hz_sync!=video_50hz_active)begin
+                native_x<=0;compat_x<=0;compat_fraction<=0;
+                native_read_x<=1;compat_read_x<=1;
+                native_running<=0;compat_running<=0;
+            end else if(sample_phase==9)begin
+                if(h_sample==(video_50hz_active?10'd160:10'd157))begin
+                    native_x<=0;native_read_x<=1;native_running<=1;
+                end else if(native_running)begin
+                    native_x<=native_x+1'b1;
+                    if(native_read_x!=10'd639)native_read_x<=native_read_x+1'b1;
+                end
+                if(h_sample==(video_50hz_active?10'd224:10'd221))begin
+                    compat_x<=0;compat_read_x<=1;compat_fraction<=0;compat_running<=1;
+                end else if(compat_running)begin
+                    compat_x<=compat_x+(compat_fraction==3?10'd2:10'd1);
+                    compat_read_x<=compat_read_x+(compat_fraction==3?10'd2:10'd1);
+                    compat_fraction<=compat_fraction+1'b1;
+                end
+            end
+        end
+        assign cvbs_incremental_x=picture_high_resolution?native_x:compat_x;
+        assign source_read_address=picture_high_resolution?native_read_x:compat_read_x;
+    end else begin:original_dot_address
+        assign cvbs_incremental_x=picture_x;
+        assign source_read_address=10'd0;
+    end endgenerate
     wire [8:0] picture_y_full = v_line - field_picture_top;
     wire [7:0] picture_y = picture_y_full[7:0];
     assign framebuffer_addr = in_picture ? {picture_y, picture_x[7:0]} : 16'd0;
@@ -271,13 +335,23 @@ module coco_cvbs_ntsc #(
     // above line up with the actual returned pixels, including page edges.
     // At the left edge samples zero and one belong to the same VDG dot.
     assign source_x = RGB_DOT_TIMING && !picture_high_resolution ?
-                      rgb_cache_x : picture_x;
+                      rgb_cache_x : cvbs_incremental_x;
     assign source_y = picture_y;
     assign source_valid = in_picture;
-    assign prefetch_y = (v_line < field_picture_top) ? 8'd0 : picture_y+1'b1;
-    assign prefetch_valid = (v_line < field_picture_top) ? 1'b1 :
-                            ((v_line < field_picture_bottom) &&
-                             (picture_y+1'b1 < height_meta));
+    // Parallel boundary comparisons replace subtract/increment/compare.
+    // The origin is captured beside picture_top and is always top-1.
+    reg [8:0] cvbs_prefetch_origin=9'd42;
+    // Use the same captured geometry as picture_bottom. Prefetch no longer
+    // carries a height adder and pixel-row comparator in one clock.
+    reg [8:0] cvbs_prefetch_limit=9'd234;
+    wire [8:0] cvbs_prefetch_row=v_line-cvbs_prefetch_origin;
+    assign prefetch_y = (v_line < field_picture_top) ? 8'd0 :
+        (CVBS_FAST_PREFETCH&&!RGB_SOG_OUTPUT ? cvbs_prefetch_row[7:0] : picture_y+1'b1);
+    assign prefetch_valid = CVBS_FAST_PREFETCH&&!RGB_SOG_OUTPUT ?
+        ((v_line<field_picture_top) ||
+         ((v_line<field_picture_bottom)&&(v_line<cvbs_prefetch_limit))) :
+        (v_line < field_picture_top) ? 1'b1 :
+        ((v_line < field_picture_bottom) && (picture_y+1'b1 < height_meta));
 
     // Six pre-equalizing half-lines, six broad-sync half-lines and six
     // post-equalizing half-lines, followed by conventional horizontal sync.
@@ -301,6 +375,25 @@ module coco_cvbs_ntsc #(
     reg [2:0] carrier_octant = 3'd0;
     reg [25:0] pal_carrier_acc = 26'd0;
     reg pal_v_invert = 1'b0;
+    // At 858 samples/line, the field origin differs only by 180 degrees.
+    // Align composite picture and burst without disturbing the S-Video DDS.
+    // Make the entire feature a compile-time no-op for RGB and PAL,
+    // including if the opt-in parameter is accidentally set for those modes.
+    localparam CVBS_PHASE_ALIGNMENT=CVBS_FIELD_PHASE_ALIGN &&
+                                    !RGB_SOG_OUTPUT && !PAL_CHROMA_OUTPUT;
+    wire cvbs_phase_flip;
+    generate if (CVBS_PHASE_ALIGNMENT) begin:cvbs_field_phase
+        reg phase_flip=0;
+        always @(posedge clk135)begin
+            if(!reset_n)phase_flip<=0;
+            else if(!video_50hz_active &&
+                    v_line==0 && h_sample==0 && sample_phase==0)
+                phase_flip<=carrier_octant[2];
+        end
+        assign cvbs_phase_flip=phase_flip;
+    end else begin:continuous_field_phase
+        assign cvbs_phase_flip=1'b0;
+    end endgenerate
     wire [2:0] carrier_phase = PAL_CHROMA_OUTPUT ?
                                pal_carrier_acc[25:23] : carrier_octant;
 
@@ -336,18 +429,20 @@ module coco_cvbs_ntsc #(
         input signed [10:0] difference3;
         input [2:0] phase;
         reg signed [10:0] mix;
+        reg signed [4:0] quantized;
         begin
-            case (phase)
-                3'd0: mix = y4;
-                3'd1: mix = sum3;
-                3'd2: mix = x4;
-                3'd3: mix = difference3;
-                3'd4: mix = -y4;
-                3'd5: mix = -sum3;
-                3'd6: mix = -x4;
-                default: mix = -difference3;
+            case (phase[1:0])
+                2'd0: mix = y4;
+                2'd1: mix = sum3;
+                2'd2: mix = x4;
+                default: mix = difference3;
             endcase
-            rgb_chroma = mix >>> 6;
+            // Keep the original 11-bit wrap and arithmetic-shift semantics.
+            // floor(-mix/64) = ~floor(mix/64) + (remainder == 0).
+            quantized = mix[10:6];
+            if (phase[2])
+                quantized = ~quantized + {4'b0, !(|mix[5:0])};
+            rgb_chroma = quantized;
         end
     endfunction
 
@@ -377,6 +472,73 @@ module coco_cvbs_ntsc #(
             else add_svideo_level = {1'b0,result[4:0]};
         end
     endfunction
+
+    // Factor the exact RGB222 matrix into four-input corrections and a
+    // two-input channel level. Every reachable component result is 1..127,
+    // so modulo-128 addition gives the original unsaturated result exactly.
+    function [6:0] component_pb_base;
+        input [3:0] pair;
+        begin
+            case(pair)
+                4'd0: component_pb_base=7'd64;
+                4'd1: component_pb_base=7'd51;
+                4'd2: component_pb_base=7'd37;
+                4'd3: component_pb_base=7'd23;
+                4'd4: component_pb_base=7'd57;
+                4'd5: component_pb_base=7'd43;
+                4'd6: component_pb_base=7'd30;
+                4'd7: component_pb_base=7'd16;
+                4'd8: component_pb_base=7'd50;
+                4'd9: component_pb_base=7'd36;
+                4'd10: component_pb_base=7'd22;
+                4'd11: component_pb_base=7'd9;
+                4'd12: component_pb_base=7'd43;
+                4'd13: component_pb_base=7'd29;
+                4'd14: component_pb_base=7'd15;
+                4'd15: component_pb_base=7'd1;
+                default: component_pb_base=7'd64;
+            endcase
+        end
+    endfunction
+
+    function [6:0] component_pr_base;
+        input [3:0] pair;
+        begin
+            case(pair)
+                4'd0: component_pr_base=7'd64;
+                4'd1: component_pr_base=7'd47;
+                4'd2: component_pr_base=7'd29;
+                4'd3: component_pr_base=7'd11;
+                4'd4: component_pr_base=7'd61;
+                4'd5: component_pr_base=7'd43;
+                4'd6: component_pr_base=7'd26;
+                4'd7: component_pr_base=7'd8;
+                4'd8: component_pr_base=7'd58;
+                4'd9: component_pr_base=7'd40;
+                4'd10: component_pr_base=7'd22;
+                4'd11: component_pr_base=7'd5;
+                4'd12: component_pr_base=7'd55;
+                4'd13: component_pr_base=7'd37;
+                4'd14: component_pr_base=7'd19;
+                4'd15: component_pr_base=7'd1;
+                default: component_pr_base=7'd64;
+            endcase
+        end
+    endfunction
+
+    function [5:0] component_channel;
+        input [1:0] channel;
+        begin
+            case(channel)
+                0:component_channel=0;
+                1:component_channel=21;
+                2:component_channel=42;
+                default:component_channel=63;
+            endcase
+        end
+    endfunction
+    reg [6:0] encoder_component_pb_base=64,encoder_component_pr_base=64;
+    reg [5:0] encoder_component_blue=0,encoder_component_red=0;
 
     // Seven-bit component-video level with two fractional matrix bits.
     // Midpoint 64/128 is electrically identical to the former 16/32, while
@@ -448,15 +610,63 @@ module coco_cvbs_ntsc #(
     wire [5:0] fb_red   = {3{pixel_rgb[5:4]}};
     wire [5:0] fb_green = {3{pixel_rgb[3:2]}};
     wire [5:0] fb_blue  = {3{pixel_rgb[1:0]}};
-    wire signed [7:0] fb_x_axis = $signed({1'b0,fb_blue}) -
-                                          $signed({1'b0,fb_green});
-    wire signed [7:0] fb_y_axis = $signed({1'b0,fb_red}) -
-                                          $signed({1'b0,fb_green});
-    wire [9:0] fb_luma_rb = ({4'd0,fb_red} << 2) +
-                            ({4'd0,fb_red} << 1) +
-                            ({4'd0,fb_blue} << 1) + 10'd32;
-    wire [9:0] fb_luma_g = ({4'd0,fb_green} << 3) +
-                           ({4'd0,fb_green} << 2);
+    // RGB222 has only four levels per channel. Exact lookup tables avoid
+    // widening repeated-bit components through subtract/constant-add trees.
+    function signed [7:0] rgb222_difference;
+        input [1:0] positive,negative;
+        begin case({positive,negative})
+            4'h0:rgb222_difference=8'sd0;
+            4'h1:rgb222_difference=-8'sd21;
+            4'h2:rgb222_difference=-8'sd42;
+            4'h3:rgb222_difference=-8'sd63;
+            4'h4:rgb222_difference=8'sd21;
+            4'h5:rgb222_difference=8'sd0;
+            4'h6:rgb222_difference=-8'sd21;
+            4'h7:rgb222_difference=-8'sd42;
+            4'h8:rgb222_difference=8'sd42;
+            4'h9:rgb222_difference=8'sd21;
+            4'ha:rgb222_difference=8'sd0;
+            4'hb:rgb222_difference=-8'sd21;
+            4'hc:rgb222_difference=8'sd63;
+            4'hd:rgb222_difference=8'sd42;
+            4'he:rgb222_difference=8'sd21;
+            4'hf:rgb222_difference=8'sd0;
+        endcase end
+    endfunction
+    function [9:0] rgb222_luma_rb;
+        input [3:0] red_blue;
+        begin case(red_blue)
+            4'h0:rgb222_luma_rb=10'd32;
+            4'h1:rgb222_luma_rb=10'd74;
+            4'h2:rgb222_luma_rb=10'd116;
+            4'h3:rgb222_luma_rb=10'd158;
+            4'h4:rgb222_luma_rb=10'd158;
+            4'h5:rgb222_luma_rb=10'd200;
+            4'h6:rgb222_luma_rb=10'd242;
+            4'h7:rgb222_luma_rb=10'd284;
+            4'h8:rgb222_luma_rb=10'd284;
+            4'h9:rgb222_luma_rb=10'd326;
+            4'ha:rgb222_luma_rb=10'd368;
+            4'hb:rgb222_luma_rb=10'd410;
+            4'hc:rgb222_luma_rb=10'd410;
+            4'hd:rgb222_luma_rb=10'd452;
+            4'he:rgb222_luma_rb=10'd494;
+            4'hf:rgb222_luma_rb=10'd536;
+        endcase end
+    endfunction
+    function [9:0] rgb222_luma_green;
+        input [1:0] green;
+        begin case(green)
+            2'd0:rgb222_luma_green=10'd0;
+            2'd1:rgb222_luma_green=10'd252;
+            2'd2:rgb222_luma_green=10'd504;
+            2'd3:rgb222_luma_green=10'd756;
+        endcase end
+    endfunction
+    wire signed [7:0] fb_x_axis=rgb222_difference(pixel_rgb[1:0],pixel_rgb[3:2]);
+    wire signed [7:0] fb_y_axis=rgb222_difference(pixel_rgb[5:4],pixel_rgb[3:2]);
+    wire [9:0] fb_luma_rb=rgb222_luma_rb({pixel_rgb[5:4],pixel_rgb[1:0]});
+    wire [9:0] fb_luma_g=rgb222_luma_green(pixel_rgb[3:2]);
 
     reg source_sync = 1'b1;
     reg source_burst = 1'b0;
@@ -596,6 +806,7 @@ module coco_cvbs_ntsc #(
     reg signed [10:0] mod_difference3 = 11'sd0;
     reg signed [10:0] cvbs_mod_x4=0,cvbs_mod_y4=0;
     reg signed [10:0] cvbs_mod_sum3=0,cvbs_mod_difference3=0;
+    reg [6:0] mod_component_pb_level=7'd64, mod_component_pr_level=7'd64;
     reg signed [7:0] mod_component_x = 8'sd0;
     reg signed [7:0] mod_component_y = 8'sd0;
 
@@ -609,9 +820,13 @@ module coco_cvbs_ntsc #(
         (PAL_CHROMA_OUTPUT && pal_v_invert) ? mod_difference3 : mod_sum3;
     wire signed [10:0] pal_picture_difference3 =
         (PAL_CHROMA_OUTPUT && pal_v_invert) ? mod_sum3 : mod_difference3;
+    wire pal_picture_invert = PAL_CHROMA_OUTPUT && pal_v_invert;
+    wire [2:0] pal_picture_carrier = mod_carrier ^
+        {pal_picture_invert && !(|mod_carrier[1:0]),
+         pal_picture_invert && mod_carrier[0],1'b0};
     wire signed [5:0] mod_picture_chroma =
-        rgb_chroma(mod_x4,pal_picture_y4,pal_picture_sum3,
-                   pal_picture_difference3,mod_carrier);
+        rgb_chroma(mod_x4,mod_y4,mod_sum3,mod_difference3,
+                   pal_picture_carrier);
     wire signed [5:0] mod_svideo_picture_chroma = mod_picture_chroma;
     // Delay baseband colour, never the modulated carrier. The four-tap
     // chroma group delay and fast pipeline now match the CVBS luma trap;
@@ -622,18 +837,38 @@ module coco_cvbs_ntsc #(
         (PAL_CHROMA_OUTPUT && pal_v_invert) ? cvbs_mod_difference3 : cvbs_mod_sum3;
     wire signed [10:0] cvbs_pal_difference3=
         (PAL_CHROMA_OUTPUT && pal_v_invert) ? cvbs_mod_sum3 : cvbs_mod_difference3;
+    wire [2:0] cvbs_mod_carrier=mod_carrier ^
+        {(!PAL_CHROMA_OUTPUT && !video_50hz_active && cvbs_phase_flip),2'b00};
+    // Reuse the existing unfiltered matrix for a 180-degree correction.
+    // For mix=64*q+r, floor(-mix/64)=-q-(r!=0). Preserve this rounding
+    // exactly instead of duplicating the eleven-bit chroma matrix.
+    reg cvbs_fraction_nonzero;
+    always @(*)begin
+        case(mod_carrier[1:0])
+            0:cvbs_fraction_nonzero=|pal_picture_y4[5:0];
+            1:cvbs_fraction_nonzero=|pal_picture_sum3[5:0];
+            2:cvbs_fraction_nonzero=|mod_x4[5:0];
+            default:cvbs_fraction_nonzero=|pal_picture_difference3[5:0];
+        endcase
+    end
+    wire signed [5:0] cvbs_opposite_chroma=
+        ~mod_picture_chroma+{5'b0,!cvbs_fraction_nonzero};
+    wire signed [5:0] cvbs_unfiltered_picture_chroma=
+        (!PAL_CHROMA_OUTPUT && !video_50hz_active && cvbs_phase_flip) ?
+        cvbs_opposite_chroma : mod_picture_chroma;
     wire signed [5:0] cvbs_picture_chroma=
         rgb_chroma(cvbs_mod_x4,cvbs_pal_y4,cvbs_pal_sum3,
-                   cvbs_pal_difference3,mod_carrier);
+                   cvbs_pal_difference3,cvbs_mod_carrier);
     // PAL burst swings +/-45 degrees about the negative U axis.  The two
     // octant offsets correspond to -U+V and -U-V respectively; NTSC keeps
     // its original 180-degree burst unchanged.
     wire [2:0] burst_phase_offset = PAL_CHROMA_OUTPUT ?
         (pal_v_invert ? 3'd5 : 3'd3) : 3'd4;
     wire signed [5:0] mod_burst_chroma =
-        chroma8(mod_carrier + burst_phase_offset,2'd3);
+        chroma8(cvbs_mod_carrier + burst_phase_offset,2'd3);
     wire signed [5:0] mod_selected_chroma = mod_burst ?
-        mod_burst_chroma : (CVBS_CHROMA_FILTER ? cvbs_picture_chroma : mod_picture_chroma);
+        mod_burst_chroma : (CVBS_CHROMA_FILTER ? cvbs_picture_chroma :
+            CVBS_PHASE_ALIGNMENT ? cvbs_unfiltered_picture_chroma : mod_picture_chroma);
 
     reg level_sync = 1'b1;
     reg level_burst = 1'b0;
@@ -687,17 +922,20 @@ module coco_cvbs_ntsc #(
                             level_picture ? selected_luma_level_q2 :
                                             LUMA_BLANK_Q2;
     // The receiver derives hue and saturation from the picture-to-burst ratio.
+    wire signed [5:0] svideo_burst_chroma=
+        chroma8(level_carrier + burst_phase_offset,2'd3);
     wire [5:0] chroma_level = level_picture ?
         add_svideo_level(CHROMA_CENTER,svideo_picture_chroma) :
-        level_burst ? add_level(CHROMA_CENTER,level_chroma) :
+        level_burst ? add_level(CHROMA_CENTER,
+            CVBS_PHASE_ALIGNMENT ? svideo_burst_chroma : level_chroma) :
         CHROMA_CENTER;
     wire [5:0] composite_level = level_sync ? LEVEL_SYNC :
         level_burst ? add_level(LEVEL_BLANK,level_chroma) :
         level_picture ? add_level(level_luma,level_chroma) : LEVEL_BLANK;
     wire [6:0] component_pb_level = RGB_SOG_OUTPUT ? rgb_blue_level :
-        level_picture ? add_component_level(component_pb_delta_q2) : 7'd64;
+        mod_component_pb_level;
     wire [6:0] component_pr_level = RGB_SOG_OUTPUT ? rgb_red_level :
-        level_picture ? add_component_level(component_pr_delta_q2) : 7'd64;
+        mod_component_pr_level;
 
     reg [6:0] luma_level_135 = LUMA_SYNC_Q2;
     reg [5:0] chroma_level_135 = CHROMA_CENTER;
@@ -710,6 +948,8 @@ module coco_cvbs_ntsc #(
             sample_phase <= 4'd0;
             height_meta <= 8'd192;
             picture_top <= 9'd43;
+            cvbs_prefetch_origin <= 9'd42;
+            cvbs_prefetch_limit <= 9'd234;
             picture_bottom <= 9'd235;
             video_50hz_meta <= 1'b0;
             video_50hz_sync <= 1'b0;
@@ -739,6 +979,10 @@ module coco_cvbs_ntsc #(
             pixel_carrier <= 3'd0;
             pixel_sample_tick <= 1'b0;
             pixel_rgb <= 6'd0;
+            encoder_component_pb_base<=64;
+            encoder_component_pr_base<=64;
+            encoder_component_blue<=0;
+            encoder_component_red<=0;
             encoder_rgb <= 6'd0;
             mod_rgb <= 6'd0;
             border_meta <= 6'd0;
@@ -792,6 +1036,8 @@ module coco_cvbs_ntsc #(
             mod_difference3 <= 11'sd0;
             cvbs_mod_x4<=0;cvbs_mod_y4<=0;
             cvbs_mod_sum3<=0;cvbs_mod_difference3<=0;
+            mod_component_pb_level <= 7'd64;
+            mod_component_pr_level <= 7'd64;
             mod_component_x <= 8'sd0;
             mod_component_y <= 8'sd0;
             level_sync <= 1'b1;
@@ -821,6 +1067,8 @@ module coco_cvbs_ntsc #(
                 v_line>=compatibility_border_lag ?
                     v_line-compatibility_border_lag : 9'd0;
             picture_top <= next_picture_top+9'd1;
+            cvbs_prefetch_origin <= next_picture_top;
+            cvbs_prefetch_limit <= next_picture_top+{1'b0,height_meta};
             picture_bottom <= next_picture_top+9'd1+{1'b0,height_meta};
             luma_level_135 <= LUMA_DAC_EVEN_LEVELS ?
                               {luma_level[6:1],1'b0} : luma_level;
@@ -875,6 +1123,10 @@ module coco_cvbs_ntsc #(
             encoder_picture <= pixel_picture;
             encoder_carrier <= pixel_carrier;
             encoder_sample_tick <= pixel_sample_tick;
+            encoder_component_pb_base<=component_pb_base(pixel_rgb[5:2]);
+            encoder_component_pr_base<=component_pr_base({pixel_rgb[1:0],pixel_rgb[3:2]});
+            encoder_component_blue<=component_channel(pixel_rgb[1:0]);
+            encoder_component_red<=component_channel(pixel_rgb[5:4]);
             encoder_rgb <= pixel_rgb;
             encoder_x_axis <= fb_x_axis;
             encoder_y_axis <= fb_y_axis;
@@ -940,6 +1192,10 @@ module coco_cvbs_ntsc #(
             // Component video keeps the full colour-difference bandwidth;
             // the composite-only two-tap chroma filter is intentionally not
             // inserted in these paths.
+            mod_component_pb_level <= (YPBPR_TO_RGB_LUT || mod_picture) ?
+                encoder_component_pb_base+{1'b0,encoder_component_blue} : 7'd64;
+            mod_component_pr_level <= (YPBPR_TO_RGB_LUT || mod_picture) ?
+                encoder_component_pr_base+{1'b0,encoder_component_red} : 7'd64;
             mod_component_x <= encoder_x_axis;
             mod_component_y <= encoder_y_axis;
 
@@ -990,6 +1246,64 @@ module coco_cvbs_ntsc #(
         end
     end
 
+    // Align the factored Pr stage with Y, then apply the exact inverse
+    // palette. The eight selected input bits distinguish all 64 RGB222
+    // colours. Sync/blanking are applied after conversion at the same stage.
+    reg [6:0] inverse_pr=64;
+    reg inverse_picture=0;
+    reg [20:0] inverse_rgb=0;
+    reg [6:0] inverse_pb=64;
+    reg [5:0] inverse_color=0;
+    reg inverse_sync_q=1,inverse_picture_q=0;
+    wire [20:0] inverse_tuple={luma_level_135,inverse_pb,inverse_pr};
+    wire [7:0] inverse_address={luma_level_135[5],luma_level_135[2:1],
+                               inverse_pr[6],inverse_pr[3:0]};
+    // Exact inverse of the confirmed RGB222-to-component matrix. Each
+    // colour bit uses its own smallest projection of the quantized Y/Pb/Pr
+    // tuple; unreachable keys are deterministically zero. All 64 reachable
+    // palette colours are checked against the calibrated RGB DAC levels.
+    localparam [63:0] INVERSE_BIT_0=64'h188522c685181463;
+    wire [5:0] inverse_index_0={inverse_tuple[19],inverse_tuple[18],inverse_tuple[3],inverse_tuple[2],inverse_tuple[1],inverse_tuple[0]};
+    localparam [63:0] INVERSE_BIT_1=64'hd0444ce0a0223060;
+    wire [5:0] inverse_index_1={inverse_tuple[17],inverse_tuple[16],inverse_tuple[15],inverse_tuple[13],inverse_tuple[10],inverse_tuple[0]};
+    localparam [63:0] INVERSE_BIT_2=64'h6613c96422000000;
+    wire [5:0] inverse_index_2={inverse_tuple[20],inverse_tuple[19],inverse_tuple[18],inverse_tuple[13],inverse_tuple[6],inverse_tuple[5]};
+    localparam [63:0] INVERSE_BIT_3=64'h6f7f370200000000;
+    wire [5:0] inverse_index_3={inverse_tuple[20],inverse_tuple[19],inverse_tuple[18],inverse_tuple[13],inverse_tuple[6],inverse_tuple[3]};
+    localparam [15:0] INVERSE_BIT_4=16'h36c9;
+    wire [3:0] inverse_index_4={inverse_tuple[19],inverse_tuple[18],inverse_tuple[5],inverse_tuple[4]};
+    localparam [63:0] INVERSE_BIT_5=64'h3c38f0e0c0000000;
+    wire [5:0] inverse_index_5={inverse_tuple[20],inverse_tuple[19],inverse_tuple[18],inverse_tuple[6],inverse_tuple[5],inverse_tuple[0]};
+    function [6:0] inverse_green_level;
+        input [1:0] channel;
+        begin case(channel)
+            0:inverse_green_level=40;
+            1:inverse_green_level=58;
+            2:inverse_green_level=80;
+            default:inverse_green_level=102;
+        endcase end
+    endfunction
+    always @(posedge clk135)begin
+        if(!reset_n)begin
+            inverse_pb<=64;inverse_color<=0;inverse_sync_q<=1;inverse_picture_q<=0;
+            inverse_pr<=64;inverse_picture<=0;inverse_rgb<=0;
+        end else begin
+            inverse_pr<=component_pr_level_135;
+            inverse_picture<=level_picture;
+            inverse_pb<=component_pb_level_135;
+            inverse_color<={INVERSE_BIT_5[inverse_index_5],INVERSE_BIT_4[inverse_index_4],INVERSE_BIT_3[inverse_index_3],INVERSE_BIT_2[inverse_index_2],INVERSE_BIT_1[inverse_index_1],INVERSE_BIT_0[inverse_index_0]};
+            inverse_sync_q<=luma_level_135==0;
+            inverse_picture_q<=inverse_picture;
+            if(inverse_sync_q)inverse_rgb<=0;
+            else if(!inverse_picture_q)inverse_rgb<={7'd40,7'd0,7'd0};
+            else inverse_rgb<={inverse_green_level(inverse_color[3:2]),
+                rgb_blue_picture_level(inverse_color[1:0]),
+                rgb_red_picture_level(inverse_color[5:4])};
+        end
+    end
+    wire [6:0] dac_green=YPBPR_TO_RGB_LUT ? inverse_rgb[20:14] : luma_level_135;
+    wire [6:0] dac_blue=YPBPR_TO_RGB_LUT ? inverse_rgb[13:7] : component_pb_level_135;
+    wire [6:0] dac_red=YPBPR_TO_RGB_LUT ? inverse_rgb[6:0] : component_pr_level_135;
     reg [6:0] luma_dac_level = LUMA_SYNC_Q2;
     reg [5:0] chroma_dac_level = CHROMA_CENTER;
     reg [5:0] cvbs_dac_level = LEVEL_SYNC;
@@ -1003,6 +1317,8 @@ module coco_cvbs_ntsc #(
     reg [5:0] cvbs_sigma = 6'd0;
     reg [7:0] component_pb_sigma = 8'd0;
     reg [7:0] component_pr_sigma = 8'd0;
+    reg component_pb_selected = 1'b0;
+    reg component_pr_selected = (COMPONENT_DAC_PHASE_STAGGER != 0);
     reg component_midpoint_phase = 1'b0;
     reg component_pb_midpoint = 1'b1;
     reg component_pr_midpoint = 1'b1;
@@ -1064,6 +1380,8 @@ module coco_cvbs_ntsc #(
             cvbs_sigma <= 6'd16;
             component_pb_sigma <= 8'd0;
             component_pr_sigma <= 8'd0;
+            component_pb_selected <= 1'b0;
+            component_pr_selected <= (COMPONENT_DAC_PHASE_STAGGER != 0);
             component_midpoint_phase <= 1'b0;
             component_pb_midpoint <= 1'b1;
             component_pr_midpoint <= 1'b1;
@@ -1079,22 +1397,22 @@ module coco_cvbs_ntsc #(
             luma_sync_270_d <= 1'b1;
             dac_line_phase <= 1'b0;
         end else begin
-            luma_dac_level <= luma_level_135;
+            luma_dac_level <= dac_green;
             chroma_dac_level <= chroma_level_135;
             cvbs_dac_level <= cvbs_level_135;
-            component_pb_dac_level <= component_pb_level_135;
-            component_pr_dac_level <= component_pr_level_135;
+            component_pb_dac_level <= dac_blue;
+            component_pr_dac_level <= dac_red;
             component_midpoint_phase <= ~component_midpoint_phase;
             // Register comparisons with the levels, then delay once more
             // to align the neutral flags with the sigma carry output.
-            component_pb_midpoint <= (component_pb_level_135 == 7'd64);
-            component_pr_midpoint <= (component_pr_level_135 == 7'd64);
+            component_pb_midpoint <= (dac_blue == 7'd64);
+            component_pr_midpoint <= (dac_red == 7'd64);
             component_pb_midpoint_output <= component_pb_midpoint;
             component_pr_midpoint_output <= component_pr_midpoint;
-            luma_sync_270 <= (luma_level_135 == LUMA_SYNC_Q2);
+            luma_sync_270 <= (dac_green == LUMA_SYNC_Q2);
             luma_sync_270_d <= luma_sync_270;
             if (dac_line_start &&
-                ((RGB_SOG_OUTPUT && RGB_SCANLINE_PHASE_ALTERNATION) ||
+                (((RGB_SOG_OUTPUT || YPBPR_TO_RGB_LUT) && RGB_SCANLINE_PHASE_ALTERNATION) ||
                  LUMA_SCANLINE_PHASE_ALTERNATION ||
                  CVBS_SVIDEO_SCANLINE_PHASE_ALTERNATION))
                 dac_line_phase <= ~dac_line_phase;
@@ -1102,7 +1420,7 @@ module coco_cvbs_ntsc #(
             // in the horizontal sync tip, so the accumulator transient is
             // invisible; S-Video chroma retains continuous phase.
             luma_sigma <= dac_line_start ?
-                          (((RGB_SOG_OUTPUT &&
+                          ((((RGB_SOG_OUTPUT || YPBPR_TO_RGB_LUT) &&
                              RGB_SCANLINE_PHASE_ALTERNATION) ||
                              LUMA_SCANLINE_PHASE_ALTERNATION ||
                              CVBS_SVIDEO_SCANLINE_PHASE_ALTERNATION) ?
@@ -1117,12 +1435,12 @@ module coco_cvbs_ntsc #(
             // Opposite midpoint phases avoid in-phase Pb/Pr switching on grey.
             // S-Video's modulated chroma DAC above remains continuous.
             component_pb_sigma <= (dac_line_start &&
-                                  ((RGB_SOG_OUTPUT && RGB_SCANLINE_PHASE_ALTERNATION) ||
+                                  (((RGB_SOG_OUTPUT || YPBPR_TO_RGB_LUT) && RGB_SCANLINE_PHASE_ALTERNATION) ||
                                    COMPONENT_DAC_PHASE_STAGGER)) ?
                                   (COMPONENT_DAC_PHASE_STAGGER ? 8'd42 : rgb_blue_seed) :
                                   component_pb_sum;
             component_pr_sigma <= (dac_line_start &&
-                                  ((RGB_SOG_OUTPUT && RGB_SCANLINE_PHASE_ALTERNATION) ||
+                                  (((RGB_SOG_OUTPUT || YPBPR_TO_RGB_LUT) && RGB_SCANLINE_PHASE_ALTERNATION) ||
                                    COMPONENT_DAC_PHASE_STAGGER)) ?
                                   (COMPONENT_DAC_PHASE_STAGGER ? 8'd85 : rgb_red_seed) :
                                   component_pr_sum;
@@ -1138,12 +1456,23 @@ module coco_cvbs_ntsc #(
             // Each 13.5-MHz sample spans 20 DAC clocks, so a neutral sample
             // still emits exactly ten pulses. Coloured samples keep their
             // original output bits and accumulated quantisation error.
-            component_pb_out_reg <= (COMPONENT_DAC_PHASE_STAGGER &&
-                                     component_pb_midpoint_output) ?
-                                    component_midpoint_phase : component_pb_sigma[7];
-            component_pr_out_reg <= (COMPONENT_DAC_PHASE_STAGGER &&
-                                     component_pr_midpoint_output) ?
-                                    ~component_midpoint_phase : component_pr_sigma[7];
+            // Select the NEXT sigma carry one clock earlier. The final IO
+            // flops now have a direct registered input; output latency and
+            // neutral phase are unchanged. Keep the sigma residue untouched.
+            component_pb_selected <= (COMPONENT_DAC_PHASE_STAGGER &&
+                                       component_pb_midpoint) ?
+                ~component_midpoint_phase :
+                ((dac_line_start && (((RGB_SOG_OUTPUT || YPBPR_TO_RGB_LUT) &&
+                  RGB_SCANLINE_PHASE_ALTERNATION) || COMPONENT_DAC_PHASE_STAGGER)) ?
+                 1'b0 : component_pb_sum[7]);
+            component_pr_selected <= (COMPONENT_DAC_PHASE_STAGGER &&
+                                       component_pr_midpoint) ?
+                component_midpoint_phase :
+                ((dac_line_start && (((RGB_SOG_OUTPUT || YPBPR_TO_RGB_LUT) &&
+                  RGB_SCANLINE_PHASE_ALTERNATION) || COMPONENT_DAC_PHASE_STAGGER)) ?
+                 1'b0 : component_pr_sum[7]);
+            component_pb_out_reg <= component_pb_selected;
+            component_pr_out_reg <= component_pr_selected;
         end
     end
 endmodule
