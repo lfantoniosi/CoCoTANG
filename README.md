@@ -172,6 +172,52 @@ Several adapters have oversized socket holes. They require machined-pin sockets 
 
 ![CoCoTANG boot screen](fpga/docs/CoCoTANG-RGB.jpg)
 
+### Assembled boards
+
+The photos below show the component population and header placement, in assembly order. Front and back views are included where available.
+
+#### Main board
+
+The main board carries the CPU socket, Tang Nano 20K headers, bus buffers, and connections to the other adapters. The photos show the assembled board before fitting the CPU and FPGA module. Choose the layout that matches your motherboard revision.
+
+| Front | Back |
+| --- | --- |
+| ![Assembled main board, front, showing CPU socket, FPGA headers, and bus buffers](fpga/docs/main-front.JPG) | ![Assembled main board, back, showing motherboard connection pins](fpga/docs/main-back.JPG) |
+
+#### ADDRMUX board
+
+The address mux adapter plugs into the motherboard's former **74LS138** position and connects to the main board. **Leave the 74LS138 socket on the ADDRMUX adapter empty; do not reinstall the original IC in it.** The adapter's onboard logic replaces its function.
+
+![Assembled ADDRMUX board with its 74LS138 socket deliberately left empty](fpga/docs/addrmux-front.JPG)
+
+#### PIA0 adapter
+
+Populate the logic IC, diodes, capacitors, and headers required for PIA0, and select the **PIA0** jumper setting. The external keyboard header is fitted only on this adapter. These photos show the board before installing the PIA.
+
+| Front | Back |
+| --- | --- |
+| ![Assembled PIA0 adapter, front, showing populated logic and headers](fpga/docs/pia0-front.JPG) | ![Assembled PIA0 adapter, back, showing motherboard connection pins](fpga/docs/pia0-back.JPG) |
+
+#### PIA1 adapter
+
+PIA1 uses the same PCB with the **PIA1** jumper setting. Fit the socket and required signal header; leave the PIA0-only logic, diodes, capacitors, and external keyboard header unpopulated. These photos show the board before installing the PIA.
+
+| Front | Back |
+| --- | --- |
+| ![Assembled PIA1 adapter, front, showing the reduced component population](fpga/docs/pia1-front.JPG) | ![Assembled PIA1 adapter, back, showing motherboard connection pins](fpga/docs/pia1-back.JPG) |
+
+#### AVIDEO board
+
+The optional analog audio/video board can be mounted in the **original RF modulator/shield location**. Enlarge the opening in the CoCo's cover to clear the 5-pin DIN connector. Use **pin headers on the back of the AVIDEO PCB to secure it to the CoCo motherboard**, as shown in the back view.
+
+| Front | Back / mounting headers |
+| --- | --- |
+| ![Assembled AVIDEO board, front, showing the analog output circuitry and connector](fpga/docs/avideo-front.JPG) | ![AVIDEO board, back, showing the pin headers used to secure it to the CoCo motherboard](fpga/docs/avideo-back.JPG) |
+
+The completed installation brings the main board, ADDRMUX, PIA adapters, and AVIDEO board together:
+
+![Fully assembled CoCoTANG installation](fpga/docs/fully-assembled.JPG)
+
 ### PIA adapter configuration
 
 Both PIAs use the same adapter PCB, but they require different component populations and jumper settings:
@@ -182,6 +228,12 @@ Both PIAs use the same adapter PCB, but they require different component populat
 The new PIA PCB also includes a pinout for an external keyboard. Populate and connect the external keyboard header **only on PIA0**.
 
 ![PIA0 and PIA1 adapters showing their installed configuration and wiring](fpga/docs/pias.jpg)
+
+### External keyboard companion
+
+The optional four-key companion board uses **4 Cherry MX key switches**, labeled **CTRL, ALT, F1, and F2**, and connects to the **external keyboard header on PIA0**. The photo shows the assembled companion beside the CoCo 2's built-in keyboard, with its cable attached. The PCB fabrication files are available as [gerber_extkey.zip](kicad/gerber/gerber_extkey.zip).
+
+![Assembled external four-key keyboard companion beside the CoCo 2 keyboard](fpga/docs/keyboard-companion.JPG)
 
 ### Joystick second-button support
 
@@ -203,16 +255,25 @@ You can use [this](https://www.aliexpress.com/item/1005002515211106.html) HDMI f
 
 ### Audio Video Board
 
-Besides the HDMI output CoCoTANG Audio/Video board can be assembled on the same place as the RF module and it has a 5-pin din output. 
+The optional CoCoTANG Audio/Video board provides a 5-pin DIN output and fits in the original RF modulator/shield location. Enlarge the cover opening for the connector and secure the PCB to the motherboard using the rear pin headers shown in the [AVIDEO assembly photos](#avideo-board).
 
-![5-pin-din](fpga/docs/5-pin-din.jpg)
+The revised **J24 DIN-5 connector follows the Atari 800XL monitor pin assignment**, with chroma connected to pin 5. The diagram shows the **female socket viewed from the front**, looking into the connector on the computer, with the keyway at the bottom. The cable plug's mating-face view is mirrored.
 
-There are 3 possible outputs:
-* Composite (CVBS) / S-Video (Y/CHR) / Audio
-* YPbPr (Y/B/R) / Audio
-* RGB SyncOnGreen (R/G/B) / Audio
+![CoCoTANG DIN-5 pinout: female socket front view, with Atari 800XL-style CVBS/S-Video wiring and YPbPr/RGB assignments](fpga/docs/din5-av-pinout.png)
 
-You can use a cable like [this](https://www.aliexpress.com/item/1005003227813806.html) (use the 5-pin version) to connect into a RGB monitor or Composite / S-Video. For S-Video you can use [this](https://www.aliexpress.com/item/1005005067988142.html) Y cable to connect to the mini-din 4.
+| DIN pin | CVBS / S-Video | YPbPr component | RGB with sync on green |
+| --- | --- | --- | --- |
+| 1 | Luminance (Y) | Y | Green + sync |
+| 2 | Ground | Ground | Ground |
+| 3 | Audio | Audio | Audio |
+| 4 | Composite video (CVBS) | Pr | Red |
+| 5 | Chrominance (C) | Pb | Blue |
+
+Select the matching FPGA video image; the same physical pins carry different signals in each mode. For composite, use pins **4 (video), 3 (audio), and 2 (ground)**. For S-Video, use **1 (Y), 5 (C), and 2 (ground)**, with audio on pin 3.
+
+Use an Atari 800XL-style monitor cable wired to this table for CVBS/S-Video. RGB and YPbPr need cables wired for their respective columns. Check the actual DIN pin connections rather than relying on RCA plug colors or the connector's pin count. This pinout applies to the revised AVIDEO PCB; check older boards before reusing a cable.
+
+The assignments above match J24's current PCB nets: `1=G_Y`, `2=GND`, `3=AUDIO_RCA`, `4=R_CVBS`, `5=B_CHR`. The diagram's editable source is [din5-av-pinout.svg](fpga/docs/din5-av-pinout.svg). For the Atari monitor-port reference, see the [Atari 800XL service manual](https://www.atarimania.com/documents/Atari%20800XL%20Service%20manual.pdf) and [Atari connector FAQ](https://www.atarimania.com/machines/atari-400-800-xl-xe/faq/16). CoCoTANG supplies chroma on pin 5, which was unconnected on many original 800XL machines.
 
 
 ## Preparing the microSD card

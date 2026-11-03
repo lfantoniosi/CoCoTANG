@@ -315,7 +315,7 @@
 		(uuid "aefadbae-c6e8-4202-bd8e-8fe23711d805")
 	)
 	(pad "G1" thru_hole circle
-		(at -5 -2.5)
+		(at -5 -5.005)
 		(size 2.1 2.1)
 		(drill 1.4)
 		(layers "*.Cu" "*.Mask")
@@ -324,7 +324,7 @@
 		(uuid "0c06f702-61be-4fc9-b028-36fb3964dc3f")
 	)
 	(pad "G2" thru_hole circle
-		(at -5 2.5)
+		(at -5 5.005)
 		(size 2.1 2.1)
 		(drill 1.4)
 		(layers "*.Cu" "*.Mask")
