@@ -439,3 +439,15 @@ For Windows, use the [Gowin Programmer](https://www.gowinsemi.com/en/support/dow
 ## Project status
 
 This is an actively developed hardware/RTL project. Review the [pin and bus map](fpga/docs/pinout.md), fabrication drawing, and KiCad files before building hardware. Flashing a new FPGA image or ROM changes the board's nonvolatile contents; keep a known-good image available while experimenting.
+
+## Showcase
+
+Games, NitrOS-9, and a graphics demo running on CoCoTANG:
+
+| Calixto Island | Contras |
+| --- | --- |
+| ![Calixto Island adventure running on CoCoTANG](fpga/docs/calixto.JPG) | ![Contras gameplay running on CoCoTANG](fpga/docs/contras.JPG) |
+
+| NitrOS-9 | Sock Master's Drive Thru demo |
+| --- | --- |
+| ![NitrOS-9 EOU running on CoCoTANG with a 6309 CPU in native mode](fpga/docs/nitros9.JPG) | ![Sock Master's colorful Drive Thru graphics demo running on CoCoTANG](fpga/docs/sockdemo.JPG) |
