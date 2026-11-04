@@ -727,7 +727,7 @@
     "last_paths": {
       "idf": "",
       "netlist": "",
-      "plot": "gerber_avideo",
+      "plot": "gerber_pia",
       "specctra_dsn": "CoCoTANG.dsn",
       "step": "",
       "vrml": ""
