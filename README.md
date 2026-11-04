@@ -218,6 +218,50 @@ The completed installation brings the main board, ADDRMUX, PIA adapters, and AVI
 
 ![Fully assembled CoCoTANG installation](fpga/docs/fully-assembled.JPG)
 
+### Complete assembly and umbilical cables
+
+The photo below shows the fully assembled main board, PIA0, PIA1, ADDRMUX, AVIDEO, and external keyboard companion with their umbilical cables connected. Use it as an overview alongside the [pin and bus map](fpga/docs/pinout.md) when connecting the boards.
+
+![Complete CoCoTANG assembly with the FPGA module, CPU, PIAs, ADDRMUX, AVIDEO, keyboard companion, and connecting umbilical cables](fpga/docs/full-assembled-umbelicals.JPG)
+
+### AVIDEO mounting and case opening
+
+#### Prepare the RF modulator area
+
+With the original RF module removed, prepare its mounting position for AVIDEO. Remove the plastic spacers from the mounting header pins so the AVIDEO PCB can sit close to the motherboard. Leave the metal pins in place for soldering the board, as shown below.
+
+![Former RF modulator position prepared for AVIDEO, with the plastic header spacers removed from the mounting pins](fpga/docs/remove-plastic-supports.JPG)
+
+#### Trim the underside and solder the board close to the motherboard
+
+Clip all excess component leads and header-pin ends on the **underside of AVIDEO**, and remove excess solder that would prevent the board from sitting close to the motherboard. Retain the mounting pins needed to secure it. Fit the board over the prepared RF-area mounting pins, align the DIN-5 connector with the rear of the case, and solder the mounting pins with the PCB close to the motherboard. Keep clearance between the underside solder joints and the motherboard.
+
+| Trimmed AVIDEO underside | Mounted board, side view |
+| --- | --- |
+| ![AVIDEO underside showing trimmed component leads and solder joints before mounting](fpga/docs/under-avideo.JPG) | ![AVIDEO soldered close to the motherboard in the former RF modulator position, with the DIN-5 connector facing the rear](fpga/docs/soldered-close.JPG) |
+
+#### Copy an existing opening onto tape
+
+Use a neighboring DIN connector opening as a template. Apply masking tape over it and copy its outline by trimming the tape to match the opening. Peel off the tape and stick it over the original **TO TV** opening, aligning the bottom edge and checking its position against the installed AVIDEO connector. The transferred outline marks the enlarged opening needed for the DIN-5 plug.
+
+| Copy the opening onto masking tape | Transfer the tape to the TO TV opening |
+| --- | --- |
+| ![Masking tape cut to copy the shape of an existing DIN connector opening](fpga/docs/copy-tape.JPG) | ![Tape template transferred to the original TO TV opening to mark the larger DIN-5 cutout](fpga/docs/paste-tape.JPG) |
+
+#### Enlarge the opening with a Dremel bit
+
+Remove the cover from the computer before machining it. Use a Dremel or similar rotary tool with a bit like the one shown to enlarge the opening to the tape outline. Remove material gradually, smooth the edges, and check the fit of the DIN-5 plug. Clear away the plastic debris before refitting the cover.
+
+| Rotary-tool bit | Finished opening |
+| --- | --- |
+| ![Rounded abrasive rotary-tool bit used to enlarge the plastic case opening](fpga/docs/dremel-bit.JPG) | ![Finished enlarged TO TV opening shaped to clear the AVIDEO DIN-5 plug](fpga/docs/final-hole.JPG) |
+
+#### Close the lid and connect the DIN-5 cable
+
+Refit the cover, checking that the internal cables are clear of its edges. The DIN-5 plug should fit through the enlarged opening and seat fully in the AVIDEO socket. The finished installation below shows the closed lid, connected DIN-5 cable, and external keyboard companion.
+
+![Completed CoCoTANG installation with the lid closed, DIN-5 cable connected through the enlarged TO TV opening, and external keyboard companion attached](fpga/docs/closed-lid.JPG)
+
 ### PIA adapter configuration
 
 Both PIAs use the same adapter PCB, but they require different component populations and jumper settings:
@@ -255,7 +299,7 @@ You can use [this](https://www.aliexpress.com/item/1005002515211106.html) HDMI f
 
 ### Audio Video Board
 
-The optional CoCoTANG Audio/Video board provides a 5-pin DIN output and fits in the original RF modulator/shield location. Enlarge the cover opening for the connector and secure the PCB to the motherboard using the rear pin headers shown in the [AVIDEO assembly photos](#avideo-board).
+The optional CoCoTANG Audio/Video board provides a 5-pin DIN output and fits in the original RF modulator/shield location. Enlarge the cover opening for the connector and secure the PCB to the motherboard using the rear pin headers shown in the [AVIDEO assembly photos](#avideo-board). Follow the illustrated [mounting and case-opening guide](#avideo-mounting-and-case-opening) to prepare the RF area and enlarge the cover opening.
 
 The revised **J24 DIN-5 connector follows the Atari 800XL monitor pin assignment**, with chroma connected to pin 5. The diagram shows the **female socket viewed from the front**, looking into the connector on the computer, with the keyway at the bottom. The cable plug's mating-face view is mirrored.
 
@@ -271,10 +315,27 @@ The revised **J24 DIN-5 connector follows the Atari 800XL monitor pin assignment
 
 Select the matching FPGA video image; the same physical pins carry different signals in each mode. For composite, use pins **4 (video), 3 (audio), and 2 (ground)**. For S-Video, use **1 (Y), 5 (C), and 2 (ground)**, with audio on pin 3.
 
+For an example lead, see this [5-pin DIN to four-RCA cable](https://www.aliexpress.com/item/1005003227813806.html); select the **5-pin version** and verify its wiring against the table above.
+
 Use an Atari 800XL-style monitor cable wired to this table for CVBS/S-Video. RGB and YPbPr need cables wired for their respective columns. Check the actual DIN pin connections rather than relying on RCA plug colors or the connector's pin count. This pinout applies to the revised AVIDEO PCB; check older boards before reusing a cable.
 
 The assignments above match J24's current PCB nets: `1=G_Y`, `2=GND`, `3=AUDIO_RCA`, `4=R_CVBS`, `5=B_CHR`. The diagram's editable source is [din5-av-pinout.svg](fpga/docs/din5-av-pinout.svg). For the Atari monitor-port reference, see the [Atari 800XL service manual](https://www.atarimania.com/documents/Atari%20800XL%20Service%20manual.pdf) and [Atari connector FAQ](https://www.atarimania.com/machines/atari-400-800-xl-xe/faq/16). CoCoTANG supplies chroma on pin 5, which was unconnected on many original 800XL machines.
 
+
+### Display compatibility and PVM connections
+
+**YPbPr component:** use a TV or monitor that accepts **15 kHz standard-definition 480i/240p signals** over its component inputs, such as a compatible PVM or a CRT TV with YPbPr inputs. Check that the particular display accepts 240p; support for 480i alone does not guarantee it. Connect DIN pin **1 to Y**, **5 to Pb**, and **4 to Pr**, with pin **3 for audio**.
+
+**RGB with sync on green (SoG):** use a cable wired specifically for CoCoTANG's RGB pinout and a display that accepts sync on green. On a compatible PVM, you can instead use the same **5-pin DIN to four-RCA lead** linked above, with **RCA-to-BNC adapters** on the three video leads:
+
+| DIN pin / lead | PVM input |
+| --- | --- |
+| 1 — Green + sync | G / Y |
+| 4 — Red | R / Pr |
+| 5 — Blue | B / Pb |
+| 3 — Audio | Audio input |
+
+Select **RGB** on the PVM and choose **internal sync (INT)**, or turn **EXT SYNC off**, so it takes sync from green. The fourth RCA lead carries audio; a separate external-sync connection is not needed. For YPbPr, use the same three video connections but select **component / YPbPr** instead. Control names vary by model; see, for example, the [Sony PVM-D14L5A/D20L5A operating instructions](https://pro.sony/s3/cms-static-content/operation-manual/4089510121.pdf).
 
 ## Preparing the microSD card
 
