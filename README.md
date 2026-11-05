@@ -14,6 +14,20 @@ The assembly uses a **main board** for the CPU and Tang Nano 20K, **PIA0 and PIA
 
 The design uses NTSC machine clocking. The GIME's 50 Hz setting remains available, but selecting it does **not** switch to a PAL crystal. PAL-encoded CVBS/S-Video output is also supported. See [Build on macOS or Linux](#build-on-macos-or-linux) for video targets and the [FPGA pin and bus map](fpga/docs/pinout.md) for hardware connections.
 
+## Compatibility
+
+### Games
+
+So far, **The Contras is the only game found to fail to load in its original form**. CoCoTANG's **262.5-scanline timing drifts relative to the original CoCo 3**. The resulting timing difference affects an unprotected code section in the game and prevents the original version from loading.
+
+Use the [patched version of The Contras](https://drive.google.com/file/d/1ANGJpljmbaEt34lFBowtTOSvq0qSiGtF/view?usp=sharing) instead. This patched version also includes **keyboard enhancements**.
+
+### Multi-Pak Interface and real floppy drives
+
+A **Multi-Pak Interface (MPI)** holds the cartridge data bus in a way that prevents access to CoCoTANG's internal peripheral registers. With an MPI connected, the **internal Glenside IDE, SSC sound/speech, and Orchestra-90 are unavailable**. Software that uses these internal devices must be run without the MPI.
+
+**An MPI is required to use real floppy drives.** Plug the floppy disk controller into the MPI and connect the drives to that controller. This setup uses the external floppy controller, with the internal IDE, SSC, and Orchestra-90 unavailable as described above.
+
 ## Current FPGA features
 
 - GIME video and memory mapping with 8 MB NoCan3-style RAM support and readable Disto MMU page bits.
