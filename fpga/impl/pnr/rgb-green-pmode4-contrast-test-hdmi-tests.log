@@ -1,0 +1,13 @@
+HDMI 60Hz compat=0 artifact=0: all columns, both edges and doubled rows PASS
+HDMI 60Hz compat=1 artifact=0: all columns, both edges and doubled rows PASS
+HDMI 50Hz compat=0 artifact=0: all columns, both edges and doubled rows PASS
+HDMI 50Hz compat=1 artifact=0: all columns, both edges and doubled rows PASS
+HDMI 60Hz compat=0 artifact=1: all columns, both edges and doubled rows PASS
+HDMI 60Hz compat=1 artifact=1: all columns, both edges and doubled rows PASS
+HDMI 50Hz compat=0 artifact=1: all columns, both edges and doubled rows PASS
+HDMI 50Hz compat=1 artifact=1: all columns, both edges and doubled rows PASS
+HDMI 60Hz compat=0 artifact=2: all columns, both edges and doubled rows PASS
+HDMI 60Hz compat=1 artifact=2: all columns, both edges and doubled rows PASS
+HDMI 50Hz compat=0 artifact=2: all columns, both edges and doubled rows PASS
+HDMI 50Hz compat=1 artifact=2: all columns, both edges and doubled rows PASS
+tests/tb_hdmi_pixel_alignment.sv:79: $finish called at 414840000 (1ps)

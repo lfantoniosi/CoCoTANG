@@ -420,6 +420,24 @@ module coco_cvbs_ntsc #(
         end
     endfunction
 
+    // Combine carrier polarity and composite field polarity before the
+    // narrow negate, avoiding two consecutive carry chains. Preserve even
+    // the eleven-bit minimum-value wrap of the original two-step formula.
+    function signed [5:0] cvbs_phase_chroma;
+        input signed [10:0] mix;
+        input negative_phase;
+        input field_flip;
+        reg signed [5:0] quantized;
+        begin
+            quantized = {mix[10],mix[10:6]};
+            if(negative_phase ^ field_flip)
+                quantized = ~quantized + {5'b0,!(|mix[5:0])};
+            if(negative_phase && mix==11'sh400)
+                quantized[5] = ~quantized[5];
+            cvbs_phase_chroma = quantized;
+        end
+    endfunction
+
     function signed [5:0] rgb_chroma;
         input signed [10:0] x4;
         input signed [10:0] y4;
@@ -427,18 +445,21 @@ module coco_cvbs_ntsc #(
         input signed [10:0] difference3;
         input [2:0] phase;
         reg signed [10:0] mix;
+        reg signed [4:0] quantized;
         begin
-            case (phase)
-                3'd0: mix = y4;
-                3'd1: mix = sum3;
-                3'd2: mix = x4;
-                3'd3: mix = difference3;
-                3'd4: mix = -y4;
-                3'd5: mix = -sum3;
-                3'd6: mix = -x4;
-                default: mix = -difference3;
+            case (phase[1:0])
+                2'd0: mix = y4;
+                2'd1: mix = sum3;
+                2'd2: mix = x4;
+                default: mix = difference3;
             endcase
-            rgb_chroma = mix >>> 6;
+            // Preserve the signed eleven-bit wrap and floor rounding while
+            // negating only the five retained bits. This removes the wide
+            // negate/mux chain before the shared CVBS phase correction.
+            quantized = mix[10:6];
+            if (phase[2])
+                quantized = ~quantized + {4'b0, !(|mix[5:0])};
+            rgb_chroma = quantized;
         end
     endfunction
 
@@ -763,23 +784,19 @@ module coco_cvbs_ntsc #(
         (PAL_CHROMA_OUTPUT && pal_v_invert) ? cvbs_mod_sum3 : cvbs_mod_difference3;
     wire [2:0] cvbs_mod_carrier=mod_carrier ^
         {(!PAL_CHROMA_OUTPUT && !video_50hz_active && cvbs_phase_flip),2'b00};
-    // Reuse the existing unfiltered matrix for a 180-degree correction.
-    // For mix=64*q+r, floor(-mix/64)=-q-(r!=0). Preserve this rounding
-    // exactly instead of duplicating the eleven-bit chroma matrix.
-    reg cvbs_fraction_nonzero;
+    // Reuse one selected matrix axis for both carrier/field polarities.
+    reg signed [10:0] cvbs_picture_axis;
     always @(*)begin
         case(mod_carrier[1:0])
-            0:cvbs_fraction_nonzero=|pal_picture_y4[5:0];
-            1:cvbs_fraction_nonzero=|pal_picture_sum3[5:0];
-            2:cvbs_fraction_nonzero=|mod_x4[5:0];
-            default:cvbs_fraction_nonzero=|pal_picture_difference3[5:0];
+            0:cvbs_picture_axis=pal_picture_y4;
+            1:cvbs_picture_axis=pal_picture_sum3;
+            2:cvbs_picture_axis=mod_x4;
+            default:cvbs_picture_axis=pal_picture_difference3;
         endcase
     end
-    wire signed [5:0] cvbs_opposite_chroma=
-        ~mod_picture_chroma+{5'b0,!cvbs_fraction_nonzero};
     wire signed [5:0] cvbs_unfiltered_picture_chroma=
-        (!PAL_CHROMA_OUTPUT && !video_50hz_active && cvbs_phase_flip) ?
-        cvbs_opposite_chroma : mod_picture_chroma;
+        cvbs_phase_chroma(cvbs_picture_axis,mod_carrier[2],
+            !PAL_CHROMA_OUTPUT && !video_50hz_active && cvbs_phase_flip);
     wire signed [5:0] cvbs_picture_chroma=
         rgb_chroma(cvbs_mod_x4,cvbs_pal_y4,cvbs_pal_sum3,
                    cvbs_pal_difference3,cvbs_mod_carrier);

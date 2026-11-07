@@ -1,0 +1,8 @@
+RGB green contrast mode=0: 64 DAC colours PASS
+RGB green contrast mode=1: 64 DAC colours PASS
+RGB green contrast mode=2: 5 DAC colours PASS
+Green PMODE4 rapid-transition DAC waveform matches reference PASS
+Buff and non-PMODE4 DAC pulse streams remain identical PASS
+tests/tb_rgb_green_contrast.sv:78: $finish called at 53664000 (1ps)
+RGB scanline DAC phase PASS
+tests/tb_rgb_scanline_dac_phase.v:45: $finish called at 35000 (1ps)

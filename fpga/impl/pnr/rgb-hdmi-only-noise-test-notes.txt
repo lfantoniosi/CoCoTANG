@@ -1,0 +1,32 @@
+Analog-noise comparison image, 2026-11-06. Awaiting hardware feedback.
+
+Keeps the HDMI first/last column correction in the RGB build, but restores
+src/video/coco_cvbs_ntsc.v exactly to the confirmed stable RGB encoder hash.
+The analog sample-latching/pixel-width change is absent. The previous analog
+first/last pixel width issue is therefore expected in this comparison.
+This does not prove that sample latching caused the noise: removing logic
+also changes the routed implementation. No placement/build settings changed.
+
+All clocks meet timing: clk108 108.019 MHz, clk135 135.412 MHz,
+clk270 351.349 MHz. Zero setup and hold violations.
+HDMI alignment checks and RGB alternating DAC phase test pass.
+
+Built separately under /private/tmp/cocotang-rgb-hdmi-only-noise.
+Working combined-fix sources and normal CoCoTANG-rgb.fs were left unchanged.
+All four stable images match their previous hashes. Exact comparison sources,
+project process configuration and timing are saved beside this candidate.
+
+Program this exact file, rather than make program-rgb:
+openFPGALoader -b tangnano20k -f impl/pnr/rgb-hdmi-only-noise-test.fs
+
+Compare analog noise with rgb-hdmi-pixel-test.fs. The result is needed before
+claiming the noise is fixed or choosing which analog implementation to keep.
+
+Hardware feedback: user confirmed "yeah no noise" on 2026-11-06.
+Active shared analog encoder restored to this exact confirmed source.
+HDMI correction retained. Active CoCoTANG-rgb.fs and its routed reports now
+match this tested candidate exactly; make program-rgb uses this image.
+Analog-width regression removed from the default suite because that change
+was rolled back. Its test/source remain in earlier candidate archives.
+The earlier analog first/last pixel width issue remains unresolved.
+Stable baseline images have not been replaced or promoted.

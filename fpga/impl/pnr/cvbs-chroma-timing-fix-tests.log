@@ -1,0 +1,44 @@
+python3 tests/check_cvbs_project.py
+CVBS isolation PASS: two substitutions; RGB original; CVBS/S-Video use confirmed build identity
+python3 tests/check_minimal_cvbs.py
+Minimal CVBS isolation PASS: exactly two source substitutions; shared interfaces unchanged
+Minimal CVBS PASS: 138240 coordinates, S-Video bit-identical, NTSC/PAL native/compatibility at 192/199/225 lines; reference filters=1
+tests/tb_cvbs_minimal.sv:68: $finish called at 1652544100 (1ps)
+Minimal CVBS PASS: 138240 coordinates, S-Video bit-identical, NTSC/PAL native/compatibility at 192/199/225 lines; reference filters=0
+tests/tb_cvbs_minimal.sv:68: $finish called at 1652544100 (1ps)
+iverilog -g2012 -s tb_cvbs_chroma_rounding -o /private/tmp/cocotang_tb_cvbs_chroma_rounding tests/tb_cvbs_chroma_rounding.sv src/cvbs/video/coco_cvbs_ntsc_lut.v
+vvp /private/tmp/cocotang_tb_cvbs_chroma_rounding
+CVBS chroma rounding PASS: 49152 exhaustive signed axis/phase cases
+tests/tb_cvbs_chroma_rounding.sv:38: $finish called at 0 (1ps)
+iverilog -g2012 -s tb_cvbs_field_phase -o /private/tmp/cocotang_tb_cvbs_field_phase tests/tb_cvbs_field_phase.sv src/cvbs/video/coco_cvbs_ntsc_lut.v
+vvp /private/tmp/cocotang_tb_cvbs_field_phase
+Field phase PASS RGB=0 PAL=0 FILTERS=1: waveform isolation, both phases and display modes
+Field phase PASS RGB=0 PAL=0 FILTERS=0: waveform isolation, both phases and display modes
+Field phase PASS RGB=1 PAL=0 FILTERS=1: waveform isolation, both phases and display modes
+Field phase PASS RGB=0 PAL=1 FILTERS=1: waveform isolation, both phases and display modes
+tb_cvbs_field_phase PASS
+tests/tb_cvbs_field_phase.sv:97: $finish called at 288224000 (1ps)
+iverilog -g2012 -s tb_cvbs_field_cadence -o /private/tmp/cocotang_tb_cvbs_field_cadence tests/tb_cvbs_field_cadence.sv src/cvbs/video/coco_cvbs_ntsc_lut.v
+vvp /private/tmp/cocotang_tb_cvbs_field_cadence
+CVBS field cadence PASS: real alternating field wraps, stationary composite origin, continuous S-Video and unchanged DDS/raster
+tests/tb_cvbs_field_cadence.sv:59: $finish called at 617800000 (1ps)
+iverilog -g2012 -s tb_cvbs_incremental_dots -o /private/tmp/cocotang_tb_cvbs_dots tests/tb_cvbs_incremental_dots.sv src/cvbs/video/coco_cvbs_ntsc_lut.v
+vvp /private/tmp/cocotang_tb_cvbs_dots
+CVBS incremental dots PASS: 67840 visible coordinates, both standards, both modes, mid-line changes and waveform equivalence
+tests/tb_cvbs_incremental_dots.sv:52: $finish called at 864673000 (1ps)
+iverilog -g2012 -s tb_cvbs_cached_scanlines -o /private/tmp/cocotang_tb_cvbs_cache tests/tb_cvbs_cached_scanlines.sv src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v src/cvbs/video/coco_cvbs_ntsc_lut.v
+vvp /private/tmp/cocotang_tb_cvbs_cache
+artifact=0 field phase=0 hit rows=192 missed rows=0
+artifact=0 field phase=1 hit rows=192 missed rows=0
+tb_cvbs_cached_scanlines PASS
+tests/tb_cvbs_cached_scanlines.sv:139: $finish called at 26907128000 (1ps)
+iverilog -g2012 -s tb_cvbs_cached_scanlines -Ptb_cvbs_cached_scanlines.ROWS=4 -Ptb_cvbs_cached_scanlines.GM=7 -Ptb_cvbs_cached_scanlines.ARTIFACT=1 -o /private/tmp/cocotang_tb_cvbs_artifact tests/tb_cvbs_cached_scanlines.sv src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v src/cvbs/video/coco_cvbs_ntsc_lut.v
+vvp /private/tmp/cocotang_tb_cvbs_artifact
+artifact=1 field phase=0 hit rows=4 missed rows=0
+artifact=1 field phase=1 hit rows=4 missed rows=0
+tb_cvbs_cached_scanlines PASS
+tests/tb_cvbs_cached_scanlines.sv:139: $finish called at 1098488000 (1ps)
+iverilog -g2012 -s tb_cvbs_boink_pixels -o /private/tmp/cocotang_tb_cvbs_boink_pixels tests/tb_cvbs_boink_pixels.sv src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v src/cvbs/video/coco_cvbs_ntsc_lut.v
+vvp /private/tmp/cocotang_tb_cvbs_boink_pixels
+Boink-style cache equivalence PASS: analog=7680 HDMI=15360 colors=16, native225, scroll writes, delayed word reads
+tests/tb_cvbs_boink_pixels.sv:151: $finish called at 953502200 (1ps)

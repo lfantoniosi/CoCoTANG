@@ -1,0 +1,23 @@
+RGB pixel-width test candidate, 2026-11-06. Not yet hardware confirmed.
+
+The native first pixel was only two clk135 clocks wide instead of ten.
+Latch RGB cache data on the native sample strobe, or a phase-two strobe
+for compatibility's fractional canonical addressing. This preserves all
+640 native pixels at ten clocks and 256 compatibility pixels at twenty
+clocks, including both edges and page boundaries, through the inverse LUT.
+The compatibility body shifts by two clk135 clocks to meet its RAM response.
+Line length, sync pipeline, inverse palette, DAC levels and phases unchanged.
+HDMI and isolated CVBS/PAL/YPbPr sources unchanged; stable images untouched.
+Project, placement, routing, synthesis and clock settings unchanged.
+
+All routed clocks pass: clk108 Fmax 108.114 MHz; clk135 Fmax 135.236 MHz.
+Setup and hold violations: zero. Margins remain narrow.
+
+Regression caveat: make test completes with printed failures in CVBS (2),
+GIME registers (3), artifact decoder (24), HDMI debug overlay (1).
+CVBS failures reproduced with the unmodified encoder. The other failing
+unit test sources and dependencies are unchanged. The test runner does
+not propagate these printed failures to its exit status.
+
+Program the candidate with make program-rgb, or use this saved .fs explicitly.
+Do not promote over stable-rgb.fs until hardware video and Boink are confirmed.

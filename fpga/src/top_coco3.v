@@ -731,6 +731,7 @@ module top_coco3 #(
         6'b001100 : cvbs_right_border_data;
     wire visible_cvbs_border_valid = !startup_video_blank && cvbs_border_valid;
     coco3_hdmi #(.LOG_ADDR_WIDTH(LOG_ADDR_WIDTH),
+        .ALIGN_SCANLINE_READ(ANALOG_VIDEO_MODE==3),
         .LOG_COUNT_WIDTH(LOG_COUNT_WIDTH),.LOG_PAGE_WIDTH(LOG_PAGE_WIDTH),
         .LOG_DEPTH(LOG_DEPTH),
         .ENABLE_DEBUG_OVERLAY(ENABLE_BUS_LOGGER||ENABLE_GIME_TRACE),

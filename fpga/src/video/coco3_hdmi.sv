@@ -6,7 +6,8 @@ module coco3_hdmi #(
     parameter integer LOG_PAGE_WIDTH=6,
     parameter integer LOG_DEPTH=4096,
     parameter integer ENABLE_DEBUG_OVERLAY=0,
-    parameter integer GIME_TRACE_MODE=0
+    parameter integer GIME_TRACE_MODE=0,
+    parameter integer ALIGN_SCANLINE_READ=0
 ) (
     input logic pixel_clk,input logic serial_clk,
     input logic audio_clk,input logic [15:0] audio_pcm_left,
@@ -115,9 +116,11 @@ module coco3_hdmi #(
         source_line=(y>=top) ? ((y-top)>>1) : 10'd0;
     end
 
-    // Lead the visible window by one clock for the synchronous line RAM.
+    // The cache registers the address and then the RAM data. Keep its
+    // read enable asserted for the final pending address as well.
     always_comb begin
-        source_valid=(x>=picture_lead && x<picture_lead+picture_width &&
+        source_valid=(x>=picture_lead &&
+                      x<picture_lead+picture_width+(ALIGN_SCANLINE_READ?10'd1:10'd0) &&
                       y>=top && y<top+doubled_height);
         // Unlike source_valid, this stays asserted through the horizontal
         // borders.  Raster-time GIME writes happen there, and the scanline
@@ -131,7 +134,9 @@ module coco3_hdmi #(
         // Native GIME retains all 640 dots. VDG and artifact modes use the
         // centered 512-dot aperture; ordinary VDG pixels use exact
         // 2x/4x/8x replication and artifact pixels keep composite decoding.
-        source_x=source_valid ? picture_x : 10'd0;
+        source_x=source_valid ?
+            ((ALIGN_SCANLINE_READ && picture_x>=picture_width)?picture_width-1'b1:picture_x) :
+            10'd0;
         source_y=source_line[7:0];
         // The ping-pong scan doubler starts producing the next source line
         // while the current one is first displayed:
@@ -150,7 +155,7 @@ module coco3_hdmi #(
                        (y<top+doubled_height && source_line+1'b1<height_s);
     end
 
-    logic picture_d=0;
+    logic picture_d=0,picture_request_d=0;
     // Scanout is deliberately one native GIME raster (two 858-pixel HDMI
     // rows) behind the interrupt generator so a horizontal-border handler
     // can finish before the corresponding framebuffer row is prefetched.
@@ -165,7 +170,10 @@ module coco3_hdmi #(
     logic artifact_css_m=0,artifact_css_s=0;
     logic [23:0] stream_rgb,debug_rgb,rgb;
     always_ff @(posedge pixel_clk) begin
-        picture_d<=source_valid;
+        // Delay the visible mask by both cache stages. The extra read
+        // request above flushes the final pixel; it is not a visible dot.
+        picture_request_d<=source_valid && picture_x<picture_width;
+        picture_d<=ALIGN_SCANLINE_READ ? picture_request_d : source_valid;
         artifact_active_m<=artifact_video_active;
         artifact_active_s<=artifact_active_m;
         artifact_css_m<=artifact_css;

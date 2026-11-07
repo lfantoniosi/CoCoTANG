@@ -1,0 +1,133 @@
+diff --git a/fpga/Makefile b/fpga/Makefile
+index ad12220..545c462 100644
+--- a/fpga/Makefile
++++ b/fpga/Makefile
+@@ -190,6 +190,8 @@ test:
+ 	vvp /private/tmp/cocotang_tb_artifact_decode
+ 	iverilog -g2012 -o /private/tmp/cocotang_tb_rgb_phase tests/tb_rgb_scanline_dac_phase.v src/video/coco_cvbs_ntsc.v
+ 	vvp /private/tmp/cocotang_tb_rgb_phase
++	iverilog -g2012 -s tb_hdmi_pixel_alignment -o /private/tmp/cocotang_tb_hdmi_pixel_alignment tests/tb_hdmi_pixel_alignment.sv src/video/coco3_hdmi.sv src/video/artifact_mode_osd.sv src/video/hdmi/hdmi.sv src/video/hdmi/tmds_channel.sv src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
++	vvp /private/tmp/cocotang_tb_hdmi_pixel_alignment
+ 	iverilog -g2012 -s tb_luma_scanline_dac_phase -o /private/tmp/cocotang_tb_luma_phase tests/tb_luma_scanline_dac_phase.sv src/video/coco_cvbs_ntsc.v
+ 	vvp /private/tmp/cocotang_tb_luma_phase
+ 	iverilog -g2012 -s tb_component_dac_phase -o /private/tmp/cocotang_tb_component_phase tests/tb_component_dac_phase.sv src/video/coco_cvbs_ntsc.v
+@@ -389,6 +391,8 @@ test-cvbs-project:
+ 	python3 tests/check_cvbs_project.py
+ 
+ test-cvbs-video:
++	iverilog -g2012 -s tb_cvbs_chroma_rounding -o /private/tmp/cocotang_tb_cvbs_chroma_rounding tests/tb_cvbs_chroma_rounding.sv $(CVBS_TEST_VIDEO)
++	vvp /private/tmp/cocotang_tb_cvbs_chroma_rounding
+ 	iverilog -g2012 -s tb_cvbs_field_phase -o /private/tmp/cocotang_tb_cvbs_field_phase tests/tb_cvbs_field_phase.sv $(CVBS_TEST_VIDEO)
+ 	vvp /private/tmp/cocotang_tb_cvbs_field_phase
+ 	iverilog -g2012 -s tb_cvbs_field_cadence -o /private/tmp/cocotang_tb_cvbs_field_cadence tests/tb_cvbs_field_cadence.sv $(CVBS_TEST_VIDEO)
+diff --git a/fpga/src/cvbs/video/coco_cvbs_ntsc_lut.v b/fpga/src/cvbs/video/coco_cvbs_ntsc_lut.v
+index 5835563..1231e26 100644
+--- a/fpga/src/cvbs/video/coco_cvbs_ntsc_lut.v
++++ b/fpga/src/cvbs/video/coco_cvbs_ntsc_lut.v
+@@ -420,6 +420,24 @@ module coco_cvbs_ntsc #(
+         end
+     endfunction
+ 
++    // Combine carrier polarity and composite field polarity before the
++    // narrow negate, avoiding two consecutive carry chains. Preserve even
++    // the eleven-bit minimum-value wrap of the original two-step formula.
++    function signed [5:0] cvbs_phase_chroma;
++        input signed [10:0] mix;
++        input negative_phase;
++        input field_flip;
++        reg signed [5:0] quantized;
++        begin
++            quantized = {mix[10],mix[10:6]};
++            if(negative_phase ^ field_flip)
++                quantized = ~quantized + {5'b0,!(|mix[5:0])};
++            if(negative_phase && mix==11'sh400)
++                quantized[5] = ~quantized[5];
++            cvbs_phase_chroma = quantized;
++        end
++    endfunction
++
+     function signed [5:0] rgb_chroma;
+         input signed [10:0] x4;
+         input signed [10:0] y4;
+@@ -427,18 +445,21 @@ module coco_cvbs_ntsc #(
+         input signed [10:0] difference3;
+         input [2:0] phase;
+         reg signed [10:0] mix;
++        reg signed [4:0] quantized;
+         begin
+-            case (phase)
+-                3'd0: mix = y4;
+-                3'd1: mix = sum3;
+-                3'd2: mix = x4;
+-                3'd3: mix = difference3;
+-                3'd4: mix = -y4;
+-                3'd5: mix = -sum3;
+-                3'd6: mix = -x4;
+-                default: mix = -difference3;
++            case (phase[1:0])
++                2'd0: mix = y4;
++                2'd1: mix = sum3;
++                2'd2: mix = x4;
++                default: mix = difference3;
+             endcase
+-            rgb_chroma = mix >>> 6;
++            // Preserve the signed eleven-bit wrap and floor rounding while
++            // negating only the five retained bits. This removes the wide
++            // negate/mux chain before the shared CVBS phase correction.
++            quantized = mix[10:6];
++            if (phase[2])
++                quantized = ~quantized + {4'b0, !(|mix[5:0])};
++            rgb_chroma = quantized;
+         end
+     endfunction
+ 
+@@ -763,23 +784,19 @@ module coco_cvbs_ntsc #(
+         (PAL_CHROMA_OUTPUT && pal_v_invert) ? cvbs_mod_sum3 : cvbs_mod_difference3;
+     wire [2:0] cvbs_mod_carrier=mod_carrier ^
+         {(!PAL_CHROMA_OUTPUT && !video_50hz_active && cvbs_phase_flip),2'b00};
+-    // Reuse the existing unfiltered matrix for a 180-degree correction.
+-    // For mix=64*q+r, floor(-mix/64)=-q-(r!=0). Preserve this rounding
+-    // exactly instead of duplicating the eleven-bit chroma matrix.
+-    reg cvbs_fraction_nonzero;
++    // Reuse one selected matrix axis for both carrier/field polarities.
++    reg signed [10:0] cvbs_picture_axis;
+     always @(*)begin
+         case(mod_carrier[1:0])
+-            0:cvbs_fraction_nonzero=|pal_picture_y4[5:0];
+-            1:cvbs_fraction_nonzero=|pal_picture_sum3[5:0];
+-            2:cvbs_fraction_nonzero=|mod_x4[5:0];
+-            default:cvbs_fraction_nonzero=|pal_picture_difference3[5:0];
++            0:cvbs_picture_axis=pal_picture_y4;
++            1:cvbs_picture_axis=pal_picture_sum3;
++            2:cvbs_picture_axis=mod_x4;
++            default:cvbs_picture_axis=pal_picture_difference3;
+         endcase
+     end
+-    wire signed [5:0] cvbs_opposite_chroma=
+-        ~mod_picture_chroma+{5'b0,!cvbs_fraction_nonzero};
+     wire signed [5:0] cvbs_unfiltered_picture_chroma=
+-        (!PAL_CHROMA_OUTPUT && !video_50hz_active && cvbs_phase_flip) ?
+-        cvbs_opposite_chroma : mod_picture_chroma;
++        cvbs_phase_chroma(cvbs_picture_axis,mod_carrier[2],
++            !PAL_CHROMA_OUTPUT && !video_50hz_active && cvbs_phase_flip);
+     wire signed [5:0] cvbs_picture_chroma=
+         rgb_chroma(cvbs_mod_x4,cvbs_pal_y4,cvbs_pal_sum3,
+                    cvbs_pal_difference3,cvbs_mod_carrier);
+diff --git a/fpga/tests/check_minimal_cvbs.py b/fpga/tests/check_minimal_cvbs.py
+index 7eb8047..bb3ed47 100644
+--- a/fpga/tests/check_minimal_cvbs.py
++++ b/fpga/tests/check_minimal_cvbs.py
+@@ -22,7 +22,12 @@ def main():
+     original = (ROOT / 'src/top_coco3.v').read_text()
+     minimal = (ROOT / 'src/cvbs/minimal_top_coco3.v').read_text()
+     boundary = '    wire analog_luma,analog_chroma,analog_cvbs;'
+-    original_prefix = original.split(boundary)[0]
++    # RGB-only read-address plumbing and the HDMI alignment opt-in do not
++    # belong to the preserved CVBS prefix. Normalize those exact additions;
++    # continue comparing the CPU/SDRAM/SSC/IDE/GIME sections verbatim.
++    original_prefix = original.split(boundary)[0].replace(
++        '    wire [9:0] cvbs_source_read_address_raw;\n', '').replace(
++        '        .ALIGN_SCANLINE_READ(ANALOG_VIDEO_MODE==3),\n', '')
+     minimal_prefix = minimal.split(boundary)[0].replace('    wire [9:0] cvbs_source_read_address_raw;\n', '')
+     assert original_prefix == minimal_prefix, 'CPU/SDRAM/SSC/IDE/GIME/HDMI section changed'
+     for flag in ('CVBS_LUMA_FILTER', 'CVBS_LUMA_NOTCH', 'CVBS_CHROMA_FILTER'):

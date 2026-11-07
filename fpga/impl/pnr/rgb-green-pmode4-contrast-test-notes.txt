@@ -1,0 +1,37 @@
+RGB-only CSS=0 PMODE 4 contrast candidate, 2026-11-07.
+Awaiting CRT contrast/noise and Boink confirmation. Stable images unchanged.
+
+The quantized green artifact palette is 00,04,08,14,18. Change only 04 to
+black 00 and background 18 to full green 0c. Preserve intermediate 08/14.
+Dark/background green separation increases from 22 to 62 calibrated DAC
+steps (58/80 to 40/102, including green's 40-code sync pedestal).
+
+Enable only when RGB mode and synchronized PMODE4 artifact CSS=0 are active.
+Reuse the HDMI block's existing synchronized mode bits; expose only a mode
+status output without altering HDMI scanout or colours. CSS=1 (buff), other
+video modes, startup blanking and all non-RGB analog variants bypass it.
+
+Correct two recovered RGB bits using three component bits already available
+in the inverse stage. Original 336-bit inverse tables remain intact and are
+used unchanged when the green-specific mode is off. No extra data latency,
+pixel hold, sync change, clock/DAC phase change, or DAC calibration change.
+The previously rejected analog sample-latching/width change is absent.
+
+Tests pass for all 64 buff/non-PMODE4 colours and bit-identical DAC pulse
+streams, all five green artifact colours, and 512 rapid green transitions
+compared with an independently remapped-input reference. HDMI pixels/rows/
+artifact palettes and the mode flag pass; RGB DAC phases and CVBS isolation
+also pass. Full broad suite not repeated (existing failures previously saved).
+
+Routed Fmax: clk108 108.010 MHz, clk135 135.925 MHz, clk270 335.072 MHz.
+All clocks pass; zero setup/hold violations. The clk108 margin remains narrow.
+Placement/build/clock settings unchanged (place1/route0/replicate1/maxfan16).
+CVBS/PAL/YPbPr sources and images, all saved rollbacks and stable images unchanged.
+
+make program-rgb selects this candidate. Rollback to the user's noise-free
+RGB/HDMI image: rgb-hdmi-only-noise-test.fs. No stable baseline promoted.
+
+REJECTED on 2026-11-07: user reported "still look bad" and requested
+reverting CSS=0 changes. All contrast logic/mode-status plumbing/tests removed
+from active sources. Active CoCoTANG-rgb.fs restored byte-for-byte to the
+noise-free rgb-hdmi-only-noise-test.fs. HDMI alignment and CVBS timing fix kept.

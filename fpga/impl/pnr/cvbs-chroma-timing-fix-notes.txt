@@ -1,0 +1,27 @@
+CVBS-only timing fix, 2026-11-07. Awaiting hardware confirmation.
+
+Initial build missed clk108 (107.938 MHz) and clk135 (125.812 MHz).
+Optimize only src/cvbs/video/coco_cvbs_ntsc_lut.v:
+- Select an unnegated matrix axis, round at five-bit output precision, and
+  preserve the original signed eleven-bit wrap and negative floor rounding.
+- Combine carrier and field polarity before a single six-bit negate.
+  Preserve the exact minimum-value overflow behavior of the old formula.
+- Reuse the existing chroma matrix; no added matrix or pipeline latency.
+
+Keeps composite-only field-phase alignment and continuous S-Video Y/C/DDS.
+CVBS project identity and source paths unchanged. Placement options exactly
+match stable-cvbs-pnr-options.txt (place1/route1/no replication/maxfan23).
+No shared source, RGB/PAL/YPbPr project, build script or non-CVBS image changed.
+All four stable image hashes remain unchanged.
+
+All clocks pass: clk108 110.087 MHz, clk135 141.564 MHz,
+clk270 278.851 MHz. Zero setup and hold violations.
+make test-cvbs passes, including 49,152 exhaustive arithmetic cases, phase
+and carrier checks, 67,840 coordinate cases, cached artifact rows and
+Boink-style pixel equivalence. Additional field-phase tests compare against
+the pre-change encoder. CVBS prefix test normalizes the two existing RGB-only
+additions without changing shared sources.
+
+make program-cvbs now selects the passing active CVBS image without rebuild.
+Actual flashing could not be verified: USB/JTAG device was not detected.
+Do not promote over stable-cvbs.fs until hardware video/Boink is confirmed.

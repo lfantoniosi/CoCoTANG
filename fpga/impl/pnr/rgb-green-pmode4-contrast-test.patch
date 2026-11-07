@@ -1,0 +1,210 @@
+diff --git a/fpga/Makefile b/fpga/Makefile
+index ad12220..c3ec190 100644
+--- a/fpga/Makefile
++++ b/fpga/Makefile
+@@ -190,6 +190,10 @@ test:
+ 	vvp /private/tmp/cocotang_tb_artifact_decode
+ 	iverilog -g2012 -o /private/tmp/cocotang_tb_rgb_phase tests/tb_rgb_scanline_dac_phase.v src/video/coco_cvbs_ntsc.v
+ 	vvp /private/tmp/cocotang_tb_rgb_phase
++	iverilog -g2012 -s tb_rgb_green_contrast -o /private/tmp/cocotang_tb_rgb_green_contrast tests/tb_rgb_green_contrast.sv src/video/coco_cvbs_ntsc.v
++	vvp /private/tmp/cocotang_tb_rgb_green_contrast
++	iverilog -g2012 -s tb_hdmi_pixel_alignment -o /private/tmp/cocotang_tb_hdmi_pixel_alignment tests/tb_hdmi_pixel_alignment.sv src/video/coco3_hdmi.sv src/video/artifact_mode_osd.sv src/video/hdmi/hdmi.sv src/video/hdmi/tmds_channel.sv src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
++	vvp /private/tmp/cocotang_tb_hdmi_pixel_alignment
+ 	iverilog -g2012 -s tb_luma_scanline_dac_phase -o /private/tmp/cocotang_tb_luma_phase tests/tb_luma_scanline_dac_phase.sv src/video/coco_cvbs_ntsc.v
+ 	vvp /private/tmp/cocotang_tb_luma_phase
+ 	iverilog -g2012 -s tb_component_dac_phase -o /private/tmp/cocotang_tb_component_phase tests/tb_component_dac_phase.sv src/video/coco_cvbs_ntsc.v
+@@ -389,6 +393,8 @@ test-cvbs-project:
+ 	python3 tests/check_cvbs_project.py
+ 
+ test-cvbs-video:
++	iverilog -g2012 -s tb_cvbs_chroma_rounding -o /private/tmp/cocotang_tb_cvbs_chroma_rounding tests/tb_cvbs_chroma_rounding.sv $(CVBS_TEST_VIDEO)
++	vvp /private/tmp/cocotang_tb_cvbs_chroma_rounding
+ 	iverilog -g2012 -s tb_cvbs_field_phase -o /private/tmp/cocotang_tb_cvbs_field_phase tests/tb_cvbs_field_phase.sv $(CVBS_TEST_VIDEO)
+ 	vvp /private/tmp/cocotang_tb_cvbs_field_phase
+ 	iverilog -g2012 -s tb_cvbs_field_cadence -o /private/tmp/cocotang_tb_cvbs_field_cadence tests/tb_cvbs_field_cadence.sv $(CVBS_TEST_VIDEO)
+diff --git a/fpga/src/top_coco3.v b/fpga/src/top_coco3.v
+index ea2b5b5..41e547a 100644
+--- a/fpga/src/top_coco3.v
++++ b/fpga/src/top_coco3.v
+@@ -731,6 +731,7 @@ module top_coco3 #(
+         6'b001100 : cvbs_right_border_data;
+     wire visible_cvbs_border_valid = !startup_video_blank && cvbs_border_valid;
+     coco3_hdmi #(.LOG_ADDR_WIDTH(LOG_ADDR_WIDTH),
++        .ALIGN_SCANLINE_READ(ANALOG_VIDEO_MODE==3),
+         .LOG_COUNT_WIDTH(LOG_COUNT_WIDTH),.LOG_PAGE_WIDTH(LOG_PAGE_WIDTH),
+         .LOG_DEPTH(LOG_DEPTH),
+         .ENABLE_DEBUG_OVERLAY(ENABLE_BUS_LOGGER||ENABLE_GIME_TRACE),
+@@ -764,6 +765,7 @@ module top_coco3 #(
+         .sdram_test_expected(sdram_test_expected),
+         .sdram_test_actual(sdram_test_actual),
+         .artifact_mode(artifact_mode),
++        .artifact_green_active(rgb_green_artifact_active),
+         .ssc_enabled(ssc_enabled),
+         .artifact_video_active(artifact_video_active),
+         .artifact_css(artifact_css),
+@@ -792,6 +794,9 @@ module top_coco3 #(
+         .tmds_data_n(tmds_data_n));
+ 
+     wire analog_luma,analog_chroma,analog_cvbs;
++    wire rgb_green_artifact_active;
++    wire rgb_green_contrast=(ANALOG_VIDEO_MODE==3)&&
++                            rgb_green_artifact_active&&!startup_video_blank;
+     wire analog_component_pb,analog_component_pr;
+     wire [23:0] analog_osd_rgb;
+     artifact_mode_osd #(.DISPLAY_CYCLES(540000000),.PANEL_X(136),
+@@ -838,6 +843,7 @@ module top_coco3 #(
+         .PAL_CHROMA_OUTPUT(PAL_CHROMA_OUTPUT),
+         .RGB_SOG_OUTPUT(0),
+         .YPBPR_TO_RGB_LUT(ANALOG_VIDEO_MODE==3),
++        .RGB_GREEN_CONTRAST(ANALOG_VIDEO_MODE==3),
+         .RGB_SCANLINE_PHASE_ALTERNATION(ANALOG_VIDEO_MODE==3),
+         .COMPONENT_DAC_PHASE_STAGGER(ANALOG_VIDEO_MODE==2),
+         .LUMA_SCANLINE_PHASE_ALTERNATION(1),
+@@ -853,6 +859,7 @@ module top_coco3 #(
+         .video_50hz(hdmi_video_50hz),
+         .high_resolution(1'b1),.compatibility_mode(compatibility_video),
+         .framebuffer_data(analog_status_pixel),
++        .green_pmode4_contrast(rgb_green_contrast),
+         .border_rgb(visible_border_rgb),.row_border_rgb(visible_cvbs_border),
+         .row_right_border_rgb(visible_cvbs_right_border),
+         .row_border_valid(visible_cvbs_border_valid),
+diff --git a/fpga/src/video/coco3_hdmi.sv b/fpga/src/video/coco3_hdmi.sv
+index 1d40dfe..300a1da 100644
+--- a/fpga/src/video/coco3_hdmi.sv
++++ b/fpga/src/video/coco3_hdmi.sv
+@@ -6,7 +6,8 @@ module coco3_hdmi #(
+     parameter integer LOG_PAGE_WIDTH=6,
+     parameter integer LOG_DEPTH=4096,
+     parameter integer ENABLE_DEBUG_OVERLAY=0,
+-    parameter integer GIME_TRACE_MODE=0
++    parameter integer GIME_TRACE_MODE=0,
++    parameter integer ALIGN_SCANLINE_READ=0
+ ) (
+     input logic pixel_clk,input logic serial_clk,
+     input logic audio_clk,input logic [15:0] audio_pcm_left,
+@@ -47,6 +48,7 @@ module coco3_hdmi #(
+     output logic [7:0] prefetch_y,
+     output logic prefetch_valid,
+     output logic active_video_50hz,
++    output wire artifact_green_active,
+     output logic tmds_clk_p,output logic tmds_clk_n,
+     output logic [2:0] tmds_data_p,output logic [2:0] tmds_data_n
+ );
+@@ -115,9 +117,11 @@ module coco3_hdmi #(
+         source_line=(y>=top) ? ((y-top)>>1) : 10'd0;
+     end
+ 
+-    // Lead the visible window by one clock for the synchronous line RAM.
++    // The cache registers the address and then the RAM data. Keep its
++    // read enable asserted for the final pending address as well.
+     always_comb begin
+-        source_valid=(x>=picture_lead && x<picture_lead+picture_width &&
++        source_valid=(x>=picture_lead &&
++                      x<picture_lead+picture_width+(ALIGN_SCANLINE_READ?10'd1:10'd0) &&
+                       y>=top && y<top+doubled_height);
+         // Unlike source_valid, this stays asserted through the horizontal
+         // borders.  Raster-time GIME writes happen there, and the scanline
+@@ -131,7 +135,9 @@ module coco3_hdmi #(
+         // Native GIME retains all 640 dots. VDG and artifact modes use the
+         // centered 512-dot aperture; ordinary VDG pixels use exact
+         // 2x/4x/8x replication and artifact pixels keep composite decoding.
+-        source_x=source_valid ? picture_x : 10'd0;
++        source_x=source_valid ?
++            ((ALIGN_SCANLINE_READ && picture_x>=picture_width)?picture_width-1'b1:picture_x) :
++            10'd0;
+         source_y=source_line[7:0];
+         // The ping-pong scan doubler starts producing the next source line
+         // while the current one is first displayed:
+@@ -150,7 +156,7 @@ module coco3_hdmi #(
+                        (y<top+doubled_height && source_line+1'b1<height_s);
+     end
+ 
+-    logic picture_d=0;
++    logic picture_d=0,picture_request_d=0;
+     // Scanout is deliberately one native GIME raster (two 858-pixel HDMI
+     // rows) behind the interrupt generator so a horizontal-border handler
+     // can finish before the corresponding framebuffer row is prefetched.
+@@ -163,9 +169,13 @@ module coco3_hdmi #(
+     logic [5:0] border_row_delayed=0;
+     logic artifact_active_m=0,artifact_active_s=0;
+     logic artifact_css_m=0,artifact_css_s=0;
++    assign artifact_green_active=artifact_active_s&&!artifact_css_s;
+     logic [23:0] stream_rgb,debug_rgb,rgb;
+     always_ff @(posedge pixel_clk) begin
+-        picture_d<=source_valid;
++        // Delay the visible mask by both cache stages. The extra read
++        // request above flushes the final pixel; it is not a visible dot.
++        picture_request_d<=source_valid && picture_x<picture_width;
++        picture_d<=ALIGN_SCANLINE_READ ? picture_request_d : source_valid;
+         artifact_active_m<=artifact_video_active;
+         artifact_active_s<=artifact_active_m;
+         artifact_css_m<=artifact_css;
+diff --git a/fpga/src/video/coco_cvbs_ntsc.v b/fpga/src/video/coco_cvbs_ntsc.v
+index 597e2b7..ad0a121 100644
+--- a/fpga/src/video/coco_cvbs_ntsc.v
++++ b/fpga/src/video/coco_cvbs_ntsc.v
+@@ -24,6 +24,7 @@ module coco_cvbs_ntsc #(
+     parameter integer RGB_SOG_OUTPUT = 0,
+     // Experimental inverse LUT, using the proven YPbPr raster and matrix.
+     parameter integer YPBPR_TO_RGB_LUT = 0,
++    parameter integer RGB_GREEN_CONTRAST = 0,
+     // Match NTSC CoCo RGB dot timing while retaining the shared line raster.
+     // Set to zero to restore the former BT.601-width RGB aperture.
+     parameter integer RGB_COCO_APERTURE = 1,
+@@ -64,6 +65,7 @@ module coco_cvbs_ntsc #(
+     input  wire        high_resolution,
+     input  wire        compatibility_mode,
+     input  wire [5:0]  framebuffer_data,
++    input  wire        green_pmode4_contrast,
+     input  wire [5:0]  border_rgb,
+     input  wire [5:0]  row_border_rgb,
+     input  wire [5:0]  row_right_border_rgb,
+@@ -1274,6 +1276,20 @@ module coco_cvbs_ntsc #(
+     wire [3:0] inverse_index_4={inverse_tuple[19],inverse_tuple[18],inverse_tuple[5],inverse_tuple[4]};
+     localparam [63:0] INVERSE_BIT_5=64'h3c38f0e0c0000000;
+     wire [5:0] inverse_index_5={inverse_tuple[20],inverse_tuple[19],inverse_tuple[18],inverse_tuple[6],inverse_tuple[5],inverse_tuple[0]};
++    // CSS=0 PMODE 4 uses five RGB222 colours. Expand only its dark
++    // green 04 -> black and its background 18 -> full green 0c. The
++    // intermediate shades and the complete CSS=1 inverse stay unchanged.
++    wire green_contrast_active=YPBPR_TO_RGB_LUT && RGB_GREEN_CONTRAST &&
++                               green_pmode4_contrast;
++    // Pb bit 3 and Pr bits 2/0 distinguish all five reachable green-palette
++    // entries. Leave the original 336-bit inverse intact for every other
++    // mode, including all 64 buff/non-artifact colours.
++    wire palette_green_low=green_contrast_active ?
++        inverse_tuple[10] :
++        INVERSE_BIT_2[inverse_index_2];
++    wire palette_red_low=green_contrast_active ?
++        (inverse_tuple[2] && !inverse_tuple[0]) :
++        INVERSE_BIT_4[inverse_index_4];
+     function [6:0] inverse_green_level;
+         input [1:0] channel;
+         begin case(channel)
+@@ -1291,7 +1307,7 @@ module coco_cvbs_ntsc #(
+             inverse_pr<=component_pr_level_135;
+             inverse_picture<=level_picture;
+             inverse_pb<=component_pb_level_135;
+-            inverse_color<={INVERSE_BIT_5[inverse_index_5],INVERSE_BIT_4[inverse_index_4],INVERSE_BIT_3[inverse_index_3],INVERSE_BIT_2[inverse_index_2],INVERSE_BIT_1[inverse_index_1],INVERSE_BIT_0[inverse_index_0]};
++            inverse_color<={INVERSE_BIT_5[inverse_index_5],palette_red_low,INVERSE_BIT_3[inverse_index_3],palette_green_low,INVERSE_BIT_1[inverse_index_1],INVERSE_BIT_0[inverse_index_0]};
+             inverse_sync_q<=luma_level_135==0;
+             inverse_picture_q<=inverse_picture;
+             if(inverse_sync_q)inverse_rgb<=0;
+diff --git a/fpga/tests/check_minimal_cvbs.py b/fpga/tests/check_minimal_cvbs.py
+index 7eb8047..dacac63 100644
+--- a/fpga/tests/check_minimal_cvbs.py
++++ b/fpga/tests/check_minimal_cvbs.py
+@@ -22,7 +22,13 @@ def main():
+     original = (ROOT / 'src/top_coco3.v').read_text()
+     minimal = (ROOT / 'src/cvbs/minimal_top_coco3.v').read_text()
+     boundary = '    wire analog_luma,analog_chroma,analog_cvbs;'
+-    original_prefix = original.split(boundary)[0]
++    # RGB-only read-address plumbing, HDMI alignment and mode-status output
++    # do not belong to the preserved CVBS prefix. Normalize those additions;
++    # continue comparing the CPU/SDRAM/SSC/IDE/GIME sections verbatim.
++    original_prefix = original.split(boundary)[0].replace(
++        '    wire [9:0] cvbs_source_read_address_raw;\n', '').replace(
++        '        .ALIGN_SCANLINE_READ(ANALOG_VIDEO_MODE==3),\n', '').replace(
++        '        .artifact_green_active(rgb_green_artifact_active),\n', '')
+     minimal_prefix = minimal.split(boundary)[0].replace('    wire [9:0] cvbs_source_read_address_raw;\n', '')
+     assert original_prefix == minimal_prefix, 'CPU/SDRAM/SSC/IDE/GIME/HDMI section changed'
+     for flag in ('CVBS_LUMA_FILTER', 'CVBS_LUMA_NOTCH', 'CVBS_CHROMA_FILTER'):

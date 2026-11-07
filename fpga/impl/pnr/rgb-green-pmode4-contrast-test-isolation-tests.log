@@ -1,0 +1,8 @@
+python3 tests/check_cvbs_project.py
+CVBS isolation PASS: two substitutions; RGB original; CVBS/S-Video use confirmed build identity
+python3 tests/check_minimal_cvbs.py
+Minimal CVBS isolation PASS: exactly two source substitutions; shared interfaces unchanged
+Minimal CVBS PASS: 138240 coordinates, S-Video bit-identical, NTSC/PAL native/compatibility at 192/199/225 lines; reference filters=1
+tests/tb_cvbs_minimal.sv:68: $finish called at 1652544100 (1ps)
+Minimal CVBS PASS: 138240 coordinates, S-Video bit-identical, NTSC/PAL native/compatibility at 192/199/225 lines; reference filters=0
+tests/tb_cvbs_minimal.sv:68: $finish called at 1652544100 (1ps)

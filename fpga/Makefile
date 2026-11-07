@@ -190,6 +190,8 @@ test:
 	vvp /private/tmp/cocotang_tb_artifact_decode
 	iverilog -g2012 -o /private/tmp/cocotang_tb_rgb_phase tests/tb_rgb_scanline_dac_phase.v src/video/coco_cvbs_ntsc.v
 	vvp /private/tmp/cocotang_tb_rgb_phase
+	iverilog -g2012 -s tb_hdmi_pixel_alignment -o /private/tmp/cocotang_tb_hdmi_pixel_alignment tests/tb_hdmi_pixel_alignment.sv src/video/coco3_hdmi.sv src/video/artifact_mode_osd.sv src/video/hdmi/hdmi.sv src/video/hdmi/tmds_channel.sv src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
+	vvp /private/tmp/cocotang_tb_hdmi_pixel_alignment
 	iverilog -g2012 -s tb_luma_scanline_dac_phase -o /private/tmp/cocotang_tb_luma_phase tests/tb_luma_scanline_dac_phase.sv src/video/coco_cvbs_ntsc.v
 	vvp /private/tmp/cocotang_tb_luma_phase
 	iverilog -g2012 -s tb_component_dac_phase -o /private/tmp/cocotang_tb_component_phase tests/tb_component_dac_phase.sv src/video/coco_cvbs_ntsc.v
@@ -389,6 +391,8 @@ test-cvbs-project:
 	python3 tests/check_cvbs_project.py
 
 test-cvbs-video:
+	iverilog -g2012 -s tb_cvbs_chroma_rounding -o /private/tmp/cocotang_tb_cvbs_chroma_rounding tests/tb_cvbs_chroma_rounding.sv $(CVBS_TEST_VIDEO)
+	vvp /private/tmp/cocotang_tb_cvbs_chroma_rounding
 	iverilog -g2012 -s tb_cvbs_field_phase -o /private/tmp/cocotang_tb_cvbs_field_phase tests/tb_cvbs_field_phase.sv $(CVBS_TEST_VIDEO)
 	vvp /private/tmp/cocotang_tb_cvbs_field_phase
 	iverilog -g2012 -s tb_cvbs_field_cadence -o /private/tmp/cocotang_tb_cvbs_field_cadence tests/tb_cvbs_field_cadence.sv $(CVBS_TEST_VIDEO)

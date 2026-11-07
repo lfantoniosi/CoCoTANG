@@ -1,0 +1,120 @@
+diff --git a/fpga/Makefile b/fpga/Makefile
+index ad12220..fe9836e 100644
+--- a/fpga/Makefile
++++ b/fpga/Makefile
+@@ -190,6 +190,10 @@ test:
+ 	vvp /private/tmp/cocotang_tb_artifact_decode
+ 	iverilog -g2012 -o /private/tmp/cocotang_tb_rgb_phase tests/tb_rgb_scanline_dac_phase.v src/video/coco_cvbs_ntsc.v
+ 	vvp /private/tmp/cocotang_tb_rgb_phase
++	iverilog -g2012 -s tb_rgb_pixel_width -o /private/tmp/cocotang_tb_rgb_pixel_width tests/tb_rgb_pixel_width.sv src/video/coco_cvbs_ntsc.v src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
++	vvp /private/tmp/cocotang_tb_rgb_pixel_width
++	iverilog -g2012 -s tb_hdmi_pixel_alignment -o /private/tmp/cocotang_tb_hdmi_pixel_alignment tests/tb_hdmi_pixel_alignment.sv src/video/coco3_hdmi.sv src/video/artifact_mode_osd.sv src/video/hdmi/hdmi.sv src/video/hdmi/tmds_channel.sv src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
++	vvp /private/tmp/cocotang_tb_hdmi_pixel_alignment
+ 	iverilog -g2012 -s tb_luma_scanline_dac_phase -o /private/tmp/cocotang_tb_luma_phase tests/tb_luma_scanline_dac_phase.sv src/video/coco_cvbs_ntsc.v
+ 	vvp /private/tmp/cocotang_tb_luma_phase
+ 	iverilog -g2012 -s tb_component_dac_phase -o /private/tmp/cocotang_tb_component_phase tests/tb_component_dac_phase.sv src/video/coco_cvbs_ntsc.v
+diff --git a/fpga/src/top_coco3.v b/fpga/src/top_coco3.v
+index ea2b5b5..239ab8f 100644
+--- a/fpga/src/top_coco3.v
++++ b/fpga/src/top_coco3.v
+@@ -731,6 +731,7 @@ module top_coco3 #(
+         6'b001100 : cvbs_right_border_data;
+     wire visible_cvbs_border_valid = !startup_video_blank && cvbs_border_valid;
+     coco3_hdmi #(.LOG_ADDR_WIDTH(LOG_ADDR_WIDTH),
++        .ALIGN_SCANLINE_READ(ANALOG_VIDEO_MODE==3),
+         .LOG_COUNT_WIDTH(LOG_COUNT_WIDTH),.LOG_PAGE_WIDTH(LOG_PAGE_WIDTH),
+         .LOG_DEPTH(LOG_DEPTH),
+         .ENABLE_DEBUG_OVERLAY(ENABLE_BUS_LOGGER||ENABLE_GIME_TRACE),
+diff --git a/fpga/src/video/coco3_hdmi.sv b/fpga/src/video/coco3_hdmi.sv
+index 1d40dfe..77c61d8 100644
+--- a/fpga/src/video/coco3_hdmi.sv
++++ b/fpga/src/video/coco3_hdmi.sv
+@@ -6,7 +6,8 @@ module coco3_hdmi #(
+     parameter integer LOG_PAGE_WIDTH=6,
+     parameter integer LOG_DEPTH=4096,
+     parameter integer ENABLE_DEBUG_OVERLAY=0,
+-    parameter integer GIME_TRACE_MODE=0
++    parameter integer GIME_TRACE_MODE=0,
++    parameter integer ALIGN_SCANLINE_READ=0
+ ) (
+     input logic pixel_clk,input logic serial_clk,
+     input logic audio_clk,input logic [15:0] audio_pcm_left,
+@@ -115,9 +116,11 @@ module coco3_hdmi #(
+         source_line=(y>=top) ? ((y-top)>>1) : 10'd0;
+     end
+ 
+-    // Lead the visible window by one clock for the synchronous line RAM.
++    // The cache registers the address and then the RAM data. Keep its
++    // read enable asserted for the final pending address as well.
+     always_comb begin
+-        source_valid=(x>=picture_lead && x<picture_lead+picture_width &&
++        source_valid=(x>=picture_lead &&
++                      x<picture_lead+picture_width+(ALIGN_SCANLINE_READ?10'd1:10'd0) &&
+                       y>=top && y<top+doubled_height);
+         // Unlike source_valid, this stays asserted through the horizontal
+         // borders.  Raster-time GIME writes happen there, and the scanline
+@@ -131,7 +134,9 @@ module coco3_hdmi #(
+         // Native GIME retains all 640 dots. VDG and artifact modes use the
+         // centered 512-dot aperture; ordinary VDG pixels use exact
+         // 2x/4x/8x replication and artifact pixels keep composite decoding.
+-        source_x=source_valid ? picture_x : 10'd0;
++        source_x=source_valid ?
++            ((ALIGN_SCANLINE_READ && picture_x>=picture_width)?picture_width-1'b1:picture_x) :
++            10'd0;
+         source_y=source_line[7:0];
+         // The ping-pong scan doubler starts producing the next source line
+         // while the current one is first displayed:
+@@ -150,7 +155,7 @@ module coco3_hdmi #(
+                        (y<top+doubled_height && source_line+1'b1<height_s);
+     end
+ 
+-    logic picture_d=0;
++    logic picture_d=0,picture_request_d=0;
+     // Scanout is deliberately one native GIME raster (two 858-pixel HDMI
+     // rows) behind the interrupt generator so a horizontal-border handler
+     // can finish before the corresponding framebuffer row is prefetched.
+@@ -165,7 +170,10 @@ module coco3_hdmi #(
+     logic artifact_css_m=0,artifact_css_s=0;
+     logic [23:0] stream_rgb,debug_rgb,rgb;
+     always_ff @(posedge pixel_clk) begin
+-        picture_d<=source_valid;
++        // Delay the visible mask by both cache stages. The extra read
++        // request above flushes the final pixel; it is not a visible dot.
++        picture_request_d<=source_valid && picture_x<picture_width;
++        picture_d<=ALIGN_SCANLINE_READ ? picture_request_d : source_valid;
+         artifact_active_m<=artifact_video_active;
+         artifact_active_s<=artifact_active_m;
+         artifact_css_m<=artifact_css;
+diff --git a/fpga/src/video/coco_cvbs_ntsc.v b/fpga/src/video/coco_cvbs_ntsc.v
+index 597e2b7..8f1bc7e 100644
+--- a/fpga/src/video/coco_cvbs_ntsc.v
++++ b/fpga/src/video/coco_cvbs_ntsc.v
+@@ -943,6 +943,17 @@ module coco_cvbs_ntsc #(
+     reg [6:0] component_pb_level_135 = 7'd64;
+     reg [6:0] component_pr_level_135 = 7'd64;
+ 
++    // RGB displays every clock of each BT.601 sample. Latch the cache
++    // response once per sample instead of allowing its read-ahead address
++    // to change the colour partway through a displayed dot. Native data is
++    // ready at phase zero; compatibility's 5:4 address step needs two more
++    // clocks through the top-level request register and paged cache.
++    reg rgb_compat_pixel_tick=0;
++    always @(posedge clk135)begin
++        if(!reset_n)rgb_compat_pixel_tick<=0;
++        else rgb_compat_pixel_tick<=sample_phase==4'd2;
++    end
++
+     always @(posedge clk135) begin
+         if (!reset_n) begin
+             sample_phase <= 4'd0;
+@@ -1116,7 +1127,9 @@ module coco_cvbs_ntsc #(
+                 (source_left_of_picture ? vertical_left_border_rgb :
+                                           vertical_right_border_rgb) :
+                 border_row_delay2;
+-            pixel_rgb <= source_active ? framebuffer_data : border_sample;
++            if(!YPBPR_TO_RGB_LUT ||
++               (picture_high_resolution ? source_sample_tick : rgb_compat_pixel_tick))
++                pixel_rgb <= source_active ? framebuffer_data : border_sample;
+ 
+             encoder_sync <= pixel_sync;
+             encoder_burst <= pixel_burst;

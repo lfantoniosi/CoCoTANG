@@ -22,7 +22,12 @@ def main():
     original = (ROOT / 'src/top_coco3.v').read_text()
     minimal = (ROOT / 'src/cvbs/minimal_top_coco3.v').read_text()
     boundary = '    wire analog_luma,analog_chroma,analog_cvbs;'
-    original_prefix = original.split(boundary)[0]
+    # RGB-only read-address plumbing and the HDMI alignment opt-in do not
+    # belong to the preserved CVBS prefix. Normalize those exact additions;
+    # continue comparing the CPU/SDRAM/SSC/IDE/GIME sections verbatim.
+    original_prefix = original.split(boundary)[0].replace(
+        '    wire [9:0] cvbs_source_read_address_raw;\n', '').replace(
+        '        .ALIGN_SCANLINE_READ(ANALOG_VIDEO_MODE==3),\n', '')
     minimal_prefix = minimal.split(boundary)[0].replace('    wire [9:0] cvbs_source_read_address_raw;\n', '')
     assert original_prefix == minimal_prefix, 'CPU/SDRAM/SSC/IDE/GIME/HDMI section changed'
     for flag in ('CVBS_LUMA_FILTER', 'CVBS_LUMA_NOTCH', 'CVBS_CHROMA_FILTER'):

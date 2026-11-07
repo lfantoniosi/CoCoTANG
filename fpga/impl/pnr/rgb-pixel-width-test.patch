@@ -1,0 +1,46 @@
+diff --git a/fpga/Makefile b/fpga/Makefile
+index ad12220..b29c12b 100644
+--- a/fpga/Makefile
++++ b/fpga/Makefile
+@@ -190,6 +190,8 @@ test:
+ 	vvp /private/tmp/cocotang_tb_artifact_decode
+ 	iverilog -g2012 -o /private/tmp/cocotang_tb_rgb_phase tests/tb_rgb_scanline_dac_phase.v src/video/coco_cvbs_ntsc.v
+ 	vvp /private/tmp/cocotang_tb_rgb_phase
++	iverilog -g2012 -s tb_rgb_pixel_width -o /private/tmp/cocotang_tb_rgb_pixel_width tests/tb_rgb_pixel_width.sv src/video/coco_cvbs_ntsc.v src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
++	vvp /private/tmp/cocotang_tb_rgb_pixel_width
+ 	iverilog -g2012 -s tb_luma_scanline_dac_phase -o /private/tmp/cocotang_tb_luma_phase tests/tb_luma_scanline_dac_phase.sv src/video/coco_cvbs_ntsc.v
+ 	vvp /private/tmp/cocotang_tb_luma_phase
+ 	iverilog -g2012 -s tb_component_dac_phase -o /private/tmp/cocotang_tb_component_phase tests/tb_component_dac_phase.sv src/video/coco_cvbs_ntsc.v
+diff --git a/fpga/src/video/coco_cvbs_ntsc.v b/fpga/src/video/coco_cvbs_ntsc.v
+index 597e2b7..8f1bc7e 100644
+--- a/fpga/src/video/coco_cvbs_ntsc.v
++++ b/fpga/src/video/coco_cvbs_ntsc.v
+@@ -943,6 +943,17 @@ module coco_cvbs_ntsc #(
+     reg [6:0] component_pb_level_135 = 7'd64;
+     reg [6:0] component_pr_level_135 = 7'd64;
+ 
++    // RGB displays every clock of each BT.601 sample. Latch the cache
++    // response once per sample instead of allowing its read-ahead address
++    // to change the colour partway through a displayed dot. Native data is
++    // ready at phase zero; compatibility's 5:4 address step needs two more
++    // clocks through the top-level request register and paged cache.
++    reg rgb_compat_pixel_tick=0;
++    always @(posedge clk135)begin
++        if(!reset_n)rgb_compat_pixel_tick<=0;
++        else rgb_compat_pixel_tick<=sample_phase==4'd2;
++    end
++
+     always @(posedge clk135) begin
+         if (!reset_n) begin
+             sample_phase <= 4'd0;
+@@ -1116,7 +1127,9 @@ module coco_cvbs_ntsc #(
+                 (source_left_of_picture ? vertical_left_border_rgb :
+                                           vertical_right_border_rgb) :
+                 border_row_delay2;
+-            pixel_rgb <= source_active ? framebuffer_data : border_sample;
++            if(!YPBPR_TO_RGB_LUT ||
++               (picture_high_resolution ? source_sample_tick : rgb_compat_pixel_tick))
++                pixel_rgb <= source_active ? framebuffer_data : border_sample;
+ 
+             encoder_sync <= pixel_sync;
+             encoder_burst <= pixel_burst;

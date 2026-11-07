@@ -1,0 +1,699 @@
+python3 tests/ssc_psg/test_tts.py
+PASS: SSC English translator matches regex reference for 250 phrases, with backpressure and abort
+tests/tb_coco_ssc_tts.sv:60: $finish called at 6231330000 (1ps)
+iverilog -g2012 -s tb_coco_ssc_speech -o /private/tmp/cocotang_tb_ssc_speech tests/tb_coco_ssc_speech.v src/audio/coco_ssc_psg.v src/audio/coco_ssc_speech.v src/audio/coco_ssc_tts.v src/audio/coco_ssc_tts_rom.v src/third_party/jt49/*.v src/third_party/ssc_speech/*.v
+vvp /private/tmp/cocotang_tb_ssc_speech
+PASS: SSC speech clock, KQ1/KQ2 reset probe, Pitfall II probe, ASCII/CR and buffered phrase PCM, completion, abort and reset (     -16000..      17344)
+tests/tb_coco_ssc_speech.v:99: $finish called at 69066220000 (1ps)
+iverilog -g2012 -s tb_coco_ssc_audio -o /private/tmp/cocotang_tb_ssc_audio tests/tb_coco_ssc_audio.sv tests/tb_coco3_hdmi_border_handoff.sv src/audio/coco_ssc_psg.v src/audio/coco_psg_mix.v src/audio/coco_orchestra90.v src/audio/coco_pia1_dac.v src/third_party/jt49/*.v src/video/sigma_delta_dac.v src/video/coco3_hdmi.sv src/video/artifact_mode_osd.sv src/video/hdmi/audio_sample_packet.sv
+src/video/artifact_mode_osd.sv:127: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'local_x[9:0]').
+src/video/coco3_hdmi.sv:129: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'y[9:0]').
+src/video/coco3_hdmi.sv:135: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'source_line[9:0]').
+src/video/coco3_hdmi.sv:148: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'source_line[9:0]').
+src/video/hdmi/audio_sample_packet.sv:97: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'audio_sample_word_present[3:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'parity_bit[word='sd0][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'user_data_bit[word='sd0][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'valid_bit[word='sd0][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'parity_bit[word='sd0][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'user_data_bit[word='sd0][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'valid_bit[word='sd0][1:0]').
+src/video/hdmi/audio_sample_packet.sv:97: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'audio_sample_word_present[3:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'parity_bit[word='sd1][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'user_data_bit[word='sd1][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'valid_bit[word='sd1][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'parity_bit[word='sd1][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'user_data_bit[word='sd1][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'valid_bit[word='sd1][1:0]').
+src/video/hdmi/audio_sample_packet.sv:97: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'audio_sample_word_present[3:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'parity_bit[word='sd2][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'user_data_bit[word='sd2][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'valid_bit[word='sd2][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'parity_bit[word='sd2][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'user_data_bit[word='sd2][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'valid_bit[word='sd2][1:0]').
+src/video/hdmi/audio_sample_packet.sv:97: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'audio_sample_word_present[3:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'parity_bit[word='sd3][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'user_data_bit[word='sd3][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'valid_bit[word='sd3][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'parity_bit[word='sd3][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'user_data_bit[word='sd3][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'valid_bit[word='sd3][1:0]').
+vvp /private/tmp/cocotang_tb_ssc_audio
+SSC manual setup, PSG+Orchestra HDMI stereo, physical mono, clipping and silence PASS
+tests/tb_coco_ssc_audio.sv:134: $finish called at 2091319144 (1ps)
+iverilog -g2012 -s tb_coco_ssc_psg -o /private/tmp/cocotang_tb_ssc_psg tests/tb_coco_ssc_psg.v src/audio/coco_ssc_psg.v src/third_party/jt49/*.v
+vvp /private/tmp/cocotang_tb_ssc_psg
+tb_coco_ssc_psg PASS
+tests/tb_coco_ssc_psg.v:209: $finish called at 5690501000 (1ps)
+iverilog -g2012 -s tb_coco_orchestra90 -o /private/tmp/cocotang_tb_orchestra90 tests/tb_coco_orchestra90.sv tests/tb_coco3_hdmi_border_handoff.sv src/audio/coco_orchestra90.v src/video/sigma_delta_dac.v src/video/coco3_hdmi.sv src/video/artifact_mode_osd.sv src/video/hdmi/audio_sample_packet.sv
+src/video/artifact_mode_osd.sv:127: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'local_x[9:0]').
+src/video/coco3_hdmi.sv:129: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'y[9:0]').
+src/video/coco3_hdmi.sv:135: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'source_line[9:0]').
+src/video/coco3_hdmi.sv:148: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'source_line[9:0]').
+src/video/hdmi/audio_sample_packet.sv:97: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'audio_sample_word_present[3:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'parity_bit[word='sd0][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'user_data_bit[word='sd0][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'valid_bit[word='sd0][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'parity_bit[word='sd0][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'user_data_bit[word='sd0][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'valid_bit[word='sd0][1:0]').
+src/video/hdmi/audio_sample_packet.sv:97: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'audio_sample_word_present[3:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'parity_bit[word='sd1][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'user_data_bit[word='sd1][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'valid_bit[word='sd1][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'parity_bit[word='sd1][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'user_data_bit[word='sd1][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'valid_bit[word='sd1][1:0]').
+src/video/hdmi/audio_sample_packet.sv:97: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'audio_sample_word_present[3:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'parity_bit[word='sd2][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'user_data_bit[word='sd2][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'valid_bit[word='sd2][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'parity_bit[word='sd2][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'user_data_bit[word='sd2][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'valid_bit[word='sd2][1:0]').
+src/video/hdmi/audio_sample_packet.sv:97: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'audio_sample_word_present[3:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'parity_bit[word='sd3][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'user_data_bit[word='sd3][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'valid_bit[word='sd3][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'parity_bit[word='sd3][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'user_data_bit[word='sd3][1:0]').
+src/video/hdmi/audio_sample_packet.sv:98: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'valid_bit[word='sd3][1:0]').
+vvp /private/tmp/cocotang_tb_orchestra90
+Orchestra-90 stereo DAC, analog mono mixing, disable and HDMI packets PASS
+tests/tb_coco_orchestra90.sv:123: $finish called at 20991000 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_sd_spi tests/tb_sd_spi_block.v src/storage/sd_spi_block.v
+vvp /private/tmp/cocotang_tb_sd_spi
+PASS: SD SPI init, CRC-checked CMD17 and CRC-protected CMD24
+tests/tb_sd_spi_block.v:201: $finish called at 585145000 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_glenside tests/tb_glenside_ata.v src/storage/glenside_ata.v src/storage/glenside_sector_buffer.v
+vvp /private/tmp/cocotang_tb_glenside
+PASS: Glenside ATA task-file, latch ordering, LBA read/write, IDENTIFY and prescaled timeout
+tests/tb_glenside_ata.v:194: $finish called at 1125376000 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_pia1_dac tests/tb_coco_pia1_dac.v src/audio/coco_pia1_dac.v
+vvp /private/tmp/cocotang_tb_pia1_dac
+PASS coco_pia1_dac
+tests/tb_coco_pia1_dac.v:85: $finish called at 361000 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_mux tests/tb_coco_bus_mux.v src/bus/coco_bus_mux.v
+vvp /private/tmp/cocotang_tb_mux
+tb_coco_bus_mux PASS
+tests/tb_coco_bus_mux.v:67: $finish called at 54880000 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_cvbs tests/tb_coco_cvbs_ntsc.v src/video/coco_cvbs_ntsc.v
+vvp /private/tmp/cocotang_tb_cvbs
+blue component Pb=64 Pr=64
+red component Pb=64 Pr=64
+tb_coco_cvbs_ntsc FAIL: 2
+tests/tb_coco_cvbs_ntsc.v:236: $finish called at 51754855872 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_pal_cvbs tests/tb_coco_cvbs_pal.v src/video/coco_cvbs_ntsc.v
+vvp /private/tmp/cocotang_tb_pal_cvbs
+PAL CVBS chroma PASS
+tests/tb_coco_cvbs_pal.v:69: $finish called at 137304000 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_ntsc_svideo tests/tb_coco_cvbs_ntsc_svideo.v src/video/coco_cvbs_ntsc.v
+vvp /private/tmp/cocotang_tb_ntsc_svideo
+NTSC S-Video/CVBS phase match PASS
+tests/tb_coco_cvbs_ntsc_svideo.v:80: $finish called at 74936000 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_startup_test tests/tb_coco_sdram_startup_test.v src/memory/coco_sdram_startup_test.v
+vvp /private/tmp/cocotang_tb_startup_test
+tb_coco_sdram_startup_test PASS
+tests/tb_coco_sdram_startup_test.v:41: $finish called at 31457310000 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_cpu_arbiter tests/tb_cpu_sdram_arbiter.v src/memory/cpu_sdram_arbiter.v
+vvp /private/tmp/cocotang_tb_cpu_arbiter
+tb_cpu_sdram_arbiter PASS
+tests/tb_cpu_sdram_arbiter.v:157: $finish called at 11386000 (1ps)
+iverilog -g2012 -s tb_coco3_memory_write_queue -o /private/tmp/cocotang_tb_memory_write_queue tests/tb_coco3_memory_write_queue.v src/memory/coco3_memory.v src/memory/cpu_sdram_arbiter.v src/memory/coco_sdram_startup_test.v src/memory/coco_flash_loader.v src/memory/spi_flash_reader.v
+vvp /private/tmp/cocotang_tb_memory_write_queue
+tb_coco3_memory_write_queue PASS
+tests/tb_coco3_memory_write_queue.v:180: $finish called at 23810000 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_cpu_bus_logger tests/tb_cpu_bus_logger.v src/debug/cpu_bus_logger.v
+vvp /private/tmp/cocotang_tb_cpu_bus_logger
+tb_cpu_bus_logger PASS
+tests/tb_cpu_bus_logger.v:137: $finish called at 1080000 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_gime_mode tests/tb_gime_mode_debug.v src/coco3/gime_mode_debug.v
+vvp /private/tmp/cocotang_tb_gime_mode
+tb_gime_mode_debug PASS
+tests/tb_gime_mode_debug.v:60: $finish called at 7226000 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_gime_timing tests/tb_gime_timing.v src/coco3/gime_timing.v
+vvp /private/tmp/cocotang_tb_gime_timing
+tb_gime_timing PASS
+tests/tb_gime_timing.v:63: $finish called at 332506000 (1ps)
+iverilog -g2012 -s tb_gime_compat_phase -o /private/tmp/cocotang_tb_gime_compat_phase tests/tb_gime_compat_phase.sv src/coco3/gime_timing.v src/coco3/gime_native_video.v
+vvp /private/tmp/cocotang_tb_gime_compat_phase
+tb_gime_compat_phase PASS
+tests/tb_gime_compat_phase.sv:61: $finish called at 11641066000 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_gime_native_video tests/tb_gime_native_video.v src/coco3/gime_native_video.v
+vvp /private/tmp/cocotang_tb_gime_native_video
+tb_gime_native_video PASS
+tests/tb_gime_native_video.v:54: $finish called at 75504035000 (1ps)
+iverilog -g2012 -s tb_gime_vborder -o /private/tmp/cocotang_tb_gime_vborder tests/tb_gime_vborder.v src/coco3/gime_native_video.v src/coco3/gime_registers.v
+vvp /private/tmp/cocotang_tb_gime_vborder
+GIME VBORD position, one IRQ per field, independent FS PASS
+tests/tb_gime_vborder.v:83: $finish called at 24344076000 (1ps)
+iverilog -g2012 -s tb_coco3_vborder_startup -o /private/tmp/cocotang_tb_vborder_startup tests/tb_coco3_vborder_startup.sv src/coco3/coco3.v src/coco3/gime_timing.v src/coco3/gime_registers.v src/coco3/gime_mode_debug.v src/coco3/gime_native_video.v src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v src/video/coco3_hdmi.sv src/video/artifact_mode_osd.sv src/video/hdmi/hdmi.sv src/video/hdmi/tmds_channel.sv
+src/video/artifact_mode_osd.sv:127: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'local_x[9:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:56: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:58: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:65: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:72: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:75: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:75: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:75: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:80: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:80: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:80: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:87: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:87: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:88: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:92: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:92: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:93: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:56: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:58: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:65: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:72: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:75: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:75: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:75: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:80: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:80: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:80: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:87: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:87: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:88: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:92: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:92: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:93: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:56: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:58: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:65: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:72: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:75: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:75: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:75: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:80: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:80: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:80: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:87: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:87: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:88: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:92: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:92: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:93: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/coco3_hdmi.sv:129: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'y[9:0]').
+src/video/coco3_hdmi.sv:135: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'source_line[9:0]').
+src/video/coco3_hdmi.sv:148: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'source_line[9:0]').
+src/video/hdmi/hdmi.sv:210: warning: A non-blocking assignment should not be used in an always_comb process.
+src/video/hdmi/hdmi.sv:214: warning: A non-blocking assignment should not be used in an always_comb process.
+src/video/hdmi/hdmi.sv:216: warning: A non-blocking assignment should not be used in an always_comb process.
+src/video/hdmi/hdmi.sv:218: warning: A non-blocking assignment should not be used in an always_comb process.
+src/video/hdmi/tmds_channel.sv:104: vvp.tgt sorry: Case unique/unique0 qualities are ignored.
+src/video/hdmi/tmds_channel.sv:116: vvp.tgt sorry: Case unique/unique0 qualities are ignored.
+src/video/hdmi/tmds_channel.sv:104: vvp.tgt sorry: Case unique/unique0 qualities are ignored.
+src/video/hdmi/tmds_channel.sv:116: vvp.tgt sorry: Case unique/unique0 qualities are ignored.
+src/video/hdmi/tmds_channel.sv:104: vvp.tgt sorry: Case unique/unique0 qualities are ignored.
+src/video/hdmi/tmds_channel.sv:116: vvp.tgt sorry: Case unique/unique0 qualities are ignored.
+vvp /private/tmp/cocotang_tb_vborder_startup
+core release HDMI line=0: VBORD HDMI line=432 x=651 logical row=190, rows remaining=2, next prefetch=191 valid=1
+rows filled using old origin/new offset=0
+core release HDMI line=497: VBORD HDMI line=432 x=651 logical row=190, rows remaining=2, next prefetch=191 valid=1
+rows filled using old origin/new offset=0
+tb_coco3_vborder_startup PASS
+tests/tb_coco3_vborder_startup.sv:137: $finish called at 54054460000 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_gime_50_to_60_resync tests/tb_gime_50_to_60_resync.v src/coco3/gime_native_video.v
+vvp /private/tmp/cocotang_tb_gime_50_to_60_resync
+tb_gime_50_to_60_resync PASS
+tests/tb_gime_50_to_60_resync.v:63: $finish called at 500000 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_gime_50_to_60_field_wrap tests/tb_gime_50_to_60_field_wrap.v src/coco3/gime_native_video.v
+vvp /private/tmp/cocotang_tb_gime_50_to_60_field_wrap
+tb_gime_50_to_60_field_wrap PASS
+tests/tb_gime_50_to_60_field_wrap.v:18: $finish called at 110000 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_gime_compat_video tests/tb_gime_compat_video.v src/coco3/gime_native_video.v
+vvp /private/tmp/cocotang_tb_gime_compat_video
+tb_gime_compat_video PASS
+tests/tb_gime_compat_video.v:64: $finish called at 18023235000 (1ps)
+iverilog -g2012 -s tb_gime_css_alignment -o /private/tmp/cocotang_tb_gime_css_alignment tests/tb_gime_css_alignment.sv src/coco3/gime_native_video.v src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
+vvp /private/tmp/cocotang_tb_gime_css_alignment
+tb_gime_css_alignment PASS
+tests/tb_gime_css_alignment.sv:120: $finish called at 7348510000 (1ps)
+iverilog -g2012 -s tb_gime_text_hdmi_slots -o /private/tmp/cocotang_tb_text_hdmi_slots tests/tb_gime_text_hdmi_slots.sv src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v src/video/coco_cvbs_ntsc.v src/memory/cpu_sdram_arbiter.v
+vvp /private/tmp/cocotang_tb_text_hdmi_slots
+columns=80 CPU cycle=120 field=0 analog hits=48 misses=0
+HDMI hits=96 misses=0
+columns=80 CPU cycle=120 field=1 analog hits=48 misses=0
+HDMI hits=96 misses=0
+tb_gime_text_hdmi_slots PASS
+tests/tb_gime_text_hdmi_slots.sv:147: $finish called at 7138808000 (1ps)
+iverilog -g2012 -s tb_gime_pmode4_analog -o /private/tmp/cocotang_tb_gime_pmode4_analog tests/tb_gime_pmode4_analog.sv src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v src/video/coco_cvbs_ntsc.v
+vvp /private/tmp/cocotang_tb_gime_pmode4_analog
+artifact=0 field phase=0 hit rows=4 missed rows=0
+artifact=0 field phase=1 hit rows=4 missed rows=0
+artifact=1 field phase=0 hit rows=4 missed rows=0
+artifact=1 field phase=1 hit rows=4 missed rows=0
+artifact=2 field phase=0 hit rows=4 missed rows=0
+artifact=2 field phase=1 hit rows=4 missed rows=0
+tb_gime_pmode4_analog PASS
+tests/tb_gime_pmode4_analog.sv:111: $finish called at 3295448000 (1ps)
+iverilog -g2012 -s tb_gime_compat_capture -o /private/tmp/cocotang_tb_gime_compat_capture tests/tb_gime_compat_capture.sv src/coco3/gime_scanline_buffer.v
+vvp /private/tmp/cocotang_tb_gime_compat_capture
+tb_gime_compat_capture PASS
+tests/tb_gime_compat_capture.sv:111: $finish called at 10614920000 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_gime_registers tests/tb_gime_registers.v src/coco3/gime_registers.v
+vvp /private/tmp/cocotang_tb_gime_registers
+idle slow timer count=4 divider=0 irq=0
+first HS timer count=3 irq=0
+second HS timer count=2 irq=0
+tb_gime_registers FAIL: 3
+tests/tb_gime_registers.v:337: $finish called at 1776000 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_gime_disto tests/tb_gime_disto.v src/coco3/gime_registers.v
+vvp /private/tmp/cocotang_tb_gime_disto
+tb_gime_disto PASS
+tests/tb_gime_disto.v:89: $finish called at 822000 (1ps)
+iverilog -g2012 -s tb_gime_nocan3 -o /private/tmp/cocotang_tb_gime_nocan3 tests/tb_gime_nocan3.v src/coco3/gime_registers.v
+vvp /private/tmp/cocotang_tb_gime_nocan3
+NoCan3: all 1024 CPU pages, independent task latches, video banks and ROM PASS
+tests/tb_gime_nocan3.v:84: $finish called at 82231000 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_artifact_decode tests/tb_ntsc_artifact_decode.v src/video/ntsc_artifact_decode.v
+vvp /private/tmp/cocotang_tb_artifact_decode
+light orange wrong: 34
+light orange wrong: 34
+light blue wrong: 07
+light blue wrong: 07
+light blue wrong: 07
+light blue wrong: 07
+light blue wrong: 07
+light blue wrong: 07
+light orange wrong: 34
+light orange wrong: 34
+light orange wrong: 34
+light orange wrong: 34
+light orange wrong: 34
+light orange wrong: 34
+light orange wrong: 34
+light orange wrong: 34
+light blue wrong: 07
+light blue wrong: 07
+light blue wrong: 07
+light blue wrong: 07
+light blue wrong: 07
+light blue wrong: 07
+light orange wrong: 34
+light orange wrong: 34
+tb_ntsc_artifact_decode FAIL: 24
+tests/tb_ntsc_artifact_decode.v:40: $finish called at 132000 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_rgb_phase tests/tb_rgb_scanline_dac_phase.v src/video/coco_cvbs_ntsc.v
+vvp /private/tmp/cocotang_tb_rgb_phase
+RGB scanline DAC phase PASS
+tests/tb_rgb_scanline_dac_phase.v:45: $finish called at 35000 (1ps)
+iverilog -g2012 -s tb_rgb_pixel_width -o /private/tmp/cocotang_tb_rgb_pixel_width tests/tb_rgb_pixel_width.sv src/video/coco_cvbs_ntsc.v src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
+vvp /private/tmp/cocotang_tb_rgb_pixel_width
+RGB 60Hz compat=0: 640 equal strokes of 10 clocks through inverse LUT PASS
+RGB 60Hz compat=1: 256 equal strokes of 20 clocks through inverse LUT PASS
+RGB 50Hz compat=0: 640 equal strokes of 10 clocks through inverse LUT PASS
+RGB 50Hz compat=1: 256 equal strokes of 20 clocks through inverse LUT PASS
+tests/tb_rgb_pixel_width.sv:91: $finish called at 276096000 (1ps)
+iverilog -g2012 -s tb_luma_scanline_dac_phase -o /private/tmp/cocotang_tb_luma_phase tests/tb_luma_scanline_dac_phase.sv src/video/coco_cvbs_ntsc.v
+vvp /private/tmp/cocotang_tb_luma_phase
+Component/S-Video Y matches RGB green phase, even-code density and 64-clock period at all 128 input levels PASS
+tests/tb_luma_scanline_dac_phase.sv:85: $finish called at 135416000 (1ps)
+iverilog -g2012 -s tb_component_dac_phase -o /private/tmp/cocotang_tb_component_phase tests/tb_component_dac_phase.sv src/video/coco_cvbs_ntsc.v
+vvp /private/tmp/cocotang_tb_component_phase
+Component neutral phase independent of preceding blue/white, all DAC levels preserved, Y waveform unchanged PASS
+tests/tb_component_dac_phase.sv:113: $finish called at 344696000 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_cvbs_svideo_phase tests/tb_cvbs_svideo_scanline_dac_phase.v src/video/coco_cvbs_ntsc.v
+vvp /private/tmp/cocotang_tb_cvbs_svideo_phase
+CVBS/S-Video scanline DAC phase PASS
+tests/tb_cvbs_svideo_scanline_dac_phase.v:43: $finish called at 35000 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_cvbs_luma_filter tests/tb_cvbs_luma_filter.v src/video/coco_cvbs_ntsc.v
+vvp /private/tmp/cocotang_tb_cvbs_luma_filter
+Four-sample CVBS luma FIR PASS
+tests/tb_cvbs_luma_filter.v:88: $finish called at 439000 (1ps)
+iverilog -g2012 -s tb_cvbs_luma_notch -o /private/tmp/cocotang_tb_cvbs_luma_notch tests/tb_cvbs_luma_notch.sv src/video/coco_cvbs_ntsc.v
+vvp /private/tmp/cocotang_tb_cvbs_luma_notch
+f=0.500 MHz: input energy=66032 trap=62595 Gaussian=62595
+f=3.580 MHz: input energy=65024 trap=0 Gaussian=6112
+f=4.434 MHz: input energy=64434 trap=0 Gaussian=1106
+CVBS NTSC/PAL luma trap and unchanged S-Video PASS
+tests/tb_cvbs_luma_notch.sv:117: $finish called at 258668000 (1ps)
+iverilog -g2012 -s tb_cvbs_chroma_filter -o /private/tmp/cocotang_tb_cvbs_chroma_filter tests/tb_cvbs_chroma_filter.sv src/video/coco_cvbs_ntsc.v
+vvp /private/tmp/cocotang_tb_cvbs_chroma_filter
+green/white transient overshoots: legacy=2 filtered=0
+chroma f=0.500 MHz: input=512204 two-tap=505252 four-tap=480644
+chroma f=3.375 MHz: input=519210 two-tap=259740 four-tap=244
+CVBS green-edge chroma filtering, DAC range and unchanged S-Video PASS
+tests/tb_cvbs_chroma_filter.sv:126: $finish called at 185648000 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_artifact_control tests/tb_artifact_mode_control.v src/video/artifact_mode_control.v
+vvp /private/tmp/cocotang_tb_artifact_control
+tb_artifact_mode_control PASS
+tests/tb_artifact_mode_control.v:47: $finish called at 2966000 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_artifact_osd tests/tb_artifact_mode_osd.sv src/video/artifact_mode_osd.sv
+src/video/artifact_mode_osd.sv:127: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'local_x[9:0]').
+src/video/artifact_mode_osd.sv:127: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'local_x[9:0]').
+src/video/artifact_mode_osd.sv:127: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'local_x[9:0]').
+vvp /private/tmp/cocotang_tb_artifact_osd
+tb_artifact_mode_osd PASS
+tests/tb_artifact_mode_osd.sv:63: $finish called at 592460000 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_hdmi_standard tests/tb_hdmi_video_standard.sv src/video/hdmi/hdmi.sv src/video/hdmi/tmds_channel.sv
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:56: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:58: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:65: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:72: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:75: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:75: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:75: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:80: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:80: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:80: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:87: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:87: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:88: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:92: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:92: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:93: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:56: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:58: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:65: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:72: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:75: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:75: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:75: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:80: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:80: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:80: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:87: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:87: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:88: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:92: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:92: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:93: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:34: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:35: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:56: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:58: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:65: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'video_data[7:0]').
+src/video/hdmi/tmds_channel.sv:72: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:75: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:75: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:75: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:80: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:80: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:80: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:87: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:87: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:88: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:92: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:92: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/tmds_channel.sv:93: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'q_m[8:0]').
+src/video/hdmi/hdmi.sv:210: warning: A non-blocking assignment should not be used in an always_comb process.
+src/video/hdmi/hdmi.sv:214: warning: A non-blocking assignment should not be used in an always_comb process.
+src/video/hdmi/hdmi.sv:216: warning: A non-blocking assignment should not be used in an always_comb process.
+src/video/hdmi/hdmi.sv:218: warning: A non-blocking assignment should not be used in an always_comb process.
+src/video/hdmi/tmds_channel.sv:104: vvp.tgt sorry: Case unique/unique0 qualities are ignored.
+src/video/hdmi/tmds_channel.sv:116: vvp.tgt sorry: Case unique/unique0 qualities are ignored.
+src/video/hdmi/tmds_channel.sv:104: vvp.tgt sorry: Case unique/unique0 qualities are ignored.
+src/video/hdmi/tmds_channel.sv:116: vvp.tgt sorry: Case unique/unique0 qualities are ignored.
+src/video/hdmi/tmds_channel.sv:104: vvp.tgt sorry: Case unique/unique0 qualities are ignored.
+src/video/hdmi/tmds_channel.sv:116: vvp.tgt sorry: Case unique/unique0 qualities are ignored.
+vvp /private/tmp/cocotang_tb_hdmi_standard
+tb_hdmi_video_standard PASS
+tests/tb_hdmi_video_standard.sv:55: $finish called at 37000 (1ps)
+iverilog -g2012 -s tb_coco3_hdmi_border_handoff -o /private/tmp/cocotang_tb_hdmi_border tests/tb_coco3_hdmi_border_handoff.sv src/video/coco3_hdmi.sv src/video/artifact_mode_osd.sv
+src/video/artifact_mode_osd.sv:127: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'local_x[9:0]').
+src/video/coco3_hdmi.sv:129: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'y[9:0]').
+src/video/coco3_hdmi.sv:135: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'source_line[9:0]').
+src/video/coco3_hdmi.sv:148: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'source_line[9:0]').
+vvp /private/tmp/cocotang_tb_hdmi_border
+tb_coco3_hdmi_border_handoff PASS
+tests/tb_coco3_hdmi_border_handoff.sv:53: $finish called at 56000 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_gime_scanline tests/tb_gime_scanline_buffer.v src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
+vvp /private/tmp/cocotang_tb_gime_scanline
+80-column shared line completed in 6016 clocks
+master row mirrored in 2896 clocks
+Compatibility font: all 6144 glyph rows match XRoar
+tb_gime_scanline_buffer PASS
+tests/tb_gime_scanline_buffer.v:967: $finish called at 3389096000 (1ps)
+iverilog -g2012 -s tb_gime_cached_scanline -o /private/tmp/cocotang_tb_cached_scanline tests/tb_gime_cached_scanline.v src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
+vvp /private/tmp/cocotang_tb_cached_scanline
+tb_gime_cached_scanline PASS
+tests/tb_gime_cached_scanline.v:129: $finish called at 24217500 (1ps)
+iverilog -g2012 -s tb_gime_handover_cache_trace -o /private/tmp/cocotang_tb_gime_handover_cache_trace tests/tb_gime_handover_cache_trace.v src/coco3/gime_scanline_buffer.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
+vvp /private/tmp/cocotang_tb_gime_handover_cache_trace
+TRACE cold60 XRoar-line=26 row=0 expected=00c040 cache=00c040 dma_next=0c040 dma_y=1
+TRACE cold60 XRoar-line=27 row=1 expected=00c0e0 cache=00c0e0 dma_next=0c0e0 dma_y=2
+TRACE cold60 XRoar-line=28 row=2 expected=00c180 cache=00c180 dma_next=0c180 dma_y=3
+HDMI READ cold60 source_row=16 bank=0 valid=1 SDRAM=00ca40
+TRACE cold60 XRoar-line=120 row=94 expected=00fb00 cache=00fb00 dma_next=0fb00 dma_y=95
+TRACE cold60 XRoar-line=121 row=95 expected=00fba0 cache=00fba0 dma_next=0fba0 dma_y=96
+TRACE cold60 XRoar-line=122 row=96 expected=00fba0 cache=00fba0 dma_next=0fba0 dma_y=97
+TRACE cold60 XRoar-line=244 row=218 expected=00fba0 cache=00fba0 dma_next=0fba0 dma_y=219
+TRACE cold60 XRoar-line=245 row=219 expected=00fba0 cache=00fba0 dma_next=0fba0 dma_y=220
+TRACE cold60 XRoar-line=246 row=220 expected=00fc40 cache=00fc40 dma_next=0fc40 dma_y=221
+TRACE cold60 XRoar-line=250 row=224 expected=00fec0 cache=00fec0 dma_next=0fec0 dma_y=225
+HANDOVER 50->60: before frame base=18080 dma=1bf00 dma_y=225 tags=224/223
+TRACE warm60 XRoar-line=26 row=0 expected=00c040 cache=00c040 dma_next=0c040 dma_y=1
+TRACE warm60 XRoar-line=27 row=1 expected=00c0e0 cache=00c0e0 dma_next=0c0e0 dma_y=2
+TRACE warm60 XRoar-line=28 row=2 expected=00c180 cache=00c180 dma_next=0c180 dma_y=3
+HDMI READ warm60 source_row=16 bank=0 valid=1 SDRAM=00ca40
+TRACE warm60 XRoar-line=120 row=94 expected=00fb00 cache=00fb00 dma_next=0fb00 dma_y=95
+TRACE warm60 XRoar-line=121 row=95 expected=00fba0 cache=00fba0 dma_next=0fba0 dma_y=96
+TRACE warm60 XRoar-line=122 row=96 expected=00fba0 cache=00fba0 dma_next=0fba0 dma_y=97
+TRACE warm60 XRoar-line=244 row=218 expected=00fba0 cache=00fba0 dma_next=0fba0 dma_y=219
+TRACE warm60 XRoar-line=245 row=219 expected=00fba0 cache=00fba0 dma_next=0fba0 dma_y=220
+TRACE warm60 XRoar-line=246 row=220 expected=00fc40 cache=00fc40 dma_next=0fc40 dma_y=221
+TRACE warm60 XRoar-line=250 row=224 expected=00fec0 cache=00fec0 dma_next=0fec0 dma_y=225
+SDRAM line=26 XRoar-DMA=00c040 expected-read=00c054 cold-read=00c054 warm-read=00c054
+SDRAM line=27 XRoar-DMA=00c0e0 expected-read=00c0f4 cold-read=00c0f4 warm-read=00c0f4
+SDRAM line=28 XRoar-DMA=00c180 expected-read=00c194 cold-read=00c194 warm-read=00c194
+SDRAM line=120 XRoar-DMA=00fb00 expected-read=00fb14 cold-read=00fb14 warm-read=00fb14
+SDRAM line=121 XRoar-DMA=00fba0 expected-read=00fbb4 cold-read=00fbb4 warm-read=00fbb4
+SDRAM line=122 XRoar-DMA=00fba0 expected-read=00fbb4 cold-read=00fbb4 warm-read=00fbb4
+SDRAM line=245 XRoar-DMA=00fba0 expected-read=00fbb4 cold-read=00fbb4 warm-read=00fbb4
+SDRAM line=246 XRoar-DMA=00fc40 expected-read=00fc54 cold-read=00fc54 warm-read=00fc54
+SDRAM line=250 XRoar-DMA=00fec0 expected-read=00fed4 cold-read=00fed4 warm-read=00fed4
+tb_gime_handover_cache_trace PASS
+tests/tb_gime_handover_cache_trace.v:245: $finish called at 26312130000 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_coco3_video_mux tests/tb_coco3_video_mux.v src/coco3/coco3.v src/coco3/gime_timing.v src/coco3/gime_registers.v src/coco3/gime_mode_debug.v src/coco3/gime_scanline_buffer.v src/coco3/gime_native_video.v src/coco3/coco3_char_rom.v src/video/ntsc_artifact_decode.v
+vvp /private/tmp/cocotang_tb_coco3_video_mux
+tb_coco3_video_mux PASS
+tests/tb_coco3_video_mux.v:125: $finish called at 11516000 (1ps)
+iverilog -g2012 -o /private/tmp/cocotang_tb_hdmi_debug tests/tb_hdmi_debug_overlay.sv src/video/hdmi_debug_overlay.sv
+src/video/hdmi_debug_overlay.sv:252: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'x[9:0]').
+src/video/hdmi_debug_overlay.sv:253: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'y[9:0]').
+src/video/hdmi_debug_overlay.sv:258: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'y[9:0]').
+src/video/hdmi_debug_overlay.sv:264: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'x[9:0]').
+src/video/hdmi_debug_overlay.sv:265: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'y[9:0]').
+src/video/hdmi_debug_overlay.sv:282: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry_index_sum[9:0]').
+src/video/hdmi_debug_overlay.sv:289: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:372: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'display_count_16[15:0]').
+src/video/hdmi_debug_overlay.sv:373: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'display_count_16[15:0]').
+src/video/hdmi_debug_overlay.sv:374: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'display_count_16[15:0]').
+src/video/hdmi_debug_overlay.sv:375: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'display_count_16[15:0]').
+src/video/hdmi_debug_overlay.sv:377: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'log_page_8[7:0]').
+src/video/hdmi_debug_overlay.sv:378: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'log_page_8[7:0]').
+src/video/hdmi_debug_overlay.sv:382: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'interrupt_status[3:0]').
+src/video/hdmi_debug_overlay.sv:386: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'interrupt_status[3:0]').
+src/video/hdmi_debug_overlay.sv:389: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'interrupt_status[3:0]').
+src/video/hdmi_debug_overlay.sv:393: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'interrupt_status[3:0]').
+src/video/hdmi_debug_overlay.sv:395: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'debug_data[319:0]').
+src/video/hdmi_debug_overlay.sv:397: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'debug_data[319:0]').
+src/video/hdmi_debug_overlay.sv:399: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'debug_data[319:0]').
+src/video/hdmi_debug_overlay.sv:400: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'debug_data[319:0]').
+src/video/hdmi_debug_overlay.sv:402: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'debug_data[319:0]').
+src/video/hdmi_debug_overlay.sv:403: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'debug_data[319:0]').
+src/video/hdmi_debug_overlay.sv:405: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'debug_data[319:0]').
+src/video/hdmi_debug_overlay.sv:406: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'debug_data[319:0]').
+src/video/hdmi_debug_overlay.sv:416: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'display_count[8:0]').
+src/video/hdmi_debug_overlay.sv:417: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'display_count[8:0]').
+src/video/hdmi_debug_overlay.sv:418: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'display_count[8:0]').
+src/video/hdmi_debug_overlay.sv:423: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'debug_status[4:0]').
+src/video/hdmi_debug_overlay.sv:425: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'debug_status[4:0]').
+src/video/hdmi_debug_overlay.sv:427: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'debug_status[4:0]').
+src/video/hdmi_debug_overlay.sv:429: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'debug_status[4:0]').
+src/video/hdmi_debug_overlay.sv:431: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'debug_status[4:0]').
+src/video/hdmi_debug_overlay.sv:440: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'gime_register_debug[79:0]').
+src/video/hdmi_debug_overlay.sv:441: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'gime_register_debug[79:0]').
+src/video/hdmi_debug_overlay.sv:443: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'gime_register_debug[79:0]').
+src/video/hdmi_debug_overlay.sv:444: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'gime_register_debug[79:0]').
+src/video/hdmi_debug_overlay.sv:446: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'gime_register_debug[79:0]').
+src/video/hdmi_debug_overlay.sv:447: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'gime_register_debug[79:0]').
+src/video/hdmi_debug_overlay.sv:449: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'gime_register_debug[79:0]').
+src/video/hdmi_debug_overlay.sv:450: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'gime_register_debug[79:0]').
+src/video/hdmi_debug_overlay.sv:452: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'gime_register_debug[79:0]').
+src/video/hdmi_debug_overlay.sv:453: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'gime_register_debug[79:0]').
+src/video/hdmi_debug_overlay.sv:455: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'gime_register_debug[79:0]').
+src/video/hdmi_debug_overlay.sv:457: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'gime_register_debug[79:0]').
+src/video/hdmi_debug_overlay.sv:458: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'gime_register_debug[79:0]').
+src/video/hdmi_debug_overlay.sv:459: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'gime_register_debug[79:0]').
+src/video/hdmi_debug_overlay.sv:460: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'gime_register_debug[79:0]').
+src/video/hdmi_debug_overlay.sv:462: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'gime_register_debug[79:0]').
+src/video/hdmi_debug_overlay.sv:463: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'gime_register_debug[79:0]').
+src/video/hdmi_debug_overlay.sv:465: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'gime_register_debug[79:0]').
+src/video/hdmi_debug_overlay.sv:466: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'gime_register_debug[79:0]').
+src/video/hdmi_debug_overlay.sv:474: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'character_column[6:0]').
+src/video/hdmi_debug_overlay.sv:475: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'status_mmu_page[5:0]').
+src/video/hdmi_debug_overlay.sv:476: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'status_mmu_page[5:0]').
+src/video/hdmi_debug_overlay.sv:482: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'character_column[6:0]').
+src/video/hdmi_debug_overlay.sv:483: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'status_mmu_page[5:0]').
+src/video/hdmi_debug_overlay.sv:484: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'status_mmu_page[5:0]').
+src/video/hdmi_debug_overlay.sv:523: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry_index_16[15:0]').
+src/video/hdmi_debug_overlay.sv:524: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry_index_16[15:0]').
+src/video/hdmi_debug_overlay.sv:525: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry_index_16[15:0]').
+src/video/hdmi_debug_overlay.sv:526: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry_index_16[15:0]').
+src/video/hdmi_debug_overlay.sv:527: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:531: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:532: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:533: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:534: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:536: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:537: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:539: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:540: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:542: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:543: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:545: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:546: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:548: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:550: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:555: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'page_entry_index[6:0]').
+src/video/hdmi_debug_overlay.sv:556: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'page_entry_index[6:0]').
+src/video/hdmi_debug_overlay.sv:557: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:559: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:560: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:561: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:562: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:564: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:565: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:567: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:567: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:568: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:568: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:570: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:572: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:591: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+vvp /private/tmp/cocotang_tb_hdmi_debug
+overlay mismatch at 2,24: got 001020 expected ffffff
+tb_hdmi_debug_overlay FAIL: 1
+tests/tb_hdmi_debug_overlay.sv:86: $finish called at 596000 (1ps)
+iverilog -g2012 -s tb_gime_field_trace -o /private/tmp/cocotang_tb_gime_field_trace tests/tb_gime_field_trace.sv src/video/hdmi_debug_overlay.sv
+src/video/hdmi_debug_overlay.sv:252: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'x[9:0]').
+src/video/hdmi_debug_overlay.sv:253: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'y[9:0]').
+src/video/hdmi_debug_overlay.sv:258: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'y[9:0]').
+src/video/hdmi_debug_overlay.sv:264: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'x[9:0]').
+src/video/hdmi_debug_overlay.sv:265: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'y[9:0]').
+src/video/hdmi_debug_overlay.sv:282: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry_index_sum[9:0]').
+src/video/hdmi_debug_overlay.sv:289: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+src/video/hdmi_debug_overlay.sv:302: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'gime_count_pixel[8:0]').
+src/video/hdmi_debug_overlay.sv:303: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'gime_count_pixel[8:0]').
+src/video/hdmi_debug_overlay.sv:304: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'gime_count_pixel[8:0]').
+src/video/hdmi_debug_overlay.sv:340: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'trace_cache_y[7:0]').
+src/video/hdmi_debug_overlay.sv:341: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'trace_cache_y[7:0]').
+src/video/hdmi_debug_overlay.sv:342: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'trace_cache_start[22:0]').
+src/video/hdmi_debug_overlay.sv:343: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'trace_cache_start[22:0]').
+src/video/hdmi_debug_overlay.sv:344: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'trace_cache_start[22:0]').
+src/video/hdmi_debug_overlay.sv:345: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'trace_cache_start[22:0]').
+src/video/hdmi_debug_overlay.sv:346: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'trace_cache_start[22:0]').
+src/video/hdmi_debug_overlay.sv:347: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'trace_cache_start[22:0]').
+src/video/hdmi_debug_overlay.sv:348: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'trace_dma_y[7:0]').
+src/video/hdmi_debug_overlay.sv:349: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'trace_dma_y[7:0]').
+src/video/hdmi_debug_overlay.sv:350: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'trace_dma_next[18:0]').
+src/video/hdmi_debug_overlay.sv:351: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'trace_dma_next[18:0]').
+src/video/hdmi_debug_overlay.sv:352: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'trace_dma_next[18:0]').
+src/video/hdmi_debug_overlay.sv:353: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'trace_dma_next[18:0]').
+src/video/hdmi_debug_overlay.sv:354: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'trace_dma_next[18:0]').
+src/video/hdmi_debug_overlay.sv:361: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'trace_reg_byte[7:0]').
+src/video/hdmi_debug_overlay.sv:361: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'trace_reg_byte[7:0]').
+src/video/hdmi_debug_overlay.sv:591: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'entry[47:0]').
+vvp /private/tmp/cocotang_tb_gime_field_trace
+tb_gime_field_trace PASS
+tests/tb_gime_field_trace.sv:89: $finish called at 11641000 (1ps)

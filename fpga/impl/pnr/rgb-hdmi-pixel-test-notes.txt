@@ -1,0 +1,37 @@
+Combined HDMI and analog RGB pixel timing candidate, 2026-11-06.
+Not yet hardware confirmed. All confirmed stable images remain unchanged.
+
+HDMI's mask was delayed one clock while cache data took two clocks.
+That repeated the first column and dropped the final column. In the RGB
+build only, delay the mask by both cache stages and extend the RAM read
+window by one clock to return the final pending address. Clamp that flush
+request to the last address; it does not add a displayed column.
+Native video retains all 640 columns; compatibility retains all 512.
+The centered HDMI picture edges are 40/680 and 104/616 respectively.
+Line/field timing and prefetch scheduling are unchanged.
+
+Retains analog RGB fix from rgb-pixel-width-test: latch cache pixels once
+per sample to prevent read-ahead from shortening the first native dot.
+
+All clocks meet routed timing; clk108 Fmax 108.006 MHz and clk135 Fmax
+135.136 MHz. Zero setup/hold violations. The clk108 margin is extremely
+narrow. Project, placement, routing, synthesis and clock settings unchanged.
+
+Targeted tests pass:
+- Every HDMI column, both edges, doubled row copies and cache-bank changes,
+  native/compatibility at 50/60 Hz, normal colours and both artifact palettes.
+  Covers real wrapper/cache and encoder RGB capture. Physical serializer
+  stubbed; DVI video branch used for Icarus audio-array compatibility.
+- Analog RGB widths through inverse LUT: 640 x 10 and 256 x 20 clocks.
+- RGB alternating DAC phases and HDMI video-standard transitions.
+
+The full suite was not repeated; earlier pre-existing failures are listed
+in rgb-pixel-width-test-notes.txt and its saved regression log.
+
+make program-rgb programs this combined candidate. The earlier analog-only
+candidate remains rgb-pixel-width-test.fs. Confirm video and Boink before
+promoting either candidate over stable-rgb.fs.
+
+REJECTED after user reported analog noise. User confirmed "yeah no noise"
+with rgb-hdmi-only-noise-test.fs. Analog sample-latching change rolled back;
+HDMI correction retained. Do not use this earlier combined candidate.
