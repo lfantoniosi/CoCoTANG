@@ -4,7 +4,7 @@
 
 ## Overview
 
-CoCoTANG upgrades the Radio Shack/Tandy Color Computer with a Tang Nano 20K FPGA board and CoCo 3 video and memory features. It retains the MC6809E CPU and motherboard PIAs while the FPGA implements the GIME video and memory subsystem, HDMI and analog video outputs, and a Glenside-compatible IDE interface backed by a microSD card. It also provides 8 MB of RAM, Orchestra-90 audio with stereo over HDMI, and Tandy Speech/Sound Cartridge (SSC) support.
+CoCoTANG upgrades the Radio Shack/Tandy Color Computer 2 with a Tang Nano 20K FPGA board and CoCo 3 video and memory features. It retains the MC6809E CPU and motherboard PIAs while the FPGA implements the GIME video and memory subsystem, HDMI and analog video outputs, and a Glenside-compatible IDE interface backed by a microSD card. It also provides 8 MB of RAM, Orchestra-90 audio with stereo over HDMI, and Tandy Speech/Sound Cartridge (SSC) support.
 
 This repository contains the FPGA sources, KiCad designs, fabrication files, and bill of materials.
 
@@ -15,6 +15,10 @@ The assembly uses a **main board** for the CPU and Tang Nano 20K, **PIA0 and PIA
 The design uses NTSC machine clocking. The GIME's 50 Hz setting remains available, but selecting it does **not** switch to a PAL crystal. PAL-encoded CVBS/S-Video output is also supported. See [Build on macOS or Linux](#build-on-macos-or-linux) for video targets and the [FPGA pin and bus map](fpga/docs/pinout.md) for hardware connections.
 
 ## Compatibility
+
+### Color Computer 1 power-supply noise
+
+Testing on a Color Computer 1 revealed power-supply noise affecting the FPGA and its video outputs, causing rolling interference and intermittent loss of analog video sync. HDMI also appeared to be affected. **Use a Color Computer 2 for this conversion; CoCo 1 installations are not currently recommended.**
 
 ### Games
 
@@ -75,7 +79,7 @@ Tandy used several motherboard layouts for the CoCo 2. Identify your motherboard
 | [20261045](fpga/docs/20261045.jpg) | No | — |
 | [20261059](fpga/docs/20261059.jpg) | No | — |
 
-**CoCo 1 compatibility has not yet been tested.**
+**CoCo 1 is not currently recommended.** See the [power-supply noise warning](#color-computer-1-power-supply-noise).
 
 ## Bill of materials
 
