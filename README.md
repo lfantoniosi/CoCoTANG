@@ -4,7 +4,7 @@
 
 ## Overview
 
-CoCoTANG upgrades the Radio Shack/Tandy Color Computer 2 with a Tang Nano 20K FPGA board and CoCo 3 video and memory features. It retains the MC6809E CPU and motherboard PIAs while the FPGA implements the GIME video and memory subsystem, HDMI and analog video outputs, and a Glenside-compatible IDE interface backed by a microSD card. It also provides 8 MB of RAM, Orchestra-90 audio with stereo over HDMI, and Tandy Speech/Sound Cartridge (SSC) support.
+CoCoTANG upgrades the Radio Shack/Tandy Color Computer 1 and 2 with a Tang Nano 20K FPGA board and CoCo 3 video and memory features. It retains the MC6809E CPU and motherboard PIAs while the FPGA implements the GIME video and memory subsystem, HDMI and analog video outputs, and a Glenside-compatible IDE interface backed by a microSD card. It also provides 8 MB of RAM, Orchestra-90 audio with stereo over HDMI, and Tandy Speech/Sound Cartridge (SSC) support.
 
 This repository contains the FPGA sources, KiCad designs, fabrication files, and bill of materials.
 
@@ -18,7 +18,9 @@ The design uses NTSC machine clocking. The GIME's 50 Hz setting remains availabl
 
 ### Color Computer 1 power-supply noise
 
-Testing on a Color Computer 1 revealed power-supply noise affecting the FPGA and its video outputs, causing rolling interference and intermittent loss of analog video sync. HDMI also appeared to be affected. **Use a Color Computer 2 for this conversion; CoCo 1 installations are not currently recommended.**
+CoCoTANG has been confirmed working on a Color Computer 1 with added power-supply decoupling: **a 100 µF electrolytic capacitor and a 100 nF ceramic capacitor connected in parallel across the supply**, as shown below. This resolves the power-supply noise that previously caused rolling video interference and intermittent loss of analog sync, and also appeared to affect HDMI.
+
+![100 µF electrolytic and 100 nF ceramic decoupling capacitors installed on the CoCoTANG board for CoCo 1 operation](fpga/docs/coco1-decoupler.jpg)
 
 ### Games
 
@@ -79,7 +81,7 @@ Tandy used several motherboard layouts for the CoCo 2. Identify your motherboard
 | [20261045](fpga/docs/20261045.jpg) | No | — |
 | [20261059](fpga/docs/20261059.jpg) | No | — |
 
-**CoCo 1 is not currently recommended.** See the [power-supply noise warning](#color-computer-1-power-supply-noise).
+**CoCo 1 operation is confirmed with added 100 µF + 100 nF supply decoupling.** See the [decoupling details and installation photo](#color-computer-1-power-supply-noise).
 
 ## Bill of materials
 
@@ -520,6 +522,12 @@ For Windows, use the [Gowin Programmer](https://www.gowinsemi.com/en/support/dow
 This is an actively developed hardware/RTL project. Review the [pin and bus map](fpga/docs/pinout.md), fabrication drawing, and KiCad files before building hardware. Flashing a new FPGA image or ROM changes the board's nonvolatile contents; keep a known-good image available while experimenting.
 
 ## Showcase
+
+CoCo 1 booting and running NitrOS-9 with CoCoTANG and the decoupling modification shown above:
+
+| CoCo 1 boot | CoCo 1 NitrOS-9 Level 2 |
+| --- | --- |
+| ![CoCo 1 boot screen with CoCoTANG](fpga/docs/coco1-boot-screen.JPG) | ![CoCo 1 running NitrOS-9 Level 2 with CoCoTANG](fpga/docs/coco1-nos9l2.JPG) |
 
 Games, NitrOS-9, and a graphics demo running on CoCoTANG:
 
