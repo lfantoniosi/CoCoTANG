@@ -517,6 +517,27 @@ For Windows, use the [Gowin Programmer](https://www.gowinsemi.com/en/support/dow
 
 **Windows USB driver choice:** Gowin Programmer and openFPGALoader may require different USB drivers. The normal Windows path above uses Gowin's driver. If you choose to use openFPGALoader on Windows instead, install its Windows build and use [Zadig](https://zadig.akeo.ie/) to bind **WinUSB** to the Tang Nano 20K's *programming/JTAG interface* (enable **Options → List All Devices** if necessary). Check the device/interface identity before clicking **Install/Replace Driver**—do not replace an unrelated USB interface. Switching to WinUSB can stop Gowin Programmer from seeing the board; restore the Gowin driver in Device Manager or reinstall it when returning to Gowin Programmer. [libusb's Windows guidance](https://github.com/libusb/libusb/wiki/Windows) recommends WinUSB for libusb applications.
 
+## Troubleshooting
+
+### Green screen
+
+If CoCoTANG shows a green screen, check that you have programmed the CoCo 3 ROM with `make rom`. Run this command from the `fpga/` directory, then power-cycle the board:
+
+```sh
+make rom
+```
+
+A faulty **74LVC245 bus buffer** or a poor connection on the data or address bus can also cause a green screen. If programming the ROM does not resolve it:
+
+1. With power off, inspect all data and address bus connections, especially the LVC245 pins, for solder bridges, unsoldered pins, and poor solder joints.
+2. Follow the [KiCad schematics](kicad/) and check continuity along each bus line through the sockets, adapters, buffers, and interconnecting cables. Check for shorts between adjacent lines as well as missing connections.
+3. Run the SRAM diagnostic from `fpga/` with `make data-test-program-sram`. Follow the [bus and address test procedure](#using-the-tester-to-diagnose-the-board), including its CPU-removal and jumper instructions, to verify **every data line D0–D7 and address line A0–A15 individually**. Each line must change only its corresponding bit in the HDMI readback.
+4. If a line fails, trace it through the circuit to locate the open connection, short, or faulty LVC245 buffer. Repair the fault and repeat the test.
+
+### CoCo SDC failures
+
+If the CoCo SDC fails to work reliably, check the CPU's speed rating against the operating clock speed. Try a different CPU, such as an **MC68B09E** or **HD6309E**, using the externally clocked E variant required by the motherboard. See [CPU choice](#cpu-choice-mc6809e-or-hd6309e).
+
 ## Project status
 
 This is an actively developed hardware/RTL project. Review the [pin and bus map](fpga/docs/pinout.md), fabrication drawing, and KiCad files before building hardware. Flashing a new FPGA image or ROM changes the board's nonvolatile contents; keep a known-good image available while experimenting.
