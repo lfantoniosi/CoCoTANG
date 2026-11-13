@@ -169,7 +169,9 @@ The reference columns identify the same components on each layout. Lists follow 
 | Qty | Value | Description | DigiKey P/N | References | Alternative link |
 | ---: | --- | --- | --- | --- | --- |
 | 2 | PRPC040SBAN-M71RC | CONN HEADER R/A 40POS 2.54MM | [S1111EC-40-ND](https://www.digikey.ca/en/products/detail/sullins-connector-solutions/PRPC040SBAN-M71RC/2775294) | 
-| 1 |1950 | JUMPER WIRE F TO F 6" 28AWG | [1528-1961-ND](https://www.digikey.ca/en/products/detail/adafruit-industries-llc/1950/6827084)
+| 2 |1950 | JUMPER WIRE F TO F 6" 28AWG | [1528-1961-ND](https://www.digikey.ca/en/products/detail/adafruit-industries-llc/1950/6827084)
+
+*NOTE:* You may need more than one jumper wires pack or source at different place like Amazon. CoCo1 requires longer jumper wires  
 
 ## Assembly
 
@@ -359,7 +361,7 @@ Select **RGB** on the PVM and choose **internal sync (INT)**, or turn **EXT SYNC
 
 ## Preparing the microSD card
 
-Download the appropriate CPU version of the [CF disk image](https://drive.google.com/file/d/1-FzbW95mYzfBBA8JGILCE1EUJpi1Im-F/view?usp=sharing) and write it to the microSD card used by CoCoTANG. These images require HDB-DOS, supplied by the optional cartridge or another supported ROM source.
+Download the appropriate CPU version of the [microSD disk image](https://drive.google.com/file/d/1VkAMsVHzRIia8T7F_5E-AXlJXhQMgnkP/view?usp=sharing) and write it to the microSD card used by CoCoTANG. These images require HDB-DOS, supplied by the optional cartridge or another supported ROM source.
 
 On Linux, identify and unmount the card, then write the image to the **whole device**, replacing `/dev/sdX` with the correct device path:
 

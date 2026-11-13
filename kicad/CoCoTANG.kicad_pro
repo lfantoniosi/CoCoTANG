@@ -310,7 +310,8 @@
         }
       ],
       "track_widths": [
-        0.0
+        0.0,
+        0.254
       ],
       "tuning_pattern_settings": {
         "diff_pair_defaults": {
@@ -342,6 +343,10 @@
         {
           "diameter": 0.0,
           "drill": 0.0
+        },
+        {
+          "diameter": 0.5588,
+          "drill": 0.3048
         }
       ],
       "via_stack_presets": [],
@@ -727,7 +732,7 @@
     "last_paths": {
       "idf": "",
       "netlist": "",
-      "plot": "gerber_pia",
+      "plot": "gerber_cart",
       "specctra_dsn": "CoCoTANG.dsn",
       "step": "",
       "vrml": ""
@@ -899,7 +904,7 @@
         "uuid": "975e10be-2eb6-4f70-aa39-19e0743e473f"
       }
     ],
-    "used_designators": "J1-30,#PWR1-147,D1-4,RN1-4,C1-34,SW1-4,U1-17,Q1-12,RV1,H1-5,R1,R3-39,JP1-4",
+    "used_designators": "J1-30,#PWR1-148,D1-4,RN1-4,C1-34,SW1-4,U1-17,Q1-12,RV1,H1-5,R1,R3-39,JP1-4",
     "variants": []
   },
   "sheets": [

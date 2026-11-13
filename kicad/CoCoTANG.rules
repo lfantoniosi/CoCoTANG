@@ -11,7 +11,7 @@
     (via_costs 50)
     (plane_via_costs 5)
     (start_ripup_costs 100)
-    (start_pass_no 28793)
+    (start_pass_no 48854)
     (layer_rule F.Cu
       (active on)
       (preferred_direction horizontal)
@@ -33,6 +33,7 @@
     (clearance 152.4 (type "kicad_default"))
     (clearance 152.4 (type GND))
     (clearance 152.4 (type +5V))
+    (clearance 152.4 (type +3.3V))
     (clearance 152.4 (type kicad))
   )
   (padstack "Via[0-1]_457.2:203.2_um"
@@ -109,12 +110,19 @@
     )
   )
   (class "kicad_default"
-    ~{FS{slash}CART} ~{HS}{slash}SERNT KEYINT PB0 PA6 PB5 PB4 PB3
-    ~{HS} "Net-(D1-K)" PA0 PA1 PA2 PA3 PA4 PA5
-    "unconnected-(U7-Pin_9-Pad9)" "unconnected-(U7-Pin_10-Pad10)" "unconnected-(U7-Pin_13-Pad13)" PB6 "Net-(D3-K)" PA7 PB1 PB2
-    PB7 AP19 AP21 AP22 AP23 AP24 AP25 AP26
-    AP27 AP28 AP29 AP30 AP31 AP32 AP33 AP34
-    AP35 AP36 AP37 AP38 AP39
+    KEYINT A15 A14 A13 A8 A9 A10 A11
+    A12 "MP7_33" "MP6_33" "MP5_33" "MP4_33" "MP3_33" "MP2_33" "MP1_33"
+    "MP0_33" MSEL1 A0 A1 A2 A3 A4 A5
+    A6 A7 MSEL0 "FIRQ_33" ~{HALT} ~{NMI} ~{RESET} E
+    Q ~{CART} D0 D1 D2 D3 D4 D5
+    D6 D7 R{slash}~{W} ~{SLENB} "MSEL0_33" "MSEL1_33" MSEL2 "unconnected-(U6-Pin_7-Pad7)"
+    "unconnected-(U6-Pin_9-Pad9)" "unconnected-(U6-Pin_10-Pad10)" "unconnected-(U6-Pin_11-Pad11)" "unconnected-(U6-Pin_12-Pad12)" "unconnected-(U6-Pin_13-Pad13)" "unconnected-(U6-Pin_14-Pad14)" "unconnected-(U6-Pin_15-Pad15)" S0
+    S1 S2 ~{DATAEN} DATADIR SERNT "Net-(Q1-Pad1)" ~{IRQ} "AUDIO_33"
+    "R_CVBS_33" "~{HS_33}" "~{FS_33}" "unconnected-(U17-85_IOT4B-Pad4)" "S0_33" "S2_33" "IRQ_33" "D7_33"
+    "D6_33" "D5_33" "D4_33" "D3_33" "D2_33" "D1_33" "D0_33" "E_33"
+    "B_CHR_33" "G_Y_33" "S1_33" "RESET_33" "unconnected-(U17-80_IOT27A-Pad37)" "Q_33" "Net-(D4-K)" "unconnected-(U16-A7-Pad9)"
+    "unconnected-(U16-B7-Pad11)" ~{HS} ~{FS} ~{FIRQ} "Net-(Q3-Pad1)" "Net-(Q6-Pad1)" "unconnected-(J19-Pin_5-Pad5)" "unconnected-(J19-Pin_6-Pad6)"
+    "unconnected-(J19-Pin_33-Pad33)" "unconnected-(J19-Pin_36-Pad36)" "unconnected-(J19-Pin_38-Pad38)" TSC
     (clearance_class "kicad_default")
     (via_rule "kicad_default")
     (rule
@@ -147,6 +155,7 @@
     )
   )
   (class +3.3V
+    +3.3V
     (clearance_class default)
     (via_rule +3.3V)
     (rule

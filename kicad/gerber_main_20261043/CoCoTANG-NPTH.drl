@@ -1,0 +1,12 @@
+M48
+; DRILL file KiCad 10.99.0-3590-g428effed22-dirty-specctra-netnames date 2026-11-13T09:45:04
+; FORMAT={-:-/ absolute / metric / decimal}
+; #@! TF.CreationDate,2026-11-13T09:45:04-07:00
+; #@! TF.GenerationSoftware,Kicad,Pcbnew,10.99.0-3590-g428effed22-dirty-specctra-netnames
+; #@! TF.FileFunction,NonPlated,1,2,NPTH
+FMAT,2
+METRIC
+%
+G90
+G05
+M30
