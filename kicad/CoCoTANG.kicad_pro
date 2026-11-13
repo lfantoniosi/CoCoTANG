@@ -732,7 +732,7 @@
     "last_paths": {
       "idf": "",
       "netlist": "",
-      "plot": "gerber_cart",
+      "plot": "gerber_avideo",
       "specctra_dsn": "CoCoTANG.dsn",
       "step": "",
       "vrml": ""
